@@ -1,32 +1,68 @@
-# Galatea AI Assistant - Documentation
+# Galatea Documentation
 
-This directory contains all architectural documentation, system designs, and research materials for building a psychologically-informed AI assistant.
+This directory contains all architectural documentation, design decisions, and research materials.
 
-## Directory Structure
+## Key Documents
 
-### `/architecture` - Core System Designs
-- **context-management.md** - ContextForge: Token budget and zone-based context management
-- **memory-systems.md** - Multi-layered memory architecture (Working, Episodic, Semantic, Procedural, Emotional)
-- **cognitive-models.md** - Model architecture (Self, User, Domain, Conversation, Relationship)
-- **processing-pipeline.md** - Request processing stages and metaprocessing logic
+| Document | Description |
+|----------|-------------|
+| **[PSYCHOLOGICAL_ARCHITECTURE.md](PSYCHOLOGICAL_ARCHITECTURE.md)** | Full architecture design - homeostasis, memory, models |
+| **[FINAL_MINIMAL_ARCHITECTURE.md](FINAL_MINIMAL_ARCHITECTURE.md)** | Implementation roadmap - 10 weeks, 6 phases |
+| **[GUIDING_PRINCIPLES.md](GUIDING_PRINCIPLES.md)** | Core principles - pragmatical, iterative, reuse |
+| **[REFERENCE_SCENARIOS.md](REFERENCE_SCENARIOS.md)** | Test scenarios for validation |
 
-### `/guides` - Implementation Guides
-- **safety-considerations.md** - Critical safety mechanisms and real-world case studies
-- **curriculum-modules-7-11.md** - Teaching materials for advanced psychology modules
+## Design Documents (`/plans`)
 
-### `/research` - Background Research
-- **psychology-report.md** - Comprehensive implementation report with latest research
+| Document | Description |
+|----------|-------------|
+| **[BRAINSTORM_QUEUE.md](plans/BRAINSTORM_QUEUE.md)** | Open research questions |
+| **[2026-02-02-homeostasis-architecture-design.md](plans/2026-02-02-homeostasis-architecture-design.md)** | Homeostasis decision record |
+| **[2026-02-02-memory-system-design.md](plans/2026-02-02-memory-system-design.md)** | Graphiti memory design |
+
+## Research (`/research`)
+
+Agent deconstructions and psychology research:
+- OpenClaw, Cline, GPT-Engineer analysis
+- MAGELLAN, WorldLLM, Reflexion patterns
+- Tools landscape survey
+- Psychology implementation report
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  LAYER 1: EXPLICIT GUIDANCE                                      │
+│  Persona preprompts, domain rules, hard blocks                  │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  LAYER 2: HOMEOSTASIS ENGINE (6 Dimensions)                      │
+│  knowledge_sufficiency, certainty_alignment, progress_momentum  │
+│  communication_health, productive_engagement, knowledge_application │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  MEMORY LAYER (Graphiti + FalkorDB)                              │
+│  Episodic, Semantic, Procedural + 4 Cognitive Models            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## Key Decisions
+
+| Decision | Choice |
+|----------|--------|
+| Architecture | Homeostasis (6 dimensions) instead of 12+ subsystems |
+| Memory | Graphiti + FalkorDB (not Mem0, not simple RAG) |
+| Three layers | Guidance → Homeostasis → Guardrails |
 
 ## Project Status
 
-**Current Phase**: Organization and modernization
-- Legacy materials (2024) being updated for 2025-2026 technologies
-- Integration of ContextForge with psychological subsystems in progress
-- Preparing for brainstorming phase
+**Research Complete, Implementation Ready**
 
-## Key Concepts
+See [FINAL_MINIMAL_ARCHITECTURE.md](FINAL_MINIMAL_ARCHITECTURE.md) for the 10-week implementation roadmap.
 
-1. **ContextForge** - Manages limited context windows using PERMANENT/STABLE/WORKING zones
-2. **62 Subsystems** - Modular psychological components (empathy, safety, curiosity, etc.)
-3. **Memory Architecture** - 6 types of memory working together
-4. **Safety-First Design** - Reality boundaries, crisis detection, dependency prevention
+---
+
+*Last Updated: 2026-02-02*
