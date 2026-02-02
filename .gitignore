@@ -1,0 +1,14 @@
+# Editor
+.obsidian/workspace.json
+
+# Claude local settings
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp files
+*.tmp
+*.swp
+*~
