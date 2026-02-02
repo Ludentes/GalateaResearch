@@ -1,867 +1,1541 @@
-# Memory System Design: Graphiti vs Mem0 vs Self-Build
+# Memory System Design: Graphiti-Based Implementation
 
 **Date**: 2026-02-02
-**Status**: Draft - Awaiting Decision
-**Context**: Brainstorm session evaluating memory layer options for Galatea
+**Status**: Accepted
+**Decision**: Graphiti with FalkorDB backend
 
 ---
 
 ## Executive Summary
 
-This document evaluates three options for Galatea's memory system based on concrete use cases derived from the target scenario: shadow learning from vibe coding, exporting personas, and multi-agent collaboration in a company setting.
+After extensive scenario tracing, we've determined that **Graphiti is essential** for Galatea's memory system. The key differentiators that eliminate simpler alternatives (Mem0, basic RAG):
 
-**Key Finding**: Neither Mem0 nor Graphiti fully implements the 6-layer memory architecture in `memory-systems.md`, but both can serve as foundations. The choice depends on whether **temporal reasoning** (Graphiti) or **ecosystem/UX** (Mem0) is prioritized.
+1. **Guaranteed hard rules** - Hard blocks must be injected regardless of semantic similarity
+2. **Temporal validity** - "Was true then, not true now" cannot be expressed in flat vector stores
+3. **Usage tracking** - Procedures need success rates updated across uses
+4. **Memory promotion** - Episodes must become facts must become procedures (graph edges)
+5. **Cross-agent patterns** - Multiple agents sharing knowledge requires relationship modeling
 
-**Recommendation**: Graphiti with FalkorDB backend, with custom procedural memory layer.
-
----
-
-## Target Scenario
-
-### The Full Lifecycle
-
-```
-Phase 1: Shadow Learning
-├── User vibe codes with Expo + Claude Code
-├── Galatea observes: decisions, errors, solutions, preferences
-├── Forms: episodic, semantic, procedural memories
-└── Duration: Days/weeks
-
-Phase 2: Export Persona
-├── Package: semantic + procedural memories
-├── Exclude/anonymize: raw episodic (privacy)
-└── Output: Portable persona file
-
-Phase 3: Company Deployment
-├── PM imports persona to company instance
-├── Instantiates 3 AI programmers
-├── Each agent: shared knowledge base + own episodic memory
-└── MCP access: GitLab, Discord, Filesystem
-
-Phase 4: Multi-Agent Work
-├── Agents pick tasks, execute, communicate
-├── Learn from each other's feedback
-├── Build shared knowledge over time
-└── PM can inspect and correct knowledge
-```
+**Key insight**: Memory is infrastructure, not thesis. But this infrastructure is essential for the thesis (psychological architecture) to function.
 
 ---
 
-## Concrete Use Cases
+## Graph Schema
 
-### Use Case 1: Shadow Learning - Tech Decision
-
-**Scenario**: User tries JWT, abandons it for Clerk
-
-**What happens**:
-```
-10:00 - User starts custom JWT implementation
-10:45 - Token refresh errors, user frustrated
-11:00 - User asks Claude about alternatives
-11:15 - Switches to Clerk, completes in 30 min
-```
-
-**Memory operations**:
-| Type | Content | Temporal Aspect |
-|------|---------|-----------------|
-| Episodic | "Feb 2 10:00-11:45: Tried JWT, hit refresh issues, switched to Clerk" | When it happened |
-| Semantic | "Prefer Clerk over custom JWT for Expo auth" | Valid from Feb 2 |
-| Semantic | "Custom JWT has token refresh issues" | Learned Feb 2 |
-| Procedural | "When adding auth to Expo: consider Clerk first" | Learned from experience |
-
-**Retrieval scenario**:
-```
-Agent starts new Expo project, needs auth.
-Query: "How should I handle auth in Expo?"
-
-Expected retrieval:
-1. Semantic: "Prefer Clerk over custom JWT" (high relevance)
-2. Procedural: "When adding auth: consider Clerk first"
-3. Episodic: (optional) "User had bad experience with JWT on Feb 2"
-```
-
----
-
-### Use Case 2: Manual Knowledge Entry - "Never Use Realm"
-
-**Scenario**: User wants to add explicit rule about Realm database
-
-**Input**:
-- Fact: "Realm is a mobile database option"
-- Rule: "Never use Realm in our projects"
-- Reason: "Sync issues, painful migrations"
-
-**Memory operations**:
-| Type | Content | Metadata |
-|------|---------|----------|
-| Semantic | "Realm is a mobile database for React Native" | domain: mobile |
-| Semantic | "Never use Realm - sync issues, painful migrations" | type: hard-rule, severity: block |
-| Semantic | "Use SQLite+Drizzle or WatermelonDB instead of Realm" | type: alternative |
-
-**Retrieval scenario**:
-```
-Agent researching mobile database options.
-Query: "What database should I use for offline storage?"
-
-Expected retrieval:
-1. "Use SQLite+Drizzle or WatermelonDB" (recommendation)
-2. "Never use Realm" (hard-block rule)
-3. Reason available if agent asks "why not Realm?"
-```
-
-**View/Edit requirement**:
-- User wants to see stored Realm knowledge
-- Verify the rule was captured correctly
-- Potentially update if Realm improves
-
----
-
-### Use Case 3: Article Ingestion - "Liquid Glass"
-
-**Scenario**: User reads article about Apple's new design language
-
-**Input**:
-- Article URL or pasted content
-- Key concepts: Liquid Glass, .glassEffect(), iOS 26
-- User's annotation: "Use sparingly - performance impact"
-
-**Memory operations**:
-| Type | Content | Source |
-|------|---------|--------|
-| Semantic | "Liquid Glass is Apple's design language for iOS 26" | Article |
-| Semantic | "Use .glassEffect() modifier in SwiftUI for Liquid Glass" | Article |
-| Semantic | "Liquid Glass impacts performance on older devices" | User annotation |
-| Procedural | "When using Liquid Glass: apply to hero sections only" | User annotation |
-
-**Retrieval scenario**:
-```
-Agent designing iOS UI.
-Query: "How do I make this look modern for iOS 26?"
-
-Expected retrieval:
-1. "Liquid Glass is Apple's new design language"
-2. "Use .glassEffect() modifier"
-3. "Use sparingly - performance impact on older devices"
-```
-
-**Temporal aspect**:
-- "When did we learn about Liquid Glass?" → Feb 2, 2026
-- "Is this still current?" → Yes, introduced iOS 26
-
----
-
-### Use Case 4: Procedural Workaround - "NativeWind Flicker"
-
-**Scenario**: User discovered NativeWind bug and workaround
-
-**Input**:
-- Problem: "className on Pressable causes animation flicker"
-- Trigger: Using className for animated properties
-- Solution: Use inline style for animated props
-- Code example provided
-- Status: Workaround until NativeWind 4.1
-
-**Memory operations**:
-| Type | Content | Metadata |
-|------|---------|----------|
-| Procedural | "When Pressable animation flickers: move animated props to style, keep static in className" | trigger: animation-flicker, technology: nativewind |
-| Semantic | "NativeWind className causes flicker with Pressable animations" | type: known-issue |
-| Semantic | "NativeWind 4.1 will fix Pressable animation issue" | type: future-fix |
-
-**Retrieval scenario**:
-```
-Agent implementing animated button with NativeWind.
-Encounters flicker during testing.
-Query: "Why is my Pressable animation flickering?"
-
-Expected retrieval:
-1. "Known issue: NativeWind className causes flicker"
-2. "Workaround: move animated props to inline style"
-3. Code example
-```
-
-**Temporal aspect (critical)**:
-```
-Later: NativeWind 4.1 releases
-
-Memory update needed:
-- Mark workaround as "superseded"
-- Add: "Fixed in NativeWind 4.1"
-- History preserved: "Was a workaround from Feb-Mar 2026"
-```
-
----
-
-### Use Case 5: Cross-Agent Learning
-
-**Scenario**: Agent-Dev-3 reviews Agent-Dev-1's code, finds pattern
-
-**What happens**:
-```
-PR Review #1: Dev-1 forgot null check on user object
-PR Review #2: Dev-1 forgot null check on profile object
-PR Review #3: Dev-1 remembered null checks (improvement!)
-```
-
-**Memory operations**:
-| Type | Content | Agent |
-|------|---------|-------|
-| Semantic | "Agent-Dev-1 sometimes forgets null checks" | Shared |
-| Episodic | "PR #456: Found missing null check" | Dev-3 |
-| Episodic | "PR #789: Found missing null check again" | Dev-3 |
-| Episodic | "PR #890: Null checks present, improvement noted" | Dev-3 |
-| Procedural (Dev-1) | "Remember to add null checks before PR" | Dev-1 |
-
-**Retrieval scenario**:
-```
-Dev-3 starts reviewing Dev-1's PR.
-Query: "What should I watch for in Dev-1's code?"
-
-Expected retrieval:
-1. "Dev-1 sometimes forgets null checks"
-2. "But improved recently - PR #890 was clean"
-```
-
-**Temporal aspect (critical)**:
-- Pattern emerged over time (PR #456, #789)
-- Pattern improving (PR #890)
-- Need to track trajectory, not just current state
-
----
-
-### Use Case 6: Retrieval During Task Execution
-
-**Scenario**: Agent-Dev-1 picks up task "Add user profile screen"
-
-**Retrieval pipeline**:
-```
-1. Task Context
-   Query: "user profile screen expo"
-   Retrieves:
-   - Procedural: "For new Expo screen: create in app/(tabs)"
-   - Semantic: "Use expo-router for navigation"
-
-2. Technology Context
-   Query: "expo ui styling"
-   Retrieves:
-   - Semantic: "Use NativeWind for styling"
-   - Procedural: "NativeWind animation workaround"
-   - Semantic: "Liquid Glass for premium feel"
-
-3. Company Context
-   Query: "code standards PR"
-   Retrieves:
-   - Procedural: "PR checklist: types, tests, null checks"
-   - Semantic: "Use GitLab MR, post in #mobile-dev"
-
-4. Negative Constraints
-   Query: implicit check
-   Retrieves:
-   - "Never use Realm"
-   - Any other hard-block rules
-```
-
-**Memory assembly for LLM context**:
-```
-## Relevant Knowledge
-
-### How to create Expo screens
-- Create file in app/(tabs)/profile.tsx
-- Use expo-router for navigation
-- Use NativeWind for styling
-
-### Known Issues
-- NativeWind Pressable animation: use inline style for animated props
-
-### Design Guidelines
-- Consider Liquid Glass for premium feel (sparingly)
-
-### Code Standards
-- PR checklist: types, tests, null checks
-- Post in #mobile-dev when ready
-
-### Constraints
-- Do NOT use Realm for database
-```
-
----
-
-## Extraction Pipeline Comparison
-
-### Mem0 Extraction Pipeline
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  QUERY                                                          │
-│  "How should I handle auth in Expo?"                            │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  MEM0 SEARCH                                                    │
-│                                                                 │
-│  1. Generate embedding for query                                │
-│  2. Vector similarity search in Qdrant                          │
-│  3. (Optional) BM25 keyword search                              │
-│  4. (Optional) Graph traversal if Mem0g enabled                 │
-│  5. Rerank results                                              │
-│                                                                 │
-│  Returns: List[Memory] with scores                              │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  RESULTS                                                        │
-│                                                                 │
-│  [0.92] "Prefer Clerk over custom JWT for Expo auth"            │
-│  [0.87] "When adding auth: consider Clerk first"                │
-│  [0.76] "Custom JWT has token refresh issues"                   │
-│                                                                 │
-│  Flat list, ranked by relevance                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-**Code**:
-```python
-from mem0 import Memory
-
-m = Memory()
-
-# Simple search
-results = m.search(
-    query="How should I handle auth in Expo?",
-    user_id="mobile-dev-knowledge",
-    limit=10
-)
-
-# With filters
-results = m.search(
-    query="auth expo",
-    user_id="mobile-dev-knowledge",
-    filters={"technology": "expo", "type": ["fact", "procedure"]}
-)
-
-# Results structure
-for r in results:
-    print(f"[{r['score']:.2f}] {r['memory']}")
-    print(f"  Metadata: {r['metadata']}")
-```
-
-**Pros**:
-- Simple API
-- Fast retrieval
-- Good relevance ranking
-
-**Cons**:
-- No structured relationships
-- Can't query "what changed since X"
-- Can't traverse "related to Y"
-
----
-
-### Graphiti Extraction Pipeline
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  QUERY                                                          │
-│  "How should I handle auth in Expo?"                            │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  GRAPHITI HYBRID SEARCH                                         │
-│                                                                 │
-│  1. Semantic search on node summaries                           │
-│  2. BM25 keyword search                                         │
-│  3. Graph traversal from matched nodes                          │
-│  4. Temporal filtering (valid_at = now)                         │
-│  5. Combine and rank                                            │
-│                                                                 │
-│  Returns: Nodes + Edges + Facts                                 │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  RESULTS (Graph Structure)                                      │
-│                                                                 │
-│  Entities:                                                      │
-│    - Clerk (auth_provider)                                      │
-│    - JWT (auth_method)                                          │
-│    - Expo (framework)                                           │
-│                                                                 │
-│  Facts (Edges):                                                 │
-│    - Clerk --[preferred_for]--> Expo auth                       │
-│    - JWT --[has_issue]--> token refresh                         │
-│    - Clerk --[recommended_over]--> JWT                          │
-│                                                                 │
-│  Temporal:                                                      │
-│    - JWT preference: invalid_from Feb 2                         │
-│    - Clerk preference: valid_from Feb 2                         │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-**Code**:
-```python
-from graphiti_core import Graphiti
-
-g = Graphiti(...)
-
-# Search for relevant facts
-facts = await g.search(
-    query="How should I handle auth in Expo?",
-    num_results=10
-)
-
-# Search with temporal filter
-facts = await g.search(
-    query="auth expo",
-    num_results=10,
-    # Only facts valid now (not invalidated)
-)
-
-# Get specific entity and relationships
-entity = await g.get_entity("Clerk")
-relationships = await g.get_entity_edges("Clerk")
-
-# Temporal query: "What did we think about auth before Feb 2?"
-historical = await g.search(
-    query="auth expo",
-    reference_time=datetime(2026, 2, 1)  # Before the JWT->Clerk switch
-)
-```
-
-**Pros**:
-- Structured relationships
-- Temporal queries native
-- Can traverse graph for related knowledge
-- History preserved
-
-**Cons**:
-- More complex API
-- Requires understanding graph model
-- Results need more processing
-
----
-
-### Extraction for Task Execution
-
-**Mem0 approach**:
-```python
-async def get_context_for_task(task: str, technology: str) -> str:
-    # Multiple searches, combine results
-    tech_facts = m.search(f"{technology} best practices", limit=5)
-    task_procedures = m.search(f"how to {task}", limit=5)
-    constraints = m.search(f"{technology} avoid never don't", limit=3)
-
-    # Manual assembly
-    context = "## Relevant Knowledge\n\n"
-    context += "### Best Practices\n"
-    for f in tech_facts:
-        context += f"- {f['memory']}\n"
-    # ... etc
-
-    return context
-```
-
-**Graphiti approach**:
-```python
-async def get_context_for_task(task: str, technology: str) -> str:
-    # Single search with graph expansion
-    results = await g.search(f"{task} {technology}", num_results=10)
-
-    # Get related entities automatically via graph
-    entities = set()
-    for fact in results:
-        entities.add(fact.source_entity)
-        entities.add(fact.target_entity)
-
-    # Get constraints (edges with negative sentiment)
-    constraints = [f for f in results if f.relationship in ["avoid", "never_use", "has_issue"]]
-
-    # Temporal: only current knowledge
-    current = [f for f in results if f.valid_at is None or f.valid_at <= now]
-
-    # Assembly with structure preserved
-    context = format_knowledge_graph(current, constraints)
-    return context
-```
-
----
-
-## Requirements Summary
-
-### Functional Requirements
-
-| ID | Requirement | Priority | Mem0 | Graphiti | Self-Build |
-|----|-------------|----------|------|----------|------------|
-| F1 | Store episodic memories (what happened, when) | High | ⚠️ Timestamps only | ✅ Native | ✅ Full control |
-| F2 | Store semantic memories (facts, concepts) | High | ✅ Native | ✅ Native | ✅ Full control |
-| F3 | Store procedural memories (trigger → action) | High | ⚠️ As text | ⚠️ Custom entity | ✅ Full control |
-| F4 | Query by semantic similarity | High | ✅ Native | ✅ Native | ⚠️ Use Qdrant |
-| F5 | Query by relationships (what's related to X) | Medium | ⚠️ Mem0g | ✅ Native | ⚠️ Use graph DB |
-| F6 | Temporal queries (what was true when) | Medium | ❌ Manual | ✅ Native | ⚠️ Build yourself |
-| F7 | Invalidate outdated knowledge | Medium | ⚠️ DELETE/UPDATE | ✅ Native | ⚠️ Build yourself |
-| F8 | Track knowledge provenance (where learned) | Medium | ⚠️ Metadata | ✅ Episode links | ✅ Full control |
-| F9 | Export/import persona | High | ⚠️ API dump | ⚠️ API dump | ✅ Full control |
-| F10 | Cross-agent knowledge sharing | High | ✅ Shared user_id | ✅ Shared graph | ✅ Full control |
-
-### Non-Functional Requirements
-
-| ID | Requirement | Priority | Mem0 | Graphiti | Self-Build |
-|----|-------------|----------|------|----------|------------|
-| N1 | View/edit UI for knowledge management | High | ✅ OpenMemory | ❌ Need Neo4j/custom | ❌ Build yourself |
-| N2 | TypeScript native | Medium | ⚠️ REST API | ⚠️ REST API | ✅ Native |
-| N3 | Local-first (no cloud dependency) | High | ✅ Self-hosted | ✅ Self-hosted | ✅ Self-hosted |
-| N4 | No JVM | Low | ✅ Python | ✅ FalkorDB option | ✅ Your choice |
-| N5 | Low latency retrieval (<500ms) | High | ✅ ~100ms | ✅ ~300ms p95 | Depends |
-| N6 | Ecosystem/community support | Medium | ✅ Large ($24M) | ⚠️ Smaller ($2M) | ❌ None |
-| N7 | Future-proof (won't be abandoned) | Medium | ✅ AWS partnership | ⚠️ YC backed | ✅ You own it |
-
----
-
-## Architecture Options
-
-### Option A: Mem0 (Simpler, Larger Ecosystem)
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  GALATEA                                                        │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  Memory Abstraction Layer                                │   │
-│  │  (Wraps Mem0, adds procedural memory logic)             │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                              │                                  │
-│                              ▼                                  │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  Mem0 (with Mem0g graph mode)                           │   │
-│  │  ├── Vector store: Qdrant                               │   │
-│  │  ├── Graph store: Neo4j (optional)                      │   │
-│  │  └── LLM: Claude for extraction                         │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                              │                                  │
-│                              ▼                                  │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  OpenMemory Dashboard                                    │   │
-│  │  View, edit, delete memories                            │   │
-│  └─────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-
-Pros:
-+ Simpler mental model (facts with metadata)
-+ Better dashboard/UX out of the box
-+ Larger ecosystem, AWS backing
-+ Faster to implement
-
-Cons:
-- No native temporal reasoning
-- Procedural memory is awkward
-- Less structured relationships
-- May need to add temporal layer later
-```
-
-### Option B: Graphiti + FalkorDB (More Powerful, Smaller Ecosystem)
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  GALATEA                                                        │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  Memory Abstraction Layer                                │   │
-│  │  (Adds procedural memory, UI layer)                     │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                              │                                  │
-│                              ▼                                  │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  Graphiti                                                │   │
-│  │  ├── Graph store: FalkorDB (Redis-based, no JVM)        │   │
-│  │  ├── Embeddings: Voyage AI                              │   │
-│  │  ├── LLM: Claude for extraction                         │   │
-│  │  └── Temporal model: bi-temporal                        │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                              │                                  │
-│                              ▼                                  │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  Custom Dashboard (or FalkorDB Insight)                 │   │
-│  │  Graph visualization, CRUD operations                    │   │
-│  └─────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-
-Pros:
-+ Native temporal reasoning
-+ Structured relationships
-+ Better for multi-agent patterns
-+ FalkorDB: 500x faster than Neo4j, no JVM
-
-Cons:
-- Smaller ecosystem
-- Need to build/adopt dashboard
-- More complex mental model
-- Custom procedural layer still needed
-```
-
-### Option C: Hybrid (Mem0 + Graphiti)
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  GALATEA                                                        │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  Memory Router                                           │   │
-│  │  Routes queries to appropriate store                     │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                    │                    │                       │
-│                    ▼                    ▼                       │
-│  ┌────────────────────────┐  ┌────────────────────────────┐   │
-│  │  Mem0                  │  │  Graphiti                  │   │
-│  │  Simple facts, rules   │  │  Temporal, relationships   │   │
-│  │  "Never use Realm"     │  │  "JWT→Clerk on Feb 2"      │   │
-│  └────────────────────────┘  └────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-
-Pros:
-+ Best of both worlds
-+ Use simple tool for simple things
-
-Cons:
-- Two systems to maintain
-- Complex routing logic
-- Potential inconsistencies
-```
-
-### Option D: Self-Build on Qdrant + FalkorDB
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  GALATEA                                                        │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  Custom Memory Layer (TypeScript)                        │   │
-│  │  ├── EpisodicMemory: Qdrant + timestamps                │   │
-│  │  ├── SemanticMemory: FalkorDB graph                     │   │
-│  │  ├── ProceduralMemory: Custom schema                    │   │
-│  │  └── WorkingMemory: In-memory with decay                │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                    │                    │                       │
-│                    ▼                    ▼                       │
-│  ┌────────────────────────┐  ┌────────────────────────────┐   │
-│  │  Qdrant               │  │  FalkorDB                   │   │
-│  │  Vector similarity    │  │  Graph + Cypher             │   │
-│  └────────────────────────┘  └────────────────────────────┘   │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  Custom Dashboard (React)                                │   │
-│  │  Full control over UX                                    │   │
-│  └─────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-
-Pros:
-+ Full control
-+ Exact fit to memory-systems.md
-+ TypeScript native
-+ No vendor lock-in
-
-Cons:
-- Most development effort
-- No community support
-- Must build everything
-```
-
----
-
-## Recommendation
-
-### Primary: Option B (Graphiti + FalkorDB)
-
-**Rationale**:
-
-1. **Temporal reasoning is critical** for the multi-agent scenario
-   - "When did we learn this?"
-   - "What changed?"
-   - "Is this still valid?"
-
-2. **FalkorDB solves the JVM concern**
-   - Redis-based, written in C
-   - 500x faster p99 than Neo4j
-   - Same Cypher query language
-
-3. **Custom procedural layer is needed regardless**
-   - Neither Mem0 nor Graphiti has native procedural memory
-   - Building on Graphiti's entity system is cleaner
-
-4. **Dashboard can be solved**
-   - FalkorDB has Insight UI
-   - Cypher queries are acceptable
-   - Can build custom UI incrementally
-
-5. **Ecosystem risk is manageable**
-   - Graphiti is open source, can fork
-   - FalkorDB is established (Redis ecosystem)
-   - Zep is YC-backed, growing
-
-### Fallback: Option A (Mem0) if:
-- Temporal reasoning proves less critical than expected
-- Dashboard UX becomes blocking issue
-- Mem0 adds temporal features
-
-### Migration Path
-
-```
-Week 1-2: Implement Graphiti + FalkorDB
-Week 3: Add custom procedural memory layer
-Week 4: Build basic management UI (or adopt FalkorDB Insight)
-Ongoing: Monitor if temporal reasoning is actually used
-If not: Consider simplifying to Mem0
-```
-
----
-
-## Implementation Sketch
-
-### Memory Abstraction Interface
+### Node Types
 
 ```typescript
-// src/lib/memory/types.ts
+type NodeType =
+  // Core memory types
+  | 'episodic'              // What happened (events with timestamps)
+  | 'observation'           // Pattern noticed from episodes
+  | 'semantic:fact'         // Declarative knowledge
+  | 'semantic:preference'   // User/team preferences
+  | 'semantic:policy'       // Company/team policies
+  | 'semantic:hard_rule'    // Absolute prohibitions (guaranteed injection)
+  | 'semantic:reference'    // External knowledge (articles, docs)
+  | 'procedural'            // Trigger → steps (how-to knowledge)
 
-interface Memory {
+  // Cognitive models
+  | 'model:self'            // Agent's model of itself
+  | 'model:user'            // Agent's model of users
+  | 'model:relationship'    // Agent's model of team dynamics
+  | 'model:domain'          // Domain-specific knowledge structures
+
+  // Entities (extracted from content)
+  | 'entity:person'         // People mentioned
+  | 'entity:technology'     // Technologies, tools, frameworks
+  | 'entity:practice'       // Practices, patterns, approaches
+```
+
+### Edge Types
+
+```typescript
+type EdgeType =
+  // Provenance edges
+  | 'CONTRIBUTED_TO'        // Episode → Observation/Fact
+  | 'PROMOTED_TO'           // Lower level → Higher level
+  | 'SUPERSEDES'            // New → Old (temporal invalidation)
+  | 'PROVES'                // Evidence supporting a fact
+  | 'CONTRADICTS'           // Evidence against a fact
+
+  // Structural edges
+  | 'CONTAINS'              // Parent → Child
+  | 'HAS_RULE'              // Domain → Rule
+  | 'HAS_PREFERENCE'        // User → Preference
+  | 'HAS_PROCEDURE'         // Practice → Procedure
+
+  // Relationship edges
+  | 'PREFERS'               // User → Technology
+  | 'USES'                  // Project → Technology
+  | 'EXPECTS'               // User → Practice
+  | 'DOCUMENTED_AT'         // Fact → Reference
+
+  // Self-model edges
+  | 'HAS_STRENGTH'          // Self → Capability
+  | 'HAS_WEAKNESS'          // Self → Limitation
+  | 'MISSED'                // Self → Pattern (mistakes)
+  | 'APPLIED'               // Self → Procedure (usage tracking)
+  | 'REVIEWED'              // Agent → Agent (cross-agent)
+```
+
+### Node Schema
+
+```typescript
+interface MemoryNode {
+  // Core identifiers
   id: string;
-  type: "episodic" | "semantic" | "procedural";
+  type: NodeType;
+
+  // Content
   content: string;
-  metadata: MemoryMetadata;
-  temporal: TemporalInfo;
-}
+  summary: string;           // For search/display
+  embedding: number[];       // For semantic search
 
-interface TemporalInfo {
-  createdAt: Date;
-  validFrom?: Date;
-  validUntil?: Date;  // null = still valid
-  supersededBy?: string;  // ID of newer memory
-}
+  // Temporal (bi-temporal model)
+  created_at: Date;          // When node was created
+  valid_from: Date;          // When knowledge became true
+  valid_until: Date | null;  // When knowledge stopped being true (null = current)
 
-interface MemoryMetadata {
-  source: "observation" | "manual" | "article" | "feedback";
-  confidence: number;
+  // Confidence and provenance
+  confidence: number;        // 0-1
+  source: 'observation' | 'manual' | 'external' | 'inference' | 'cross_agent';
+  source_episode_ids: string[];  // Trace back to episodes
+
+  // Classification
+  domain?: string;           // mobile, auth, ui, etc.
+  technology?: string[];     // expo, clerk, nativewind
   tags: string[];
-  domain?: string;
-  technology?: string;
+
+  // Usage tracking (for procedural)
+  times_used?: number;
+  success_rate?: number;
+  last_used?: Date;
+
+  // Agent scope
+  agent_id?: string;         // null = shared
+  promoted_to_shared?: boolean;
 }
+```
 
-interface ProceduralMemory extends Memory {
-  type: "procedural";
-  trigger: string;
-  steps: string[];
-  successRate: number;
-  lastUsed?: Date;
-}
+### Edge Schema
 
-interface MemoryStore {
-  // Write
-  addMemory(memory: Omit<Memory, "id">): Promise<string>;
-  addEpisode(content: string, metadata: EpisodeMetadata): Promise<void>;
+```typescript
+interface MemoryEdge {
+  id: string;
+  type: EdgeType;
 
-  // Read
-  search(query: string, options?: SearchOptions): Promise<Memory[]>;
-  searchProcedures(trigger: string): Promise<ProceduralMemory[]>;
-  getMemory(id: string): Promise<Memory | null>;
+  source_id: string;
+  target_id: string;
 
   // Temporal
-  getHistoryOf(entityOrTopic: string): Promise<Memory[]>;
-  getValidAt(query: string, timestamp: Date): Promise<Memory[]>;
+  created_at: Date;
+  valid_from: Date;
+  valid_until: Date | null;
 
-  // Update
-  updateMemory(id: string, updates: Partial<Memory>): Promise<void>;
-  invalidateMemory(id: string, reason: string): Promise<void>;
+  // Metadata
+  weight: number;            // Relationship strength
+  confidence: number;
+  evidence_count: number;    // How many times observed
 
-  // Delete
-  deleteMemory(id: string): Promise<void>;
+  // For PROMOTED_TO edges
+  promotion_reason?: string;
+  promotion_threshold?: number;
 }
 ```
 
-### Graphiti Implementation
+---
+
+## Memory Levels and Promotion
+
+### Promotion Hierarchy
+
+```
+episode → observation → fact → rule → procedure → shared
+   │           │          │       │        │          │
+   │           │          │       │        │          └─ Cross-agent pattern
+   │           │          │       │        └─ Trigger → steps
+   │           │          │       └─ Strong fact (high confidence)
+   │           │          └─ Extracted knowledge
+   │           └─ Pattern noticed
+   └─ Raw event
+```
+
+### Promotion Rules
 
 ```typescript
-// src/lib/memory/graphiti-store.ts
+interface PromotionRule {
+  from: MemoryLevel;
+  to: MemoryLevel;
+  threshold: number;
+  conditions: PromotionCondition[];
+}
 
-import { Graphiti } from "graphiti-core";  // via REST API wrapper
-
-export class GraphitiMemoryStore implements MemoryStore {
-  private client: Graphiti;
-
-  constructor(config: GraphitiConfig) {
-    this.client = new Graphiti({
-      graphDriver: "falkordb",
-      falkordbUrl: config.falkordbUrl,
-      embeddingModel: "voyage-ai",
-      llmModel: "claude-sonnet"
-    });
+const promotionRules: PromotionRule[] = [
+  {
+    from: 'episode',
+    to: 'observation',
+    threshold: 2,  // 2 similar episodes
+    conditions: [
+      { type: 'similarity', threshold: 0.85 },
+      { type: 'time_span', min: '1h' }  // Not just repetition
+    ]
+  },
+  {
+    from: 'observation',
+    to: 'fact',
+    threshold: 3,  // 3 supporting observations
+    conditions: [
+      { type: 'no_contradictions' },
+      { type: 'confidence_min', value: 0.7 }
+    ]
+  },
+  {
+    from: 'fact',
+    to: 'rule',
+    threshold: 0.9,  // Confidence threshold
+    conditions: [
+      { type: 'consequence_severity', min: 'medium' }
+    ]
+  },
+  {
+    from: 'rule',
+    to: 'procedure',
+    threshold: 2,  // 2 successful applications
+    conditions: [
+      { type: 'has_trigger_pattern' },
+      { type: 'has_concrete_steps' }
+    ]
+  },
+  {
+    from: 'observation',  // Self-observation
+    to: 'shared',
+    threshold: 3,  // 3 agents with same pattern
+    conditions: [
+      { type: 'cross_agent_occurrence', min: 3 },
+      { type: 'time_span', min: '24h' }
+    ]
   }
+];
+```
 
-  async addMemory(memory: Omit<Memory, "id">): Promise<string> {
-    // Convert to Graphiti episode
-    const result = await this.client.addEpisode({
-      name: memory.metadata.source,
-      episodeBody: this.formatMemoryAsEpisode(memory),
-      sourceDescription: memory.metadata.source,
-      referenceTime: memory.temporal.createdAt
-    });
-    return result.episodeId;
-  }
+### Circular Promotion Prevention
 
-  async search(query: string, options?: SearchOptions): Promise<Memory[]> {
-    const facts = await this.client.search({
-      query,
-      numResults: options?.limit ?? 10,
-      // Temporal filter: only valid facts
-    });
+```typescript
+interface PromotionCheck {
+  source_tag: string[];  // Track where evidence came from
+  self_reinforcement_discount: 0.5;  // 50% weight reduction
+}
 
-    return facts.map(this.factToMemory);
-  }
+function canPromote(evidence: Evidence[], target: MemoryNode): boolean {
+  // Filter out evidence that came from the target itself
+  const externalEvidence = evidence.filter(e =>
+    !e.source_tag.includes(target.id)
+  );
 
-  async getHistoryOf(topic: string): Promise<Memory[]> {
-    // Graphiti native: get all versions of facts about topic
-    const facts = await this.client.getEntityHistory(topic);
-    return facts.map(this.factToMemory);
-  }
+  // Apply discount to self-derived evidence
+  const selfEvidence = evidence.filter(e =>
+    e.source_tag.includes(target.id)
+  );
 
-  async invalidateMemory(id: string, reason: string): Promise<void> {
-    // Graphiti native: mark edge as invalid, preserve history
-    await this.client.invalidateEdge(id, {
-      reason,
-      invalidatedAt: new Date()
-    });
-  }
+  const effectiveCount =
+    externalEvidence.length +
+    (selfEvidence.length * 0.5);  // 50% discount
+
+  return effectiveCount >= promotionThreshold;
 }
 ```
 
 ---
 
-## Open Questions
+## Memory Processes
 
-1. **Procedural memory schema**: How exactly to model trigger/steps/success in Graphiti?
-2. **Dashboard priority**: Build custom vs adopt FalkorDB Insight?
-3. **Multi-agent memory isolation**: Shared graph with user_id filtering, or separate graphs?
-4. **Export format**: What's in a portable persona file?
+### 1. Ingestion Pipeline
+
+```
+Raw Event (from Observation Pipeline)
+    │
+    ▼
+┌─────────────────────────────────────────────────────┐
+│  Memory Gatekeeper                                   │
+│  Q: "Is this team/company specific?"                │
+│                                                      │
+│  Filter out:                                         │
+│  - General programming knowledge                     │
+│  - Public API documentation                          │
+│  - Common patterns LLM already knows                 │
+│                                                      │
+│  Keep:                                               │
+│  - Team preferences ("we use Clerk")                 │
+│  - Company policies ("never push to main")          │
+│  - Project specifics ("user table has email col")   │
+│  - Personal patterns ("I miss null checks")         │
+└─────────────────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────────────────┐
+│  Memory Router                                       │
+│  Classify by category                                │
+│                                                      │
+│  → episodic: "What happened"                        │
+│  → semantic:fact: "X is Y"                          │
+│  → semantic:preference: "We prefer X"               │
+│  → semantic:policy: "Always/Never X"                │
+│  → semantic:hard_rule: "BLOCK: Never X"             │
+│  → procedural: "When X, do Y"                       │
+│  → model:self: "I tend to X"                        │
+│  → model:user: "User expects X"                     │
+└─────────────────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────────────────┐
+│  Graphiti Entity/Relationship Extraction             │
+│  (Built-in LLM extraction)                          │
+│                                                      │
+│  Extract:                                            │
+│  - Entities (people, technologies, practices)       │
+│  - Relationships (prefers, uses, conflicts_with)    │
+│  - Temporal markers (valid_from, valid_until)       │
+└─────────────────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────────────────┐
+│  Deduplication / Merge                               │
+│                                                      │
+│  If similar node exists (similarity > 0.9):         │
+│  - Merge content                                     │
+│  - Update confidence                                 │
+│  - Add provenance edge                               │
+│                                                      │
+│  If conflicting node exists:                         │
+│  - Check scope (agent vs shared)                    │
+│  - Use recency + confidence                         │
+│  - Flag for user if unclear                         │
+└─────────────────────────────────────────────────────┘
+    │
+    ▼
+[Stored in Graphiti/FalkorDB]
+```
+
+### 2. Consolidation (Background Process)
+
+```typescript
+async function consolidateMemory(): Promise<void> {
+  // Run periodically (e.g., end of session, daily)
+
+  // 1. Find promotion candidates
+  const candidates = await findPromotionCandidates();
+
+  for (const candidate of candidates) {
+    // 2. Check promotion rules
+    if (await shouldPromote(candidate)) {
+      // 3. Create promoted node
+      const promoted = await createPromotedNode(candidate);
+
+      // 4. Create PROMOTED_TO edge (preserves provenance)
+      await createEdge({
+        type: 'PROMOTED_TO',
+        source: candidate.sourceNodes.map(n => n.id),
+        target: promoted.id,
+        reason: candidate.promotionReason
+      });
+
+      // 5. Don't delete source nodes - preserve history
+    }
+  }
+
+  // 6. Decay unused memories (reduce confidence, don't delete)
+  await decayUnusedMemories();
+}
+```
+
+### 3. Invalidation (Non-Lossy)
+
+```typescript
+async function invalidateMemory(
+  nodeId: string,
+  reason: string,
+  supersededBy?: string
+): Promise<void> {
+  // NEVER delete - always supersede
+
+  const node = await getNode(nodeId);
+
+  // Mark as no longer valid
+  await updateNode(nodeId, {
+    valid_until: new Date()
+  });
+
+  // Create supersession edge if applicable
+  if (supersededBy) {
+    await createEdge({
+      type: 'SUPERSEDES',
+      source: supersededBy,
+      target: nodeId,
+      metadata: { reason }
+    });
+  }
+
+  // Log for provenance
+  await logInvalidation(nodeId, reason);
+}
+
+// Example: NativeWind fix released
+await invalidateMemory(
+  'nativewind-flicker-workaround',
+  'Fixed in NativeWind 4.1',
+  'nativewind-4.1-release-note'
+);
+```
+
+### 4. Context Assembly (Query Time)
+
+```typescript
+async function assembleContext(
+  task: string,
+  agent: Agent
+): Promise<AssembledContext> {
+  // Layer 1: GUARANTEED - Hard rules (always included)
+  const hardRules = await getHardRules(agent.domain);
+
+  // Layer 2: SEMANTIC SEARCH - Relevant knowledge
+  const relevantFacts = await graphiti.search({
+    query: task,
+    numResults: 20,
+    // Only currently valid
+    validAt: new Date()
+  });
+
+  // Layer 3: PROCEDURE MATCHING - Applicable how-tos
+  const procedures = await matchProcedures(task);
+
+  // Layer 4: MODELS - Self/user/relationship context
+  const selfModel = await getSelfModel(agent.id);
+  const userModel = await getUserModel(agent.currentUser);
+
+  // Assemble with priorities
+  return {
+    hardRules,      // Always first, never truncated
+    procedures,     // Relevant how-tos
+    facts: dedupe(relevantFacts),
+    selfContext: summarize(selfModel),
+    userContext: summarize(userModel),
+
+    // Metadata for homeostasis
+    knowledgeSufficiency: assessCoverage(relevantFacts, task)
+  };
+}
+```
+
+### 5. Pruning (Archival, Not Deletion)
+
+```typescript
+interface PruningPolicy {
+  archiveAfter: Duration;      // Move to cold storage
+  conditions: {
+    unusedFor: Duration;       // No retrievals
+    confidenceBelow: number;   // Decayed confidence
+    supersededBy: boolean;     // Has replacement
+  };
+}
+
+async function pruneMemory(): Promise<void> {
+  const archiveCandidates = await findArchiveCandidates({
+    unusedFor: '90d',
+    confidenceBelow: 0.3,
+    supersededBy: true
+  });
+
+  for (const node of archiveCandidates) {
+    // Move to archive graph (separate FalkorDB instance)
+    await archiveNode(node);
+
+    // Keep stub in main graph for provenance
+    await replaceWithStub(node.id, {
+      archivedAt: new Date(),
+      archiveLocation: 'cold-storage'
+    });
+  }
+}
+```
+
+### 6. Export/Import (Persona Portability)
+
+```typescript
+interface PersonaExport {
+  version: '1.0';
+  exportedAt: Date;
+
+  // What gets exported
+  semanticMemory: SemanticNode[];     // Facts, preferences, policies
+  proceduralMemory: ProceduralNode[]; // How-tos
+  domainModel: DomainNode[];          // Domain knowledge
+
+  // What gets EXCLUDED (privacy)
+  // - Raw episodic memories
+  // - User-specific models
+  // - Relationship models
+  // - Agent-specific self-observations (unless elevated to shared)
+
+  // Metadata
+  domain: string;
+  sourceAgentType: string;
+  learningPeriod: { start: Date; end: Date };
+}
+
+async function exportPersona(agentId: string): Promise<PersonaExport> {
+  // Get shared + elevated knowledge only
+  const semantic = await getExportableSemanticMemory(agentId);
+  const procedural = await getExportableProceduralMemory(agentId);
+  const domain = await getDomainModel(agentId);
+
+  return {
+    version: '1.0',
+    exportedAt: new Date(),
+    semanticMemory: anonymize(semantic),
+    proceduralMemory: procedural,
+    domainModel: domain,
+    domain: 'mobile-development',
+    sourceAgentType: 'shadow-learning',
+    learningPeriod: await getLearningPeriod(agentId)
+  };
+}
+
+async function importPersona(
+  persona: PersonaExport,
+  targetAgentId: string
+): Promise<void> {
+  // Create new nodes in target agent's graph
+  for (const node of persona.semanticMemory) {
+    await createNode({
+      ...node,
+      id: generateNewId(),
+      source: 'imported',
+      imported_from: persona.sourceAgentType,
+      imported_at: new Date()
+    });
+  }
+
+  // Mark as imported (for provenance tracking)
+  await recordImport(targetAgentId, persona);
+}
+```
 
 ---
 
-## Next Steps
+## Request Handling: End-to-End Flow
 
-1. **Decision**: Confirm Option B (Graphiti + FalkorDB)
-2. **Spike**: Set up FalkorDB locally, test Graphiti basic operations
-3. **Design**: Procedural memory schema as custom Graphiti entities
-4. **Implement**: Memory abstraction layer
-5. **Iterate**: Build dashboard as needed
+This section traces how a typical request flows through the memory system, from task receipt to final prompt construction.
+
+### Overview: The Request Pipeline
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  1. TASK RECEIVED                                                        │
+│     "Add user profile screen with avatar upload"                        │
+└────────────────────────────────┬────────────────────────────────────────┘
+                                 │
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  2. QUERY FORMULATION                                                    │
+│     Task → Multiple search queries (parallel)                           │
+└────────────────────────────────┬────────────────────────────────────────┘
+                                 │
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  3. MEMORY RETRIEVAL (Parallel Queries)                                  │
+│     ├── Hard Rules Query (guaranteed)                                   │
+│     ├── Semantic Search (task relevance)                                │
+│     ├── Procedure Match (trigger patterns)                              │
+│     ├── Self Model Query (agent context)                                │
+│     └── User Model Query (preferences)                                  │
+└────────────────────────────────┬────────────────────────────────────────┘
+                                 │
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  4. RANKING & SELECTION                                                  │
+│     Score, deduplicate, budget allocation                               │
+└────────────────────────────────┬────────────────────────────────────────┘
+                                 │
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  5. PROMPT CONSTRUCTION                                                  │
+│     Assemble sections with priorities                                   │
+└────────────────────────────────┬────────────────────────────────────────┘
+                                 │
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  6. HOMEOSTASIS ASSESSMENT                                               │
+│     Evaluate knowledge_sufficiency for the task                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Step 1: Task Received
+
+```typescript
+interface IncomingTask {
+  content: string;           // "Add user profile screen with avatar upload"
+  source: 'pm' | 'user' | 'self' | 'system';
+  context?: {
+    project?: string;        // "mobile-app"
+    technology?: string[];   // ["expo", "react-native"]
+    urgency?: 'low' | 'normal' | 'high';
+  };
+  conversation_history?: Message[];  // Recent messages if any
+}
+```
+
+### Step 2: Query Formulation
+
+The task is decomposed into multiple search queries to maximize retrieval coverage.
+
+```typescript
+async function formulateQueries(task: IncomingTask): Promise<SearchQueries> {
+  // Extract key concepts from task
+  const concepts = await extractConcepts(task.content);
+  // → ["user profile", "screen", "avatar", "upload", "image"]
+
+  // Identify technologies mentioned or implied
+  const technologies = task.context?.technology ?? await inferTechnologies(task.content);
+  // → ["expo", "react-native", "expo-image-picker"]
+
+  // Generate query variants
+  return {
+    // Primary: direct task match
+    primary: task.content,
+
+    // Concept queries: individual topics
+    concepts: concepts.map(c => ({
+      query: c,
+      weight: conceptImportance(c, task.content)
+    })),
+    // → [{query: "avatar upload", weight: 0.9}, {query: "user profile screen", weight: 0.8}]
+
+    // Technology queries: tech-specific knowledge
+    technology: technologies.map(t => `${t} best practices`),
+    // → ["expo best practices", "expo-image-picker usage"]
+
+    // Constraint query: what NOT to do
+    constraints: `${technologies.join(' ')} avoid never don't warning`,
+
+    // Procedure triggers: how-to patterns
+    procedureTriggers: [
+      "creating screen",
+      "image upload",
+      "avatar",
+      "file upload expo"
+    ]
+  };
+}
+```
+
+### Step 3: Memory Retrieval (Parallel Queries)
+
+All queries execute in parallel for performance.
+
+```typescript
+async function retrieveMemories(
+  queries: SearchQueries,
+  agent: Agent
+): Promise<RetrievedMemories> {
+  // Execute all queries in parallel
+  const [
+    hardRules,
+    semanticResults,
+    procedureResults,
+    selfModel,
+    userModel,
+    recentEpisodes
+  ] = await Promise.all([
+    // 3a. Hard Rules - ALWAYS retrieved, no similarity threshold
+    queryHardRules(agent.domain),
+
+    // 3b. Semantic Search - relevance-based
+    querySemanticMemory(queries),
+
+    // 3c. Procedure Match - trigger-based
+    queryProcedures(queries.procedureTriggers),
+
+    // 3d. Self Model - agent's self-knowledge
+    querySelfModel(agent.id),
+
+    // 3e. User Model - current user's preferences
+    queryUserModel(agent.currentUserId),
+
+    // 3f. Recent Episodes - short-term context
+    queryRecentEpisodes(agent.id, { limit: 5, hours: 24 })
+  ]);
+
+  return {
+    hardRules,
+    semanticResults,
+    procedureResults,
+    selfModel,
+    userModel,
+    recentEpisodes
+  };
+}
+```
+
+#### 3a. Hard Rules Query (Guaranteed Injection)
+
+```typescript
+async function queryHardRules(domain: string): Promise<HardRule[]> {
+  // Cypher: Get ALL hard rules for domain (no similarity threshold)
+  const query = `
+    MATCH (r:semantic_hard_rule)
+    WHERE r.valid_until IS NULL
+      AND (r.domain = $domain OR r.domain IS NULL)
+    RETURN r.content, r.severity, r.reason
+    ORDER BY r.severity DESC
+  `;
+
+  return await falkordb.query(query, { domain });
+  // Returns:
+  // [
+  //   { content: "Never use Realm database", severity: "block", reason: "Sync issues" },
+  //   { content: "Never push directly to main", severity: "block", reason: "Policy" },
+  //   { content: "Always use TypeScript strict mode", severity: "warn", reason: "Code quality" }
+  // ]
+}
+```
+
+#### 3b. Semantic Search (Relevance-Based)
+
+```typescript
+async function querySemanticMemory(queries: SearchQueries): Promise<SemanticResult[]> {
+  const results: SemanticResult[] = [];
+
+  // Primary query with Graphiti hybrid search
+  const primaryResults = await graphiti.search({
+    query: queries.primary,
+    numResults: 15,
+    // Only currently valid facts
+    // Graphiti filters by valid_until IS NULL internally
+  });
+  results.push(...primaryResults.map(r => ({ ...r, source: 'primary' })));
+
+  // Concept queries (weighted)
+  for (const concept of queries.concepts) {
+    const conceptResults = await graphiti.search({
+      query: concept.query,
+      numResults: 5
+    });
+    results.push(...conceptResults.map(r => ({
+      ...r,
+      source: 'concept',
+      weight: r.score * concept.weight
+    })));
+  }
+
+  // Technology queries
+  for (const techQuery of queries.technology) {
+    const techResults = await graphiti.search({
+      query: techQuery,
+      numResults: 5
+    });
+    results.push(...techResults.map(r => ({ ...r, source: 'technology' })));
+  }
+
+  // Constraint query (negative knowledge)
+  const constraintResults = await graphiti.search({
+    query: queries.constraints,
+    numResults: 10
+  });
+  results.push(...constraintResults.map(r => ({ ...r, source: 'constraint' })));
+
+  return results;
+}
+```
+
+#### 3c. Procedure Match (Trigger-Based)
+
+```typescript
+async function queryProcedures(triggers: string[]): Promise<Procedure[]> {
+  const procedures: Procedure[] = [];
+
+  for (const trigger of triggers) {
+    // Semantic match on trigger field
+    const matches = await graphiti.search({
+      query: trigger,
+      nodeTypes: ['procedural'],
+      numResults: 3
+    });
+
+    // Also try exact pattern match
+    const exactMatches = await falkordb.query(`
+      MATCH (p:procedural)
+      WHERE p.valid_until IS NULL
+        AND p.trigger CONTAINS $pattern
+      RETURN p
+      ORDER BY p.success_rate DESC
+      LIMIT 3
+    `, { pattern: trigger });
+
+    procedures.push(...matches, ...exactMatches);
+  }
+
+  // Deduplicate by ID
+  return deduplicateById(procedures);
+}
+```
+
+#### 3d. Self Model Query
+
+```typescript
+async function querySelfModel(agentId: string): Promise<SelfModel> {
+  // Get agent's self-knowledge
+  const query = `
+    MATCH (s:model_self {agent_id: $agentId})
+    OPTIONAL MATCH (s)-[:HAS_STRENGTH]->(str)
+    OPTIONAL MATCH (s)-[:HAS_WEAKNESS]->(weak)
+    OPTIONAL MATCH (s)-[:MISSED]->(miss)
+    WHERE str.valid_until IS NULL
+      AND weak.valid_until IS NULL
+      AND miss.valid_until IS NULL
+    RETURN s,
+           collect(DISTINCT str) as strengths,
+           collect(DISTINCT weak) as weaknesses,
+           collect(DISTINCT miss) as recentMisses
+  `;
+
+  const result = await falkordb.query(query, { agentId });
+
+  return {
+    strengths: result.strengths,
+    // → ["Good at React Native styling", "Thorough testing"]
+    weaknesses: result.weaknesses,
+    // → ["Sometimes misses null checks", "Tends to over-engineer"]
+    recentMisses: result.recentMisses.slice(0, 3),
+    // → ["Forgot error boundary in last PR"]
+    confidence: result.s.overall_confidence
+  };
+}
+```
+
+#### 3e. User Model Query
+
+```typescript
+async function queryUserModel(userId: string): Promise<UserModel> {
+  const query = `
+    MATCH (u:model_user {user_id: $userId})
+    OPTIONAL MATCH (u)-[:PREFERS]->(pref)
+    OPTIONAL MATCH (u)-[:EXPECTS]->(exp)
+    WHERE pref.valid_until IS NULL
+      AND exp.valid_until IS NULL
+    RETURN u,
+           collect(DISTINCT pref) as preferences,
+           collect(DISTINCT exp) as expectations
+  `;
+
+  const result = await falkordb.query(query, { userId });
+
+  return {
+    preferences: result.preferences,
+    // → ["Prefers functional components", "Likes detailed PR descriptions"]
+    expectations: result.expectations,
+    // → ["Expects tests for new features", "Wants progress updates every 2 hours"]
+    communicationStyle: result.u.communication_style
+    // → "concise"
+  };
+}
+```
+
+### Step 4: Ranking & Selection
+
+Combine all results, score, deduplicate, and fit within context budget.
+
+```typescript
+interface ContextBudget {
+  total: number;           // 8000 tokens typical
+  hardRules: number;       // 500 reserved (never truncated)
+  procedures: number;      // 1500 max
+  facts: number;           // 4000 max
+  models: number;          // 1000 max
+  episodes: number;        // 1000 max
+}
+
+async function rankAndSelect(
+  retrieved: RetrievedMemories,
+  budget: ContextBudget
+): Promise<SelectedMemories> {
+  // 1. Hard rules: ALL included (guaranteed)
+  const hardRules = retrieved.hardRules;
+  const hardRulesTokens = estimateTokens(hardRules);
+
+  // 2. Score and rank semantic results
+  const scoredFacts = retrieved.semanticResults.map(r => ({
+    ...r,
+    finalScore: calculateFinalScore(r)
+  }));
+
+  // Score formula:
+  // finalScore = similarity * 0.4 + recency * 0.2 + confidence * 0.3 + source_boost * 0.1
+  function calculateFinalScore(result: SemanticResult): number {
+    const similarity = result.score;
+    const recency = recencyScore(result.valid_from);  // Newer = higher
+    const confidence = result.confidence;
+    const sourceBoost = result.source === 'primary' ? 0.1 :
+                        result.source === 'constraint' ? 0.15 : 0;
+
+    return similarity * 0.4 + recency * 0.2 + confidence * 0.3 + sourceBoost;
+  }
+
+  // 3. Deduplicate (same content from multiple queries)
+  const deduped = deduplicateBySimilarity(scoredFacts, threshold: 0.9);
+
+  // 4. Sort by final score
+  const ranked = deduped.sort((a, b) => b.finalScore - a.finalScore);
+
+  // 5. Select within budget
+  const selectedFacts = selectWithinBudget(ranked, budget.facts);
+
+  // 6. Procedures: rank by relevance * success_rate
+  const rankedProcedures = retrieved.procedureResults
+    .map(p => ({ ...p, score: p.relevance * p.success_rate }))
+    .sort((a, b) => b.score - a.score);
+  const selectedProcedures = selectWithinBudget(rankedProcedures, budget.procedures);
+
+  // 7. Models: summarize to fit budget
+  const selfSummary = summarizeModel(retrieved.selfModel, budget.models / 2);
+  const userSummary = summarizeModel(retrieved.userModel, budget.models / 2);
+
+  return {
+    hardRules,
+    facts: selectedFacts,
+    procedures: selectedProcedures,
+    selfModel: selfSummary,
+    userModel: userSummary,
+    recentEpisodes: retrieved.recentEpisodes.slice(0, 3)
+  };
+}
+```
+
+### Step 5: Prompt Construction
+
+Assemble the final prompt with clear sections and priorities.
+
+```typescript
+async function constructPrompt(
+  task: IncomingTask,
+  selected: SelectedMemories,
+  agent: Agent
+): Promise<ConstructedPrompt> {
+  const sections: PromptSection[] = [];
+
+  // === SECTION 1: HARD RULES (Priority: CRITICAL - Never truncated) ===
+  if (selected.hardRules.length > 0) {
+    sections.push({
+      name: 'CONSTRAINTS',
+      priority: 1,  // Highest
+      content: formatHardRules(selected.hardRules),
+      truncatable: false
+    });
+  }
+
+  // === SECTION 2: RELEVANT PROCEDURES (Priority: HIGH) ===
+  if (selected.procedures.length > 0) {
+    sections.push({
+      name: 'RELEVANT_PROCEDURES',
+      priority: 2,
+      content: formatProcedures(selected.procedures),
+      truncatable: true
+    });
+  }
+
+  // === SECTION 3: KNOWLEDGE (Priority: MEDIUM) ===
+  if (selected.facts.length > 0) {
+    sections.push({
+      name: 'RELEVANT_KNOWLEDGE',
+      priority: 3,
+      content: formatFacts(selected.facts),
+      truncatable: true
+    });
+  }
+
+  // === SECTION 4: SELF-AWARENESS (Priority: MEDIUM) ===
+  if (selected.selfModel) {
+    sections.push({
+      name: 'SELF_AWARENESS',
+      priority: 4,
+      content: formatSelfModel(selected.selfModel),
+      truncatable: true
+    });
+  }
+
+  // === SECTION 5: USER CONTEXT (Priority: MEDIUM) ===
+  if (selected.userModel) {
+    sections.push({
+      name: 'USER_CONTEXT',
+      priority: 5,
+      content: formatUserModel(selected.userModel),
+      truncatable: true
+    });
+  }
+
+  // === SECTION 6: RECENT CONTEXT (Priority: LOW) ===
+  if (selected.recentEpisodes.length > 0) {
+    sections.push({
+      name: 'RECENT_CONTEXT',
+      priority: 6,
+      content: formatEpisodes(selected.recentEpisodes),
+      truncatable: true
+    });
+  }
+
+  return {
+    sections,
+    task: task.content,
+    metadata: {
+      totalTokens: estimateTotalTokens(sections),
+      retrievalStats: {
+        hardRulesCount: selected.hardRules.length,
+        factsRetrieved: selected.facts.length,
+        proceduresMatched: selected.procedures.length
+      }
+    }
+  };
+}
+```
+
+#### Prompt Template
+
+```typescript
+function formatPrompt(constructed: ConstructedPrompt): string {
+  return `
+## Task
+${constructed.task}
+
+${constructed.sections.find(s => s.name === 'CONSTRAINTS')?.content ? `
+## Constraints (MUST FOLLOW)
+${formatHardRules(constructed.hardRules)}
+` : ''}
+
+${constructed.sections.find(s => s.name === 'RELEVANT_PROCEDURES')?.content ? `
+## How To (Learned Procedures)
+${formatProcedures(constructed.procedures)}
+` : ''}
+
+${constructed.sections.find(s => s.name === 'RELEVANT_KNOWLEDGE')?.content ? `
+## Relevant Knowledge
+${formatFacts(constructed.facts)}
+` : ''}
+
+${constructed.sections.find(s => s.name === 'SELF_AWARENESS')?.content ? `
+## Self-Awareness
+${formatSelfModel(constructed.selfModel)}
+` : ''}
+
+${constructed.sections.find(s => s.name === 'USER_CONTEXT')?.content ? `
+## User Preferences
+${formatUserModel(constructed.userModel)}
+` : ''}
+`.trim();
+}
+```
+
+### Step 6: Homeostasis Assessment
+
+Evaluate whether retrieved knowledge is sufficient for the task.
+
+```typescript
+async function assessKnowledgeSufficiency(
+  task: IncomingTask,
+  selected: SelectedMemories
+): Promise<HomeostasisAssessment> {
+  // Check coverage
+  const coverage = {
+    hasRelevantProcedures: selected.procedures.length > 0,
+    hasRelevantFacts: selected.facts.length > 0,
+    hasConstraints: selected.hardRules.length > 0,
+    highConfidenceFacts: selected.facts.filter(f => f.confidence > 0.8).length,
+    lowConfidenceFacts: selected.facts.filter(f => f.confidence < 0.5).length
+  };
+
+  // Assess gaps
+  const gaps = await identifyKnowledgeGaps(task.content, selected.facts);
+  // → ["No knowledge about expo-image-picker S3 upload", "Avatar cropping not covered"]
+
+  // Calculate sufficiency score
+  const sufficiencyScore =
+    (coverage.hasRelevantProcedures ? 0.3 : 0) +
+    (coverage.highConfidenceFacts > 2 ? 0.3 : coverage.highConfidenceFacts * 0.1) +
+    (gaps.length === 0 ? 0.4 : Math.max(0, 0.4 - gaps.length * 0.1));
+
+  return {
+    dimension: 'knowledge_sufficiency',
+    state: sufficiencyScore > 0.7 ? 'HEALTHY' :
+           sufficiencyScore > 0.4 ? 'LOW' : 'CRITICAL',
+    score: sufficiencyScore,
+    gaps,
+    recommendation: sufficiencyScore < 0.5 ?
+      'Research before proceeding' :
+      sufficiencyScore < 0.7 ?
+      'Proceed with caution, may need to ask' :
+      'Sufficient knowledge to proceed'
+  };
+}
+```
+
+### Complete Example: "Add user profile screen with avatar upload"
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  TASK: "Add user profile screen with avatar upload"                     │
+│  AGENT: Dev-1 (Expo specialist)                                         │
+│  USER: Alice (PM)                                                       │
+└─────────────────────────────────────────────────────────────────────────┘
+
+QUERY FORMULATION:
+├── Primary: "Add user profile screen with avatar upload"
+├── Concepts: ["avatar upload", "user profile screen", "image picker"]
+├── Technology: ["expo best practices", "expo-image-picker"]
+├── Constraints: "expo react-native avoid never warning"
+└── Triggers: ["creating screen", "image upload", "avatar"]
+
+MEMORY RETRIEVAL (parallel):
+
+  Hard Rules Query:
+  ├── "Never use Realm database" (severity: block)
+  ├── "Never push directly to main" (severity: block)
+  └── "Use TypeScript strict mode" (severity: warn)
+
+  Semantic Search:
+  ├── [0.92] "Use expo-image-picker for camera/gallery access"
+  ├── [0.88] "Store images in S3, save URL in database"
+  ├── [0.85] "User profile screen goes in app/(tabs)/profile.tsx"
+  ├── [0.82] "Use expo-file-system for local caching"
+  ├── [0.78] "Avatar images should be ≤500KB, resize before upload"
+  └── [0.71] "Use NativeWind for styling"
+
+  Procedure Match:
+  ├── "When creating new screen → create in app/(tabs), add to layout"
+  │   success_rate: 0.95, times_used: 12
+  └── "When uploading images → compress first, use presigned URL"
+      success_rate: 0.88, times_used: 5
+
+  Self Model:
+  ├── strengths: ["React Native styling", "Expo APIs"]
+  ├── weaknesses: ["Sometimes misses error handling"]
+  └── recent_misses: ["Forgot loading state in last PR"]
+
+  User Model:
+  ├── preferences: ["Prefers functional components", "Wants tests"]
+  └── expectations: ["Progress update every 2 hours"]
+
+RANKING & SELECTION:
+├── Hard rules: 3 (all included, 150 tokens)
+├── Facts: 6 selected from 12 retrieved (1200 tokens)
+├── Procedures: 2 matched (400 tokens)
+├── Self model: summarized (200 tokens)
+└── User model: summarized (150 tokens)
+
+CONSTRUCTED PROMPT:
+┌─────────────────────────────────────────────────────────────────────────┐
+│ ## Task                                                                 │
+│ Add user profile screen with avatar upload                              │
+│                                                                         │
+│ ## Constraints (MUST FOLLOW)                                            │
+│ - ❌ NEVER use Realm database (sync issues, painful migrations)         │
+│ - ❌ NEVER push directly to main                                        │
+│ - ⚠️  Use TypeScript strict mode                                        │
+│                                                                         │
+│ ## How To (Learned Procedures)                                          │
+│ **Creating new screen:**                                                │
+│ 1. Create file in app/(tabs)/profile.tsx                               │
+│ 2. Add route to app/(tabs)/_layout.tsx                                  │
+│ 3. Export component with proper TypeScript types                        │
+│ (Success rate: 95%)                                                     │
+│                                                                         │
+│ **Uploading images:**                                                   │
+│ 1. Use expo-image-picker to select image                                │
+│ 2. Compress to ≤500KB using expo-image-manipulator                     │
+│ 3. Get presigned URL from backend                                       │
+│ 4. Upload directly to S3                                                │
+│ 5. Save URL to user record                                              │
+│ (Success rate: 88%)                                                     │
+│                                                                         │
+│ ## Relevant Knowledge                                                   │
+│ - Use expo-image-picker for camera/gallery access                       │
+│ - Store images in S3, save URL in database                              │
+│ - User profile screen goes in app/(tabs)/profile.tsx                    │
+│ - Avatar images should be ≤500KB, resize before upload                 │
+│ - Use NativeWind for styling                                            │
+│                                                                         │
+│ ## Self-Awareness                                                       │
+│ - Strength: Good with Expo APIs and styling                             │
+│ - Watch out: Sometimes miss error handling                              │
+│ - Recent miss: Forgot loading state in last PR - remember to add it    │
+│                                                                         │
+│ ## User Preferences                                                     │
+│ - Prefers functional components                                         │
+│ - Expects tests for new features                                        │
+│ - Wants progress update every ~2 hours                                  │
+└─────────────────────────────────────────────────────────────────────────┘
+
+HOMEOSTASIS ASSESSMENT:
+├── knowledge_sufficiency: HEALTHY (0.82)
+│   └── Has relevant procedures and high-confidence facts
+├── certainty_alignment: HEALTHY
+│   └── Can proceed with known patterns
+└── Recommendation: "Proceed with implementation"
+```
+
+### Token Budget Management
+
+```typescript
+const DEFAULT_BUDGET: ContextBudget = {
+  total: 8000,
+  hardRules: 500,      // Reserved, never truncated
+  procedures: 1500,    // High value, detailed steps
+  facts: 4000,         // Bulk of knowledge
+  models: 1000,        // Self + user context
+  episodes: 1000       // Recent short-term context
+};
+
+// If over budget, truncate in priority order (lowest priority first)
+function truncateToFitBudget(
+  sections: PromptSection[],
+  budget: number
+): PromptSection[] {
+  let currentTokens = sections.reduce((sum, s) => sum + s.tokens, 0);
+
+  // Sort by priority descending (highest priority = keep)
+  const sortedSections = [...sections].sort((a, b) => a.priority - b.priority);
+
+  // Truncate from lowest priority until within budget
+  for (const section of sortedSections) {
+    if (currentTokens <= budget) break;
+    if (!section.truncatable) continue;  // Skip hard rules
+
+    const reduction = Math.min(
+      section.tokens * 0.5,  // Reduce by up to 50%
+      currentTokens - budget
+    );
+
+    section.content = truncateContent(section.content, section.tokens - reduction);
+    section.tokens -= reduction;
+    currentTokens -= reduction;
+  }
+
+  return sections;
+}
+```
+
+---
+
+## Typical Queries
+
+### Cypher Examples (FalkorDB)
+
+```cypher
+// 1. Get all currently valid facts about a technology
+MATCH (f:semantic_fact)-[:ABOUT]->(t:entity_technology {name: 'NativeWind'})
+WHERE f.valid_until IS NULL
+RETURN f.content, f.confidence
+ORDER BY f.confidence DESC
+
+// 2. Get procedure for a trigger pattern
+MATCH (p:procedural)
+WHERE p.trigger CONTAINS 'animation flicker'
+AND p.valid_until IS NULL
+RETURN p.trigger, p.steps, p.success_rate
+
+// 3. Get self-model weaknesses
+MATCH (s:model_self {agent_id: $agentId})-[:HAS_WEAKNESS]->(w)
+WHERE w.valid_until IS NULL
+RETURN w.content, w.confidence, w.evidence_count
+
+// 4. Get what changed about a topic
+MATCH (old:semantic_fact)-[:SUPERSEDES]->(new:semantic_fact)
+WHERE old.content CONTAINS 'JWT' OR new.content CONTAINS 'JWT'
+RETURN old.content AS was, new.content AS now, new.valid_from AS changed_at
+
+// 5. Get cross-agent patterns
+MATCH (o:observation)-[:OBSERVED_BY]->(a:agent)
+WITH o.pattern AS pattern, COUNT(DISTINCT a) AS agent_count
+WHERE agent_count >= 3
+RETURN pattern, agent_count
+
+// 6. Get hard rules (always inject)
+MATCH (r:semantic_hard_rule)
+WHERE r.domain = $domain OR r.domain IS NULL
+RETURN r.content, r.severity
+```
+
+### TypeScript Query Interface
+
+```typescript
+interface MemoryQueries {
+  // Semantic search
+  search(query: string, options?: SearchOptions): Promise<MemoryNode[]>;
+
+  // Hard rules (guaranteed retrieval)
+  getHardRules(domain?: string): Promise<HardRule[]>;
+
+  // Procedures
+  matchProcedures(situation: string): Promise<Procedure[]>;
+  getProcedure(id: string): Promise<Procedure>;
+  recordProcedureOutcome(id: string, success: boolean): Promise<void>;
+
+  // Temporal
+  getValidAt(query: string, timestamp: Date): Promise<MemoryNode[]>;
+  getHistory(entityOrTopic: string): Promise<MemoryNode[]>;
+  getChanges(since: Date): Promise<Change[]>;
+
+  // Models
+  getSelfModel(agentId: string): Promise<SelfModel>;
+  getUserModel(userId: string): Promise<UserModel>;
+
+  // Cross-agent
+  getSharedPatterns(): Promise<SharedPattern[]>;
+  flagForReview(nodeId: string, reason: string): Promise<void>;
+}
+```
+
+---
+
+## Edge Case Handling
+
+### 1. Circular Promotion Prevention
+
+**Problem**: Fact influences behavior → creates episode → promotes back to same fact.
+
+**Solution**: Source tagging + discount.
+
+```typescript
+// Every memory carries its source lineage
+interface MemoryLineage {
+  original_source_ids: string[];  // Ultimate sources
+  promotion_chain: string[];       // Path taken
+}
+
+// When checking promotion evidence
+function calculateEffectiveEvidence(
+  evidence: Evidence[],
+  targetId: string
+): number {
+  let score = 0;
+
+  for (const e of evidence) {
+    if (e.lineage.original_source_ids.includes(targetId)) {
+      // Self-reinforcing: 50% discount
+      score += e.weight * 0.5;
+    } else {
+      // External: full weight
+      score += e.weight;
+    }
+  }
+
+  return score;
+}
+```
+
+### 2. Conflicting Promotions
+
+**Problem**: Agent-1 learns "use X", Agent-2 learns "avoid X".
+
+**Solution**: Scope check → recency+confidence → flag for user.
+
+```typescript
+async function handleConflict(
+  existing: MemoryNode,
+  incoming: MemoryNode
+): Promise<Resolution> {
+  // 1. Check scope
+  if (existing.agent_id !== incoming.agent_id) {
+    // Different agents - both can be valid
+    return { action: 'keep_both', flag: true };
+  }
+
+  // 2. Same agent - use recency + confidence
+  const existingScore = existing.confidence * recencyWeight(existing.valid_from);
+  const incomingScore = incoming.confidence * recencyWeight(incoming.valid_from);
+
+  if (Math.abs(existingScore - incomingScore) < 0.2) {
+    // Too close - flag for user
+    return { action: 'flag_for_user', reason: 'conflicting_evidence' };
+  }
+
+  // 3. Clear winner - supersede loser
+  const winner = existingScore > incomingScore ? existing : incoming;
+  const loser = existingScore > incomingScore ? incoming : existing;
+
+  return {
+    action: 'supersede',
+    keep: winner.id,
+    invalidate: loser.id
+  };
+}
+```
+
+### 3. Cascade Demotion
+
+**Problem**: Evidence for fact is invalidated → what happens to fact?
+
+**Solution**: Soft invalidation (confidence reduction, not deletion).
+
+```typescript
+async function handleEvidenceInvalidation(
+  invalidatedEvidence: string
+): Promise<void> {
+  // Find all nodes that depended on this evidence
+  const dependents = await findDependents(invalidatedEvidence);
+
+  for (const node of dependents) {
+    // Recalculate confidence without invalid evidence
+    const remainingEvidence = await getRemainingEvidence(node.id);
+    const newConfidence = calculateConfidence(remainingEvidence);
+
+    if (newConfidence < 0.3) {
+      // Too low - soft invalidate
+      await softInvalidate(node.id, {
+        reason: 'evidence_invalidated',
+        original_confidence: node.confidence,
+        remaining_confidence: newConfidence
+      });
+    } else {
+      // Update confidence but keep
+      await updateConfidence(node.id, newConfidence);
+    }
+  }
+}
+```
+
+### 4. Abstraction Quality
+
+**Problem**: LLM abstracts "NativeWind Pressable flickers" to "animations are buggy".
+
+**Solution**: Specificity scoring + keep specifics when unsure.
+
+```typescript
+interface AbstractionResult {
+  abstraction: string;
+  specificity_score: number;  // 0-1, higher = more specific
+  keep_original: boolean;
+}
+
+async function evaluateAbstraction(
+  original: string,
+  proposed: string
+): Promise<AbstractionResult> {
+  const specificity = await scoreSpecificity(original, proposed);
+
+  return {
+    abstraction: proposed,
+    specificity_score: specificity,
+    keep_original: specificity < 0.7  // Keep specific if abstraction too vague
+  };
+}
+
+// Result: Keep BOTH "NativeWind Pressable flickers" AND "animation issues"
+// Link them with ABSTRACTED_TO edge
+```
+
+---
+
+## Why Not Simpler Alternatives?
+
+### vs Basic RAG (Vector Store Only)
+
+| Need | RAG | Graphiti |
+|------|-----|----------|
+| Hard rules guarantee | ❌ Depends on similarity | ✅ Separate guaranteed query |
+| "What was true then" | ❌ No temporal model | ✅ Native bi-temporal |
+| Procedure success tracking | ❌ No state | ✅ Node metadata |
+| Promotion/learning | ❌ Flat storage | ✅ Edge relationships |
+| Cross-agent patterns | ❌ No structure | ✅ Graph queries |
+
+### vs Mem0
+
+| Need | Mem0 | Graphiti |
+|------|------|----------|
+| Temporal validity | ⚠️ Metadata only | ✅ Native |
+| Relationship traversal | ⚠️ Mem0g limited | ✅ Full Cypher |
+| Procedure modeling | ❌ As text | ✅ As nodes |
+| Dashboard | ✅ OpenMemory | ⚠️ FalkorDB Insight |
+| Ecosystem | ✅ Larger | ⚠️ Smaller |
+
+**Verdict**: Mem0 could work for MVP but we'd hit walls on temporal reasoning and relationship modeling. Graphiti provides the foundation we need.
+
+---
+
+## Implementation Roadmap
+
+### Phase 1: Foundation (Week 1-2)
+
+```
+Tasks:
+1. Set up FalkorDB locally (Docker)
+2. Install Graphiti, configure with Claude
+3. Create base TypeScript wrapper
+4. Implement core ingestion pipeline
+5. Test with shadow learning scenario
+```
+
+### Phase 2: Memory Types (Week 3-4)
+
+```
+Tasks:
+1. Implement all node types
+2. Implement edge types
+3. Build Memory Router (classification)
+4. Build Memory Gatekeeper (filtering)
+5. Test with manual knowledge entry
+```
+
+### Phase 3: Processes (Week 5-6)
+
+```
+Tasks:
+1. Implement promotion rules engine
+2. Implement consolidation (background)
+3. Implement invalidation (non-lossy)
+4. Build context assembly
+5. Test with multi-agent scenario
+```
+
+### Phase 4: Cross-Agent (Week 7-8)
+
+```
+Tasks:
+1. Implement shared memory pool
+2. Build pattern detection
+3. Implement elevation rules
+4. Test cross-agent learning
+5. Build basic dashboard (or adopt FalkorDB Insight)
+```
+
+### Phase 5: Export/Import (Week 9-10)
+
+```
+Tasks:
+1. Define persona export format
+2. Implement export (with privacy filters)
+3. Implement import (with provenance)
+4. Test full lifecycle: shadow → export → company
+```
+
+---
+
+## Open Questions for Implementation
+
+1. **Graphiti TypeScript bindings**: REST API wrapper vs native port?
+2. **Embedding model**: Voyage AI vs OpenAI vs local?
+3. **Multi-tenancy**: One FalkorDB per company or namespace?
+4. **Dashboard**: Build custom React UI or use FalkorDB Insight?
+
+---
+
+## References
+
+- [Graphiti GitHub](https://github.com/getzep/graphiti)
+- [FalkorDB Documentation](https://docs.falkordb.com/)
+- [FalkorDB vs Neo4j](https://www.falkordb.com/blog/falkordb-vs-neo4j-for-ai-applications/)
+- [Graphiti CRUD Operations](https://help.getzep.com/graphiti/working-with-data/crud-operations)
+- Previous documents: `homeostasis-architecture-design.md`, `memory-findings.md`
 
 ---
 
 *Document created: 2026-02-02*
-*Status: Awaiting decision*
-
-Sources:
-- [Graphiti GitHub](https://github.com/getzep/graphiti)
-- [Graphiti CRUD Operations](https://help.getzep.com/graphiti/working-with-data/crud-operations)
-- [Mem0 Documentation](https://docs.mem0.ai/)
-- [OpenMemory MCP](https://mem0.ai/blog/introducing-openmemory-mcp)
-- [FalkorDB vs Neo4j](https://www.falkordb.com/blog/falkordb-vs-neo4j-for-ai-applications/)
-- [Mem0 $24M Funding](https://mem0.ai/series-a)
-- [Zep Tracxn](https://tracxn.com/d/companies/zep/__poSadJnSfLWHjz05Xi3U5KwnpCMWSU3aDrihLX_8FLs)
+*Status: Accepted - Ready for implementation*

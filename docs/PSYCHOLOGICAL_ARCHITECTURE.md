@@ -331,15 +331,22 @@ interface Procedure {
 
 ### Memory System Decision
 
-> **STATUS**: Decision pending - leaning Mem0 for MVP
+> **STATUS**: Decided - Graphiti with FalkorDB
 >
-> | Option | Pros | Cons |
-> |--------|------|------|
-> | **Mem0** | Ready SDK, $24M funding, dashboard | External dependency |
-> | **Graphiti** | Temporal reasoning built-in | Smaller ecosystem |
-> | **Files + Custom** | Full control | Must build everything |
+> | Option | Verdict |
+> |--------|---------|
+> | **Basic RAG** | ❌ No temporal validity, no promotion, no hard rule guarantee |
+> | **Mem0** | ❌ Limited temporal reasoning, weak relationship modeling |
+> | **Graphiti + FalkorDB** | ✅ Bi-temporal model, graph relationships, Cypher queries |
 >
-> **Key insight**: The thesis is about psychological architecture, not memory systems. Use existing tools.
+> **Why Graphiti is essential**:
+> - Hard rules must be guaranteed (not similarity-dependent)
+> - Temporal validity ("was true then, not now")
+> - Procedure success tracking
+> - Memory promotion (episode → fact → procedure)
+> - Cross-agent pattern detection
+>
+> See [plans/2026-02-02-memory-system-design.md](./plans/2026-02-02-memory-system-design.md) for full design.
 
 ---
 

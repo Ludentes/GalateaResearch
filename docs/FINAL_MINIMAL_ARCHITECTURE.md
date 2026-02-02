@@ -1,83 +1,190 @@
 # Galatea: Final Minimal Architecture
 
-**Date**: 2026-02-01
+**Date**: 2026-02-02
 **Status**: Ready for Implementation
-**Timeline**: 6 weeks to working core
+**Timeline**: 10 weeks to working core
 
 ---
 
 ## Foundation
 
-### Guiding Principles ✅
+### Guiding Principles
 1. **Pragmatical** - Practice is the criterion of truth
 2. **Iterative** - Useful at every step
 3. **Reuse** - Team of one leverages thousands
 
-### End Goal ✅
+### End Goal
 **Prove: Psychological Architecture + LLM > Plain LLM**
 
 Test via two instantiations:
-- "Programmer in the box"
+- "Programmer in the box" (Expo/React Native specialist)
 - "Personal assistant"
 
 ---
 
 ## What We're Building
 
-### The Core (12 Subsystems)
+### Core Architecture: Homeostasis-Based
 
-**Memory Layer (3):**
-1. Episodic Memory - Remembers interactions
-2. Semantic Memory - Learns facts/concepts
-3. Procedural Memory - Learns what works
+After evaluating multiple approaches, we selected **homeostasis-based architecture** over 12+ discrete subsystems:
 
-**Learning Layer (2):**
-4. Curiosity Engine - Identifies gaps, asks questions, explores
-5. Metacognition - Reflects on performance
+| Approach | Verdict |
+|----------|---------|
+| 12 Subsystems | Too complex, subsystems compete for context |
+| Preprompts Only | Too brittle, no emergence |
+| **Homeostasis-Based** | ✓ Balance of structure and emergence |
 
-**Execution Layer (2):**
-6. Tool Executor - Executes via Claude API + MCP tools
-7. Context Manager - Maintains coherent context
+**Key insight**: Instead of separate Curiosity/Motivation/Initiative engines, behavior **emerges** from maintaining balance across 6 dimensions.
 
-**Identity Layer (1):**
-8. Personality Core - Consistent identity via preprompts
+### The Three-Layer Model
 
-**Autonomy Layer (4):** ← NEW
-9. Motivation Engine - Why act? (completion, competence, relatedness, achievement drives)
-10. Attention Manager - What to focus on? (priority, urgency, opportunity detection)
-11. Initiative Engine - When to start? (confidence, permission, risk assessment)
-12. Homeostasis - How to persist? (progress monitoring, stuck detection, help-seeking)
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  LAYER 1: EXPLICIT GUIDANCE                                              │
+│  "When X happens, do Y"                                                  │
+│  Handles anticipated situations with precise rules                       │
+│  ├── Persona preprompts (coder, lawyer, buddy)                          │
+│  ├── Domain rules (Expo patterns, code standards)                       │
+│  └── Hard blocks ("never push to main", "never use Realm")              │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  LAYER 2: HOMEOSTASIS ENGINE                                             │
+│  "Stay in balance"                                                       │
+│  Handles NOVEL situations through dimension balance-seeking             │
+│  ├── 6 Universal Dimensions (same for all personas)                     │
+│  ├── Assessment: LOW / HEALTHY / HIGH per dimension                     │
+│  └── Guidance: What to do when imbalanced                               │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  LAYER 3: GUARDRAILS                                                     │
+│  "Don't go too far in any direction"                                    │
+│  Catches runaway behavior (over-research, over-ask, going dark)         │
+│  Built into dimension HIGH states                                        │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### The Six Homeostasis Dimensions
+
+| # | Dimension | Question | When LOW | When HIGH |
+|---|-----------|----------|----------|-----------|
+| 1 | Knowledge Sufficiency | "Do I know enough?" | Research/ask | N/A |
+| 2 | Certainty Alignment | "Does confidence match action?" | Ask before acting | Try instead of asking |
+| 3 | Progress Momentum | "Am I moving forward?" | Diagnose/escalate | Slow down, verify |
+| 4 | Communication Health | "Am I connected?" | Update team | Batch messages |
+| 5 | Productive Engagement | "Am I contributing?" | Find work | Prioritize/delegate |
+| 6 | Knowledge Application | "Learning vs doing?" | Pause to understand | Time to apply |
+
+**Psychological grounding**: Each dimension maps to established psychological needs (Self-Determination Theory, Goal Theory, Metacognition research).
+
+### Memory System: Graphiti + FalkorDB
+
+**Decision**: Graphiti with FalkorDB backend (not Mem0, not basic RAG)
+
+**Why Graphiti is essential**:
+| Requirement | RAG | Mem0 | Graphiti |
+|-------------|-----|------|----------|
+| Hard rules guarantee | ❌ | ❌ | ✅ |
+| Temporal validity | ❌ | ⚠️ | ✅ |
+| Usage tracking | ❌ | ❌ | ✅ |
+| Promotion/learning | ❌ | ❌ | ✅ |
+| Cross-agent patterns | ❌ | ⚠️ | ✅ |
+
+**Memory types**:
+- **Episodic**: Events with timestamps ("Debugging auth took 45min")
+- **Semantic**: Facts with confidence ("Prefer Clerk over JWT")
+- **Procedural**: Trigger → steps ("When animation flickers → use inline styles")
+
+**Cognitive models**:
+- **Self Model**: Strengths, weaknesses, recent misses
+- **User Model**: Preferences, expectations, expertise
+- **Domain Model**: Rules, risk levels, precision requirements
+- **Relationship Model**: Trust level, interaction history
+
+See [2026-02-02-memory-system-design.md](./plans/2026-02-02-memory-system-design.md) for full design.
 
 ### The Observation Pipeline (4 Layers)
 
+```
+RAW ACTIVITY → ENRICHMENT → DIALOGUE → MEMORY FORMATION
+(OS-level)    (guess intent) (validate) (store in Graphiti)
+```
+
 See [OBSERVATION_PIPELINE.md](OBSERVATION_PIPELINE.md) for full details.
 
+---
+
+## Architecture Diagram
+
 ```
-RAW ACTIVITY → ENRICHMENT → DIALOGUE → MEMORY
-(OS-level)    (guess intent) (validate) (store)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           GALATEA AGENT                                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │                    LAYER 1: EXPLICIT GUIDANCE                           │ │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌────────────────────────────────┐  │ │
+│  │  │   Persona   │  │   Domain    │  │         Hard Blocks            │  │ │
+│  │  │  Preprompts │  │   Rules     │  │  (never push to main...)       │  │ │
+│  │  └─────────────┘  └─────────────┘  └────────────────────────────────┘  │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                   │                                          │
+│                                   ▼                                          │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │                   LAYER 2: HOMEOSTASIS ENGINE                           │ │
+│  │  ┌───────────────┐ ┌───────────────┐ ┌───────────────┐                 │ │
+│  │  │  Knowledge    │ │   Certainty   │ │   Progress    │                 │ │
+│  │  │  Sufficiency  │ │   Alignment   │ │   Momentum    │                 │ │
+│  │  └───────────────┘ └───────────────┘ └───────────────┘                 │ │
+│  │  ┌───────────────┐ ┌───────────────┐ ┌───────────────┐                 │ │
+│  │  │ Communication │ │  Productive   │ │   Knowledge   │                 │ │
+│  │  │    Health     │ │  Engagement   │ │  Application  │                 │ │
+│  │  └───────────────┘ └───────────────┘ └───────────────┘                 │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                   │                                          │
+│                                   ▼                                          │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │                      MEMORY LAYER (GRAPHITI)                            │ │
+│  │  ┌──────────────┐ ┌──────────────┐ ┌────────────────────────────────┐  │ │
+│  │  │   Episodic   │ │   Semantic   │ │         Procedural             │  │ │
+│  │  │   (events)   │ │   (facts)    │ │     (trigger → steps)          │  │ │
+│  │  └──────────────┘ └──────────────┘ └────────────────────────────────┘  │ │
+│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐  │ │
+│  │  │  Self Model  │ │  User Model  │ │ Domain Model │ │ Relationship │  │ │
+│  │  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘  │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                   │                                          │
+│                                   ▼                                          │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │                       EXECUTION LAYER                                   │ │
+│  │  ┌──────────────┐ ┌──────────────┐ ┌────────────────────────────────┐  │ │
+│  │  │   Context    │ │    Tool      │ │           LLM                  │  │ │
+│  │  │   Builder    │ │   Executor   │ │        Generation              │  │ │
+│  │  │              │ │   (MCP)      │ │     (Claude Sonnet)            │  │ │
+│  │  └──────────────┘ └──────────────┘ └────────────────────────────────┘  │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         INFRASTRUCTURE                                       │
+│                                                                              │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────────────────────┐ │
+│  │    FalkorDB    │  │     Convex     │  │        MCP Servers             │ │
+│  │  (graph store) │  │   (backend)    │  │     (1000+ tools)              │ │
+│  └────────────────┘  └────────────────┘  └────────────────────────────────┘ │
+│                                                                              │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────────────────────┐ │
+│  │   Voyage AI    │  │    LangFuse    │  │      Claude Sonnet 4           │ │
+│  │  (embeddings)  │  │ (observability)│  │       (via OpenRouter)         │ │
+│  └────────────────┘  └────────────────┘  └────────────────────────────────┘ │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
-
-**Layer 1: Activity Capture**
-- Browser tabs, searches (via extension or ActivityWatch)
-- Terminal commands, output (via shell wrapper)
-- VSCode file opens, saves (via extension)
-
-**Layer 2: Enrichment**
-- Group activities into sessions
-- Guess user intent with confidence score
-- Link to daily goals
-
-**Layer 3: Dialogue**
-- Morning plan: "What's our plan for today?"
-- Validation: "Looks like you're working on X. Is that right?"
-- Learning: "I noticed you did Y. Why that approach?"
-- Evening summary: "Here's what I saw today. Anything I missed?"
-
-**Layer 4: Memory Formation**
-- Transform validated observations into memories
-- Episodic: What happened
-- Semantic: What we learned
-- Procedural: How to do things
 
 ---
 
@@ -86,7 +193,7 @@ RAW ACTIVITY → ENRICHMENT → DIALOGUE → MEMORY
 ### From ContextForgeTS (~75% reuse)
 
 **Backend:**
-- ✅ Convex with 8 tables (sessions, blocks, templates, projects, workflows, snapshots, generations, auth)
+- ✅ Convex with existing tables (sessions, blocks, templates, projects, workflows)
 - ✅ Three-zone system (PERMANENT, STABLE, WORKING)
 - ✅ Context assembly logic
 - ✅ LLM integrations (Ollama, OpenRouter, Claude Code)
@@ -113,132 +220,117 @@ RAW ACTIVITY → ENRICHMENT → DIALOGUE → MEMORY
 - ✅ Commit, review-pr, debug, docs
 - ✅ Portable to preprompts
 
-**n8n Workflows (1,000+):**
-- ✅ Any integration via webhooks
-- ✅ Workflow automation
-
-**OpenClaw Patterns:**
-- ✅ Gateway architecture
-- ✅ Multi-platform adapters
-
 **Tools Available: 1,000+ immediately**
-
----
-
-## Architecture Diagram
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      FRONTEND (React)                            │
-│              ✅ Reuse: ContextForge UI                           │
-│              + Add: Memory/Curiosity/Reflection views           │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-┌────────────────────────────▼────────────────────────────────────┐
-│                   CONVEX BACKEND                                 │
-│                                                                  │
-│  ✅ REUSE FROM CONTEXTFORGE:    + ADD FOR GALATEA:              │
-│  • sessions                     • memories table                │
-│  • blocks (zone storage)        • curiosityGaps table           │
-│  • templates                    • reflections table             │
-│  • projects                     • learningProgress table        │
-│  • workflows                    • preprompts table              │
-│  • generations (LLM tracking)   • toolExecutions table          │
-│  • auth                         • Mem0 integration              │
-│                                 • MCP tool execution            │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-┌────────────────────────────▼────────────────────────────────────┐
-│                    EXTERNAL SERVICES                             │
-│                                                                  │
-│  ✅ REUSE:                      + ADD:                           │
-│  • Ollama (local LLM)           • Mem0 (memory layer)           │
-│  • OpenRouter (cloud LLMs)      • Qdrant (vector DB)            │
-│  • Claude Code                  • Voyage AI (embeddings)        │
-│  • LangFuse (observability)     • MCP servers (1000+ tools)     │
-│                                                                  │
-│  ECOSYSTEM ACCESS:                                               │
-│  • Claude Code skills (20+)                                      │
-│  • n8n workflows (1000+)                                         │
-│  • OpenClaw adapters (12+)                                       │
-└─────────────────────────────────────────────────────────────────┘
-```
 
 ---
 
 ## Implementation Roadmap
 
-### Week 1: Foundation Setup
+### Phase 1: Foundation (Weeks 1-2)
 
-**Objective:** Fork ContextForge, rename to Galatea, verify works
+**Objective:** Fork ContextForge, set up Graphiti + FalkorDB
 
 **Tasks:**
 - [ ] Fork ContextForgeTS repository
 - [ ] Rename project to Galatea
+- [ ] Set up FalkorDB locally (Docker)
+- [ ] Install Graphiti, configure with Claude
+- [ ] Create TypeScript wrapper for Graphiti
+- [ ] Test basic graph operations
 - [ ] Update branding, README
-- [ ] Test existing functionality
-- [ ] Set up development environment
 
-**Deliverable:** Working ContextForge instance running as Galatea
+**Deliverable:** Working Galatea instance with graph database ready
 
-**Success Metric:** Can create sessions, add blocks to zones, interact with LLMs
+**Success Metric:** Can store and retrieve nodes/edges from FalkorDB
 
 ---
 
-### Week 2: Observation Pipeline + Memory System
+### Phase 2: Memory System (Weeks 3-4)
 
-**Objective:** Add activity observation and persistent memory
+**Objective:** Implement full memory layer with all types
 
 **Tasks:**
-- [ ] Add Mem0 API key to Convex env
-- [ ] Create tables: `activities`, `activitySessions`, `dailyPlans`, `dialogues`, `memories`
-- [ ] Implement ActivityWatch integration (or browser/VSCode extensions)
-- [ ] Implement enrichment layer (group activities, guess intent)
-- [ ] Implement morning/evening rituals
-- [ ] Implement memory storage via Mem0
-- [ ] Add dialogue widget to UI
+- [ ] Implement all node types (episodic, semantic, procedural, models)
+- [ ] Implement edge types (provenance, structural, relationship)
+- [ ] Build Memory Router (classification)
+- [ ] Build Memory Gatekeeper (filter general knowledge)
+- [ ] Implement ingestion pipeline
+- [ ] Implement context assembly (query → prompt)
+- [ ] Add memory panel to UI
 
-**Deliverable:** Agent asks about your day, observes activity, summarizes evening
+**Deliverable:** Agent stores and retrieves typed memories
 
-**Success Metric:** Agent accurately summarizes what you worked on
+**Success Metric:** Context includes relevant hard rules, facts, procedures
 
-**New Schema:**
+**Key Schema:**
 ```typescript
-memories: defineTable({
-  sessionId: v.id("sessions"),
-  type: v.union(
-    v.literal("episodic"),
-    v.literal("semantic"),
-    v.literal("procedural")
-  ),
-  content: v.string(),
-  metadata: v.object({
-    timestamp: v.number(),
-    confidence: v.optional(v.number()),
-    tags: v.array(v.string()),
-  }),
-  mem0Id: v.optional(v.string()),
-})
+type NodeType =
+  | 'episodic' | 'observation'
+  | 'semantic:fact' | 'semantic:preference' | 'semantic:policy' | 'semantic:hard_rule'
+  | 'procedural'
+  | 'model:self' | 'model:user' | 'model:domain' | 'model:relationship';
+
+type EdgeType =
+  | 'CONTRIBUTED_TO' | 'PROMOTED_TO' | 'SUPERSEDES' | 'PROVES' | 'CONTRADICTS'
+  | 'HAS_RULE' | 'HAS_PREFERENCE' | 'HAS_PROCEDURE'
+  | 'PREFERS' | 'USES' | 'EXPECTS';
 ```
 
 ---
 
-### Week 3: MCP Tool Integration
+### Phase 3: Homeostasis Engine (Weeks 5-6)
 
-**Objective:** Add MCP tool execution
+**Objective:** Implement 6-dimension homeostasis with guidance
+
+**Tasks:**
+- [ ] Create HomeostasisEngine class
+- [ ] Implement assessment logic (hybrid: computed + LLM)
+- [ ] Define guidance text for all dimension states
+- [ ] Integrate with context builder
+- [ ] Add homeostasis state to prompt construction
+- [ ] Add homeostasis visualization to UI
+- [ ] Test with reference scenarios
+
+**Deliverable:** Agent behavior driven by dimension balance
+
+**Success Metric:** Agent asks when knowledge LOW, proceeds when HEALTHY
+
+**Core Implementation:**
+```typescript
+class HomeostasisEngine {
+  dimensions = [
+    'knowledge_sufficiency',
+    'certainty_alignment',
+    'progress_momentum',
+    'communication_health',
+    'productive_engagement',
+    'knowledge_application'
+  ];
+
+  assess(context: AgentContext): Record<string, 'LOW' | 'HEALTHY' | 'HIGH'>;
+  getGuidance(states: Record<string, string>): string;
+  buildContext(task: string, agent: Agent): AssembledContext;
+}
+```
+
+---
+
+### Phase 4: MCP Tool Integration (Week 7)
+
+**Objective:** Add MCP tool execution with approval gates
 
 **Tasks:**
 - [ ] Install Vercel AI SDK with MCP support
-- [ ] Create `toolExecutions` table
+- [ ] Create tool execution tracking in Convex
 - [ ] Implement MCP client initialization
-- [ ] Add tool listing function
-- [ ] Add tool execution action
+- [ ] Add tool listing and execution
 - [ ] Add approval gates for destructive tools
-- [ ] Add tool execution history to UI
+- [ ] Record tool usage in procedural memory
+- [ ] Add tool history to UI
 
 **Deliverable:** Agent can execute filesystem, GitHub, search tools
 
-**Success Metric:** Agent successfully uses tools to complete tasks
+**Success Metric:** Tool success rate > 85%, procedure success_rate tracks
 
 **Initial MCP Servers:**
 - `@modelcontextprotocol/server-filesystem`
@@ -247,158 +339,103 @@ memories: defineTable({
 
 ---
 
-### Week 4: Curiosity Engine (Dialogue-Based)
+### Phase 5: Memory Promotion & Learning (Weeks 8-9)
 
-**Objective:** Agent asks questions during observation to learn
+**Objective:** Implement memory promotion pipeline
 
 **Tasks:**
-- [ ] Implement curiosity triggers (first_occurrence, pattern_deviation, decision_point, error_recovery)
-- [ ] Add learning dialogue type
-- [ ] Implement question generation from activity sessions
-- [ ] Build answer → memory pipeline
-- [ ] Add curiosity questions to dialogue widget
-- [ ] Tune question frequency (max 5/hour)
+- [ ] Implement promotion rules engine
+- [ ] Build consolidation process (episode → observation → fact)
+- [ ] Implement non-lossy invalidation (supersede, don't delete)
+- [ ] Handle edge cases (circular promotion, conflicts, cascade)
+- [ ] Implement cross-agent pattern detection
+- [ ] Add procedure success tracking
+- [ ] Test with shadow learning scenario
 
-**Deliverable:** Agent asks "why" questions and learns from answers
+**Deliverable:** Memories promote and update based on evidence
 
-**Success Metric:** Agent asks 3-5 learning questions per day, forms useful memories from answers
+**Success Metric:** Procedures accumulate, success rates update
 
-**New Schema:**
-```typescript
-curiosityGaps: defineTable({
-  sessionId: v.id("sessions"),
-  topic: v.string(),
-  confidence: v.number(),
-  explored: v.boolean(),
-  exploredAt: v.optional(v.number()),
-  findings: v.optional(v.string()),
-})
+**Promotion Hierarchy:**
+```
+episode → observation → fact → rule → procedure → shared
 ```
 
 ---
 
-### Week 5: Reflection Loop
+### Phase 6: Personas & Instantiation (Week 10)
 
-**Objective:** Agent learns from mistakes
-
-**Tasks:**
-- [ ] Create `reflections` table
-- [ ] Create `learningProgress` table
-- [ ] Implement Reflexion pattern (draft → critique → revise)
-- [ ] Build procedural memory update logic
-- [ ] Add reflection trigger (after errors/tasks)
-- [ ] Add reflection history UI
-- [ ] Implement Learning Progress metric (MAGELLAN LP)
-
-**Deliverable:** Agent reflects on mistakes, improves over time
-
-**Success Metric:** Measurable reduction in repeated mistakes (LP metric shows positive trend)
-
-**New Schema:**
-```typescript
-reflections: defineTable({
-  sessionId: v.id("sessions"),
-  taskDescription: v.string(),
-  outcome: v.string(),
-  whatWorked: v.string(),
-  whatDidnt: v.string(),
-  improvement: v.string(),
-  createdAt: v.number(),
-})
-
-learningProgress: defineTable({
-  sessionId: v.id("sessions"),
-  goal: v.string(),
-  attempts: v.array(v.object({
-    timestamp: v.number(),
-    success: v.boolean(),
-    feedback: v.optional(v.string()),
-  })),
-  recentCompetence: v.number(),
-  delayedCompetence: v.number(),
-  learningProgress: v.number(),
-})
-```
-
----
-
-### Week 6: Preprompts, Instantiation & Sharing
-
-**Objective:** Same core, different personalities + shadow mode + sharing
+**Objective:** Same core, different personalities + export/import
 
 **Tasks:**
-- [ ] Create `preprompts` table
+- [ ] Create preprompts table in Convex
 - [ ] Write core identity preprompt
-- [ ] Write programmer role preprompt
-- [ ] Write assistant role preprompt
-- [ ] Port Claude Code skills to preprompts (commit, debug, explore, reflect)
-- [ ] Add personality configuration to sessions
-- [ ] Add personality selector UI
-- [ ] Implement **shadow mode** skill (observe + ask + learn)
-- [ ] Implement **export/import** persona functions
+- [ ] Write programmer persona (Expo specialist)
+- [ ] Write assistant persona
+- [ ] Implement threshold configuration per persona
+- [ ] Add personality selector to UI
+- [ ] Implement persona export (privacy-filtered)
+- [ ] Implement persona import (with provenance)
 - [ ] Test both instantiations
 
-**Deliverable:** Can instantiate as Programmer OR Personal Assistant; can shadow and learn; can share personas
+**Deliverable:** Can instantiate as Programmer OR Assistant; can export/share
 
-**Success Metric:** Same core behaves differently based on preprompt; shadow mode learns effectively
+**Success Metric:** Same core behaves differently based on persona
 
-**New Schema:**
-```typescript
-preprompts: defineTable({
-  name: v.string(),
-  type: v.union(v.literal("core"), v.literal("role"), v.literal("skill")),
-  content: v.string(),
-  tools: v.optional(v.array(v.string())),
-  createdAt: v.number(),
-  updatedAt: v.number(),
-}).index("by_name", ["name"])
+**Persona Config:**
+```yaml
+identity:
+  name: "Expo Developer Agent"
+  role: "Mobile developer"
+  domain: "Expo / React Native"
 
-// Add to sessions table
-sessions: defineTable({
-  // ... existing fields
-  personality: v.optional(v.object({
-    corePrompt: v.id("preprompts"),
-    rolePrompt: v.id("preprompts"),
-    skills: v.array(v.id("preprompts")),
-  })),
-})
+thresholds:
+  certainty_alignment:
+    ask_threshold: "architecture/preference questions"
+  communication_health:
+    update_interval: "~2 hours during active work"
+
+hard_blocks:
+  - "push directly to main"
+  - "use Realm database"
 ```
 
 ---
 
 ## Success Metrics (Testing the Thesis)
 
-### Week 2 (Memory)
-- ✅ Agent remembers facts from previous sessions
-- ✅ Agent adapts to user preferences
-- ✅ User feels agent "knows them"
-- **Metric:** Memory recall accuracy > 90%
+### Phase 2 (Memory)
+- ✅ Hard rules ALWAYS appear in context (100%)
+- ✅ Semantic search retrieves relevant facts (> 80% relevance)
+- ✅ Procedures match appropriate triggers
+- **Metric:** Context assembly includes correct memories
 
-### Week 3 (Tools)
+### Phase 3 (Homeostasis)
+- ✅ Agent asks when knowledge_sufficiency LOW
+- ✅ Agent proceeds when certainty_alignment HEALTHY
+- ✅ Agent escalates when progress_momentum STALLING
+- ✅ Agent updates team when communication_health LOW
+- **Metric:** Dimension-appropriate behavior in > 85% of cases
+
+### Phase 4 (Tools)
 - ✅ Agent successfully executes tools
 - ✅ Tool results inform responses
-- ✅ Agent chains multiple tools
+- ✅ Approval gates prevent unauthorized actions
 - **Metric:** Tool success rate > 85%
 
-### Week 4 (Curiosity)
-- ✅ Agent asks 3-5 clarifying questions per session
-- ✅ Agent identifies gaps user didn't mention
-- ✅ User says "good question" at least once per day
-- **Metric:** Gap exploration rate > 70%
+### Phase 5 (Learning)
+- ✅ Episodes promote to facts (2+ similar episodes)
+- ✅ Procedure success_rate updates after use
+- ✅ Superseded knowledge marked, not deleted
+- **Metric:** Memory promotion occurs correctly
 
-### Week 5 (Reflection)
-- ✅ Measurable reduction in repeated mistakes
-- ✅ Learning Progress metric shows positive trend (LP > 0.1)
-- ✅ Procedural memory accumulates useful patterns
-- **Metric:** Mistake repetition rate < 20%
-
-### Week 6 (Instantiation)
+### Phase 6 (Instantiation)
 - ✅ Programmer and Assistant behave distinctly
-- ✅ Both share same core capabilities
-- ✅ User rates both as "more helpful than ChatGPT"
-- **Metric:** User satisfaction > 8/10 for both
+- ✅ Both share same homeostasis dimensions
+- ✅ Export includes semantic + procedural, excludes episodic
+- **Metric:** User rates both as "more helpful than ChatGPT"
 
-**If all metrics met → Thesis proven! 🎉**
+**If all metrics met → Thesis proven!**
 
 ---
 
@@ -406,17 +443,17 @@ sessions: defineTable({
 
 | Layer | Technology | Reuse | Add |
 |-------|-----------|-------|-----|
-| **Frontend** | React 19 + TypeScript | 75% | Memory/curiosity/reflection UI |
-| **Backend** | Convex | 70% | 6 new tables |
-| **LLM** | Claude Sonnet 4 (via OpenRouter) | 100% | Confidence extraction |
-| **Memory** | Mem0 + Qdrant | 0% | Full integration |
+| **Frontend** | React 19 + TypeScript | 75% | Memory/homeostasis UI |
+| **Backend** | Convex | 70% | Memory tables, homeostasis |
+| **LLM** | Claude Sonnet 4 (via OpenRouter) | 100% | Homeostasis assessment |
+| **Graph DB** | FalkorDB | 0% | Full integration |
+| **Memory** | Graphiti | 0% | Full integration |
 | **Tools** | MCP (1000+ servers) | 100% | Execution logic |
 | **Embeddings** | Voyage AI | 0% | Integration |
-| **Observability** | LangFuse | 90% | Memory/curiosity traces |
-| **Skills** | Claude Code patterns | 100% | Port to preprompts |
+| **Observability** | LangFuse | 90% | Homeostasis traces |
 
-**Overall Reuse: 75%**
-**Time to Working Core: 6 weeks**
+**Overall Reuse: 70%**
+**Time to Working Core: 10 weeks**
 
 ---
 
@@ -425,40 +462,52 @@ sessions: defineTable({
 ```
 galatea/
 ├── convex/
-│   ├── schema.ts                 # ✏️ ADD: 6 new tables
-│   ├── memories.ts               # 🆕 Memory CRUD + Mem0 integration
-│   ├── curiosity.ts              # 🆕 Gap detection + exploration
-│   ├── reflections.ts            # 🆕 Reflexion loop
-│   ├── learningProgress.ts       # 🆕 LP metric tracking
-│   ├── preprompts.ts             # 🆕 Personality/skills management
+│   ├── schema.ts                 # ✏️ ADD: memory, homeostasis tables
+│   ├── memories.ts               # 🆕 Memory CRUD via Graphiti
+│   ├── homeostasis.ts            # 🆕 Dimension assessment
+│   ├── preprompts.ts             # 🆕 Personality/persona management
 │   ├── mcp.ts                    # 🆕 MCP tool execution
 │   └── lib/
-│       ├── mem0.ts               # 🆕 Mem0 client
-│       ├── mcp-client.ts         # 🆕 MCP SDK wrapper
-│       └── context.ts            # ✏️ EXTEND: Add memory injection
+│       ├── graphiti.ts           # 🆕 Graphiti client wrapper
+│       ├── falkordb.ts           # 🆕 FalkorDB connection
+│       └── context-builder.ts    # 🆕 Prompt construction
 │
 ├── src/
+│   ├── lib/
+│   │   ├── homeostasis/
+│   │   │   ├── engine.ts         # 🆕 HomeostasisEngine class
+│   │   │   ├── dimensions.ts     # 🆕 Dimension definitions
+│   │   │   └── guidance.ts       # 🆕 Guidance text per state
+│   │   ├── memory/
+│   │   │   ├── types.ts          # 🆕 Node/edge type definitions
+│   │   │   ├── ingestion.ts      # 🆕 Memory ingestion pipeline
+│   │   │   ├── retrieval.ts      # 🆕 Query formulation, context assembly
+│   │   │   └── promotion.ts      # 🆕 Promotion rules engine
+│   │   └── context/
+│   │       └── builder.ts        # 🆕 Full context assembly
+│   │
 │   ├── components/
 │   │   ├── memory/
 │   │   │   ├── MemoryPanel.tsx   # 🆕 Memory visualization
-│   │   │   └── MemoryTimeline.tsx # 🆕 Episodic timeline
-│   │   ├── curiosity/
-│   │   │   ├── GapsPanel.tsx     # 🆕 Curiosity gaps display
-│   │   │   └── ExplorationLog.tsx # 🆕 Exploration history
-│   │   ├── reflection/
-│   │   │   ├── ReflectionPanel.tsx # 🆕 Reflection history
-│   │   │   └── LearningProgress.tsx # 🆕 LP metric display
-│   │   └── personality/
-│   │       ├── PersonalitySelector.tsx # 🆕 Choose role
-│   │       └── SkillsManager.tsx  # 🆕 Manage skills
-│   └── lib/
-│       └── lp-metric.ts          # 🆕 Learning Progress calculation
+│   │   │   └── GraphView.tsx     # 🆕 Knowledge graph display
+│   │   ├── homeostasis/
+│   │   │   ├── StatePanel.tsx    # 🆕 Dimension states display
+│   │   │   └── GuidanceView.tsx  # 🆕 Current guidance
+│   │   └── persona/
+│   │       ├── PersonaSelector.tsx # 🆕 Choose persona
+│   │       └── ThresholdConfig.tsx # 🆕 Tune thresholds
+│   │
+│   └── hooks/
+│       ├── useHomeostasis.ts     # 🆕 Homeostasis state hook
+│       └── useMemory.ts          # 🆕 Memory query hook
 │
 └── docs/
-    ├── GUIDING_PRINCIPLES.md     # ✅ Saved
-    ├── CONTEXTFORGE_REUSE.md     # ✅ Saved
-    ├── ECOSYSTEM_REUSE.md        # ✅ Saved
-    └── FINAL_MINIMAL_ARCHITECTURE.md # ✅ This document
+    ├── PSYCHOLOGICAL_ARCHITECTURE.md  # ✅ Design doc
+    ├── FINAL_MINIMAL_ARCHITECTURE.md  # ✅ This document
+    ├── OBSERVATION_PIPELINE.md        # ✅ Observation design
+    └── plans/
+        ├── 2026-02-02-homeostasis-architecture-design.md  # ✅ Decision
+        └── 2026-02-02-memory-system-design.md             # ✅ Memory design
 ```
 
 ---
@@ -470,17 +519,28 @@ galatea/
 # Existing from ContextForge
 VITE_CONVEX_URL=<auto-generated>
 OLLAMA_URL=http://localhost:11434
-OLLAMA_MODEL=llama3.2
 OPENROUTER_API_KEY=sk-or-v1-...
 OPENROUTER_MODEL=anthropic/claude-sonnet-4
 LANGFUSE_SECRET_KEY=sk-lf-...
 LANGFUSE_PUBLIC_KEY=pk-lf-...
 
 # New for Galatea
-MEM0_API_KEY=mem0-...
-QDRANT_URL=https://xyz.qdrant.io
-QDRANT_API_KEY=...
+FALKORDB_URL=redis://localhost:6379
 VOYAGE_AI_API_KEY=pa-...
+```
+
+### docker-compose.yml (for FalkorDB)
+```yaml
+services:
+  falkordb:
+    image: falkordb/falkordb:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - falkordb_data:/data
+
+volumes:
+  falkordb_data:
 ```
 
 ### package.json additions
@@ -488,8 +548,8 @@ VOYAGE_AI_API_KEY=pa-...
 {
   "dependencies": {
     "ai": "^6.0.39",                    // Vercel AI SDK (MCP support)
-    "mem0": "^1.0.0",                   // Mem0 client
-    "@qdrant/js-client-rest": "^1.0.0", // Qdrant
+    "falkordb": "^5.0.0",               // FalkorDB client
+    "graphiti-core": "^0.5.0",          // Graphiti (via REST wrapper)
     "voyage-ai": "^1.0.0"               // Voyage embeddings
   }
 }
@@ -499,106 +559,64 @@ VOYAGE_AI_API_KEY=pa-...
 
 ## What We're NOT Building
 
-❌ All 54 other subsystems (build later if needed)
-❌ Custom vector DB
-❌ Custom embedding model
-❌ Custom LLM
-❌ Complex UI from scratch
-❌ Multi-agent coordination (single agent first)
-❌ Graphiti temporal graphs (Mem0 sufficient for MVP)
-❌ Custom observability platform
-❌ Custom gateway (reuse ContextForge patterns)
+❌ 12+ discrete subsystems (homeostasis replaces them)
+❌ Custom vector DB (use Graphiti/FalkorDB)
+❌ Custom embedding model (use Voyage AI)
+❌ Custom LLM (use Claude Sonnet)
+❌ Complex UI from scratch (extend ContextForge)
+❌ Mem0 (replaced by Graphiti)
+❌ Multi-agent coordination initially (single agent first, then cross-agent)
 
 ---
 
 ## Risk Mitigation
 
-### Risk 1: Mem0 integration complexity
-**Mitigation:** Start with simple key-value storage, add sophistication iteratively
+### Risk 1: Graphiti TypeScript integration
+**Mitigation:** Use REST API wrapper, contribute TypeScript bindings if needed
 
-### Risk 2: MCP tool reliability
-**Mitigation:** Add error handling, retry logic, approval gates for destructive operations
+### Risk 2: FalkorDB learning curve
+**Mitigation:** Start with basic Cypher queries, add complexity iteratively
 
-### Risk 3: Curiosity might be noisy
-**Mitigation:** Tune confidence thresholds, limit exploration per session
+### Risk 3: Homeostasis assessment reliability
+**Mitigation:** Hybrid approach (computed metrics + LLM assessment), test with scenarios
 
-### Risk 4: Reflection overhead
-**Mitigation:** Make reflection opt-in, async (don't block main flow)
+### Risk 4: Memory promotion edge cases
+**Mitigation:** Simple rules first, handle circular/conflicts with basic strategies
 
-### Risk 5: ContextForge limitations
-**Mitigation:** Keep fork clean, option to pivot if needed
+### Risk 5: Context size limits
+**Mitigation:** Token budget management, guaranteed sections, truncation by priority
 
 ---
 
 ## Cost Estimates
 
 ### Development Time
-- Week 1: Foundation (10 hours)
-- Week 2: Memory (15 hours)
-- Week 3: Tools (15 hours)
-- Week 4: Curiosity (15 hours)
-- Week 5: Reflection (20 hours)
-- Week 6: Preprompts (15 hours)
-**Total: ~90 hours over 6 weeks**
+- Phase 1: Foundation (15 hours)
+- Phase 2: Memory System (25 hours)
+- Phase 3: Homeostasis (20 hours)
+- Phase 4: Tools (15 hours)
+- Phase 5: Learning (20 hours)
+- Phase 6: Personas (15 hours)
+**Total: ~110 hours over 10 weeks**
 
 ### Infrastructure Costs (Monthly)
 - Convex: $0 (free tier sufficient for MVP)
 - OpenRouter: ~$50-100 (usage-based)
-- Mem0: $0-50 (depends on usage)
-- Qdrant: $0 (1GB free tier)
+- FalkorDB: $0 (self-hosted Docker)
 - Voyage AI: ~$10-20 (embedding costs)
 - LangFuse: $0 (self-hosted or free tier)
-**Total: ~$60-170/month**
+**Total: ~$60-120/month**
 
 ---
 
-## Next Steps
+## Related Documents
 
-### Immediate (This Week)
-1. ✅ Review this document
-2. ✅ Approve architecture
-3. 🔲 Fork ContextForgeTS
-4. 🔲 Rename to Galatea
-5. 🔲 Set up development environment
-
-### Week 1
-1. 🔲 Get ContextForge running
-2. 🔲 Update branding
-3. 🔲 Test existing features
-4. 🔲 Document current state
-
-### Week 2
-1. 🔲 Sign up for Mem0
-2. 🔲 Add memory tables to schema
-3. 🔲 Implement memory storage
-4. 🔲 Test memory recall
-
----
-
-## Questions to Answer Before Starting
-
-1. **Which instantiation to build first?**
-   - Programmer (immediate work use)
-   - Assistant (personal use)
-   - Both in parallel
-
-2. **Development environment preferences?**
-   - Local Convex dev
-   - Cloud Convex deployment
-   - Both
-
-3. **LLM provider priority?**
-   - OpenRouter (multi-model)
-   - Claude Code (direct)
-   - Ollama (local)
-
-4. **Memory privacy preferences?**
-   - Mem0 cloud (easier)
-   - Self-hosted (more control)
-
-5. **Timeline flexibility?**
-   - Strict 6 weeks
-   - Flexible (10-12 weeks)
+- **[PSYCHOLOGICAL_ARCHITECTURE.md](./PSYCHOLOGICAL_ARCHITECTURE.md)** - Full architecture design
+- **[plans/2026-02-02-homeostasis-architecture-design.md](./plans/2026-02-02-homeostasis-architecture-design.md)** - Homeostasis decision
+- **[plans/2026-02-02-memory-system-design.md](./plans/2026-02-02-memory-system-design.md)** - Memory system design
+- **[OBSERVATION_PIPELINE.md](./OBSERVATION_PIPELINE.md)** - Observation pipeline design
+- **[REFERENCE_SCENARIOS.md](./REFERENCE_SCENARIOS.md)** - Test scenarios
+- **[plans/BRAINSTORM_QUEUE.md](./plans/BRAINSTORM_QUEUE.md)** - Open questions
 
 ---
 
@@ -606,35 +624,35 @@ VOYAGE_AI_API_KEY=pa-...
 
 **Galatea succeeds if:**
 
-1. ✅ **Memory Works**: Agent remembers across sessions (> 90% accuracy)
-2. ✅ **Curiosity Works**: Agent explores gaps proactively (3-5 questions/session)
-3. ✅ **Learning Works**: Agent improves over time (LP > 0.1, mistakes < 20%)
-4. ✅ **Tools Work**: Agent executes MCP tools reliably (> 85% success)
-5. ✅ **Personality Works**: Same core, different instantiations behave distinctly
+1. ✅ **Memory Works**: Context assembly includes hard rules (100%), relevant facts (>80%)
+2. ✅ **Homeostasis Works**: Dimension-appropriate behavior (>85% accuracy)
+3. ✅ **Learning Works**: Memories promote, procedures track success
+4. ✅ **Tools Work**: MCP tool execution (>85% success rate)
+5. ✅ **Personality Works**: Same core, different personas behave distinctly
 6. ✅ **Better Than Plain LLM**: Users rate Galatea > ChatGPT (8+/10)
 
-**If all 6 → Thesis proven! Psychological architecture > Plain LLM** 🎉
+**If all 6 → Thesis proven! Psychological architecture > Plain LLM**
 
 ---
 
 ## Conclusion
 
 We have:
-- ✅ Clear architecture (8 subsystems)
-- ✅ Maximum reuse (75% from ContextForge, 95% tools from ecosystem)
-- ✅ 6-week timeline (pragmatic, iterative)
+- ✅ Clear architecture (Homeostasis + Memory + Models)
+- ✅ Maximum reuse (70% from ContextForge, 95% tools from ecosystem)
+- ✅ 10-week timeline (pragmatic, iterative)
 - ✅ Success metrics (practice is the criterion)
 - ✅ Risk mitigation (stay lean, pivot if needed)
 
 **This aligns perfectly with our guiding principles:**
 1. **Pragmatical** ✅ - Solves real problem (better than ChatGPT)
-2. **Iterative** ✅ - Useful at every week
-3. **Reuse** ✅ - Leverages ContextForge + ecosystem
+2. **Iterative** ✅ - Useful at every phase
+3. **Reuse** ✅ - Leverages ContextForge + Graphiti + MCP ecosystem
 
-**Ready to start building?** 🚀
+**Ready to start building?**
 
 ---
 
-*Final architecture completed: 2026-02-01*
-*Status: Ready for implementation*
-*Next: Fork ContextForgeTS and begin Week 1*
+*Architecture updated: 2026-02-02*
+*Key changes: Homeostasis replaces 12 subsystems, Graphiti replaces Mem0*
+*Next: Fork ContextForgeTS and begin Phase 1*

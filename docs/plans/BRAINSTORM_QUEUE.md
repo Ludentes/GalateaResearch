@@ -30,26 +30,36 @@ We evaluated three approaches:
 
 ---
 
-## Pending
+## Completed
 
 ### 2. Memory System Implementation
 
-**Date Added**: 2026-02-02
-**Priority**: HIGH - Needed for MVP
-**Status**: Preliminary analysis complete
+**Date Resolved**: 2026-02-02
+**Decision**: Graphiti with FalkorDB backend
 
-**Decision to make**: Mem0 vs Graphiti vs hybrid
+**Summary**:
+After extensive scenario tracing through shadow learning, multi-agent deployment, and cross-agent learning use cases, we determined that Graphiti is essential due to:
+1. **Guaranteed hard rules** - Must inject regardless of semantic similarity
+2. **Temporal validity** - "Was true then, not now" needs bi-temporal model
+3. **Usage tracking** - Procedures need success rates across uses
+4. **Memory promotion** - Episodes → facts → procedures requires graph edges
+5. **Cross-agent patterns** - Sharing knowledge requires relationship modeling
 
-**Current leaning**: Mem0 for MVP, add Graphiti later if temporal features needed
+**Key design decisions**:
+- 15 node types covering episodic, semantic (5 subtypes), procedural, and 4 cognitive models
+- 15 edge types for provenance, structure, relationships, and self-model tracking
+- 6-level promotion hierarchy with circular prevention (50% self-reinforcement discount)
+- Non-lossy invalidation (supersede, never delete)
+- Memory Gatekeeper filters general knowledge LLM already knows
+- Context assembly: guaranteed hard rules + semantic search + procedure matching + models
 
-**Key questions**:
-- How to handle cross-agent memory sharing?
-- Episode granularity (task? session? action?)
-- Fact deduplication strategy
-
-**Related file**: [2026-02-02-memory-findings.md](./2026-02-02-memory-findings.md)
+**Documents created**:
+- [2026-02-02-memory-system-design.md](./2026-02-02-memory-system-design.md) (comprehensive design)
+- [2026-02-02-memory-findings.md](./2026-02-02-memory-findings.md) (preliminary analysis)
 
 ---
+
+## Pending
 
 ### 3. Threshold Calibration from Observation
 
