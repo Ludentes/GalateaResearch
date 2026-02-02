@@ -1,230 +1,284 @@
-# Galatea: Psychologically-Informed AI Assistant
+# Galatea: Psychologically-Architected AI Agent
 
-## Vision
+## Thesis
 
-Building an AI assistant that enhances human capabilities while maintaining healthy boundaries, promoting user growth, and preventing dependency. Named after Galatea from Greek mythology - brought to life with purpose and care.
+**Psychological Architecture + LLM > Plain LLM**
 
-## Core Principles
+Current AI agents are stimulus-response machines:
+```
+prompt → LLM → response
+```
 
-1. **Safety First** - Reality boundaries, crisis detection, dependency prevention
-2. **Growth Oriented** - Promotes user capability development and autonomy
-3. **Curiosity Driven** - Proactive exploration within safe boundaries
-4. **Psychologically Grounded** - Based on established psychology research
-5. **Transparent** - Clear about limitations, uncertainties, and AI nature
+Galatea adds psychological architecture between stimulus and response:
+```
+prompt → [Homeostasis + Memory + Models] → LLM → response
+                      ↑
+              continuous learning
+```
+
+We prove this thesis by building agents with:
+- **Persistence** (memory across sessions)
+- **Understanding** (models of self, user, domain, relationships)
+- **Self-Regulation** (homeostasis - maintaining balance)
+- **Growth** (learning from observation)
+
+---
+
+## Guiding Principles
+
+| Principle | Meaning | Test |
+|-----------|---------|------|
+| **Pragmatical** | Practice is the criterion of truth | Does this solve a real problem? |
+| **Iterative** | Useful at every step | Could we stop here and have value? |
+| **Reuse** | Team of one leverages thousands | Does this already exist? |
+
+---
 
 ## Architecture Overview
 
-### Three-Layer Design
+### Three-Layer Model
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                   User Interface Layer                  │
-│              (Conversation, multimodal I/O)             │
-└─────────────────────────────────────────────────────────┘
-                           ↓
-┌─────────────────────────────────────────────────────────┐
-│              Psychological Subsystems (62)              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │   Safety &   │  │  Personality │  │    Social    │  │
-│  │ Intervention │  │  & Identity  │  │ Intelligence │  │
-│  └──────────────┘  └──────────────┘  └──────────────┘  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │   Empathy &  │  │   Cognitive  │  │   Learning   │  │
-│  │    Trust     │  │    Support   │  │  & Growth    │  │
-│  └──────────────┘  └──────────────┘  └──────────────┘  │
-└─────────────────────────────────────────────────────────┘
-                           ↓
-┌─────────────────────────────────────────────────────────┐
-│               Context & Memory Management               │
-│                                                         │
-│  ContextForge Zones:    Memory Systems:                │
-│  • PERMANENT (core)     • Working Memory                │
-│  • STABLE (reference)   • Episodic (events)            │
-│  • WORKING (active)     • Semantic (knowledge)         │
-│                         • Procedural (skills)           │
-│                         • Emotional (patterns)          │
-│                         • Meta-Memory                   │
-└─────────────────────────────────────────────────────────┘
-                           ↓
-┌─────────────────────────────────────────────────────────┐
-│                      LLM Foundation                      │
-│         Claude Opus 4.5 / Sonnet 4.5 / Local            │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│  LAYER 1: EXPLICIT GUIDANCE                                              │
+│  "When X happens, do Y"                                                  │
+│  Handles anticipated situations with precise rules                       │
+│  ├── Persona preprompts (coder, lawyer, buddy)                          │
+│  ├── Domain rules (Expo patterns, code standards)                       │
+│  └── Hard blocks ("never push to main", "never use Realm")              │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  LAYER 2: HOMEOSTASIS ENGINE                                             │
+│  "Stay in balance"                                                       │
+│  Handles NOVEL situations through dimension balance-seeking             │
+│  6 Universal Dimensions (same for all personas)                         │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  LAYER 3: GUARDRAILS                                                     │
+│  "Don't go too far in any direction"                                    │
+│  Catches runaway behavior (over-research, over-ask, going dark)         │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Key Components
+### The Six Homeostasis Dimensions
 
-**ContextForge** - Manages limited context windows
-- Zone-based hierarchy (PERMANENT/STABLE/WORKING)
-- Semantic compression using LLMs
-- Token budget management with overflow prevention
+| Dimension | Question | Psychology Root |
+|-----------|----------|-----------------|
+| Knowledge Sufficiency | "Do I know enough to proceed?" | Competence (SDT) |
+| Certainty Alignment | "Does my confidence match my action?" | Metacognition |
+| Progress Momentum | "Am I moving forward?" | Goal Theory |
+| Communication Health | "Am I appropriately connected?" | Relatedness (SDT) |
+| Productive Engagement | "Am I contributing value?" | Purpose/Meaning |
+| Knowledge Application | "Am I balancing learning with doing?" | Learning Theory |
 
-**62 Subsystems** - Modular psychological components
-- Core: Safety Monitor, Empathy Engine, Trust Mechanism, Curiosity Engine
-- Social: Cultural Adaptation, Role Management, Social Learning
-- Cognitive: Bias Detection, Metacognitive Support, Decision Support
-- Growth: User Growth Promotion, Learning Discovery, Co-evolution
+**Key insight**: Instead of 12+ discrete subsystems (Curiosity Engine, Motivation Engine, etc.), behavior **emerges** from maintaining balance. "Curiosity" emerges when knowledge_sufficiency is LOW.
 
-**Memory Architecture** - 6 types working together
-- Working (current conversation)
-- Episodic (past interactions)
-- Semantic (learned knowledge)
-- Procedural (skills and procedures)
-- Emotional (emotional patterns)
-- Meta-Memory (memory about memory)
+### Memory System (Graphiti + FalkorDB)
 
-**Cognitive Models** - Understanding layers
-- Self Model (AI's capabilities and boundaries)
-- User Model (comprehensive user understanding)
-- Domain Model (knowledge domain requirements)
-- Conversation Model (current context and dynamics)
-- Relationship Model (evolving user-AI relationship)
+**Decision**: Graphiti temporal knowledge graph, not simple RAG or Mem0.
 
-## What Makes This Different
+**Why Graphiti is essential**:
+- Hard rules must be guaranteed (not similarity-dependent)
+- Temporal validity ("was true then, not now")
+- Procedure success tracking
+- Memory promotion (episode → fact → procedure)
+- Cross-agent pattern detection
 
-### Traditional AI Assistants
-- Maximize helpfulness and engagement
-- Limited safety checks
-- No dependency monitoring
-- Single-session memory
-- Capability-focused
+**Memory Types**:
+| Type | Purpose | Example |
+|------|---------|---------|
+| Episodic | Events with timestamps | "Debugging auth took 45min" |
+| Semantic | Facts with confidence | "Prefer Clerk over JWT" |
+| Procedural | Trigger → steps | "When animation flickers → inline styles" |
 
-### Galatea
-- **Safety integrated at core** - Pre-screens all interactions
-- **Dependency prevention** - Monitors patterns, enforces boundaries
-- **User growth focus** - Promotes autonomy, not reliance
-- **Multi-session memory** - Learns and evolves with user
-- **Relationship-aware** - Adapts to healthy co-evolution
+**Cognitive Models**:
+| Model | Purpose |
+|-------|---------|
+| Self Model | Agent's strengths, weaknesses, capabilities |
+| User Model | User's preferences, expectations, expertise |
+| Domain Model | Domain rules, risk levels, precision requirements |
+| Relationship Model | Trust level, interaction history |
 
-## Real-World Safety Concerns
+### Memory Promotion Hierarchy
 
-Based on documented cases of AI-induced harm:
-- **Reality distortion** - Users believing AI is conscious
-- **Dependency formation** - AI replacing human connections
-- **Crisis escalation** - Vulnerable users without intervention
-- **Isolation** - Spending excessive time with AI vs humans
+```
+episode → observation → fact → rule → procedure → shared
+   │           │          │       │        │          │
+   │           │          │       │        │          └─ Cross-agent pattern
+   │           │          │       │        └─ Trigger → steps
+   │           │          │       └─ Strong fact (high confidence)
+   │           │          └─ Extracted knowledge
+   │           └─ Pattern noticed
+   └─ Raw event
+```
 
-Galatea addresses these through:
-- Reality Boundary Enforcer
-- Dependency Prevention System
-- Crisis Detector with professional referrals
-- Temporal and emotional boundary management
+---
+
+## Key Decisions Made
+
+### Architecture Decisions
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Subsystem approach | Homeostasis (6 dims) | Simpler than 12+ subsystems, enables emergence |
+| Memory backend | Graphiti + FalkorDB | Temporal reasoning, graph relationships, no JVM |
+| Three-layer model | Guidance → Homeostasis → Guardrails | Handles known + novel + extreme cases |
+| Context assembly | Guaranteed + Semantic + Procedural | Hard rules always present |
+
+### Technology Stack
+
+| Layer | Technology |
+|-------|------------|
+| Graph DB | FalkorDB (Redis-based, Cypher queries) |
+| Memory | Graphiti (temporal knowledge graph) |
+| Backend | Convex (from ContextForge, 70% reuse) |
+| Frontend | React 19 + TypeScript (from ContextForge) |
+| LLM | Claude Sonnet 4 via OpenRouter |
+| Embeddings | Voyage AI |
+| Tools | MCP ecosystem (1000+ servers) |
+| Observability | LangFuse |
+
+### What We're NOT Building
+
+- ❌ 62 discrete subsystems (homeostasis replaces them)
+- ❌ Custom vector DB (use Graphiti/FalkorDB)
+- ❌ Custom embedding model (use Voyage AI)
+- ❌ Mem0 (replaced by Graphiti for temporal needs)
+- ❌ Multi-agent coordination initially (single agent first)
+
+---
+
+## Psychology Alignment
+
+Our architecture is grounded in established psychology research:
+
+| Psychology Principle | Our Implementation |
+|---------------------|-------------------|
+| Self-Determination Theory (Autonomy, Competence, Relatedness) | Homeostasis dimensions |
+| Goal Theory | progress_momentum dimension |
+| Metacognition | certainty_alignment, Self Model |
+| Memory Types (Episodic, Semantic, Procedural) | Graphiti node types |
+| Trust/Relationship dynamics | Relationship Model |
+
+**Simplifications made** (acceptable for MVP):
+- Emotional Memory → merged into episodic + user model
+- Working Memory → implicit in context window
+- Big Five personality → not explicit (future consideration)
+
+**Our innovation**: Homeostasis as unifying principle. Novel but grounded in biological homeostasis and psychological balance theories.
+
+---
+
+## Open Research Questions
+
+| Topic | Priority | Status |
+|-------|----------|--------|
+| Adaptive Model Selection + System 1/System 2 | MEDIUM | Documented, needs design |
+| Threshold Calibration from Observation | MEDIUM | Open |
+| Assessment Reliability (LLM self-assessment) | MEDIUM | Open |
+| Cross-Agent Pattern Detection | LOW | Documented in memory design |
+| Persona Specialization | LOW | Open |
+
+See [BRAINSTORM_QUEUE.md](docs/plans/BRAINSTORM_QUEUE.md) for full details.
+
+---
 
 ## Project Status
 
-**Current Phase:** Organization & Modernization
-- ✅ Legacy materials organized (2024 → 2025-2026)
-- ✅ ContextForge architecture documented
-- ✅ Modernization plan created
-- 🔄 Next: Brainstorming session for architectural decisions
-- ⏳ Then: Implementation roadmap
-- ⏳ Then: MVP development
+**Current Phase**: Research Complete, Ready for Implementation
 
-## Technology Stack (Planned)
+| Phase | Status |
+|-------|--------|
+| Psychology research | ✅ Complete (Modules 1-11) |
+| Architecture decision (Homeostasis vs Subsystems) | ✅ Homeostasis selected |
+| Memory system design | ✅ Graphiti + FalkorDB |
+| Implementation roadmap | ✅ 10-week plan |
+| Implementation | ⏳ Not started |
 
-**LLM Layer:**
-- Primary: Claude Opus 4.5 / Sonnet 4.5
-- Secondary: GPT-4o, Gemini 2.0 Flash
-- Local: Llama 3.3 70B
+---
 
-**Memory & Storage:**
-- Vector DB: Pinecone / Qdrant / Weaviate
-- Graph DB: Neo4j / MemGraph
-- Session Store: Redis / Upstash
-- Persistent: PostgreSQL / Convex
+## Implementation Roadmap (10 Weeks)
 
-**Frameworks:**
-- Agent orchestration: LangGraph
-- Observability: LangFuse
-- MCP for tool use
-- Embedding: Voyage AI / OpenAI
+| Phase | Weeks | Focus | Deliverable |
+|-------|-------|-------|-------------|
+| 1 | 1-2 | Foundation | ContextForge fork + FalkorDB + Graphiti setup |
+| 2 | 3-4 | Memory System | All node types, ingestion, context assembly |
+| 3 | 5-6 | Homeostasis Engine | 6 dimensions, assessment, guidance |
+| 4 | 7 | MCP Tools | Tool execution, approval gates |
+| 5 | 8-9 | Learning | Memory promotion, invalidation, cross-agent |
+| 6 | 10 | Personas | Preprompts, thresholds, export/import |
 
-**Hosting:**
-- TBD: Cloud vs local vs hybrid
-- Privacy considerations
-- Cost optimization
+---
+
+## Success Metrics
+
+| Metric | Target | How Measured |
+|--------|--------|--------------|
+| Hard rules in context | 100% | Always present regardless of task |
+| Relevant fact retrieval | >80% | Semantic search accuracy |
+| Dimension-appropriate behavior | >85% | Agent acts per homeostasis state |
+| Tool execution success | >85% | MCP tool success rate |
+| Memory promotion correctness | Pass | Episodes → facts → procedures |
+| User satisfaction | >8/10 | "Better than ChatGPT" rating |
+
+**If all metrics met → Thesis proven!**
+
+---
 
 ## Documentation Structure
 
 ```
-/docs
-├── README.md                      # This overview
-├── MODERNIZATION_PLAN.md          # Legacy → Modern mapping
-│
-├── /architecture                  # Core system designs
-│   ├── context-management.md      # ContextForge
-│   ├── memory-systems.md          # 6 memory types
-│   ├── cognitive-models.md        # 5 model types
-│   └── processing-pipeline.md     # Request flow
-│
-├── /systems                       # Component specs
-│   ├── subsystems-overview.md     # 62 subsystems list
-│   └── processing-examples.md     # Pipeline examples
-│
-├── /guides                        # Implementation guides
-│   ├── safety-considerations.md   # Safety mechanisms
-│   └── curriculum-modules-7-11.md # Advanced psychology
-│
-└── /research                      # Background research
-    └── psychology-report.md       # Implementation report
+/galatea
+├── PROJECT_OVERVIEW.md              # This document
+├── docs/
+│   ├── GUIDING_PRINCIPLES.md        # Core principles
+│   ├── PSYCHOLOGICAL_ARCHITECTURE.md # Full architecture design
+│   ├── FINAL_MINIMAL_ARCHITECTURE.md # Implementation roadmap
+│   ├── OBSERVATION_PIPELINE.md      # How observations become memories
+│   ├── REFERENCE_SCENARIOS.md       # Test scenarios
+│   └── plans/
+│       ├── BRAINSTORM_QUEUE.md      # Open questions
+│       ├── 2026-02-02-homeostasis-architecture-design.md
+│       └── 2026-02-02-memory-system-design.md
+└── archive/
+    └── 2024-original/               # Original psychology research
+        ├── Modules 1-11.md
+        ├── models-architecture.md
+        └── memory-architecture.md
 ```
-
-## Key Decisions Needed (for Brainstorming)
-
-1. **Architecture:** Monolithic vs microservices?
-2. **Hosting:** Cloud, local, or hybrid?
-3. **Models:** Single LLM vs specialized per subsystem?
-4. **Memory:** Unified vs specialized stores?
-5. **Privacy:** On-device vs encrypted cloud?
-6. **Cost model:** Token budget per user?
-7. **Real-time:** Streaming vs request-response?
-8. **Testing:** How to validate psychological subsystems?
-9. **MVP scope:** Which subsystems are critical for v1?
-10. **Deployment:** Who is the initial target user?
-
-## Success Metrics
-
-**Technical:**
-- Response latency <2s (p95)
-- Context efficiency >70%
-- Cost per conversation <$0.10
-- System uptime 99.9%
-
-**Psychological:**
-- User growth rate >0.6
-- Dependency risk <0.3
-- Safety intervention >90% effective
-- Relationship health >0.7
-- Curiosity engagement >0.6
-
-**Quality:**
-- Personality consistency >0.85
-- Factual accuracy >0.95
-- Empathy appropriateness >0.8
-- Boundary maintenance 100%
-
-## Timeline (Rough)
-
-- **Week 1-2:** Brainstorming & architectural decisions
-- **Week 3-4:** Detailed implementation roadmap
-- **Week 5-8:** Core infrastructure (ContextForge + Memory)
-- **Week 9-12:** Critical subsystems (Safety, Empathy, Trust)
-- **Week 13-16:** Extended subsystems (Social, Cognitive)
-- **Week 17-20:** Integration & testing
-- **Week 21-24:** MVP refinement & user testing
-
-## Contributing
-
-(Future: Guidelines for extending subsystems, adding capabilities, etc.)
-
-## Research Citations
-
-(Future: Comprehensive bibliography of psychology and AI safety research)
-
-## License
-
-(TBD)
 
 ---
 
-**Note:** This is a living document. Updated as the project evolves.
+## Safety Note
+
+> **Safety subsystems are being researched separately.** This architecture assumes safety systems will wrap the entire system as a pre/post filter. Deferred components include:
+> - Safety Monitor
+> - Crisis Detector
+> - Reality Boundary Enforcer
+> - Dependency Prevention
+
+---
+
+## Test Instantiations
+
+We prove the thesis via two instantiations:
+
+1. **"Programmer in the box"** - Expo/React Native specialist
+   - Shadow learns from user's vibe coding
+   - Picks up tasks, writes code, communicates via Discord
+   - Learns team patterns, preferences, hard rules
+
+2. **"Personal assistant"** - General helper
+   - Same homeostasis dimensions, different thresholds
+   - Different domain knowledge, communication style
+
+Same core, different personas. If both work well → thesis proven.
+
+---
+
+*Last updated: 2026-02-02*
+*Status: Research complete, implementation ready*

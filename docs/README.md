@@ -10,10 +10,6 @@ This directory contains all architectural documentation, system designs, and res
 - **cognitive-models.md** - Model architecture (Self, User, Domain, Conversation, Relationship)
 - **processing-pipeline.md** - Request processing stages and metaprocessing logic
 
-### `/systems` - Component Specifications
-- **subsystems-overview.md** - Complete list of 62 psychological subsystems
-- **processing-examples.md** - Detailed pipeline examples (crisis, learning, dependency)
-
 ### `/guides` - Implementation Guides
 - **safety-considerations.md** - Critical safety mechanisms and real-world case studies
 - **curriculum-modules-7-11.md** - Teaching materials for advanced psychology modules

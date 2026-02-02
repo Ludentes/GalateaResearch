@@ -10,7 +10,7 @@ All files have been migrated to the new organized structure. See the main projec
 
 1. **CONTEXT_MANAGEMENT_ARCHITECTURE.md** - ContextForge system design
 2. **compass_artifact_wf-*.md** - Modules 7-11 summary
-3. **Modules 7-11.md** - Psychology curriculum materials
+3. **Modules 1-11.md** - Psychology curriculum materials
 4. **models-architecture.md** - Cognitive models (Self, User, Domain, etc.)
 5. **critical-safety-report.md** - Safety considerations with case studies
 6. **memory-architecture.md** - 6 memory types architecture
