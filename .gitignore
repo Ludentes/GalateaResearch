@@ -1,14 +1,68 @@
-# Editor
+# Editor - Obsidian
 .obsidian/workspace.json
+.obsidian/workspace-mobile.json
 
-# Claude local settings
+# Claude Code local settings (user-specific)
 .claude/settings.local.json
 
-# OS
+# OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
 # Temp files
 *.tmp
 *.swp
+*.swo
 *~
+\#*\#
+.#*
+
+# Logs
+*.log
+logs/
+
+# Node (if we add implementation later)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.sublime-*
+
+# Build outputs (if we add implementation later)
+dist/
+build/
+out/
+.next/
+.nuxt/
+
+# Python (if we add implementation later)
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+.venv/
+ENV/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Misc
+*.bak
+*.backup
