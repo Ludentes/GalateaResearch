@@ -66,6 +66,17 @@ See [homeostasis-architecture-design.md](./plans/2026-02-02-homeostasis-architec
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                     LAYER 0: ACTIVITY ROUTER                         │   │
+│  │  Classifies task → Selects processing level → Routes appropriately   │   │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ ┌────────────┐  │   │
+│  │  │  Level 0    │  │  Level 1    │  │  Level 2    │ │  Level 3   │  │   │
+│  │  │  (Direct)   │  │  (Pattern)  │  │  (Reason)   │ │ (Reflect)  │  │   │
+│  │  │  No LLM     │  │  Haiku      │  │  Sonnet     │ │ Reflexion  │  │   │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘ └────────────┘  │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                        │
+│                                    ▼                                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │                     LAYER 1: EXPLICIT GUIDANCE                       │   │
 │  │  "When X happens, do Y" - handles anticipated situations             │   │
 │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────────┐  │   │
@@ -78,6 +89,7 @@ See [homeostasis-architecture-design.md](./plans/2026-02-02-homeostasis-architec
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │                  LAYER 2: HOMEOSTASIS ENGINE                         │   │
 │  │  6 dimensions - balance drives behavior - handles novel situations   │   │
+│  │  (May be skipped for Level 0-1 activities)                           │   │
 │  │  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐       │   │
 │  │  │ Knowledge  │ │ Certainty  │ │ Progress   │ │ Communic.  │       │   │
 │  │  │Sufficiency │ │ Alignment  │ │ Momentum   │ │  Health    │       │   │
@@ -243,6 +255,11 @@ Instead of separate engines for curiosity, motivation, initiative, we define **d
 ### Three-Layer Model
 
 ```
+Layer 0: Activity Router (NEW)
+├── Classifies incoming activity
+├── Selects processing level (0-3) and model
+└── Routes to appropriate pipeline
+
 Layer 1: Explicit Guidance
 ├── Handles anticipated situations
 ├── Persona preprompts, domain rules, hard blocks
@@ -258,6 +275,102 @@ Layer 3: Guardrails
 ├── Prevents extremes (over-research, over-ask, going dark)
 └── Built-in to dimension spectrums
 ```
+
+---
+
+## Activity Router (System 1/System 2)
+
+### The Problem
+
+Agents perform activities with vastly different cognitive requirements:
+- "Acknowledged" → near-zero effort
+- "Implement feature" → requires reasoning
+- "Debug unknown issue" → requires reflection
+
+Using the same pipeline for all wastes resources and adds latency.
+
+### Key Insight: LLM Already Knows Most Things
+
+The agent's knowledge is primarily **in the LLM**, not memories:
+- LLM knows how to code, debug, write React Native
+- Memory stores the **delta**: team preferences, specific issues, hard rules
+
+This means we can't skip memory (might miss critical preferences), but we can optimize **processing depth**.
+
+### Activity Levels
+
+| Level | Name | LLM | Model | When Used |
+|-------|------|-----|-------|-----------|
+| 0 | Just Do It | None | - | Tool calls, templates |
+| 1 | Pattern Match | 1 call | Haiku | Procedure exists, simple |
+| 2 | Reason | 1 call | Sonnet | Implement, review, answer |
+| 3 | Reflect | 3-15 calls | Sonnet | Unknown, high-stakes, architecture |
+
+### Classification (No LLM Required)
+
+Activities are classified using cheap signals:
+
+```typescript
+function classifyActivity(task, procedureMatch, homeostasis) {
+  // Level 0: Direct actions
+  if (isDirectToolCall(task) || isTemplateMessage(task)) {
+    return { level: 0, model: 'none' };
+  }
+
+  // Level 3: Knowledge gaps or high stakes
+  if (homeostasis?.knowledge_sufficiency === 'LOW' ||
+      homeostasis?.certainty_alignment === 'LOW' ||
+      isIrreversibleAction(task)) {
+    return { level: 3, model: 'sonnet' };
+  }
+
+  // Level 1: High-confidence procedure
+  if (procedureMatch && procedureMatch.success_rate > 0.85) {
+    return { level: 1, model: 'haiku' };
+  }
+
+  // Level 2: Default
+  return { level: 2, model: 'sonnet' };
+}
+```
+
+### Level 3: Reflexion Pattern
+
+When Level 3 is triggered, use Draft → Critique → Revise loop:
+
+```
+Draft initial response
+     ↓
+Gather evidence (tools, search, memory)
+     ↓
+Critique (gaps, errors, unsupported claims)
+     ↓
+Revise with evidence
+     ↓
+Repeat until good (max 3 iterations)
+```
+
+### Psychology Mapping
+
+This is our implementation of **Kahneman's dual-process theory**:
+- **System 1** (fast, automatic) → Levels 0-1
+- **System 2** (slow, deliberate) → Levels 2-3
+
+But grounded in practical activity classification, not abstract cognitive modes.
+
+### Self-Knowledge Falls Out Free
+
+The routing logic **is** the self-knowledge. During execution:
+
+```yaml
+self_knowledge:
+  current_activity: "implementing profile screen"
+  activity_level: 2
+  model_in_use: "sonnet"
+  why: "Implement verb, needs reasoning → Level 2"
+```
+
+See [plans/2026-02-03-activity-routing-design.md](./plans/2026-02-03-activity-routing-design.md) for full design.
 
 ---
 
@@ -371,8 +484,24 @@ interface SelfModel {
   };
 
   limitations: string[];             // What I cannot do
+
+  // NEW: Available models (from config, not learned)
+  available_models: Array<{
+    id: string;                      // 'haiku', 'sonnet', 'opus'
+    characteristics: string[];       // ['fast', 'cheap'] or ['capable']
+    suitable_for: number[];          // Activity levels [0,1] or [2] or [3]
+  }>;
+
+  // NEW: Current operational state (ephemeral)
+  current_state?: {
+    activity_level: 0 | 1 | 2 | 3;
+    model_in_use: string;
+    reason: string;
+  };
 }
 ```
+
+**Note**: `available_models` comes from **config**, not learning. The agent knows what models exist because we tell it. `current_state` provides self-knowledge during execution.
 
 ### User Model
 
@@ -681,11 +810,13 @@ Agent: "I'll review open MRs while waiting."
 2. **Threshold calibration** - How do we tune thresholds from observation?
 3. **Cross-agent learning** - How do agents learn from each other's mistakes?
 4. **Dimension completeness** - Are 6 dimensions enough for all situations?
+5. ~~**System 1/System 2**~~ - RESOLVED: Activity-Level Routing (see below)
 
 ---
 
 ## Related Documents
 
+- **[plans/2026-02-03-activity-routing-design.md](./plans/2026-02-03-activity-routing-design.md)** - Activity routing & model selection (System 1/2)
 - **[plans/2026-02-02-homeostasis-architecture-design.md](./plans/2026-02-02-homeostasis-architecture-design.md)** - Full decision record
 - **[REFERENCE_SCENARIOS.md](./REFERENCE_SCENARIOS.md)** - Detailed scenarios for evaluation
 - **[plans/2026-02-02-memory-system-design.md](./plans/2026-02-02-memory-system-design.md)** - Memory system options
@@ -693,6 +824,7 @@ Agent: "I'll review open MRs while waiting."
 
 ---
 
-*Architecture document updated: 2026-02-02*
+*Architecture document updated: 2026-02-03*
+*Key additions: Activity Router (Layer 0), Self Model with model awareness*
 *Decision: Homeostasis-based architecture with 6 universal dimensions*
 *Based on research: OpenClaw, Cline, GPT-Engineer, MAGELLAN, WorldLLM, Reflexion*

@@ -36,9 +36,20 @@ We prove this thesis by building agents with:
 
 ## Architecture Overview
 
-### Three-Layer Model
+### Four-Layer Model
 
 ```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  LAYER 0: ACTIVITY ROUTER (System 1/System 2)                            │
+│  "What level of thinking does this need?"                               │
+│  Classifies activity → Selects processing depth → Routes appropriately  │
+│  ├── Level 0: Direct (no LLM) - tool calls, templates                   │
+│  ├── Level 1: Pattern (Haiku) - procedure exists, simple tasks          │
+│  ├── Level 2: Reason (Sonnet) - implement, review, answer               │
+│  └── Level 3: Reflect (Reflexion loop) - unknown, high-stakes           │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  LAYER 1: EXPLICIT GUIDANCE                                              │
 │  "When X happens, do Y"                                                  │
@@ -54,6 +65,7 @@ We prove this thesis by building agents with:
 │  "Stay in balance"                                                       │
 │  Handles NOVEL situations through dimension balance-seeking             │
 │  6 Universal Dimensions (same for all personas)                         │
+│  (May be skipped for Level 0-1 activities)                              │
 └─────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
@@ -137,7 +149,9 @@ episode → observation → fact → rule → procedure → shared
 | Memory | Graphiti (temporal knowledge graph) |
 | Backend | Convex (from ContextForge, 70% reuse) |
 | Frontend | React 19 + TypeScript (from ContextForge) |
-| LLM | Claude Sonnet 4 via OpenRouter |
+| LLM | Multiple models via Activity Router: |
+| | • Haiku (Level 0-1: simple/pattern tasks) |
+| | • Sonnet (Level 2-3: reasoning/reflection) |
 | Embeddings | Voyage AI |
 | Tools | MCP ecosystem (1000+ servers) |
 | Observability | LangFuse |
@@ -177,7 +191,7 @@ Our architecture is grounded in established psychology research:
 
 | Topic | Priority | Status |
 |-------|----------|--------|
-| Adaptive Model Selection + System 1/System 2 | MEDIUM | Documented, needs design |
+| ~~Adaptive Model Selection + System 1/System 2~~ | ~~MEDIUM~~ | ✅ RESOLVED: Activity-Level Routing |
 | Threshold Calibration from Observation | MEDIUM | Open |
 | Assessment Reliability (LLM self-assessment) | MEDIUM | Open |
 | Cross-Agent Pattern Detection | LOW | Documented in memory design |
@@ -280,5 +294,6 @@ Same core, different personas. If both work well → thesis proven.
 
 ---
 
-*Last updated: 2026-02-02*
+*Last updated: 2026-02-03*
 *Status: Research complete, implementation ready*
+*Latest: Added Activity Router (System 1/2) design*

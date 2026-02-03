@@ -36,9 +36,20 @@ After evaluating multiple approaches, we selected **homeostasis-based architectu
 
 **Key insight**: Instead of separate Curiosity/Motivation/Initiative engines, behavior **emerges** from maintaining balance across 6 dimensions.
 
-### The Three-Layer Model
+### The Four-Layer Model
 
 ```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  LAYER 0: ACTIVITY ROUTER                                                │
+│  "What level of thinking does this need?"                               │
+│  Classifies activity → Selects processing depth → Routes appropriately  │
+│  ├── Level 0: Direct (no LLM) - tool calls, templates                   │
+│  ├── Level 1: Pattern (Haiku) - procedure exists, simple tasks          │
+│  ├── Level 2: Reason (Sonnet) - implement, review, answer               │
+│  └── Level 3: Reflect (Sonnet + loop) - unknown, high-stakes            │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  LAYER 1: EXPLICIT GUIDANCE                                              │
 │  "When X happens, do Y"                                                  │
@@ -55,7 +66,8 @@ After evaluating multiple approaches, we selected **homeostasis-based architectu
 │  Handles NOVEL situations through dimension balance-seeking             │
 │  ├── 6 Universal Dimensions (same for all personas)                     │
 │  ├── Assessment: LOW / HEALTHY / HIGH per dimension                     │
-│  └── Guidance: What to do when imbalanced                               │
+│  ├── Guidance: What to do when imbalanced                               │
+│  └── May be skipped for Level 0-1 activities                            │
 └─────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
@@ -125,6 +137,17 @@ See [OBSERVATION_PIPELINE.md](OBSERVATION_PIPELINE.md) for full details.
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │                    LAYER 0: ACTIVITY ROUTER                             │ │
+│  │  Classifies activity → Selects level & model → Routes to pipeline       │ │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌──────────────┐  │ │
+│  │  │  Level 0    │  │  Level 1    │  │  Level 2    │  │   Level 3    │  │ │
+│  │  │  (Direct)   │  │  (Pattern)  │  │  (Reason)   │  │  (Reflect)   │  │ │
+│  │  │   No LLM    │  │   Haiku     │  │   Sonnet    │  │  Reflexion   │  │ │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘  └──────────────┘  │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                   │                                          │
+│                                   ▼                                          │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
 │  │                    LAYER 1: EXPLICIT GUIDANCE                           │ │
 │  │  ┌─────────────┐  ┌─────────────┐  ┌────────────────────────────────┐  │ │
 │  │  │   Persona   │  │   Domain    │  │         Hard Blocks            │  │ │
@@ -135,6 +158,7 @@ See [OBSERVATION_PIPELINE.md](OBSERVATION_PIPELINE.md) for full details.
 │                                   ▼                                          │
 │  ┌────────────────────────────────────────────────────────────────────────┐ │
 │  │                   LAYER 2: HOMEOSTASIS ENGINE                           │ │
+│  │  (May be skipped for Level 0-1 activities)                              │ │
 │  │  ┌───────────────┐ ┌───────────────┐ ┌───────────────┐                 │ │
 │  │  │  Knowledge    │ │   Certainty   │ │   Progress    │                 │ │
 │  │  │  Sufficiency  │ │   Alignment   │ │   Momentum    │                 │ │
@@ -179,9 +203,11 @@ See [OBSERVATION_PIPELINE.md](OBSERVATION_PIPELINE.md) for full details.
 │  └────────────────┘  └────────────────┘  └────────────────────────────────┘ │
 │                                                                              │
 │  ┌────────────────┐  ┌────────────────┐  ┌────────────────────────────────┐ │
-│  │   Voyage AI    │  │    LangFuse    │  │      Claude Sonnet 4           │ │
-│  │  (embeddings)  │  │ (observability)│  │       (via OpenRouter)         │ │
-│  └────────────────┘  └────────────────┘  └────────────────────────────────┘ │
+│  │   Voyage AI    │  │    LangFuse    │  │     LLM Models (Activity       │ │
+│  │  (embeddings)  │  │ (observability)│  │     Router selects):           │ │
+│  └────────────────┘  └────────────────┘  │  • Haiku (Level 0-1)           │ │
+│                                          │  • Sonnet (Level 2-3)          │ │
+│                                          └────────────────────────────────┘ │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -278,22 +304,26 @@ type EdgeType =
 
 ---
 
-### Phase 3: Homeostasis Engine (Weeks 5-6)
+### Phase 3: Homeostasis Engine + Activity Router (Weeks 5-6)
 
-**Objective:** Implement 6-dimension homeostasis with guidance
+**Objective:** Implement 6-dimension homeostasis with guidance AND activity-level routing
 
 **Tasks:**
 - [ ] Create HomeostasisEngine class
 - [ ] Implement assessment logic (hybrid: computed + LLM)
 - [ ] Define guidance text for all dimension states
+- [ ] **NEW:** Create ActivityRouter class
+- [ ] **NEW:** Implement activity classification (Level 0-3)
+- [ ] **NEW:** Implement model selection logic
+- [ ] **NEW:** Implement Level 3 Reflexion loop
 - [ ] Integrate with context builder
 - [ ] Add homeostasis state to prompt construction
-- [ ] Add homeostasis visualization to UI
+- [ ] Add homeostasis/routing visualization to UI
 - [ ] Test with reference scenarios
 
-**Deliverable:** Agent behavior driven by dimension balance
+**Deliverable:** Agent behavior driven by dimension balance AND appropriate processing depth
 
-**Success Metric:** Agent asks when knowledge LOW, proceeds when HEALTHY
+**Success Metric:** Agent asks when knowledge LOW, proceeds when HEALTHY; uses Haiku for simple tasks, Sonnet for complex
 
 **Core Implementation:**
 ```typescript
@@ -310,6 +340,16 @@ class HomeostasisEngine {
   assess(context: AgentContext): Record<string, 'LOW' | 'HEALTHY' | 'HIGH'>;
   getGuidance(states: Record<string, string>): string;
   buildContext(task: string, agent: Agent): AssembledContext;
+}
+
+class ActivityRouter {
+  classify(task: Task, procedure: Procedure | null, homeostasis: HomeostasisState): {
+    level: 0 | 1 | 2 | 3;
+    model: 'none' | 'haiku' | 'sonnet';
+    reason: string;
+  };
+
+  route(classification: Classification, task: Task): Promise<Result>;
 }
 ```
 
@@ -445,7 +485,9 @@ hard_blocks:
 |-------|-----------|-------|-----|
 | **Frontend** | React 19 + TypeScript | 75% | Memory/homeostasis UI |
 | **Backend** | Convex | 70% | Memory tables, homeostasis |
-| **LLM** | Claude Sonnet 4 (via OpenRouter) | 100% | Homeostasis assessment |
+| **LLM** | Multiple models via Activity Router | 100% | Model selection logic |
+| | • Haiku (Level 0-1: simple tasks) | | |
+| | • Sonnet (Level 2-3: reasoning) | | |
 | **Graph DB** | FalkorDB | 0% | Full integration |
 | **Memory** | Graphiti | 0% | Full integration |
 | **Tools** | MCP (1000+ servers) | 100% | Execution logic |
@@ -474,6 +516,11 @@ galatea/
 │
 ├── src/
 │   ├── lib/
+│   │   ├── routing/
+│   │   │   ├── router.ts         # 🆕 ActivityRouter class
+│   │   │   ├── classifier.ts     # 🆕 Activity classification logic
+│   │   │   ├── models.ts         # 🆕 Model selection
+│   │   │   └── reflexion.ts      # 🆕 Level 3 reflexion loop
 │   │   ├── homeostasis/
 │   │   │   ├── engine.ts         # 🆕 HomeostasisEngine class
 │   │   │   ├── dimensions.ts     # 🆕 Dimension definitions
@@ -612,6 +659,7 @@ volumes:
 ## Related Documents
 
 - **[PSYCHOLOGICAL_ARCHITECTURE.md](./PSYCHOLOGICAL_ARCHITECTURE.md)** - Full architecture design
+- **[plans/2026-02-03-activity-routing-design.md](./plans/2026-02-03-activity-routing-design.md)** - Activity routing & model selection
 - **[plans/2026-02-02-homeostasis-architecture-design.md](./plans/2026-02-02-homeostasis-architecture-design.md)** - Homeostasis decision
 - **[plans/2026-02-02-memory-system-design.md](./plans/2026-02-02-memory-system-design.md)** - Memory system design
 - **[OBSERVATION_PIPELINE.md](./OBSERVATION_PIPELINE.md)** - Observation pipeline design
@@ -653,6 +701,7 @@ We have:
 
 ---
 
-*Architecture updated: 2026-02-02*
-*Key changes: Homeostasis replaces 12 subsystems, Graphiti replaces Mem0*
+*Architecture updated: 2026-02-03*
+*Key changes: Added Activity Router (Layer 0) for System 1/2 processing*
+*Previous: Homeostasis replaces 12 subsystems, Graphiti replaces Mem0*
 *Next: Fork ContextForgeTS and begin Phase 1*

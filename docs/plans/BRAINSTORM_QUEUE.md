@@ -59,75 +59,39 @@ After extensive scenario tracing through shadow learning, multi-agent deployment
 
 ---
 
-## Pending
+## Completed
 
 ### 3. Adaptive Model Selection & Dual-Process (System 1/System 2)
 
 **Date Added**: 2026-02-02
-**Priority**: MEDIUM - Cost optimization, quality improvement, psychology alignment
-**Context**: System should autonomously choose the most appropriate model AND processing mode for each task.
+**Date Resolved**: 2026-02-03
+**Decision**: Activity-Level Routing with 4 levels (0-3)
 
-**Key Insight**: This connects to Kahneman's dual-process theory from our psychology research:
-- **System 1**: Fast, automatic, pattern-matching, uses procedural memory
-- **System 2**: Slow, deliberate, analytical, uses full semantic retrieval
+**Summary**:
+Instead of binary System 1/System 2, we use a spectrum of **activity levels**:
 
-**The core problem** (in order):
-1. First: Determine if we're in System 1 or System 2 mode
-2. Then: Select appropriate model based on that mode
-3. Then: Select appropriate memory retrieval strategy
+| Level | Name | LLM | Model | When Used |
+|-------|------|-----|-------|-----------|
+| 0 | Just Do It | None | - | Tool calls, templates |
+| 1 | Pattern Match | 1 call | Haiku | Procedure exists, simple |
+| 2 | Reason | 1 call | Sonnet | Implement, review, answer |
+| 3 | Reflect | 3-15 calls | Sonnet | Unknown, high-stakes (Reflexion loop) |
 
-**NOT**: Select model first, then call it a "system" (backwards!)
+**Key Insights**:
+1. LLM already knows most things (like a professional hire) - memory stores the delta
+2. Can't skip memory entirely (might miss critical preferences)
+3. Real optimization is **processing depth**, not memory skipping
+4. Classification uses cheap signals (no LLM needed): tool type, procedure match, homeostasis state
+5. Self-knowledge falls out free: routing logic IS the self-knowledge
 
-**System 1 indicators** (fast path appropriate):
-- Matching procedure exists with success_rate > 0.85
-- Task is routine/familiar (seen similar before)
-- Homeostasis: knowledge HIGH, certainty HIGH
-- Low stakes (reversible, no major consequences)
-- Time pressure
+**Architecture Placement**: Layer 0, before Explicit Guidance. Routes to appropriate pipeline.
 
-**System 2 indicators** (slow path needed):
-- No matching procedure, or low success rate
-- Novel/unfamiliar task
-- Homeostasis: knowledge LOW or certainty LOW
-- High stakes (irreversible, significant consequences)
-- Architecture/preference decisions
-- Explicit reasoning required
-
-**Processing mode determines everything else**:
-```
-System 1 (Fast)                    System 2 (Slow)
-─────────────────────────────────────────────────────
-Memory: Procedural match only      Memory: Full retrieval pipeline
-Search: Pattern match              Search: Semantic + graph traversal
-Model: Haiku (cheap, fast)         Model: Sonnet/Opus (capable)
-Reasoning: Minimal                 Reasoning: Deliberate
-```
-
-**Fits into architecture via**:
-- Self Model: Track available models and their capabilities
-- Procedural Memory: System 1 uses this primarily
-- Semantic Memory: System 2 needs full access
-- Homeostasis: Signals for mode selection (not the mode itself)
-
-**Open questions**:
-- How to detect task novelty/familiarity?
-- Should we track "cognitive load" in Self Model?
-- How to handle System 1 failures gracefully (escalate to System 2)?
-- Can we learn System 1/2 boundaries from observation?
-- Where does this component live? Before homeostasis? Parallel?
-
-**Potential architecture placement**:
-```
-Task → [System Selector] → System 1 or 2 decision
-                              │
-                              ├─► System 1: Procedural match → Haiku → Execute
-                              │
-                              └─► System 2: Full retrieval → Homeostasis → Sonnet/Opus → Reason
-```
-
-**Related psychology**: Kahneman (Thinking Fast and Slow), Dual-Process Theory, Cognitive Load Theory
+**Documents created**:
+- [2026-02-03-activity-routing-design.md](./2026-02-03-activity-routing-design.md)
 
 ---
+
+## Pending
 
 ### 4. Threshold Calibration from Observation
 
