@@ -198,8 +198,8 @@ See [OBSERVATION_PIPELINE.md](OBSERVATION_PIPELINE.md) for full details.
 │                         INFRASTRUCTURE                                       │
 │                                                                              │
 │  ┌────────────────┐  ┌────────────────┐  ┌────────────────────────────────┐ │
-│  │    FalkorDB    │  │     Convex     │  │        MCP Servers             │ │
-│  │  (graph store) │  │   (backend)    │  │     (1000+ tools)              │ │
+│  │    FalkorDB    │  │ TanStack Start │  │        MCP Servers             │ │
+│  │  (graph store) │  │ + Drizzle ORM  │  │     (1000+ tools)              │ │
 │  └────────────────┘  └────────────────┘  └────────────────────────────────┘ │
 │                                                                              │
 │  ┌────────────────┐  ┌────────────────┐  ┌────────────────────────────────┐ │
@@ -207,7 +207,10 @@ See [OBSERVATION_PIPELINE.md](OBSERVATION_PIPELINE.md) for full details.
 │  │  (embeddings)  │  │ (observability)│  │     Router selects):           │ │
 │  └────────────────┘  └────────────────┘  │  • Haiku (Level 0-1)           │ │
 │                                          │  • Sonnet (Level 2-3)          │ │
-│                                          └────────────────────────────────┘ │
+│  ┌────────────────┐  ┌────────────────┐  └────────────────────────────────┘ │
+│  │   Mosquitto    │  │  Better Auth   │                                     │
+│  │  (MQTT broker) │  │     (auth)     │                                     │
+│  └────────────────┘  └────────────────┘                                     │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -216,24 +219,28 @@ See [OBSERVATION_PIPELINE.md](OBSERVATION_PIPELINE.md) for full details.
 
 ## What We're Reusing (Maximum Leverage)
 
-### From ContextForgeTS (~75% reuse)
+### From ContextForgeTS (~40% direct, ~30% adapted)
 
-**Backend:**
-- ✅ Convex with existing tables (sessions, blocks, templates, projects, workflows)
-- ✅ Three-zone system (PERMANENT, STABLE, WORKING)
-- ✅ Context assembly logic
-- ✅ LLM integrations (Ollama, OpenRouter, Claude Code)
-- ✅ Token tracking and budgets
-- ✅ LangFuse observability
-
-**Frontend:**
-- ✅ React 19 + TypeScript
+**Direct Port (copy with minimal changes):**
+- ✅ Context assembly logic (`lib/context.ts`)
+- ✅ Token counting (`lib/tokenizer.ts`)
+- ✅ LangFuse observability (`lib/langfuse.ts`)
+- ✅ Block positioning logic
 - ✅ UI components (shadcn/ui)
-- ✅ Drag-and-drop
-- ✅ Real-time updates
-- ✅ Streaming display
+- ✅ DnD components (@dnd-kit patterns)
 
-**Time Saved: 6-10 weeks**
+**Adapted (pattern reuse, different implementation):**
+- ⚠️ Server functions (Convex → TanStack Start)
+- ⚠️ Database schema (Convex → Drizzle ORM)
+- ⚠️ Auth (Convex Auth → Better Auth)
+- ⚠️ LLM hooks (custom → Vercel AI SDK `useChat`)
+- ⚠️ Claude Code SDK integration (port patterns)
+
+**Not Reused (replaced):**
+- ❌ Convex real-time subscriptions → polling/SSE
+- ❌ Convex scheduled functions → external cron
+
+**Time Saved: 4-6 weeks** (from patterns and component reuse)
 
 ### From Ecosystem (~95% of tools)
 
@@ -254,20 +261,21 @@ See [OBSERVATION_PIPELINE.md](OBSERVATION_PIPELINE.md) for full details.
 
 ### Phase 1: Foundation (Weeks 1-2)
 
-**Objective:** Fork ContextForge, set up Graphiti + FalkorDB
+**Objective:** Create TanStack Start project, set up infrastructure
 
 **Tasks:**
-- [ ] Fork ContextForgeTS repository
-- [ ] Rename project to Galatea
+- [ ] Create TanStack Start project (`npx create-tanstack-app`)
+- [ ] Set up Drizzle ORM with SQLite (local dev)
+- [ ] Define full schema (all tables from architecture)
+- [ ] Set up Better Auth (password provider)
 - [ ] Set up FalkorDB locally (Docker)
-- [ ] Install Graphiti, configure with Claude
-- [ ] Create TypeScript wrapper for Graphiti
-- [ ] Test basic graph operations
-- [ ] Update branding, README
+- [ ] Set up Graphiti, create TypeScript wrapper
+- [ ] Copy pure utilities from ContextForge
+- [ ] Basic chat UI with Vercel AI SDK streaming
 
-**Deliverable:** Working Galatea instance with graph database ready
+**Deliverable:** Working Galatea instance with database + graph ready
 
-**Success Metric:** Can store and retrieve nodes/edges from FalkorDB
+**Success Metric:** Can store/retrieve from SQLite and FalkorDB
 
 ---
 
@@ -481,81 +489,94 @@ hard_blocks:
 
 ## Technical Stack Summary
 
-| Layer | Technology | Reuse | Add |
-|-------|-----------|-------|-----|
-| **Frontend** | React 19 + TypeScript | 75% | Memory/homeostasis UI |
-| **Backend** | Convex | 70% | Memory tables, homeostasis |
-| **LLM** | Multiple models via Activity Router | 100% | Model selection logic |
-| | • Haiku (Level 0-1: simple tasks) | | |
-| | • Sonnet (Level 2-3: reasoning) | | |
-| **Graph DB** | FalkorDB | 0% | Full integration |
-| **Memory** | Graphiti | 0% | Full integration |
-| **Tools** | MCP (1000+ servers) | 100% | Execution logic |
-| **Embeddings** | Voyage AI | 0% | Integration |
-| **Observability** | LangFuse | 90% | Homeostasis traces |
+| Layer | Technology | Status |
+|-------|-----------|--------|
+| **Frontend** | React 19 + TanStack Router | From ContextForge patterns |
+| **Backend** | TanStack Start (server functions) | New (replaces Convex) |
+| **Database** | Drizzle ORM + SQLite/PostgreSQL | New (replaces Convex DB) |
+| **Auth** | Better Auth | New (replaces Convex Auth) |
+| **LLM** | Claude Code SDK (dev) + Vercel AI SDK | Adapted |
+| | • Haiku (Level 0-1: simple tasks) | |
+| | • Sonnet (Level 2-3: reasoning) | |
+| **Graph DB** | FalkorDB | New |
+| **Memory** | Graphiti | New |
+| **Events** | MQTT (Mosquitto) for HA/Frigate | New |
+| **Tools** | MCP (1000+ servers) | Ecosystem |
+| **Embeddings** | Voyage AI | New |
+| **Observability** | LangFuse | From ContextForge |
+| **Static Content** | MD files (Obsidian-friendly) | New |
 
-**Overall Reuse: 70%**
+**Code Reuse from ContextForge: ~40% direct + ~30% adapted**
 **Time to Working Core: 10 weeks**
+
+See [system-architecture-tanstack.md](./plans/2026-02-03-system-architecture-tanstack.md) for full technical details.
 
 ---
 
-## Code Structure (New Files)
+## Code Structure (TanStack Start)
 
 ```
 galatea/
-├── convex/
-│   ├── schema.ts                 # ✏️ ADD: memory, homeostasis tables
-│   ├── memories.ts               # 🆕 Memory CRUD via Graphiti
-│   ├── homeostasis.ts            # 🆕 Dimension assessment
-│   ├── preprompts.ts             # 🆕 Personality/persona management
-│   ├── mcp.ts                    # 🆕 MCP tool execution
-│   └── lib/
-│       ├── graphiti.ts           # 🆕 Graphiti client wrapper
-│       ├── falkordb.ts           # 🆕 FalkorDB connection
-│       └── context-builder.ts    # 🆕 Prompt construction
-│
-├── src/
-│   ├── lib/
-│   │   ├── routing/
-│   │   │   ├── router.ts         # 🆕 ActivityRouter class
-│   │   │   ├── classifier.ts     # 🆕 Activity classification logic
-│   │   │   ├── models.ts         # 🆕 Model selection
-│   │   │   └── reflexion.ts      # 🆕 Level 3 reflexion loop
-│   │   ├── homeostasis/
-│   │   │   ├── engine.ts         # 🆕 HomeostasisEngine class
-│   │   │   ├── dimensions.ts     # 🆕 Dimension definitions
-│   │   │   └── guidance.ts       # 🆕 Guidance text per state
-│   │   ├── memory/
-│   │   │   ├── types.ts          # 🆕 Node/edge type definitions
-│   │   │   ├── ingestion.ts      # 🆕 Memory ingestion pipeline
-│   │   │   ├── retrieval.ts      # 🆕 Query formulation, context assembly
-│   │   │   └── promotion.ts      # 🆕 Promotion rules engine
-│   │   └── context/
-│   │       └── builder.ts        # 🆕 Full context assembly
+├── app/
+│   ├── routes/
+│   │   ├── __root.tsx              # Root layout
+│   │   ├── index.tsx               # Dashboard
+│   │   ├── chat/$sessionId.tsx     # Chat interface
+│   │   ├── memories/index.tsx      # Memory browser
+│   │   └── settings/index.tsx      # Configuration
 │   │
-│   ├── components/
-│   │   ├── memory/
-│   │   │   ├── MemoryPanel.tsx   # 🆕 Memory visualization
-│   │   │   └── GraphView.tsx     # 🆕 Knowledge graph display
-│   │   ├── homeostasis/
-│   │   │   ├── StatePanel.tsx    # 🆕 Dimension states display
-│   │   │   └── GuidanceView.tsx  # 🆕 Current guidance
-│   │   └── persona/
-│   │       ├── PersonaSelector.tsx # 🆕 Choose persona
-│   │       └── ThresholdConfig.tsx # 🆕 Tune thresholds
+│   ├── api/                        # API routes
+│   │   ├── observations.ts         # POST /api/observations
+│   │   ├── dialogue.ts             # POST /api/dialogue
+│   │   └── chat.ts                 # POST /api/chat (streaming)
 │   │
-│   └── hooks/
-│       ├── useHomeostasis.ts     # 🆕 Homeostasis state hook
-│       └── useMemory.ts          # 🆕 Memory query hook
+│   └── components/
+│       ├── chat/                   # Chat UI components
+│       ├── memory/                 # Memory browser (TanStack Table)
+│       ├── homeostasis/            # State panel
+│       └── ui/                     # shadcn/ui components
 │
-└── docs/
-    ├── PSYCHOLOGICAL_ARCHITECTURE.md  # ✅ Design doc
-    ├── FINAL_MINIMAL_ARCHITECTURE.md  # ✅ This document
-    ├── OBSERVATION_PIPELINE.md        # ✅ Observation design
-    └── plans/
-        ├── 2026-02-02-homeostasis-architecture-design.md  # ✅ Decision
-        └── 2026-02-02-memory-system-design.md             # ✅ Memory design
+├── server/
+│   ├── functions/                  # Server functions
+│   │   ├── chat.ts                 # Chat completion (Level 0-3)
+│   │   ├── memories.ts             # Memory CRUD
+│   │   ├── sessions.ts             # Session management
+│   │   ├── homeostasis.ts          # State updates
+│   │   ├── learning.ts             # Memory promotion
+│   │   └── personas.ts             # Persona management
+│   │
+│   ├── engine/                     # Core Galatea logic
+│   │   ├── activity-router.ts      # Level 0-3 classification
+│   │   ├── homeostasis-engine.ts   # 6 dimensions + guidance
+│   │   ├── context-builder.ts      # Full context assembly
+│   │   ├── reflexion.ts            # Level 3 Draft→Critique→Revise
+│   │   ├── guardrails.ts           # Over-research, going dark
+│   │   └── observation-pipeline.ts # Capture→Enrich→Validate→Store
+│   │
+│   ├── integrations/
+│   │   ├── graphiti.ts             # Graphiti client
+│   │   ├── mqtt.ts                 # MQTT subscriber (HA/Frigate)
+│   │   ├── llm.ts                  # Claude Code SDK + Vercel AI SDK
+│   │   └── mcp.ts                  # MCP tool executor
+│   │
+│   ├── sync/
+│   │   └── md-sync.ts              # MD files → DB/Graphiti sync
+│   │
+│   └── db/
+│       ├── schema.ts               # Drizzle schema (all tables)
+│       ├── migrations/
+│       └── index.ts                # DB client
+│
+├── galatea-knowledge/              # MD files (Obsidian-friendly)
+│   ├── personas/                   # Agent specs
+│   ├── rules/                      # Hard rules
+│   ├── domain/                     # Domain knowledge
+│   └── procedures/                 # Step-by-step guides
+│
+└── docs/                           # Documentation
 ```
+
+See [system-architecture-tanstack.md](./plans/2026-02-03-system-architecture-tanstack.md) for detailed code examples.
 
 ---
 
@@ -563,21 +584,35 @@ galatea/
 
 ### .env.local
 ```bash
-# Existing from ContextForge
-VITE_CONVEX_URL=<auto-generated>
-OLLAMA_URL=http://localhost:11434
-OPENROUTER_API_KEY=sk-or-v1-...
-OPENROUTER_MODEL=anthropic/claude-sonnet-4
+# Database
+DATABASE_URL=file:./galatea.db       # SQLite for local dev
+# DATABASE_URL=postgres://...         # PostgreSQL for production
+
+# Auth
+BETTER_AUTH_SECRET=<random-secret>
+
+# LLM
+ANTHROPIC_API_KEY=sk-ant-...         # For Vercel AI SDK (production)
+OLLAMA_URL=http://localhost:11434    # For local Ollama
+
+# Graph Memory
+FALKORDB_URL=redis://localhost:6379
+VOYAGE_AI_API_KEY=pa-...
+
+# Events
+MQTT_BROKER=mqtt://localhost:1883
+
+# Observability
 LANGFUSE_SECRET_KEY=sk-lf-...
 LANGFUSE_PUBLIC_KEY=pk-lf-...
 
-# New for Galatea
-FALKORDB_URL=redis://localhost:6379
-VOYAGE_AI_API_KEY=pa-...
+# Content
+KNOWLEDGE_PATH=./galatea-knowledge   # MD files location
 ```
 
-### docker-compose.yml (for FalkorDB)
+### docker-compose.yml
 ```yaml
+version: '3.8'
 services:
   falkordb:
     image: falkordb/falkordb:latest
@@ -586,18 +621,34 @@ services:
     volumes:
       - falkordb_data:/data
 
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+
 volumes:
   falkordb_data:
 ```
 
-### package.json additions
+### package.json (key dependencies)
 ```json
 {
   "dependencies": {
-    "ai": "^6.0.39",                    // Vercel AI SDK (MCP support)
-    "falkordb": "^5.0.0",               // FalkorDB client
-    "graphiti-core": "^0.5.0",          // Graphiti (via REST wrapper)
-    "voyage-ai": "^1.0.0"               // Voyage embeddings
+    "@tanstack/react-start": "^1.0.0",
+    "@tanstack/react-query": "^5.0.0",
+    "@tanstack/react-router": "^1.0.0",
+    "@tanstack/react-table": "^8.0.0",
+    "@tanstack/react-form": "^1.0.0",
+    "drizzle-orm": "^0.30.0",
+    "better-sqlite3": "^11.0.0",
+    "ai": "^4.0.0",
+    "@ai-sdk/anthropic": "^1.0.0",
+    "@anthropic-ai/claude-agent-sdk": "^0.1.0",
+    "mqtt": "^5.0.0",
+    "better-auth": "^1.0.0"
   }
 }
 ```
@@ -609,10 +660,12 @@ volumes:
 ❌ 12+ discrete subsystems (homeostasis replaces them)
 ❌ Custom vector DB (use Graphiti/FalkorDB)
 ❌ Custom embedding model (use Voyage AI)
-❌ Custom LLM (use Claude Sonnet)
-❌ Complex UI from scratch (extend ContextForge)
+❌ Custom LLM (use Claude models via API)
+❌ Complex UI from scratch (reuse ContextForge patterns)
 ❌ Mem0 (replaced by Graphiti)
-❌ Multi-agent coordination initially (single agent first, then cross-agent)
+❌ Convex (replaced by TanStack Start + Drizzle)
+❌ Real-time sync framework (not needed for request/response + streaming)
+❌ Multi-agent coordination initially (single agent first)
 
 ---
 
@@ -658,10 +711,22 @@ volumes:
 
 ## Related Documents
 
+### Architecture
 - **[PSYCHOLOGICAL_ARCHITECTURE.md](./PSYCHOLOGICAL_ARCHITECTURE.md)** - Full architecture design
+- **[plans/2026-02-03-system-architecture-tanstack.md](./plans/2026-02-03-system-architecture-tanstack.md)** - TanStack Start implementation
+
+### Design Decisions
+- **[plans/2026-02-03-tech-stack-evaluation.md](./plans/2026-02-03-tech-stack-evaluation.md)** - Stack decision (TanStack vs Convex)
 - **[plans/2026-02-03-activity-routing-design.md](./plans/2026-02-03-activity-routing-design.md)** - Activity routing & model selection
 - **[plans/2026-02-02-homeostasis-architecture-design.md](./plans/2026-02-02-homeostasis-architecture-design.md)** - Homeostasis decision
 - **[plans/2026-02-02-memory-system-design.md](./plans/2026-02-02-memory-system-design.md)** - Memory system design
+- **[plans/2026-02-03-md-files-input-layer.md](./plans/2026-02-03-md-files-input-layer.md)** - MD files for static content
+
+### Migration & Reuse
+- **[plans/2026-02-03-contextforge-migration.md](./plans/2026-02-03-contextforge-migration.md)** - ContextForge migration analysis
+- **[plans/2026-02-03-tanstack-ecosystem.md](./plans/2026-02-03-tanstack-ecosystem.md)** - TanStack capabilities
+
+### Testing & Planning
 - **[OBSERVATION_PIPELINE.md](./OBSERVATION_PIPELINE.md)** - Observation pipeline design
 - **[REFERENCE_SCENARIOS.md](./REFERENCE_SCENARIOS.md)** - Test scenarios
 - **[plans/BRAINSTORM_QUEUE.md](./plans/BRAINSTORM_QUEUE.md)** - Open questions
@@ -702,6 +767,9 @@ We have:
 ---
 
 *Architecture updated: 2026-02-03*
-*Key changes: Added Activity Router (Layer 0) for System 1/2 processing*
-*Previous: Homeostasis replaces 12 subsystems, Graphiti replaces Mem0*
-*Next: Fork ContextForgeTS and begin Phase 1*
+*Key changes:*
+- *Stack: TanStack Start + Drizzle (replaces Convex)*
+- *Events: MQTT for Home Assistant/Frigate integration*
+- *Content: MD files as input layer (Obsidian-friendly)*
+- *Previous: Activity Router, Homeostasis, Graphiti memory*
+*Next: Create TanStack Start project and begin Phase 1*

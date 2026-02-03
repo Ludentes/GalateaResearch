@@ -91,6 +91,84 @@ Instead of binary System 1/System 2, we use a spectrum of **activity levels**:
 
 ---
 
+## Completed
+
+### 4. Tech Stack Decision (Convex vs TanStack Start)
+
+**Date Added**: 2026-02-03
+**Date Resolved**: 2026-02-03
+**Decision**: TanStack Start with Drizzle ORM
+
+**Summary**:
+After analyzing ContextForgeTS experience and Galatea requirements, we chose TanStack Start over Convex:
+
+| Factor | Convex | TanStack Start | Winner |
+|--------|--------|----------------|--------|
+| Local-first dev | Cloud-connected | SQLite file | TanStack |
+| Non-pure functions | "use node" friction | Direct Node.js | TanStack |
+| MQTT integration | HTTP wrapper needed | Native | TanStack |
+| Graphiti bridge | Indirect | Direct subprocess | TanStack |
+| Real-time sync | Excellent | Manual (SSE) | Convex |
+| Crons | Built-in | External solution | Convex |
+
+**Key insight**: Galatea is mostly request/response + streaming. Real-time sync is nice-to-have, not essential.
+
+**Documents created**:
+- [2026-02-03-tech-stack-evaluation.md](./2026-02-03-tech-stack-evaluation.md)
+- [2026-02-03-tanstack-ecosystem.md](./2026-02-03-tanstack-ecosystem.md)
+- [2026-02-03-system-architecture-tanstack.md](./2026-02-03-system-architecture-tanstack.md)
+- [2026-02-03-contextforge-migration.md](./2026-02-03-contextforge-migration.md)
+
+---
+
+## Completed
+
+### 5. Event Ingestion (MQTT for Home Automation)
+
+**Date Added**: 2026-02-03
+**Date Resolved**: 2026-02-03
+**Decision**: Include MQTT from the start
+
+**Summary**:
+Initially considered HTTP-only for simplicity, but MQTT provides ecosystem integration:
+
+- Home Assistant state changes
+- Frigate NVR detections (person, car, etc.)
+- Zigbee devices via zigbee2mqtt
+- Any IoT device speaking MQTT
+
+**Key insight**: MQTT isn't about efficiency - it's about ecosystem access. HA/Frigate already have MQTT configured.
+
+**Documents created**:
+- [2026-02-03-tech-stack-evaluation.md](./2026-02-03-tech-stack-evaluation.md) (MQTT section)
+
+---
+
+## Completed
+
+### 6. Static Content Management (MD Files)
+
+**Date Added**: 2026-02-03
+**Date Resolved**: 2026-02-03
+**Decision**: MD files as input layer for static content
+
+**Summary**:
+Users prefer Obsidian/VSCode over database admin UIs. MD files work for:
+- Personas (YAML frontmatter + content)
+- Hard rules
+- Domain knowledge
+- Procedures
+
+**Sync mechanism**:
+- `source: "file:{path}"` vs `source: "learned:{id}"`
+- Upsert by ID derived from file path
+- Learned content can supersede MD content
+
+**Documents created**:
+- [2026-02-03-md-files-input-layer.md](./2026-02-03-md-files-input-layer.md)
+
+---
+
 ## Pending
 
 ### 4. Threshold Calibration from Observation

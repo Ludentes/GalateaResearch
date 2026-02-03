@@ -70,6 +70,7 @@ Collect raw activity events from user's environment without interpretation.
 | **Browser** | Active tab (domain, title), searches, time on page | Browser extension or ActivityWatch |
 | **Terminal** | Commands executed, output summary, exit codes, working directory | Shell wrapper or ActivityWatch |
 | **VSCode** | Files opened, files saved, extensions used, debug sessions | VSCode extension |
+| **MQTT** | Home Assistant state changes, Frigate NVR detections (person, car), Zigbee device events | Mosquitto broker subscription |
 | **Manual** | User explicitly tells Galatea something | Chat interface |
 
 ### Data Schema
@@ -148,6 +149,23 @@ interface VSCodeActivity {
     filePath: string;
     language?: string;
     linesChanged?: number;  // For saves
+  };
+}
+```
+
+**MQTT Events (Home Assistant / Frigate):**
+```typescript
+interface MQTTActivity {
+  eventType: "state_change" | "frigate_detection" | "device_event";
+  summary: string;  // "Front door opened" or "Person detected in driveway"
+  details: {
+    topic: string;           // MQTT topic
+    entityId?: string;       // Home Assistant entity ID
+    oldState?: string;       // For state changes
+    newState?: string;
+    detectionType?: string;  // For Frigate: person, car, dog, etc.
+    camera?: string;         // For Frigate
+    confidence?: number;     // For Frigate
   };
 }
 ```
@@ -342,7 +360,85 @@ function getRelativePath(fullPath: string): string {
 }
 ```
 
-#### Option D: Shell Wrapper
+#### Option D: MQTT Subscriber (Home Assistant / Frigate)
+
+```typescript
+// server/integrations/mqtt.ts
+
+import mqtt from 'mqtt';
+import { db } from '../db';
+import { activities } from '../db/schema';
+
+const MQTT_BROKER = process.env.MQTT_BROKER || 'mqtt://localhost:1883';
+
+export function startMQTTSubscriber(sessionId: string) {
+  const client = mqtt.connect(MQTT_BROKER);
+
+  client.on('connect', () => {
+    // Subscribe to Home Assistant state changes
+    client.subscribe('homeassistant/+/+/state');
+
+    // Subscribe to Frigate events
+    client.subscribe('frigate/events');
+    client.subscribe('frigate/+/person');
+    client.subscribe('frigate/+/car');
+
+    console.log('MQTT subscriber connected');
+  });
+
+  client.on('message', async (topic, message) => {
+    const payload = JSON.parse(message.toString());
+
+    // Frigate detection
+    if (topic.startsWith('frigate/')) {
+      const camera = topic.split('/')[1];
+      const detectionType = topic.split('/')[2] || payload.type;
+
+      await db.insert(activities).values({
+        id: crypto.randomUUID(),
+        sessionId,
+        source: 'mqtt',
+        eventType: 'frigate_detection',
+        summary: `${detectionType} detected on ${camera}`,
+        details: {
+          topic,
+          camera,
+          detectionType,
+          confidence: payload.score,
+          timestamp: payload.timestamp,
+        },
+        timestamp: Date.now(),
+        processed: false,
+      });
+    }
+
+    // Home Assistant state change
+    if (topic.startsWith('homeassistant/')) {
+      const [, domain, entityId] = topic.split('/');
+
+      await db.insert(activities).values({
+        id: crypto.randomUUID(),
+        sessionId,
+        source: 'mqtt',
+        eventType: 'state_change',
+        summary: `${entityId}: ${payload.state}`,
+        details: {
+          topic,
+          entityId: `${domain}.${entityId}`,
+          newState: payload.state,
+          attributes: payload.attributes,
+        },
+        timestamp: Date.now(),
+        processed: false,
+      });
+    }
+  });
+
+  return client;
+}
+```
+
+#### Option E: Shell Wrapper
 
 ```bash
 # Add to ~/.bashrc or ~/.zshrc
@@ -1679,4 +1775,5 @@ The Observation Pipeline transforms raw user activity into rich, validated memor
 ---
 
 *Formalized: 2026-02-02*
+*Updated: 2026-02-03 (added MQTT for Home Assistant/Frigate integration)*
 *Status: Ready for implementation*
