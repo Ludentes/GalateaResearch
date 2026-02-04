@@ -2,11 +2,12 @@
 import {
   createRootRoute,
   HeadContent,
-  Link,
+  Outlet,
   Scripts,
 } from "@tanstack/react-router"
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools"
 import type * as React from "react"
+import appCss from "@/styles/app.css?url"
 
 export const Route = createRootRoute({
   head: () => ({
@@ -22,9 +23,20 @@ export const Route = createRootRoute({
         title: "Galatea",
       },
     ],
+    links: [
+      {
+        rel: "stylesheet",
+        href: appCss,
+      },
+    ],
   }),
+  component: RootComponent,
   shellComponent: RootDocument,
 })
+
+function RootComponent() {
+  return <Outlet />
+}
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
@@ -33,20 +45,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <div style={{ padding: "1rem" }}>
-          <nav style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
-            <Link
-              to="/"
-              activeProps={{
-                style: { fontWeight: "bold" },
-              }}
-            >
-              Home
-            </Link>
-          </nav>
-          <hr />
-          {children}
-        </div>
+        {children}
         <TanStackRouterDevtools position="bottom-right" />
         <Scripts />
       </body>
