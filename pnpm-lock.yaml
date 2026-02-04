@@ -108,6 +108,9 @@ importers:
       drizzle-kit:
         specifier: ^0.31.8
         version: 0.31.8
+      h3:
+        specifier: 2.0.1-rc.11
+        version: 2.0.1-rc.11(crossws@0.4.4(srvx@0.10.1))
       jsdom:
         specifier: ^28.0.0
         version: 28.0.0

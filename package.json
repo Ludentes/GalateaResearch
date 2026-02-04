@@ -56,6 +56,7 @@
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^4.6.0",
     "drizzle-kit": "^0.31.8",
+    "h3": "2.0.1-rc.11",
     "jsdom": "^28.0.0",
     "nitro": "3.0.1-alpha.2",
     "tsx": "^4.21.0",

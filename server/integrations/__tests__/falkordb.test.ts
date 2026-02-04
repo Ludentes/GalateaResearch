@@ -18,7 +18,9 @@ describe("FalkorDB Connection", () => {
     )
 
     expect(result.data?.length).toBeGreaterThan(0)
-    expect(result.data?.[0]?.name).toBe("smoke-test")
+    expect((result.data?.[0] as Record<string, unknown>)?.name).toBe(
+      "smoke-test",
+    )
 
     await graph.query("MATCH (n:TestNode) DELETE n")
   })
@@ -35,7 +37,9 @@ describe("FalkorDB Connection", () => {
     )
 
     expect(result.data?.length).toBe(1)
-    expect(result.data?.[0]?.from_content).toBe("Prefer Clerk")
+    expect((result.data?.[0] as Record<string, unknown>)?.from_content).toBe(
+      "Prefer Clerk",
+    )
 
     await graph.query("MATCH (n:Memory) DETACH DELETE n")
   })
