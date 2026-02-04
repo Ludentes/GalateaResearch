@@ -43,12 +43,15 @@ yarn-error.log*
 .vscode/
 *.sublime-*
 
-# Build outputs (if we add implementation later)
+# Build outputs
 dist/
 build/
 out/
+.output/
 .next/
 .nuxt/
+.nitro/
+.vinxi/
 
 # Python (if we add implementation later)
 __pycache__/
@@ -66,3 +69,4 @@ coverage/
 # Misc
 *.bak
 *.backup
+.claude
