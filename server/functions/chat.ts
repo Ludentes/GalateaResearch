@@ -1,9 +1,12 @@
 import { anthropic } from "@ai-sdk/anthropic"
 import { createServerFn } from "@tanstack/react-start"
-import { generateText } from "ai"
-import { asc, eq } from "drizzle-orm"
-import { db } from "../db"
-import { messages, preprompts, sessions } from "../db/schema"
+import {
+  createSessionLogic,
+  getSessionMessagesLogic,
+  sendMessageLogic,
+} from "./chat.logic"
+
+const MODEL_NAME = "claude-sonnet-4-20250514"
 
 /**
  * Send a message in a chat session.
@@ -17,52 +20,12 @@ import { messages, preprompts, sessions } from "../db/schema"
 export const sendMessage = createServerFn({ method: "POST" })
   .inputValidator((input: { sessionId: string; message: string }) => input)
   .handler(async ({ data }) => {
-    const { sessionId, message } = data
-
-    // Store user message
-    await db.insert(messages).values({
-      sessionId,
-      role: "user",
-      content: message,
-    })
-
-    // Get conversation history
-    const history = await db
-      .select()
-      .from(messages)
-      .where(eq(messages.sessionId, sessionId))
-      .orderBy(asc(messages.createdAt))
-
-    // Get active preprompts ordered by priority (core + hard rules)
-    const activePrompts = await db
-      .select()
-      .from(preprompts)
-      .where(eq(preprompts.active, true))
-      .orderBy(asc(preprompts.priority))
-
-    // Build system prompt from active preprompts
-    const systemPrompt = activePrompts.map((p) => p.content).join("\n\n")
-
-    // Generate response (Phase 1: non-streaming)
-    const result = await generateText({
-      model: anthropic("claude-sonnet-4-20250514"),
-      system: systemPrompt,
-      messages: history.map((m) => ({
-        role: m.role as "user" | "assistant",
-        content: m.content,
-      })),
-    })
-
-    // Store assistant response
-    await db.insert(messages).values({
-      sessionId,
-      role: "assistant",
-      content: result.text,
-      model: "claude-sonnet-4-20250514",
-      tokenCount: result.usage.totalTokens,
-    })
-
-    return { text: result.text }
+    return sendMessageLogic(
+      data.sessionId,
+      data.message,
+      anthropic(MODEL_NAME),
+      MODEL_NAME,
+    )
   })
 
 /**
@@ -71,11 +34,7 @@ export const sendMessage = createServerFn({ method: "POST" })
 export const createSession = createServerFn({ method: "POST" })
   .inputValidator((input: { name: string }) => input)
   .handler(async ({ data }) => {
-    const [session] = await db
-      .insert(sessions)
-      .values({ name: data.name })
-      .returning()
-    return session
+    return createSessionLogic(data.name)
   })
 
 /**
@@ -84,9 +43,5 @@ export const createSession = createServerFn({ method: "POST" })
 export const getSessionMessages = createServerFn({ method: "GET" })
   .inputValidator((input: { sessionId: string }) => input)
   .handler(async ({ data }) => {
-    return db
-      .select()
-      .from(messages)
-      .where(eq(messages.sessionId, data.sessionId))
-      .orderBy(asc(messages.createdAt))
+    return getSessionMessagesLogic(data.sessionId)
   })
