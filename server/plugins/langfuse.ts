@@ -1,15 +1,18 @@
-import { LangfuseSpanProcessor } from "@langfuse/otel"
-import { NodeSDK } from "@opentelemetry/sdk-node"
+export default () => {
+  const hasConfig =
+    process.env.LANGFUSE_SECRET_KEY && process.env.LANGFUSE_PUBLIC_KEY
 
-const hasLangfuseConfig =
-  process.env.LANGFUSE_SECRET_KEY && process.env.LANGFUSE_PUBLIC_KEY
+  if (!hasConfig) return
 
-if (hasLangfuseConfig) {
-  const sdk = new NodeSDK({
-    spanProcessors: [new LangfuseSpanProcessor()],
+  import("@opentelemetry/sdk-node").then(({ NodeSDK }) => {
+    import("@langfuse/otel").then(({ LangfuseSpanProcessor }) => {
+      const sdk = new NodeSDK({
+        spanProcessors: [new LangfuseSpanProcessor()],
+      })
+      sdk.start()
+      console.log(
+        `[langfuse] Tracing enabled → ${process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com"}`,
+      )
+    })
   })
-  sdk.start()
-  console.log(
-    `[langfuse] Tracing enabled → ${process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com"}`,
-  )
 }
