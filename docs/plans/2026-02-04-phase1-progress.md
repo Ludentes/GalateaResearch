@@ -19,8 +19,15 @@
 | 7 | Database + FalkorDB Integration Tests | DONE | `35fa36b` | 8/8 tests pass. FalkorDB Browser on 13001. |
 | 8 | Seed Data | DONE | `1e53177` | 2 personas, 2 preprompts. Idempotent seed. |
 | 9 | Chat Server Function + AI SDK | DONE | `791ad64` | Refactored to chat.logic.ts + thin wrapper. 3 unit + 1 integration test (Ollama). 12/12 pass. |
-| 10 | Chat UI | DONE | `f5ba919` | Streaming chat with provider switcher, token display. |
-| 11 | End-to-End Foundation Verification | DONE | `360d899` | All 3 providers (ollama, openrouter, claude-code) verified streaming. 27/27 tests, 0 TS errors. |
+| 10 | Chat UI | DONE | `f5ba919` | Basic streaming chat with message history. Later extended with provider switcher, token display (see Bonus). |
+| 11 | End-to-End Foundation Verification | DONE | `360d899` | All 3 providers (ollama, openrouter, claude-code) verified streaming. 27/27 tests, 0 TS errors, 0 lint issues. |
+| B1 | Multi-Provider System | DONE | `de1a0a1` | 3 providers (ollama, openrouter, claude-code) with config, factory, wrappers. TDD with 4 unit tests. |
+| B2 | Streaming API Route | DONE | `4a4a8e8` | Nitro `POST /api/chat` with `streamText()` + `toTextStreamResponse()`. Token tracking (input/output). |
+| B3 | Streaming Chat UI | DONE | `b095ff9` | Client-side `ReadableStream` reader, streaming cursor, token display per message. |
+| B4 | Provider Switcher UI | DONE | `23d7067` | Runtime provider/model switching via dropdowns in chat header. No server restart needed. |
+| B5 | Langfuse Observability | DONE | `6fb90ac` | OTel-based tracing via Nitro plugin. Auto-enables when `LANGFUSE_SECRET_KEY` + `LANGFUSE_PUBLIC_KEY` set. |
+| B6 | Nitro serverDir Fix | DONE | `42c27fc` | Added `serverDir: "server"` to Nitro vite plugin — required for route discovery in `server/routes/`. |
+| B7 | Nitro Plugin Export Fix | DONE | `360d899` | Nitro plugins must `export default () => {}`, not run top-level code. |
 
 ## Verification Log
 
@@ -67,6 +74,35 @@
 - **Commit:** `8c7d9ea`
 - **Human verified:** YES — noted pre-existing type errors in client.tsx/__root.tsx (TanStack Start v1.158 types), will resolve with routing work
 - **Biome schema note:** Migrated to v2.3.14 schema (plan had v2.0.0)
+
+### Task 10: Chat UI
+- **Commit:** `f5ba919`
+- **Human verified:** YES — basic chat with message history, session creation from index page
+- **Notes:** Initial version used TanStack Start server functions for `sendMessage`. Later replaced with Nitro streaming route.
+
+### Task 11: End-to-End Foundation Verification
+- **Commit:** `360d899` (final commit after all fixes)
+- **Human verified:** YES — all 3 providers streaming, 27/27 tests, 0 TS errors, 0 lint issues
+- **Notes:** Verified ollama (local), openrouter (z-ai/glm-4.5-air:free), claude-code (sonnet) all stream correctly through the UI.
+
+### Bonus: Multi-Provider Streaming System
+- **Commits:** `de1a0a1` → `f10029d` → `4a4a8e8` → `a6ddac3` → `b095ff9` → `42c27fc` → `23d7067` → `6fb90ac` → `360d899`
+- **Human verified:** YES — "All 3 providers work."
+- **Notes:** Extended well beyond original plan. Added:
+  - Multi-provider factory with runtime switching (ollama, openrouter, claude-code)
+  - Nitro API route for streaming (`POST /api/chat`)
+  - Client-side `ReadableStream` consumption (not `useChat()`)
+  - Token tracking (input/output/total) per message
+  - Provider/model selector dropdowns in chat header
+  - Langfuse OTel observability (auto-enables with env vars)
+
+### Key Lessons Learned
+- **Nitro `serverDir`:** Must set `serverDir: "server"` in `nitro()` vite plugin config — without it, `scanDirs` is empty and routes in `server/routes/` won't be discovered.
+- **Nitro plugins:** Must `export default () => {}`, not run top-level code.
+- **h3 v2:** `createError` is deprecated → use `new HTTPError(message, { status })`.
+- **AI SDK v6:** Usage fields are `inputTokens`/`outputTokens` (not `promptTokens`/`completionTokens`).
+- **`streamText()` is NOT async:** Do not `await` it. Returns synchronously.
+- **TanStack Start server functions serialize to JSON:** Not suitable for streaming — use Nitro API routes instead.
 
 ---
 

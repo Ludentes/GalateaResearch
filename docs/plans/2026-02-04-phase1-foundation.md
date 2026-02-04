@@ -1,12 +1,15 @@
 # Phase 1: Foundation Implementation Plan
 
+> **Status: COMPLETE** — All 11 tasks done + 7 bonus tasks (multi-provider streaming, Langfuse, provider switcher).
+> See [2026-02-04-phase1-progress.md](./2026-02-04-phase1-progress.md) for detailed progress and verification log.
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Create a working TanStack Start application with PostgreSQL (Drizzle), FalkorDB, and a basic chat UI that proves the infrastructure works end-to-end.
 
-**Architecture:** TanStack Start full-stack React app with server functions. PostgreSQL via Drizzle ORM for relational data. FalkorDB (Docker) for graph storage. Vercel AI SDK for LLM streaming. All infrastructure in Docker Compose.
+**Architecture:** TanStack Start full-stack React app with server functions + Nitro API routes. PostgreSQL via Drizzle ORM for relational data. FalkorDB (Docker) for graph storage. AI SDK v6 for multi-provider LLM streaming. All infrastructure in Docker Compose.
 
-**Tech Stack:** TanStack Start 1.x, React 19, Drizzle ORM (PostgreSQL), FalkorDB, Vercel AI SDK, Docker Compose, Vitest, Playwright, Biome, shadcn/ui (new-york), Tailwind CSS 4, pnpm
+**Tech Stack:** TanStack Start v1.158 (Vite 7.3, Nitro 3.0.1-alpha.2), React 19, Drizzle ORM (PostgreSQL 17), FalkorDB, AI SDK v6, Docker Compose, Vitest 4, Playwright 1.58, Biome 2.3.14, shadcn/ui (new-york), Tailwind CSS 4, pnpm
 
 **Reuse from ContextForgeTS:** Tailwind theme (oklch colors, dark mode), all UI components (button, input, label, toast, confirm-dialog, debounced-button), Vitest config, Playwright config, `cn()` utility, TypeScript strict settings.
 

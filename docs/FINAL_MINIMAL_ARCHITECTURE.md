@@ -230,11 +230,11 @@ See [OBSERVATION_PIPELINE.md](OBSERVATION_PIPELINE.md) for full details.
 - ✅ DnD components (@dnd-kit patterns)
 
 **Adapted (pattern reuse, different implementation):**
-- ⚠️ Server functions (Convex → TanStack Start)
-- ⚠️ Database schema (Convex → Drizzle ORM)
-- ⚠️ Auth (Convex Auth → Better Auth)
-- ⚠️ LLM hooks (custom → Vercel AI SDK `useChat`)
-- ⚠️ Claude Code SDK integration (port patterns)
+- ✅ Server functions (Convex → TanStack Start server functions + Nitro API routes)
+- ✅ Database schema (Convex → Drizzle ORM + PostgreSQL)
+- ⚠️ Auth (Convex Auth → Better Auth) — deferred
+- ✅ LLM integration (custom → AI SDK v6 multi-provider: ollama, openrouter, claude-code)
+- ✅ Claude Code SDK integration (via ai-sdk-provider-claude-code)
 
 **Not Reused (replaced):**
 - ❌ Convex real-time subscriptions → polling/SSE
@@ -259,23 +259,30 @@ See [OBSERVATION_PIPELINE.md](OBSERVATION_PIPELINE.md) for full details.
 
 ## Implementation Roadmap
 
-### Phase 1: Foundation (Weeks 1-2)
+### Phase 1: Foundation (Weeks 1-2) — COMPLETE
 
 **Objective:** Create TanStack Start project, set up infrastructure
 
 **Tasks:**
-- [ ] Create TanStack Start project (`npx create-tanstack-app`)
-- [ ] Set up Drizzle ORM with PostgreSQL
-- [ ] Define full schema (all tables from architecture)
-- [ ] Set up Better Auth (password provider)
-- [ ] Set up FalkorDB locally (Docker Compose)
-- [ ] Set up Graphiti, create TypeScript wrapper
-- [ ] Copy pure utilities from ContextForge
-- [ ] Basic chat UI with Vercel AI SDK streaming
+- [x] Create TanStack Start project (v1.158, Vite 7.3, Nitro 3.0.1-alpha.2)
+- [x] Set up Drizzle ORM with PostgreSQL (4 tables: sessions, messages, personas, preprompts)
+- [x] Define Phase 1 schema (sessions, messages, personas, preprompts + token columns)
+- [ ] Set up Better Auth (password provider) — deferred, not needed for single-user dev
+- [x] Set up FalkorDB locally (Docker Compose, port 16379, Browser on 13001)
+- [x] Set up FalkorDB TypeScript client wrapper
+- [x] Copy pure utilities from ContextForge (UI components, Tailwind theme, cn())
+- [x] Basic chat UI with AI SDK v6 streaming
+- [x] Multi-provider system (ollama, openrouter, claude-code) with runtime switching
+- [x] Streaming via Nitro API route (`POST /api/chat`)
+- [x] Token tracking (input/output/total per message)
+- [x] Langfuse OTel observability (auto-enables with env vars)
+- [x] 27/27 tests passing, 0 TS errors, 0 lint issues
 
 **Deliverable:** Working Galatea instance with database + graph ready
 
-**Success Metric:** Can store/retrieve from PostgreSQL and FalkorDB
+**Success Metric:** Can store/retrieve from PostgreSQL and FalkorDB — **MET**
+
+**Progress:** See [2026-02-04-phase1-progress.md](./plans/2026-02-04-phase1-progress.md)
 
 ---
 
@@ -491,19 +498,21 @@ hard_blocks:
 
 | Layer | Technology | Status |
 |-------|-----------|--------|
-| **Frontend** | React 19 + TanStack Router | From ContextForge patterns |
-| **Backend** | TanStack Start (server functions) | New (replaces Convex) |
-| **Database** | Drizzle ORM + PostgreSQL | New (replaces Convex DB) |
-| **Auth** | Better Auth | New (replaces Convex Auth) |
-| **LLM** | Claude Code SDK (dev) + Vercel AI SDK | Adapted |
-| | • Haiku (Level 0-1: simple tasks) | |
-| | • Sonnet (Level 2-3: reasoning) | |
-| **Graph DB** | FalkorDB | New |
-| **Memory** | Graphiti | New |
-| **Events** | MQTT (Mosquitto) for HA/Frigate | New |
-| **Tools** | MCP (1000+ servers) | Ecosystem |
-| **Embeddings** | Voyage AI | New |
-| **Observability** | LangFuse | From ContextForge |
+| **Frontend** | React 19 + TanStack Router v1.158 | Phase 1 DONE |
+| **Backend** | TanStack Start v1.158 (Nitro 3.0.1-alpha.2, h3 v2) | Phase 1 DONE |
+| **Database** | Drizzle ORM + PostgreSQL 17 (port 15432) | Phase 1 DONE |
+| **Auth** | Better Auth | Deferred (single-user dev) |
+| **LLM** | AI SDK v6 (`ai@6.0.69`) — multi-provider | Phase 1 DONE |
+| | • ollama (default: llama3.2, local) | |
+| | • openrouter (default: z-ai/glm-4.5-air:free) | |
+| | • claude-code (Agent SDK, default: sonnet) | |
+| **Streaming** | Nitro API route + client ReadableStream | Phase 1 DONE |
+| **Graph DB** | FalkorDB (port 16379, Browser on 13001) | Phase 1 DONE |
+| **Memory** | Graphiti | Phase 2 |
+| **Events** | MQTT (Mosquitto, port 11883/19001) | Infrastructure ready |
+| **Tools** | MCP (1000+ servers) | Phase 4 |
+| **Embeddings** | Voyage AI | Phase 2+ |
+| **Observability** | Langfuse (OTel via `@langfuse/otel`) | Phase 1 DONE |
 | **Static Content** | MD files (Obsidian-friendly) | New |
 
 **Code Reuse from ContextForge: ~40% direct + ~30% adapted**
@@ -517,55 +526,69 @@ See [system-architecture-tanstack.md](./plans/2026-02-03-system-architecture-tan
 
 ```
 galatea/
-├── app/
+├── app/                            # Frontend (React 19, TanStack Router)
 │   ├── routes/
-│   │   ├── __root.tsx              # Root layout
-│   │   ├── index.tsx               # Dashboard
-│   │   ├── chat/$sessionId.tsx     # Chat interface
-│   │   ├── memories/index.tsx      # Memory browser
-│   │   └── settings/index.tsx      # Configuration
+│   │   ├── __root.tsx              # Root layout (Tailwind, 404 page)
+│   │   ├── index.tsx               # Home — session creation
+│   │   └── chat/$sessionId.tsx     # Chat UI (streaming, provider switcher)
+│   │   # Future:
+│   │   # ├── memories/index.tsx    # Memory browser
+│   │   # └── settings/index.tsx    # Configuration
 │   │
-│   ├── api/                        # API routes
-│   │   ├── observations.ts         # POST /api/observations
-│   │   ├── dialogue.ts             # POST /api/dialogue
-│   │   └── chat.ts                 # POST /api/chat (streaming)
+│   ├── components/
+│   │   ├── chat/                   # MessageList, ChatInput
+│   │   # ├── memory/              # Memory browser (TanStack Table)
+│   │   # ├── homeostasis/         # State panel
+│   │   └── ui/                     # shadcn/ui (button, input, label, toast, etc.)
 │   │
-│   └── components/
-│       ├── chat/                   # Chat UI components
-│       ├── memory/                 # Memory browser (TanStack Table)
-│       ├── homeostasis/            # State panel
-│       └── ui/                     # shadcn/ui components
+│   ├── lib/utils.ts                # cn() utility
+│   └── styles/app.css              # Tailwind 4 theme (oklch colors, dark mode)
 │
-├── server/
-│   ├── functions/                  # Server functions
-│   │   ├── chat.ts                 # Chat completion (Level 0-3)
-│   │   ├── memories.ts             # Memory CRUD
-│   │   ├── sessions.ts             # Session management
-│   │   ├── homeostasis.ts          # State updates
-│   │   ├── learning.ts             # Memory promotion
-│   │   └── personas.ts             # Persona management
+├── server/                         # Backend (Nitro 3.0.1-alpha.2)
+│   ├── routes/                     # Nitro file-based API routes
+│   │   └── api/
+│   │       └── chat.post.ts        # POST /api/chat (streaming)
+│   │   # Future:
+│   │   # ├── observations.post.ts  # POST /api/observations
+│   │   # └── dialogue.post.ts      # POST /api/dialogue
 │   │
-│   ├── engine/                     # Core Galatea logic
-│   │   ├── activity-router.ts      # Level 0-3 classification
-│   │   ├── homeostasis-engine.ts   # 6 dimensions + guidance
-│   │   ├── context-builder.ts      # Full context assembly
-│   │   ├── reflexion.ts            # Level 3 Draft→Critique→Revise
-│   │   ├── guardrails.ts           # Over-research, going dark
-│   │   └── observation-pipeline.ts # Capture→Enrich→Validate→Store
+│   ├── plugins/
+│   │   └── langfuse.ts             # Langfuse OTel tracing (auto-enables)
+│   │
+│   ├── providers/                  # Multi-provider LLM system
+│   │   ├── index.ts                # getModel(provider?, model?) factory
+│   │   ├── config.ts               # getLLMConfig(), DEFAULT_MODELS, VALID_PROVIDERS
+│   │   ├── ollama.ts               # ollama-ai-provider wrapper
+│   │   ├── openrouter.ts           # @openrouter/ai-sdk-provider wrapper
+│   │   └── claude-code.ts          # ai-sdk-provider-claude-code wrapper
+│   │
+│   ├── functions/                  # Server functions + logic
+│   │   ├── chat.ts                 # TanStack Start server function (non-streaming)
+│   │   └── chat.logic.ts           # sendMessageLogic, streamMessageLogic, createSessionLogic
+│   │   # Future:
+│   │   # ├── memories.ts           # Memory CRUD
+│   │   # ├── homeostasis.ts        # State updates
+│   │   # └── personas.ts           # Persona management
+│   │
+│   │   # Future:
+│   │   # ├── engine/               # Core Galatea logic
+│   │   # │   ├── activity-router.ts
+│   │   # │   ├── homeostasis-engine.ts
+│   │   # │   ├── context-builder.ts
+│   │   # │   └── reflexion.ts
 │   │
 │   ├── integrations/
-│   │   ├── graphiti.ts             # Graphiti client
-│   │   ├── mqtt.ts                 # MQTT subscriber (HA/Frigate)
-│   │   ├── llm.ts                  # Claude Code SDK + Vercel AI SDK
-│   │   └── mcp.ts                  # MCP tool executor
-│   │
-│   ├── sync/
-│   │   └── md-sync.ts              # MD files → DB/Graphiti sync
+│   │   └── falkordb.ts             # FalkorDB client (getFalkorDB, getGraph, closeFalkorDB)
+│   │   # Future:
+│   │   # ├── graphiti.ts           # Graphiti client
+│   │   # ├── mqtt.ts               # MQTT subscriber
+│   │   # └── mcp.ts                # MCP tool executor
 │   │
 │   └── db/
-│       ├── schema.ts               # Drizzle schema (all tables)
-│       ├── migrations/
-│       └── index.ts                # DB client
+│       ├── schema.ts               # Drizzle schema (sessions, messages, personas, preprompts)
+│       ├── index.ts                # DB client (postgres.js driver)
+│       ├── seed.ts                 # Idempotent seed (2 personas, 2 preprompts)
+│       └── migrations/
 │
 ├── galatea-knowledge/              # MD files (Obsidian-friendly)
 │   ├── personas/                   # Agent specs
@@ -573,7 +596,15 @@ galatea/
 │   ├── domain/                     # Domain knowledge
 │   └── procedures/                 # Step-by-step guides
 │
-└── docs/                           # Documentation
+├── docs/                           # Documentation
+│   ├── plans/                      # Implementation plans + progress
+│   └── FINAL_MINIMAL_ARCHITECTURE.md
+│
+├── docker-compose.yml              # PostgreSQL, FalkorDB, Mosquitto
+├── vite.config.ts                  # TanStack Start + Nitro + Tailwind
+├── drizzle.config.ts               # Drizzle Kit config
+├── vitest.config.ts                # Vitest 4 config
+└── biome.json                      # Biome 2.3.14 (double quotes, no semicolons)
 ```
 
 See [system-architecture-tanstack.md](./plans/2026-02-03-system-architecture-tanstack.md) for detailed code examples.
@@ -584,30 +615,35 @@ See [system-architecture-tanstack.md](./plans/2026-02-03-system-architecture-tan
 
 ### .env.local
 ```bash
-# Database (PostgreSQL everywhere - see plans/2026-02-04-postgresql-everywhere.md)
-DATABASE_URL=postgres://galatea:galatea@localhost:5432/galatea  # local dev
-# DATABASE_URL=postgres://user:pass@prod-host:5432/galatea     # production
+# Database
+DATABASE_URL=postgres://galatea:galatea@localhost:15432/galatea
 
-# Auth
-BETTER_AUTH_SECRET=<random-secret>
+# Auth (generate with: openssl rand -base64 32)
+BETTER_AUTH_SECRET=change-me-in-env-local
 
-# LLM
-ANTHROPIC_API_KEY=sk-ant-...         # For Vercel AI SDK (production)
-OLLAMA_URL=http://localhost:11434    # For local Ollama
+# LLM Provider (ollama | openrouter | claude-code)
+LLM_PROVIDER=ollama
+LLM_MODEL=llama3.2
+OLLAMA_BASE_URL=http://localhost:11434
+# OPENROUTER_API_KEY=sk-or-...
+# ANTHROPIC_API_KEY=sk-ant-...
 
 # Graph Memory
-FALKORDB_URL=redis://localhost:6379
-VOYAGE_AI_API_KEY=pa-...
+FALKORDB_URL=redis://localhost:16379
+
+# Embeddings (optional for Phase 1)
+# VOYAGE_AI_API_KEY=pa-...
 
 # Events
-MQTT_BROKER=mqtt://localhost:1883
+MQTT_BROKER_URL=mqtt://localhost:11883
 
-# Observability
-LANGFUSE_SECRET_KEY=sk-lf-...
-LANGFUSE_PUBLIC_KEY=pk-lf-...
+# Observability — Langfuse (set both keys to enable tracing)
+# LANGFUSE_SECRET_KEY=sk-lf-...
+# LANGFUSE_PUBLIC_KEY=pk-lf-...
+# LANGFUSE_BASE_URL=http://localhost:3000  # for self-hosted, omit for cloud
 
 # Content
-KNOWLEDGE_PATH=./galatea-knowledge   # MD files location
+KNOWLEDGE_PATH=./galatea-knowledge
 ```
 
 ### docker-compose.yml
@@ -616,7 +652,7 @@ services:
   postgres:
     image: postgres:17
     ports:
-      - "5432:5432"
+      - "15432:5432"           # Remapped to avoid Langfuse conflict
     environment:
       POSTGRES_DB: galatea
       POSTGRES_USER: galatea
@@ -627,42 +663,45 @@ services:
   falkordb:
     image: falkordb/falkordb:latest
     ports:
-      - "6379:6379"
+      - "16379:6379"           # Remapped to avoid conflicts
+      - "13001:3000"           # FalkorDB Browser UI
     volumes:
       - falkordb_data:/data
 
   mosquitto:
     image: eclipse-mosquitto:2
     ports:
-      - "1883:1883"
-      - "9001:9001"
+      - "11883:1883"           # Remapped to avoid conflicts
+      - "19001:9001"           # WebSockets
     volumes:
-      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
 
 volumes:
   postgres_data:
   falkordb_data:
 ```
 
-### package.json (key dependencies)
+### package.json (key dependencies — as of Phase 1 completion)
 ```json
 {
   "dependencies": {
-    "@tanstack/react-start": "^1.0.0",
-    "@tanstack/react-query": "^5.0.0",
-    "@tanstack/react-router": "^1.0.0",
-    "@tanstack/react-table": "^8.0.0",
-    "@tanstack/react-form": "^1.0.0",
-    "drizzle-orm": "^0.30.0",
+    "@tanstack/react-start": "^1.158.0",
+    "@tanstack/react-query": "^5.x",
+    "@tanstack/react-router": "^1.158.0",
+    "drizzle-orm": "^0.44.0",
     "postgres": "^3.4.0",
-    "ai": "^4.0.0",
-    "@ai-sdk/anthropic": "^1.0.0",
-    "@anthropic-ai/claude-agent-sdk": "^0.1.0",
-    "mqtt": "^5.0.0",
-    "better-auth": "^1.0.0"
+    "ai": "^6.0.69",
+    "ollama-ai-provider": "^2.x",
+    "@openrouter/ai-sdk-provider": "^0.x",
+    "ai-sdk-provider-claude-code": "^0.x",
+    "falkordb": "^0.x",
+    "langfuse": "^3.x",
+    "@langfuse/otel": "^1.x",
+    "@opentelemetry/sdk-node": "^0.x"
   }
 }
 ```
+Note: `@ai-sdk/anthropic` removed in favor of multi-provider system. Better Auth deferred.
 
 ---
 
@@ -711,12 +750,14 @@ volumes:
 **Total: ~110 hours over 10 weeks**
 
 ### Infrastructure Costs (Monthly)
-- Convex: $0 (free tier sufficient for MVP)
-- OpenRouter: ~$50-100 (usage-based)
+- PostgreSQL: $0 (self-hosted Docker)
 - FalkorDB: $0 (self-hosted Docker)
-- Voyage AI: ~$10-20 (embedding costs)
-- LangFuse: $0 (self-hosted or free tier)
-**Total: ~$60-120/month**
+- Ollama: $0 (local inference)
+- OpenRouter: ~$0-50 (usage-based, free tier models available like z-ai/glm-4.5-air:free)
+- Anthropic API: ~$20-100 (for claude-code provider, usage-based)
+- Voyage AI: ~$10-20 (embedding costs, Phase 2+)
+- Langfuse: $0 (self-hosted or free tier)
+**Total: ~$30-170/month** (can be $0 with ollama + free OpenRouter models)
 
 ---
 
@@ -781,8 +822,11 @@ We have:
 *Architecture updated: 2026-02-04*
 *Key changes:*
 - *Database: PostgreSQL everywhere, drop SQLite (see plans/2026-02-04-postgresql-everywhere.md)*
-- *Stack: TanStack Start + Drizzle (replaces Convex)*
+- *Stack: TanStack Start v1.158 + Drizzle ORM (replaces Convex)*
+- *LLM: Multi-provider system — ollama (local), openrouter, claude-code (Agent SDK)*
+- *Streaming: Nitro API routes (not TanStack Start server functions)*
+- *Observability: Langfuse via OTel + AI SDK experimental_telemetry*
 - *Events: MQTT for Home Assistant/Frigate integration*
 - *Content: MD files as input layer (Obsidian-friendly)*
-- *Previous: Activity Router, Homeostasis, Graphiti memory*
-*Next: Create TanStack Start project and begin Phase 1*
+- *Phase 1: COMPLETE — 27/27 tests, 3 providers verified streaming*
+*Next: Phase 2 — Memory System (Graphiti + FalkorDB)*
