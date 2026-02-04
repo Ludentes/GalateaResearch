@@ -47,6 +47,8 @@ export const messages = pgTable("messages", {
   activityLevel: integer("activity_level"),
   model: text("model"),
   tokenCount: integer("token_count"),
+  inputTokens: integer("input_tokens"),
+  outputTokens: integer("output_tokens"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 })
 
