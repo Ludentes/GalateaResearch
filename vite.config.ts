@@ -18,6 +18,6 @@ export default defineConfig({
       srcDirectory: "app",
     }),
     viteReact(),
-    nitro(),
+    nitro({ serverDir: "server" }),
   ],
 })
