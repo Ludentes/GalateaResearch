@@ -12,6 +12,7 @@ export const Route = createFileRoute("/chat/$sessionId")({
 const PROVIDER_MODELS: Record<string, string[]> = {
   ollama: ["llama3.2", "llama3.1", "mistral", "codellama"],
   openrouter: [
+    "z-ai/glm-4.5-air:free",
     "anthropic/claude-sonnet-4",
     "google/gemini-2.5-flash",
     "meta-llama/llama-3.1-70b-instruct",

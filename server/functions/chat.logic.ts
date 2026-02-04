@@ -68,6 +68,7 @@ export async function sendMessageLogic(
       role: m.role as "user" | "assistant",
       content: m.content,
     })),
+    experimental_telemetry: { isEnabled: true },
   })
 
   // Store assistant response
@@ -126,6 +127,7 @@ export async function streamMessageLogic(
       role: m.role as "user" | "assistant",
       content: m.content,
     })),
+    experimental_telemetry: { isEnabled: true },
     onFinish: async ({ text, usage }) => {
       await db.insert(messages).values({
         sessionId,

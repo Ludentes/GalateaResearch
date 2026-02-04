@@ -39,7 +39,7 @@ describe("Provider Factory (getModel)", () => {
     process.env.OPENROUTER_API_KEY = "sk-or-test"
     const { getModel } = await import("../index")
     const result = getModel()
-    expect(result.modelName).toBe("anthropic/claude-sonnet-4")
+    expect(result.modelName).toBe("z-ai/glm-4.5-air:free")
     expect(result.model).toEqual({ provider: "mock-openrouter" })
   })
 
