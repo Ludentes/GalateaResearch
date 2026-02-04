@@ -1,20 +1,29 @@
 import { useEffect, useRef } from "react"
 import { cn } from "@/lib/utils"
 
-interface Message {
+export interface ChatMessage {
   id: string
   role: "user" | "assistant" | "system"
   content: string
   createdAt: string
+  model?: string
+  inputTokens?: number
+  outputTokens?: number
+  tokenCount?: number
 }
 
-export function MessageList({ messages }: { messages: Message[] }) {
+interface MessageListProps {
+  messages: ChatMessage[]
+  streaming?: boolean
+}
+
+export function MessageList({ messages, streaming }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll on message count change
+  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll on message count or streaming text change
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages.length])
+  }, [messages.length, messages[messages.length - 1]?.content])
 
   return (
     <div className="flex-1 overflow-y-auto p-4">
@@ -35,7 +44,22 @@ export function MessageList({ messages }: { messages: Message[] }) {
                   : "bg-muted text-foreground",
               )}
             >
-              <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
+              <p className="whitespace-pre-wrap text-sm">
+                {msg.content}
+                {streaming && msg.id === "streaming" && (
+                  <span className="inline-block w-2 h-4 ml-0.5 bg-current animate-pulse" />
+                )}
+              </p>
+              {msg.role === "assistant" &&
+                msg.id !== "streaming" &&
+                (msg.inputTokens || msg.outputTokens) && (
+                  <div className="mt-1 flex gap-2 text-xs text-muted-foreground">
+                    {msg.model && <span>{msg.model}</span>}
+                    {msg.inputTokens && <span>↑{msg.inputTokens}</span>}
+                    {msg.outputTokens && <span>↓{msg.outputTokens}</span>}
+                    {msg.tokenCount && <span>({msg.tokenCount} total)</span>}
+                  </div>
+                )}
             </div>
           </div>
         ))}
