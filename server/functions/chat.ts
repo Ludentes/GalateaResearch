@@ -1,31 +1,21 @@
-import { anthropic } from "@ai-sdk/anthropic"
 import { createServerFn } from "@tanstack/react-start"
+import { getModel } from "../providers"
 import {
   createSessionLogic,
   getSessionMessagesLogic,
   sendMessageLogic,
 } from "./chat.logic"
 
-const MODEL_NAME = "claude-sonnet-4-20250514"
-
 /**
- * Send a message in a chat session.
+ * Send a message in a chat session (non-streaming fallback).
  *
- * Stores the user message, retrieves conversation history and active
- * preprompts, calls the Anthropic model, stores the assistant response,
- * and returns the generated text.
- *
- * Phase 1: non-streaming (uses generateText). Streaming will be added later.
+ * Streaming is handled by the POST /api/chat Nitro route.
  */
 export const sendMessage = createServerFn({ method: "POST" })
   .inputValidator((input: { sessionId: string; message: string }) => input)
   .handler(async ({ data }) => {
-    return sendMessageLogic(
-      data.sessionId,
-      data.message,
-      anthropic(MODEL_NAME),
-      MODEL_NAME,
-    )
+    const { model, modelName } = getModel()
+    return sendMessageLogic(data.sessionId, data.message, model, modelName)
   })
 
 /**
