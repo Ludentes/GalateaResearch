@@ -9,7 +9,9 @@ This directory contains all architectural documentation, design decisions, and r
 | **[PSYCHOLOGICAL_ARCHITECTURE.md](PSYCHOLOGICAL_ARCHITECTURE.md)** | Full architecture design - activity router, homeostasis, memory, models |
 | **[FINAL_MINIMAL_ARCHITECTURE.md](FINAL_MINIMAL_ARCHITECTURE.md)** | Implementation roadmap - 10 weeks, 6 phases |
 | **[GUIDING_PRINCIPLES.md](GUIDING_PRINCIPLES.md)** | Core principles - pragmatical, iterative, reuse |
-| **[REFERENCE_SCENARIOS.md](REFERENCE_SCENARIOS.md)** | Test scenarios for validation |
+| **[USER_STORIES.md](USER_STORIES.md)** | Feature requirements from user perspective (8 epics, 40+ stories) |
+| **[TEST_CONTRACTS.md](TEST_CONTRACTS.md)** | Precise testable behavior contracts (61 contracts, 93% automatable) |
+| **[REFERENCE_SCENARIOS.md](REFERENCE_SCENARIOS.md)** | Narrative scenarios for context (source for stories/contracts) |
 
 ## Design Documents (`/plans`)
 
