@@ -268,7 +268,7 @@ See [OBSERVATION_PIPELINE.md](OBSERVATION_PIPELINE.md) for full details.
 - [ ] Set up Drizzle ORM with PostgreSQL
 - [ ] Define full schema (all tables from architecture)
 - [ ] Set up Better Auth (password provider)
-- [ ] Set up FalkorDB locally (Docker)
+- [ ] Set up FalkorDB locally (Docker Compose)
 - [ ] Set up Graphiti, create TypeScript wrapper
 - [ ] Copy pure utilities from ContextForge
 - [ ] Basic chat UI with Vercel AI SDK streaming
@@ -369,7 +369,7 @@ class ActivityRouter {
 
 **Tasks:**
 - [ ] Install Vercel AI SDK with MCP support
-- [ ] Create tool execution tracking in Convex
+- [ ] Create tool execution tracking in Drizzle
 - [ ] Implement MCP client initialization
 - [ ] Add tool listing and execution
 - [ ] Add approval gates for destructive tools
@@ -416,7 +416,7 @@ episode → observation → fact → rule → procedure → shared
 **Objective:** Same core, different personalities + export/import
 
 **Tasks:**
-- [ ] Create preprompts table in Convex
+- [ ] Create preprompts table in Drizzle
 - [ ] Write core identity preprompt
 - [ ] Write programmer persona (Expo specialist)
 - [ ] Write assistant persona
