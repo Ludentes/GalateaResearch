@@ -20,7 +20,7 @@
 - Node.js 20+ installed
 - pnpm installed (`corepack enable && corepack prepare pnpm@latest --activate`)
 - Docker & Docker Compose installed
-- `ANTHROPIC_API_KEY` available (for chat in Task 9)
+- At least one LLM provider available: Ollama running locally (default), or `OPENROUTER_API_KEY`, or `ANTHROPIC_API_KEY`
 
 ## ContextForgeTS Reference
 
@@ -1823,6 +1823,6 @@ If `falkordb` npm package doesn't work, fall back to `redis` package with `GRAPH
 - `tool_executions` table → Phase 4
 - Graphiti integration (Python wrapper) → Phase 2
 - MQTT subscriber → Phase 2/5
-- Better Auth → Phase 2 (not needed for single-user local dev)
+- Better Auth → **deferred indefinitely** (was never installed; not needed for single-user local dev; revisit only if multi-user or remote access is required)
 - DnD system → Phase 2 (memory browser)
 - Dark mode toggle → Task 10 or later (theme CSS is ready, just needs toggle)

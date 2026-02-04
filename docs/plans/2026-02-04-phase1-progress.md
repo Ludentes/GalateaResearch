@@ -6,6 +6,12 @@
 
 ---
 
+## Scope Notes
+
+**Auth (Better Auth):** Was in the original architecture but was **never installed or implemented**. Deferred indefinitely — single-user local dev doesn't need authentication. The `BETTER_AUTH_SECRET` env var was removed from `.env.example`. Revisit only if multi-user or remote access becomes a requirement.
+
+---
+
 ## Tasks
 
 | # | Task | Status | Commit | Notes |

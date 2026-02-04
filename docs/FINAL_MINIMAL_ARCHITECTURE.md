@@ -208,8 +208,8 @@ See [OBSERVATION_PIPELINE.md](OBSERVATION_PIPELINE.md) for full details.
 │  └────────────────┘  └────────────────┘  │  • Haiku (Level 0-1)           │ │
 │                                          │  • Sonnet (Level 2-3)          │ │
 │  ┌────────────────┐  ┌────────────────┐  └────────────────────────────────┘ │
-│  │   Mosquitto    │  │  Better Auth   │                                     │
-│  │  (MQTT broker) │  │     (auth)     │                                     │
+│  │   Mosquitto    │  │  Auth (TBD)    │                                     │
+│  │  (MQTT broker) │  │  (deferred)    │                                     │
 │  └────────────────┘  └────────────────┘                                     │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -232,7 +232,7 @@ See [OBSERVATION_PIPELINE.md](OBSERVATION_PIPELINE.md) for full details.
 **Adapted (pattern reuse, different implementation):**
 - ✅ Server functions (Convex → TanStack Start server functions + Nitro API routes)
 - ✅ Database schema (Convex → Drizzle ORM + PostgreSQL)
-- ⚠️ Auth (Convex Auth → Better Auth) — deferred
+- ❌ Auth (Convex Auth → Better Auth) — **not implemented**, deferred indefinitely. Single-user local dev; no auth needed until multi-user or remote access.
 - ✅ LLM integration (custom → AI SDK v6 multi-provider: ollama, openrouter, claude-code)
 - ✅ Claude Code SDK integration (via ai-sdk-provider-claude-code)
 
@@ -267,7 +267,7 @@ See [OBSERVATION_PIPELINE.md](OBSERVATION_PIPELINE.md) for full details.
 - [x] Create TanStack Start project (v1.158, Vite 7.3, Nitro 3.0.1-alpha.2)
 - [x] Set up Drizzle ORM with PostgreSQL (4 tables: sessions, messages, personas, preprompts)
 - [x] Define Phase 1 schema (sessions, messages, personas, preprompts + token columns)
-- [ ] Set up Better Auth (password provider) — deferred, not needed for single-user dev
+- [ ] ~~Set up Better Auth (password provider)~~ — **deferred indefinitely**. Not installed, not needed for single-user local dev. Revisit when multi-user or remote access is required.
 - [x] Set up FalkorDB locally (Docker Compose, port 16379, Browser on 13001)
 - [x] Set up FalkorDB TypeScript client wrapper
 - [x] Copy pure utilities from ContextForge (UI components, Tailwind theme, cn())
@@ -501,7 +501,7 @@ hard_blocks:
 | **Frontend** | React 19 + TanStack Router v1.158 | Phase 1 DONE |
 | **Backend** | TanStack Start v1.158 (Nitro 3.0.1-alpha.2, h3 v2) | Phase 1 DONE |
 | **Database** | Drizzle ORM + PostgreSQL 17 (port 15432) | Phase 1 DONE |
-| **Auth** | Better Auth | Deferred (single-user dev) |
+| **Auth** | None (was Better Auth) | **Not implemented** — deferred indefinitely, not needed for single-user local dev |
 | **LLM** | AI SDK v6 (`ai@6.0.69`) — multi-provider | Phase 1 DONE |
 | | • ollama (default: llama3.2, local) | |
 | | • openrouter (default: z-ai/glm-4.5-air:free) | |
@@ -701,7 +701,7 @@ volumes:
   }
 }
 ```
-Note: `@ai-sdk/anthropic` removed in favor of multi-provider system. Better Auth deferred.
+Note: `@ai-sdk/anthropic` removed in favor of multi-provider system. `better-auth` was never installed — auth deferred indefinitely (single-user local dev).
 
 ---
 
