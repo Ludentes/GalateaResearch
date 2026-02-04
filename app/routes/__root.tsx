@@ -1,25 +1,25 @@
 /// <reference types="vite/client" />
 import {
+  createRootRoute,
   HeadContent,
   Link,
   Scripts,
-  createRootRoute,
-} from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
-import * as React from 'react'
+} from "@tanstack/react-router"
+import { TanStackRouterDevtools } from "@tanstack/react-router-devtools"
+import type * as React from "react"
 
 export const Route = createRootRoute({
   head: () => ({
     meta: [
       {
-        charSet: 'utf-8',
+        charSet: "utf-8",
       },
       {
-        name: 'viewport',
-        content: 'width=device-width, initial-scale=1',
+        name: "viewport",
+        content: "width=device-width, initial-scale=1",
       },
       {
-        title: 'Galatea',
+        title: "Galatea",
       },
     ],
   }),
@@ -33,12 +33,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <div style={{ padding: '1rem' }}>
-          <nav style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+        <div style={{ padding: "1rem" }}>
+          <nav style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
             <Link
               to="/"
               activeProps={{
-                style: { fontWeight: 'bold' },
+                style: { fontWeight: "bold" },
               }}
             >
               Home
