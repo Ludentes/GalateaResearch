@@ -37,7 +37,7 @@ ContextForgeTS is a well-architected codebase with **~70% reusable code**. The m
 | Layer | Technology |
 |-------|------------|
 | Backend | TanStack Start (server functions) |
-| Database | Drizzle ORM + SQLite/PostgreSQL |
+| Database | Drizzle ORM + PostgreSQL |
 | Auth | Better Auth |
 | Frontend | React 19 + TanStack Router (same) |
 | Styling | Tailwind CSS + shadcn/ui (same) |
@@ -78,7 +78,7 @@ sessions: defineTable({
 // ↓ Becomes ↓
 
 // server/db/schema.ts (Drizzle)
-export const sessions = sqliteTable('sessions', {
+export const sessions = pgTable('sessions', {
   id: text('id').primaryKey(),
   userId: text('user_id'),
   name: text('name'),

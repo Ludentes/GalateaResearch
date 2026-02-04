@@ -75,7 +75,7 @@
          ▼                            ▼                            ▼
 ┌─────────────────┐         ┌─────────────────┐         ┌─────────────────┐
 │   Drizzle ORM   │         │    Graphiti     │         │   MQTT Broker   │
-│   (SQLite/PG)   │         │   (FalkorDB)    │         │  (Mosquitto)    │
+│  (PostgreSQL)   │         │   (FalkorDB)    │         │  (Mosquitto)    │
 │                 │         │                 │         │                 │
 │ • Sessions      │         │ • Episodic      │         │ • HA events     │
 │ • Homeostasis   │         │ • Semantic      │         │ • Frigate       │
@@ -288,11 +288,11 @@ export const chat = createServerFn({ method: 'POST' })
 
 ```typescript
 // server/db/schema.ts
-import { sqliteTable, text, integer, real, blob } from 'drizzle-orm/sqlite-core';
+import { pgTable, text, integer, real, boolean, timestamp, jsonb } from 'drizzle-orm/pg-core';
 
 // ============ Core Tables ============
 
-export const sessions = sqliteTable('sessions', {
+export const sessions = pgTable('sessions', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   persona: text('persona', { enum: ['programmer', 'assistant', 'custom'] }).default('programmer'),
@@ -300,7 +300,7 @@ export const sessions = sqliteTable('sessions', {
   lastActiveAt: integer('last_active_at', { mode: 'timestamp' }),
 });
 
-export const messages = sqliteTable('messages', {
+export const messages = pgTable('messages', {
   id: text('id').primaryKey(),
   sessionId: text('session_id').references(() => sessions.id).notNull(),
   role: text('role', { enum: ['user', 'assistant', 'system'] }).notNull(),
@@ -313,7 +313,7 @@ export const messages = sqliteTable('messages', {
 
 // ============ Homeostasis ============
 
-export const homeostasisState = sqliteTable('homeostasis_state', {
+export const homeostasisState = pgTable('homeostasis_state', {
   id: text('id').primaryKey(),
   sessionId: text('session_id').references(() => sessions.id).notNull(),
   knowledgeSufficiency: text('knowledge_sufficiency', { enum: ['LOW', 'OK', 'HIGH'] }).default('OK'),
@@ -332,7 +332,7 @@ export const homeostasisState = sqliteTable('homeostasis_state', {
 // ============ Cognitive Models ============
 
 // Self Model - agent's self-knowledge (per persona, not per session)
-export const selfModels = sqliteTable('self_models', {
+export const selfModels = pgTable('self_models', {
   id: text('id').primaryKey(),
   personaId: text('persona_id').references(() => personas.id).notNull(),
   capabilities: text('capabilities', { mode: 'json' }).$type<{
@@ -345,7 +345,7 @@ export const selfModels = sqliteTable('self_models', {
 });
 
 // User Model - theories about user behavior
-export const userModels = sqliteTable('user_models', {
+export const userModels = pgTable('user_models', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),  // External user identifier
   firstSeen: integer('first_seen', { mode: 'timestamp' }).notNull(),
@@ -362,7 +362,7 @@ export const userModels = sqliteTable('user_models', {
 });
 
 // Domain Model - domain-specific rules
-export const domainModels = sqliteTable('domain_models', {
+export const domainModels = pgTable('domain_models', {
   id: text('id').primaryKey(),
   domainId: text('domain_id').notNull().unique(),  // e.g., "mobile_development"
   precisionRequired: real('precision_required').default(0.7),
@@ -373,7 +373,7 @@ export const domainModels = sqliteTable('domain_models', {
 });
 
 // Relationship Model - per user-persona relationship
-export const relationshipModels = sqliteTable('relationship_models', {
+export const relationshipModels = pgTable('relationship_models', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),
   personaId: text('persona_id').references(() => personas.id).notNull(),
@@ -387,7 +387,7 @@ export const relationshipModels = sqliteTable('relationship_models', {
 
 // ============ Personas (Agent Specs) ============
 
-export const personas = sqliteTable('personas', {
+export const personas = pgTable('personas', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   role: text('role').notNull(),  // "Mobile Developer", "Assistant"
@@ -405,7 +405,7 @@ export const personas = sqliteTable('personas', {
 
 // ============ Preprompts ============
 
-export const preprompts = sqliteTable('preprompts', {
+export const preprompts = pgTable('preprompts', {
   id: text('id').primaryKey(),
   name: text('name').notNull().unique(),
   type: text('type', { enum: ['core', 'persona', 'hard_rule', 'domain'] }).notNull(),
@@ -416,7 +416,7 @@ export const preprompts = sqliteTable('preprompts', {
 
 // ============ Observations ============
 
-export const observations = sqliteTable('observations', {
+export const observations = pgTable('observations', {
   id: text('id').primaryKey(),
   source: text('source').notNull(),  // 'browser', 'vscode', 'home_assistant', 'frigate'
   type: text('type').notNull(),       // 'navigation', 'file_save', 'person_detected', etc.
@@ -428,7 +428,7 @@ export const observations = sqliteTable('observations', {
 
 // ============ Tool Executions ============
 
-export const toolExecutions = sqliteTable('tool_executions', {
+export const toolExecutions = pgTable('tool_executions', {
   id: text('id').primaryKey(),
   sessionId: text('session_id').references(() => sessions.id).notNull(),
   messageId: text('message_id').references(() => messages.id),
@@ -1178,7 +1178,7 @@ function ChatPage() {
 
 | Service | Purpose | Local Dev | Production |
 |---------|---------|-----------|------------|
-| **SQLite** | Primary storage | File | → PostgreSQL |
+| **PostgreSQL** | Primary storage | Docker | Docker/Cloud |
 | **FalkorDB** | Graph memory | Docker | Docker/Cloud |
 | **Graphiti** | Temporal graph | Python subprocess | Python subprocess |
 | **Mosquitto** | MQTT broker | Docker (or existing HA) | Same |
@@ -1188,8 +1188,18 @@ function ChatPage() {
 ### Docker Compose (Local Dev)
 
 ```yaml
-version: '3.8'
 services:
+  postgres:
+    image: postgres:17
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: galatea
+      POSTGRES_USER: galatea
+      POSTGRES_PASSWORD: galatea
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   falkordb:
     image: falkordb/falkordb:latest
     ports:
@@ -1206,6 +1216,7 @@ services:
       - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
 
 volumes:
+  postgres_data:
   falkordb_data:
 ```
 

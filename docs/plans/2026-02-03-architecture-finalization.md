@@ -10,7 +10,7 @@
 | Decision | Choice | Document |
 |----------|--------|----------|
 | **Tech Stack** | TanStack Start (not Convex) | [tech-stack-evaluation.md](./2026-02-03-tech-stack-evaluation.md) |
-| **Database** | Drizzle ORM + SQLite (local) / PostgreSQL (prod) | [system-architecture-tanstack.md](./2026-02-03-system-architecture-tanstack.md) |
+| **Database** | Drizzle ORM + PostgreSQL (everywhere) | [postgresql-everywhere.md](./2026-02-04-postgresql-everywhere.md) |
 | **LLM Integration** | Claude Code SDK (dev) + Vercel AI SDK (prod) | [contextforge-migration.md](./2026-02-03-contextforge-migration.md) |
 | **Event Ingestion** | MQTT for HA/Frigate ecosystem | [tech-stack-evaluation.md](./2026-02-03-tech-stack-evaluation.md) |
 | **Static Content** | MD files (Obsidian-friendly) as input layer | [md-files-input-layer.md](./2026-02-03-md-files-input-layer.md) |

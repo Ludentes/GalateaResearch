@@ -265,7 +265,7 @@ See [OBSERVATION_PIPELINE.md](OBSERVATION_PIPELINE.md) for full details.
 
 **Tasks:**
 - [ ] Create TanStack Start project (`npx create-tanstack-app`)
-- [ ] Set up Drizzle ORM with SQLite (local dev)
+- [ ] Set up Drizzle ORM with PostgreSQL
 - [ ] Define full schema (all tables from architecture)
 - [ ] Set up Better Auth (password provider)
 - [ ] Set up FalkorDB locally (Docker)
@@ -275,7 +275,7 @@ See [OBSERVATION_PIPELINE.md](OBSERVATION_PIPELINE.md) for full details.
 
 **Deliverable:** Working Galatea instance with database + graph ready
 
-**Success Metric:** Can store/retrieve from SQLite and FalkorDB
+**Success Metric:** Can store/retrieve from PostgreSQL and FalkorDB
 
 ---
 
@@ -493,7 +493,7 @@ hard_blocks:
 |-------|-----------|--------|
 | **Frontend** | React 19 + TanStack Router | From ContextForge patterns |
 | **Backend** | TanStack Start (server functions) | New (replaces Convex) |
-| **Database** | Drizzle ORM + SQLite/PostgreSQL | New (replaces Convex DB) |
+| **Database** | Drizzle ORM + PostgreSQL | New (replaces Convex DB) |
 | **Auth** | Better Auth | New (replaces Convex Auth) |
 | **LLM** | Claude Code SDK (dev) + Vercel AI SDK | Adapted |
 | | • Haiku (Level 0-1: simple tasks) | |
@@ -584,9 +584,9 @@ See [system-architecture-tanstack.md](./plans/2026-02-03-system-architecture-tan
 
 ### .env.local
 ```bash
-# Database
-DATABASE_URL=file:./galatea.db       # SQLite for local dev
-# DATABASE_URL=postgres://...         # PostgreSQL for production
+# Database (PostgreSQL everywhere - see plans/2026-02-04-postgresql-everywhere.md)
+DATABASE_URL=postgres://galatea:galatea@localhost:5432/galatea  # local dev
+# DATABASE_URL=postgres://user:pass@prod-host:5432/galatea     # production
 
 # Auth
 BETTER_AUTH_SECRET=<random-secret>
@@ -612,8 +612,18 @@ KNOWLEDGE_PATH=./galatea-knowledge   # MD files location
 
 ### docker-compose.yml
 ```yaml
-version: '3.8'
 services:
+  postgres:
+    image: postgres:17
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: galatea
+      POSTGRES_USER: galatea
+      POSTGRES_PASSWORD: galatea
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   falkordb:
     image: falkordb/falkordb:latest
     ports:
@@ -630,6 +640,7 @@ services:
       - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
 
 volumes:
+  postgres_data:
   falkordb_data:
 ```
 
@@ -643,7 +654,7 @@ volumes:
     "@tanstack/react-table": "^8.0.0",
     "@tanstack/react-form": "^1.0.0",
     "drizzle-orm": "^0.30.0",
-    "better-sqlite3": "^11.0.0",
+    "postgres": "^3.4.0",
     "ai": "^4.0.0",
     "@ai-sdk/anthropic": "^1.0.0",
     "@anthropic-ai/claude-agent-sdk": "^0.1.0",
@@ -716,6 +727,7 @@ volumes:
 - **[plans/2026-02-03-system-architecture-tanstack.md](./plans/2026-02-03-system-architecture-tanstack.md)** - TanStack Start implementation
 
 ### Design Decisions
+- **[plans/2026-02-04-postgresql-everywhere.md](./plans/2026-02-04-postgresql-everywhere.md)** - PostgreSQL everywhere (drop SQLite)
 - **[plans/2026-02-03-tech-stack-evaluation.md](./plans/2026-02-03-tech-stack-evaluation.md)** - Stack decision (TanStack vs Convex)
 - **[plans/2026-02-03-activity-routing-design.md](./plans/2026-02-03-activity-routing-design.md)** - Activity routing & model selection
 - **[plans/2026-02-02-homeostasis-architecture-design.md](./plans/2026-02-02-homeostasis-architecture-design.md)** - Homeostasis decision
@@ -766,8 +778,9 @@ We have:
 
 ---
 
-*Architecture updated: 2026-02-03*
+*Architecture updated: 2026-02-04*
 *Key changes:*
+- *Database: PostgreSQL everywhere, drop SQLite (see plans/2026-02-04-postgresql-everywhere.md)*
 - *Stack: TanStack Start + Drizzle (replaces Convex)*
 - *Events: MQTT for Home Assistant/Frigate integration*
 - *Content: MD files as input layer (Obsidian-friendly)*
