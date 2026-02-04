@@ -1,12 +1,12 @@
 export type LLMProvider = "ollama" | "openrouter" | "claude-code"
 
-const VALID_PROVIDERS: readonly string[] = [
+export const VALID_PROVIDERS: readonly string[] = [
   "ollama",
   "openrouter",
   "claude-code",
 ]
 
-const DEFAULT_MODELS: Record<LLMProvider, string> = {
+export const DEFAULT_MODELS: Record<LLMProvider, string> = {
   ollama: "llama3.2",
   openrouter: "anthropic/claude-sonnet-4",
   "claude-code": "sonnet",

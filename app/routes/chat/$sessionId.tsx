@@ -9,6 +9,18 @@ export const Route = createFileRoute("/chat/$sessionId")({
   component: ChatPage,
 })
 
+const PROVIDER_MODELS: Record<string, string[]> = {
+  ollama: ["llama3.2", "llama3.1", "mistral", "codellama"],
+  openrouter: [
+    "anthropic/claude-sonnet-4",
+    "google/gemini-2.5-flash",
+    "meta-llama/llama-3.1-70b-instruct",
+  ],
+  "claude-code": ["sonnet", "opus", "haiku"],
+}
+
+const PROVIDERS = Object.keys(PROVIDER_MODELS)
+
 function mapRows(
   rows: Awaited<ReturnType<typeof getSessionMessages>>,
 ): ChatMessage[] {
@@ -32,12 +44,19 @@ function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(false)
   const [streamingText, setStreamingText] = useState("")
+  const [provider, setProvider] = useState("ollama")
+  const [model, setModel] = useState("llama3.2")
 
   useEffect(() => {
     getSessionMessages({ data: { sessionId } }).then((rows) =>
       setMessages(mapRows(rows)),
     )
   }, [sessionId])
+
+  const handleProviderChange = (newProvider: string) => {
+    setProvider(newProvider)
+    setModel(PROVIDER_MODELS[newProvider]?.[0] ?? "")
+  }
 
   const handleSend = async (content: string) => {
     const userMsg: ChatMessage = {
@@ -54,7 +73,12 @@ function ChatPage() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, message: content }),
+        body: JSON.stringify({
+          sessionId,
+          message: content,
+          provider,
+          model,
+        }),
       })
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
@@ -72,7 +96,6 @@ function ChatPage() {
         setStreamingText(fullText)
       }
 
-      // Stream done — refresh messages from DB (includes token counts)
       const updated = await getSessionMessages({ data: { sessionId } })
       setMessages(mapRows(updated))
       setStreamingText("")
@@ -83,7 +106,6 @@ function ChatPage() {
     }
   }
 
-  // Build display messages: actual messages + streaming placeholder
   const displayMessages = streamingText
     ? [
         ...messages,
@@ -98,8 +120,34 @@ function ChatPage() {
 
   return (
     <div className="flex flex-col h-screen">
-      <header className="p-4 border-b border-border">
+      <header className="flex items-center justify-between p-4 border-b border-border">
         <h1 className="text-xl font-semibold">Galatea Chat</h1>
+        <div className="flex items-center gap-2">
+          <select
+            value={provider}
+            onChange={(e) => handleProviderChange(e.target.value)}
+            disabled={loading}
+            className="rounded-md border border-border bg-background px-2 py-1 text-sm"
+          >
+            {PROVIDERS.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+          <select
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            disabled={loading}
+            className="rounded-md border border-border bg-background px-2 py-1 text-sm"
+          >
+            {(PROVIDER_MODELS[provider] ?? []).map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </div>
       </header>
       <MessageList messages={displayMessages} streaming={!!streamingText} />
       <ChatInput onSend={handleSend} disabled={loading} />

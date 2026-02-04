@@ -12,9 +12,16 @@ import {
  * Streaming is handled by the POST /api/chat Nitro route.
  */
 export const sendMessage = createServerFn({ method: "POST" })
-  .inputValidator((input: { sessionId: string; message: string }) => input)
+  .inputValidator(
+    (input: {
+      sessionId: string
+      message: string
+      provider?: string
+      model?: string
+    }) => input,
+  )
   .handler(async ({ data }) => {
-    const { model, modelName } = getModel()
+    const { model, modelName } = getModel(data.provider, data.model)
     return sendMessageLogic(data.sessionId, data.message, model, modelName)
   })
 
