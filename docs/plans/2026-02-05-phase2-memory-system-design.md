@@ -96,6 +96,8 @@ graphiti:
   image: zepai/graphiti
   ports:
     - "18000:8000"
+  extra_hosts:
+    - "host.docker.internal:host-gateway"  # Required on Linux (not needed on Docker Desktop)
   environment:
     # Database
     FALKORDB_URI: "redis://falkordb:6379"
@@ -116,6 +118,7 @@ graphiti:
   depends_on:
     falkordb:
       condition: service_healthy
+  restart: unless-stopped
   healthcheck:
     test: ["CMD", "curl", "-f", "http://localhost:8000/healthcheck"]
     interval: 10s
@@ -124,20 +127,32 @@ graphiti:
 ```
 
 **Notes:**
+- `extra_hosts` is **required on Linux** — `host.docker.internal` is a Docker Desktop feature; on native Linux Docker, it needs the explicit `host-gateway` mapping
 - Graphiti connects to FalkorDB via Docker network (internal port 6379)
 - Ollama runs on host — accessed via `host.docker.internal:11434`
-- `galatea_memory` graph is separate from Phase 1's `galatea` test graph
+- `galatea_memory` graph is separate from Phase 1's `galatea` test graph — existing `galatea` graph from Phase 1 integration tests is untouched
 - `SEMAPHORE_LIMIT: 5` controls LLM call concurrency during ingestion
 - Embedding model `nomic-embed-text` must be pulled in Ollama before use: `ollama pull nomic-embed-text`
 - LLM model `gpt-oss:latest` must also be available in Ollama
+- **Embedding dimensions**: `nomic-embed-text` produces 768-dim vectors. Verify Graphiti's FalkorDB index creation is dimension-aware (not hardcoded to OpenAI's 1536). If mismatched, override or use a different embedding model.
 
 ### Environment Variables (.env)
 
 ```bash
 # Graphiti (Phase 2)
 GRAPHITI_URL=http://localhost:18000
-GRAPHITI_GROUP_ID=main
 ```
+
+### group_id Strategy
+
+Graphiti uses `group_id` to isolate memory namespaces. Our strategy:
+
+- **Ingestion**: Use `sessionId` as `group_id` — each conversation is stored in its own namespace
+- **Search**: Pass `[sessionId, "global"]` as `group_ids` — search the current session + shared knowledge
+- **Cognitive models**: Use `"global"` as `group_id` — self-model and user-model are cross-session
+- **Promoted knowledge** (Phase 3+): When facts are promoted, they move to `"global"` group
+
+This means early sessions will only see their own knowledge. Cross-session recall emerges as knowledge is promoted to `"global"` (Phase 3) or as cognitive models accumulate (Stage F).
 
 ### Fallback Configuration
 
@@ -190,6 +205,24 @@ User sends message
 
 **Ingestion is non-blocking** — Graphiti returns 202 and processes in the background. The user sees no latency impact.
 
+**Staging note**: During Stages B-D, the gatekeeper is OFF — all conversation turns are ingested without filtering. This means the graph will contain noise (greetings, general knowledge, etc.) during early testing, which is acceptable. Stage E adds the gatekeeper filter.
+
+**Error handling**: Ingestion failures in `onFinish` must NOT crash the user experience. PostgreSQL save happens first (critical), then memory ingestion (non-critical) is wrapped in try/catch:
+```typescript
+onFinish: async ({ text, usage }) => {
+  // Critical: save to PostgreSQL
+  await db.insert(messages).values({ ... })
+
+  // Non-critical: ingest to memory
+  try {
+    await graphitiClient.addEpisode({ ... })
+  } catch (error) {
+    logger.error("Memory ingestion failed", error)
+    // Do NOT rethrow — ingestion failure should not affect user
+  }
+}
+```
+
 ### Flow 2: Retrieval (before each LLM call)
 
 ```
@@ -197,10 +230,11 @@ User sends message
   → Context Assembler (server/memory/context-assembler.ts):
 
     Step 1: Query Formulation
-      - Extract key concepts from user message
-      - Identify technologies mentioned or implied
-      - Generate constraint query (what NOT to do)
-      - Generate procedure trigger patterns
+      Phase 2: Pass raw user message directly to Graphiti search.
+      No LLM-based concept extraction (avoids latency + complexity).
+      Graphiti's hybrid search (BM25 + vector) handles relevance.
+      Phase 3+: Add LLM-based concept extraction, technology inference,
+      and multi-query strategies from original design.
 
     Step 2: Parallel Retrieval
       Promise.all([
@@ -224,7 +258,11 @@ User sends message
       ])
 
     Step 3: Ranking & Selection
-      - Score: similarity × 0.4 + recency × 0.2 + confidence × 0.3 + source_boost × 0.1
+      Graphiti returns results with a single `score` (combined BM25 +
+      vector + graph traversal). We re-rank with:
+        finalScore = graphiti_score × 0.7 + recency × 0.2 + source_boost × 0.1
+      Where recency = exponential decay from created_at (30-day half-life).
+      Note: Graphiti does NOT return separate similarity/confidence fields.
       - Deduplicate by content similarity (threshold > 0.9)
       - Sort by final score descending
 
@@ -239,6 +277,8 @@ User sends message
       }
       - Hard rules always included (not subject to budget)
       - Truncate lowest-priority sections first if over budget
+      - Edge case: if hard rules alone exceed total budget, log
+        warning, include all hard rules anyway, skip all other sections
 
     Step 5: Prompt Construction
       Prioritized sections:
@@ -258,6 +298,27 @@ User sends message
 ```
 
 **Retrieval adds latency** but enriches context. Target: < 500ms total for the assembly pipeline (Graphiti search is the bottleneck).
+
+**Graceful degradation**: If context assembly fails (Graphiti down, timeout, error), fall back to preprompts-only behavior (the Phase 1 path). Chat never breaks because memory is unavailable:
+```typescript
+let systemPrompt: string
+try {
+  const context = await assembleContext(message, sessionId)
+  systemPrompt = context.systemPrompt
+} catch (error) {
+  // Graceful degradation: preprompts only (Phase 1 behavior)
+  const activePrompts = await db.select().from(preprompts)
+    .where(eq(preprompts.active, true))
+    .orderBy(asc(preprompts.priority))
+  systemPrompt = activePrompts.map((p) => p.content).join("\n\n")
+  logger.warn("Memory system unavailable, using preprompts only", error)
+}
+```
+
+**HTTP timeouts**: All Graphiti client calls must have timeouts:
+- Search: 2000ms (on the critical path)
+- Episode ingestion: 5000ms (non-blocking)
+- Health check: 1000ms
 
 ---
 
@@ -349,6 +410,8 @@ RETURN r.fact
 
 **Open question**: Should cognitive models be ingested as episodes (letting Graphiti extract entities) or created as explicit entities via `POST /entity-node`? Recommendation: **explicit creation** via `POST /entity-node` for models — they're structured knowledge, not conversational text. Episodes are for conversations.
 
+**Dual-path architecture note**: Cognitive model retrieval uses direct FalkorDB Cypher queries (via existing `server/integrations/falkordb.ts` with `getGraph("galatea_memory")`) alongside the Graphiti HTTP client. This is intentional — Graphiti's search API is optimized for semantic similarity, not structured graph traversal. For queries like "get all weaknesses for persona X", direct Cypher is more reliable and faster. This means Stage F introduces a second connection path to FalkorDB. The existing `getGraph()` function already supports custom graph names.
+
 ### Procedural Memory
 
 Procedures are a special case. Graphiti doesn't natively support trigger→steps structures with success tracking. Two options:
@@ -392,10 +455,12 @@ Pros: Structured, easy to update success_rate. Cons: Not in the graph, separate 
 
 ## TypeScript Types
 
+**IMPORTANT**: The Graphiti response types below are **provisional** — based on API documentation and source code analysis. They MUST be verified against the actual Swagger docs at `:18000/docs` during Stage A before writing the client. Capture real response shapes and update these types accordingly.
+
 ```typescript
 // server/memory/types.ts
 
-/** Graphiti REST API types */
+/** Graphiti REST API request types */
 export interface GraphitiEpisode {
   name: string
   episode_body: string
@@ -404,15 +469,35 @@ export interface GraphitiEpisode {
   reference_time: string  // ISO 8601
 }
 
+export interface GraphitiSearchRequest {
+  query: string
+  group_ids?: string[]
+  num_results?: number
+}
+
+export interface GraphitiGetMemoryRequest {
+  messages: Array<{ role: string; content: string }>
+  group_id: string
+}
+
+/** Graphiti REST API response types (PROVISIONAL — verify against Swagger) */
 export interface GraphitiSearchResult {
   uuid: string
   fact: string
   source_node_name: string
   target_node_name: string
-  score: number
+  score: number               // Combined BM25 + vector + graph traversal
   valid_at: string | null
   invalid_at: string | null
   created_at: string
+  // NOTE: No separate 'confidence' or 'similarity' fields.
+  // Graphiti returns a single combined 'score'.
+}
+
+/** Graphiti error response */
+export interface GraphitiError {
+  detail: string | Array<{ loc: string[]; msg: string; type: string }>
+  status_code: number
 }
 
 export interface GraphitiEntityNode {
@@ -463,11 +548,10 @@ export interface PromptSection {
 export interface ScoredFact {
   uuid: string
   fact: string
-  source: "primary" | "concept" | "technology" | "constraint"
-  similarity: number
-  recency: number
-  confidence: number
-  finalScore: number
+  source: "primary" | "concept" | "technology" | "constraint" | "episode" | "model"
+  graphitiScore: number       // Raw score from Graphiti
+  recency: number             // Computed from created_at (0-1, exponential decay)
+  finalScore: number          // Re-ranked: graphitiScore × 0.7 + recency × 0.2 + sourceBoost × 0.1
 }
 
 export interface AssembledContext {
@@ -491,6 +575,9 @@ export interface GatekeeperDecision {
   reason: string
   category: "preference" | "policy" | "correction" | "decision" | "general_knowledge" | "greeting" | "other"
 }
+// Failure policy: fail-OPEN. If the gatekeeper LLM call fails (timeout,
+// malformed response, Ollama down), ingest the message anyway. Better to
+// have noise in the graph than to lose potentially valuable knowledge.
 
 /** Cognitive model types */
 export interface SelfModel {
@@ -529,8 +616,8 @@ server/memory/
 
 **Modified existing files:**
 - `docker-compose.yml` — Add Graphiti service
-- `.env.example` — Add `GRAPHITI_URL`, `GRAPHITI_GROUP_ID`
-- `server/functions/chat.logic.ts` — Replace preprompt concatenation with context assembler; add post-response ingestion
+- `.env.example` — Add `GRAPHITI_URL`
+- `server/functions/chat.logic.ts` — Both `streamMessageLogic` and `sendMessageLogic` get context assembly + post-response ingestion. The non-streaming path (`sendMessageLogic`) uses the same `assembleContext()` for enriched prompts and the same try/catch graceful degradation.
 - `app/routes/memories/index.tsx` — [Stage D] New route for memory browser UI
 
 ---
@@ -549,9 +636,11 @@ server/memory/
 5. Verify: `POST /messages` with test data → 202 Accepted
 6. Verify: `POST /search` returns results from test data
 7. Update `.env.example` with Graphiti vars
-8. Write integration test: sidecar health + basic add/search
+8. **Capture actual API response shapes**: Hit `/docs` (Swagger), POST a test episode, capture JSON responses from `/search`, `/episodes/{group_id}`, `/get-memory`. Update `server/memory/types.ts` if they differ from provisional types.
+9. Write integration test: sidecar health + basic add/search
+10. Save sample responses as test fixtures in `server/memory/__tests__/fixtures/`
 
-**Deliverable**: Graphiti sidecar running alongside existing stack.
+**Deliverable**: Graphiti sidecar running alongside existing stack. Actual API response shapes captured and documented.
 
 ### Stage B: TypeScript Client + Basic Ingestion
 
@@ -587,8 +676,9 @@ server/memory/
    - Step 4: Allocate token budget, truncate if needed
    - Step 5: Build prioritized prompt sections
    - Step 6: Assemble final system prompt string
-3. Integrate into `chat.logic.ts` — replace `preprompts.map(p => p.content).join("\n\n")` with `assembleContext()`
-4. Ensure hard rules (preprompts with type='hard_rule') are always included regardless of Graphiti results
+3. Integrate into `chat.logic.ts` — replace `preprompts.map(p => p.content).join("\n\n")` with `assembleContext()` in **both** `streamMessageLogic` and `sendMessageLogic`
+4. Add graceful degradation: try/catch around `assembleContext()`, fallback to preprompts-only
+5. Ensure hard rules (preprompts with type='hard_rule') are always included regardless of Graphiti results
 5. Log assembly metadata (token counts, retrieval stats, timing) via Langfuse
 6. Unit tests with mocked Graphiti client
 7. Integration test: verify enriched prompts contain both preprompts AND Graphiti knowledge
@@ -676,57 +766,96 @@ server/memory/
 - **Graphiti Swagger** (:18000/docs) — manually POST episodes, search, inspect
 - **Optionally**: Graphiti MCP server for Claude-powered interactive testing
 
-### CI Consideration
+### Test Data Fixtures
 
-Integration tests require Docker (Graphiti + FalkorDB + Ollama). Tag them separately:
+Create `server/memory/__tests__/fixtures/` with:
+- `graphiti-search-response.json` — sample `POST /search` response (captured from real sidecar during Stage A)
+- `graphiti-episodes-response.json` — sample `GET /episodes/{group_id}` response
+- `sample-conversations.ts` — example conversation turns for gatekeeper testing
+- `sample-graph-data.ts` — mock cognitive model graph data for context assembly tests
+
+**What we explicitly don't test:**
+- Graphiti's internal entity extraction quality (that's Graphiti's problem)
+- Ollama model quality (tested manually, escalation path documented)
+- Embedding similarity thresholds (tuned empirically, not unit-testable)
+
+**Integration test latency note**: Entity extraction with local Ollama can take 10-30s per episode. Integration tests that need ingestion should either: (a) use pre-ingested fixtures, or (b) have generous timeouts and be tagged for manual/CI-optional runs.
+
+### CI / Environment Handling
+
+Integration tests require Docker (Graphiti + FalkorDB + Ollama). Use environment-based skipping:
 ```typescript
 // @vitest-environment node
-// @vitest-tag integration
+const hasGraphiti = !!process.env.GRAPHITI_URL
+describe.skipIf(!hasGraphiti)("Graphiti integration", () => { ... })
 ```
-CI runs unit tests always, integration tests only when Docker is available.
+CI runs unit tests always, integration tests only when `GRAPHITI_URL` is set.
 
 ---
 
 ## Development Prerequisites
 
-### Required before starting Stage A:
+### Required before starting Stage A (RESOLVE THESE FIRST):
 
-1. **Ollama models pulled:**
-   - `ollama pull gpt-oss:latest` (20GB — LLM for entity extraction)
-   - `ollama pull nomic-embed-text` (embedding model)
-2. **Docker Compose running:** existing PostgreSQL + FalkorDB healthy
-3. **Verify Graphiti Docker image supports FalkorDB**: test `zepai/graphiti` image connects to FalkorDB (if not, build from source with `pip install graphiti-core[falkordb]`)
+1. **Verify Graphiti Docker image supports FalkorDB:**
+   ```bash
+   docker pull zepai/graphiti
+   # Try starting with FalkorDB config — if it fails, build from source:
+   # git clone https://github.com/getzep/graphiti
+   # cd graphiti/server
+   # docker build -t galatea/graphiti --build-arg EXTRAS="[falkordb]" .
+   ```
+   If the official image doesn't include FalkorDB support, we need a custom Dockerfile.
+
+2. **Ollama models pulled and verified:**
+   ```bash
+   ollama pull gpt-oss:latest   # 20GB — verify it fits in available VRAM/RAM
+   ollama pull nomic-embed-text  # Embedding model (~274MB)
+   ```
+   **System requirements**: gpt-oss:latest (20GB) + nomic-embed-text + the main chat model (llama3.2) all need to coexist. Verify total memory budget.
+
+3. **Verify embedding dimension compatibility:**
+   `nomic-embed-text` produces 768-dim vectors. Check Graphiti source code (`build_indices_and_constraints()`) to confirm the FalkorDB vector index dimensions are derived from the embedding model, not hardcoded to 1536 (OpenAI default). If hardcoded, either override or use a different embedding model.
+
+4. **Docker Compose running:** existing PostgreSQL + FalkorDB healthy
+
+5. **Capture actual Graphiti API response shapes:**
+   Once the sidecar is running, hit `/docs` (Swagger) and POST a test episode. Capture the actual JSON response from `POST /search`, `GET /episodes/{group_id}`, and `POST /get-memory`. Update the TypeScript types in `server/memory/types.ts` to match reality.
 
 ### Required before starting Stage B:
 
-4. **Graphiti sidecar healthy** at :18000
-5. **At least one test episode ingested** to verify the pipeline works end-to-end
+6. **Graphiti sidecar healthy** at :18000
+7. **At least one test episode ingested** and searchable end-to-end
 
 ### Required before starting Stage E:
 
-6. **Gatekeeper LLM model**: Uses existing provider system (Ollama default). No additional models needed.
+8. **Gatekeeper LLM model**: Uses existing provider system (Ollama default). No additional models needed.
 
 ### Required before starting Stage F:
 
-7. **Understanding of Graphiti custom entity types**: May need Pydantic model definitions in the Graphiti sidecar config for `SelfModel`, `UserModel`, `Weakness`, `Strength`, `Preference`, `Expectation` labels. OR use plain entity creation with custom labels (simpler).
+9. **Understanding of Graphiti custom entity types**: May need Pydantic model definitions in the Graphiti sidecar config for `SelfModel`, `UserModel`, `Weakness`, `Strength`, `Preference`, `Expectation` labels. OR use plain entity creation with custom labels (simpler, recommended for Phase 2).
+10. **Verify direct FalkorDB queries work against Graphiti's graph**: Use FalkorDB Browser (:13001) to run test Cypher queries against the `galatea_memory` graph to confirm node labels and relationship types match expectations.
 
 ---
 
 ## Open Questions
 
-1. **Graphiti Docker image + FalkorDB**: Does the latest `zepai/graphiti` image include FalkorDB support? If not, we build from the repo's `/server` directory with `graphiti-core[falkordb]`.
+### Resolved
 
-2. **Ollama embedding model**: We chose `nomic-embed-text` as a reasonable default. Need to verify Graphiti's OpenAI-compatible embedder works with Ollama's `/v1/embeddings` endpoint.
+1. ~~**Graphiti Docker image + FalkorDB**~~ → Verify in Stage A prereqs. If not supported, build custom image.
+2. ~~**Ollama embedding model**~~ → `nomic-embed-text` (768-dim). Verify dimension compatibility in prereqs.
+3. ~~**group_id strategy**~~ → `sessionId` for episodes, `"global"` for cognitive models and promoted knowledge. Search both.
+4. ~~**Cognitive model creation**~~ → Explicit `POST /entity-node` for structured models, not episode ingestion.
 
-3. **Graphiti structured output with gpt-oss**: This is the biggest risk. If `gpt-oss:latest` (20GB) can't reliably produce structured JSON for entity extraction, we escalate to OpenRouter. Need to test early in Stage A.
+### Still Open
 
-4. **group_id strategy**: Using `sessionId` as `group_id` isolates memory per session. Should we also have a global `group_id` for cross-session knowledge? Recommendation: use both — `sessionId` for session-specific episodes, `"global"` for promoted/shared knowledge.
-
-5. **Cognitive model creation**: Use `POST /entity-node` (explicit) vs `POST /messages` (let Graphiti extract)? Recommendation: explicit creation for structured models.
+5. **Graphiti structured output with gpt-oss**: Biggest risk. If `gpt-oss:latest` (20GB) can't reliably produce structured JSON for entity extraction, we escalate to OpenRouter. Must test early in Stage A.
 
 6. **Procedural memory storage**: Graphiti entity attributes (Option A) vs PostgreSQL table (Option B)? Current recommendation: Option A (graph), revisit if success tracking is painful.
 
 7. **Concurrent ingestion**: Multiple chat sessions ingesting simultaneously. Graphiti handles this via `group_id` isolation, but verify no race conditions in FalkorDB writes.
+
+8. **Episode granularity**: Currently ingesting full conversation turns ("user: X\nassistant: Y"). Should we ingest user and assistant messages separately? Or accumulate multiple turns into a single episode? Current approach (per-turn) is simplest.
 
 ---
 
@@ -745,15 +874,29 @@ CI runs unit tests always, integration tests only when Docker is available.
 
 ## What's NOT in Phase 2
 
-These are explicitly deferred to later phases:
+These are explicitly deferred to later phases. The original memory system design (`2026-02-02-memory-system-design.md`) defined many features that Phase 2 intentionally simplifies or skips.
 
-- **Promotion engine** (episode → observation → fact → rule → procedure → shared) — Phase 3
-- **Consolidation** (background promotion, decay) — Phase 3
-- **Cross-agent learning** (shared memory pool, pattern detection) — Phase 4
-- **Export/import** (persona portability) — Phase 5
-- **Homeostasis integration** (knowledge_sufficiency assessment) — Phase 3
-- **Activity router** (Level 0-3 classification, model selection) — Phase 3
-- **MQTT observation pipeline** (external event ingestion) — Phase 5
+### Deferred to Phase 3 (Homeostasis + Learning)
+- **Promotion engine** — episode → observation → fact → rule → procedure → shared hierarchy
+- **Consolidation** — background promotion, confidence decay, periodic processing
+- **Memory invalidation** — explicit `invalidateMemory()` with `SUPERSEDES` edges (Graphiti handles basic temporal invalidation, but our custom rules are deferred)
+- **Cascade demotion** — when evidence is invalidated, dependent facts lose confidence
+- **Circular promotion prevention** — source tagging, self-reinforcement discount
+- **Homeostasis integration** — knowledge_sufficiency assessment before each LLM call
+- **Activity router** — Level 0-3 classification, model selection per task
+
+### Deferred to Phase 4+ (Cross-Agent + Advanced)
+- **Memory Router** — classifying ingested content into specific types (semantic:fact, semantic:preference, procedural, etc.). Phase 2 relies on Graphiti's generic entity extraction. All knowledge enters the graph as Entity nodes with RELATES_TO edges. The original design's rich node type taxonomy is not implemented.
+- **Rich custom edge types** — The original design defined 20+ edge types (CONTRIBUTED_TO, PROMOTED_TO, SUPERSEDES, HAS_STRENGTH, HAS_WEAKNESS, etc.). Phase 2 uses Graphiti's native `:RELATES_TO` edges with `fact` text properties. This is a significant simplification — queries based on edge type must use string matching on `fact` content instead.
+- **Cross-agent learning** — shared memory pool, pattern detection across agents
+- **Conflict resolution** — structured handling of contradictory facts from different agents
+- **Abstraction quality checking** — preventing over-generalization during promotion
+
+### Deferred to Phase 5+ (Infrastructure)
+- **Export/import** — persona portability with privacy filters
+- **MQTT observation pipeline** — external event ingestion from Home Assistant/Frigate
+- **Pruning/archival** — moving old low-confidence superseded memories to cold storage
+- **LLM-based query formulation** — multi-query strategies, concept extraction, technology inference (Phase 2 uses raw message as search query)
 
 ---
 
