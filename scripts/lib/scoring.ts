@@ -108,7 +108,7 @@ export function calculateScores(
 
   const entity_recall = expected.entities.length > 0
     ? matchedEntities.length / expected.entities.length
-    : (extracted.entities.length === 0 ? 1.0 : 0)
+    : 1.0  // No ground truth to miss
 
   const entity_f1 = (entity_precision + entity_recall) > 0
     ? 2 * (entity_precision * entity_recall) / (entity_precision + entity_recall)
@@ -137,7 +137,7 @@ export function calculateScores(
 
   const fact_recall = expected.facts.length > 0
     ? matchedFacts.length / expected.facts.length
-    : (extracted.facts.length === 0 ? 1.0 : 0)
+    : 1.0  // No ground truth to miss
 
   const fact_f1 = (fact_precision + fact_recall) > 0
     ? 2 * (fact_precision * fact_recall) / (fact_precision + fact_recall)

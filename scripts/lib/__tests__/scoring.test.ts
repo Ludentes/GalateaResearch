@@ -168,4 +168,22 @@ describe('calculateScores', () => {
     expect(scores.entity_recall).toBe(1.0)
     expect(scores.entity_f1).toBe(1.0)
   })
+
+  it('handles empty expected with non-empty extracted (over-extraction)', () => {
+    const expected = {
+      entities: [],
+      facts: []
+    }
+    const extracted = {
+      entities: [{ name: 'Docker' }],
+      facts: [],
+      parse_success: true,
+      latency_ms: 100
+    }
+    const scores = calculateScores(expected, extracted)
+
+    expect(scores.entity_precision).toBe(0)  // 0 matched / 1 extracted
+    expect(scores.entity_recall).toBe(1.0)   // No ground truth to miss
+    expect(scores.entity_f1).toBe(0)
+  })
 })
