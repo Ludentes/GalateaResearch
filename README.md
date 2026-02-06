@@ -54,6 +54,23 @@ Instead of 12+ discrete subsystems (Curiosity Engine, Motivation Engine, etc.), 
 | Tools | MCP ecosystem (1000+ servers) |
 | Embeddings | Voyage AI |
 
+## Benchmarking Graphiti LLM Quality
+
+Test different LLM configurations for entity/fact extraction:
+
+```bash
+# Run baseline
+pnpm benchmark:graphiti
+
+# Test specific config
+pnpm benchmark:graphiti --config=granite-balanced
+
+# Compare in Langfuse dashboard
+open http://localhost:3000
+```
+
+See [Benchmark Usage Guide](docs/guides/graphiti-benchmark-usage.md) for details.
+
 ## Documentation
 
 ```
