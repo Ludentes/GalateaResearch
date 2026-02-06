@@ -494,7 +494,9 @@ async function main() {
   console.log(`\nView details in Langfuse: ${process.env.BENCHMARK_LANGFUSE_BASE_URL || 'https://cloud.langfuse.com'}`)
 
   // Save results to file
-  const resultsFile = `results/benchmark-${runName}.json`
+  // Sanitize filename (replace slashes from model names like moonshotai/kimi)
+  const safeRunName = runName.replace(/\//g, '-')
+  const resultsFile = `results/benchmark-${safeRunName}.json`
   fs.mkdirSync('results', { recursive: true })
   fs.writeFileSync(
     resultsFile,
