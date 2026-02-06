@@ -126,7 +126,7 @@ async function extractResults(groupId: string): Promise<ExtractedOutput> {
       facts: [],
       parse_success: false,
       latency_ms: Date.now() - startTime,
-      error: error.message
+      error: (error as Error).message
     }
   }
 }
@@ -226,7 +226,6 @@ async function main() {
       if (scores.entity_f1 < 0.5) {
         testSpan.update({
           metadata: {
-            ...testSpan.metadata,
             warning: 'Low entity F1 score'
           }
         })
@@ -245,10 +244,16 @@ async function main() {
       results.push({
         testCase: testCase.id,
         scores: {
+          entity_precision: 0,
+          entity_recall: 0,
           entity_f1: 0,
+          fact_precision: 0,
+          fact_recall: 0,
           fact_f1: 0,
           parse_success: false,
-          error: (error as Error).message
+          total_entities: 0,
+          total_facts: 0,
+          latency_ms: 0
         }
       })
     }
