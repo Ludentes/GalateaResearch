@@ -1,0 +1,142 @@
+{
+  "version": "v1",
+  "description": "Golden dataset for Graphiti LLM evaluation - initial 5 core test cases",
+  "cases": [
+    {
+      "id": "preference-simple",
+      "category": "entity_extraction",
+      "input": {
+        "messages": [
+          {
+            "content": "I prefer dark mode",
+            "role": "user"
+          }
+        ],
+        "group_id": "test-preference-simple"
+      },
+      "expectedOutput": {
+        "entities": [
+          { "name": "dark mode" },
+          { "name": "user" }
+        ],
+        "facts": [
+          {
+            "fact": "user prefers dark mode",
+            "source_entity": "user",
+            "target_entity": "dark mode"
+          }
+        ]
+      },
+      "notes": "Basic preference extraction - simplest case"
+    },
+    {
+      "id": "tech-stack-complex",
+      "category": "fact_extraction",
+      "input": {
+        "messages": [
+          {
+            "content": "We use PostgreSQL for the database and Redis for caching",
+            "role": "user"
+          }
+        ],
+        "group_id": "test-tech-stack"
+      },
+      "expectedOutput": {
+        "entities": [
+          { "name": "PostgreSQL" },
+          { "name": "Redis" },
+          { "name": "team" }
+        ],
+        "facts": [
+          {
+            "fact": "team uses PostgreSQL for database",
+            "source_entity": "team",
+            "target_entity": "PostgreSQL"
+          },
+          {
+            "fact": "team uses Redis for caching",
+            "source_entity": "team",
+            "target_entity": "Redis"
+          }
+        ]
+      },
+      "notes": "Multiple facts from single message - tests fact extraction"
+    },
+    {
+      "id": "dedup-same-entity",
+      "category": "deduplication",
+      "input": {
+        "messages": [
+          {
+            "content": "I use Docker for containers",
+            "role": "user"
+          },
+          {
+            "content": "Docker is great for development",
+            "role": "assistant"
+          }
+        ],
+        "group_id": "test-dedup"
+      },
+      "expectedOutput": {
+        "entities": [
+          { "name": "Docker" },
+          { "name": "user" }
+        ],
+        "facts": [
+          {
+            "fact": "user uses Docker for containers",
+            "source_entity": "user",
+            "target_entity": "Docker"
+          }
+        ]
+      },
+      "notes": "Docker mentioned twice should create ONE entity - tests deduplication"
+    },
+    {
+      "id": "policy-extraction",
+      "category": "fact_extraction",
+      "input": {
+        "messages": [
+          {
+            "content": "We always use TypeScript for new projects",
+            "role": "user"
+          }
+        ],
+        "group_id": "test-policy"
+      },
+      "expectedOutput": {
+        "entities": [
+          { "name": "TypeScript" },
+          { "name": "team" }
+        ],
+        "facts": [
+          {
+            "fact": "team always uses TypeScript for new projects",
+            "source_entity": "team",
+            "target_entity": "TypeScript"
+          }
+        ]
+      },
+      "notes": "Policy statement - tests 'always' pattern recognition"
+    },
+    {
+      "id": "edge-case-empty",
+      "category": "edge_case",
+      "input": {
+        "messages": [
+          {
+            "content": "Hi",
+            "role": "user"
+          }
+        ],
+        "group_id": "test-edge-empty"
+      },
+      "expectedOutput": {
+        "entities": [],
+        "facts": []
+      },
+      "notes": "Greeting with no extractable content - should extract nothing"
+    }
+  ]
+}
