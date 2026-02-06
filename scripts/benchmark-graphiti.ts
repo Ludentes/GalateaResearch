@@ -8,7 +8,7 @@
 
 import fs from 'fs'
 import Langfuse from 'langfuse'
-import type { ExtractedOutput, Scores } from './lib/scoring'
+import type { ExtractedOutput } from './lib/scoring'
 import { calculateScores } from './lib/scoring'
 
 interface GoldenDataset {
@@ -260,7 +260,7 @@ async function main() {
   }
 
   // 6. Aggregate scores
-  const validResults = results.filter(r => r.scores.parse_success !== false) as Array<{ testCase: string; scores: Scores }>
+  const validResults = results.filter(r => r.scores.parse_success !== false && 'entity_precision' in r.scores)
 
   if (validResults.length === 0) {
     console.log('\n⚠️  All test cases failed - no valid results to aggregate')
