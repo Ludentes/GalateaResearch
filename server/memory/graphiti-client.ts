@@ -92,7 +92,25 @@ export async function ingestMessages(
 }
 
 /**
+ * Check if query text matches the fact text (case-insensitive, whole word match)
+ */
+function hasExactKeywordMatch(fact: string, query: string): boolean {
+  const queryLower = query.toLowerCase().trim()
+  const factLower = fact.toLowerCase()
+
+  // Match whole words only (not substrings)
+  const wordBoundaryRegex = new RegExp(
+    `\\b${queryLower.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
+  )
+  return wordBoundaryRegex.test(factLower)
+}
+
+/**
  * Search the knowledge graph for relevant facts.
+ *
+ * For short queries (< 10 chars OR single word), prioritizes exact keyword matches
+ * to avoid vector similarity false positives on small datasets.
+ *
  * Returns an empty array on failure (graceful degradation).
  */
 export async function searchFacts(
@@ -102,7 +120,7 @@ export async function searchFacts(
 ): Promise<FactResult[]> {
   const body: SearchRequest = {
     query,
-    max_facts: maxFacts,
+    max_facts: maxFacts * 2, // Fetch more results for filtering
     // Only include group_ids if non-empty (empty array causes Graphiti to return nothing)
     ...(groupIds.length > 0 && { group_ids: groupIds }),
   }
@@ -112,7 +130,22 @@ export async function searchFacts(
     body: JSON.stringify(body),
   })
 
-  return res?.facts ?? []
+  const facts = res?.facts ?? []
+
+  // For short queries, prioritize exact keyword matches
+  const isShortQuery =
+    query.trim().length < 10 || query.trim().split(/\s+/).length === 1
+
+  if (isShortQuery && facts.length > 0) {
+    // Separate exact matches from fuzzy matches
+    const exactMatches = facts.filter((f) => hasExactKeywordMatch(f.fact, query))
+    const fuzzyMatches = facts.filter((f) => !hasExactKeywordMatch(f.fact, query))
+
+    // Return exact matches first, then fuzzy matches, limited to maxFacts
+    return [...exactMatches, ...fuzzyMatches].slice(0, maxFacts)
+  }
+
+  return facts.slice(0, maxFacts)
 }
 
 /**
