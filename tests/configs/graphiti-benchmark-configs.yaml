@@ -1,24 +1,5 @@
 configurations:
-  - name: llama3.2-baseline
-    model: llama3.2
-    temperature: 0.7
-    description: Current production baseline
-
-  - name: granite-deterministic
-    model: granite3.1-dense:8b
-    temperature: 0.0
-    description: Test granite with zero temperature for maximum determinism
-
-  - name: granite-conservative
-    model: granite3.1-dense:8b
-    temperature: 0.3
-    description: Test granite with low temperature for consistency
-
-  - name: granite-balanced
-    model: granite3.1-dense:8b
-    temperature: 0.7
-    description: Test granite with default temperature
-
+  
   - name: granite-creative
     model: granite3.1-dense:8b
     temperature: 1.0
@@ -185,6 +166,37 @@ configurations:
     base_url: https://openrouter.ai/api/v1
     api_key_env: OPENROUTER_API_KEY
     description: Test OpenRouter's free GLM-4.5-Air model
+
+  - name: openrouter-kimi-k2.5
+    model: moonshotai/kimi-k2.5
+    temperature: 0.7
+    base_url: https://openrouter.ai/api/v1
+    api_key_env: OPENROUTER_API_KEY
+    description: Test OpenRouter's Kimi K2.5 (high-quality model for deep analysis)
+
+  - name: openrouter-kimi-k2.5-comprehensive
+    model: moonshotai/kimi-k2.5
+    temperature: 0.5
+    base_url: https://openrouter.ai/api/v1
+    api_key_env: OPENROUTER_API_KEY
+    system_prompt: |
+      You are an expert knowledge graph builder. Follow these rules precisely:
+
+      ENTITY EXTRACTION:
+      - Extract concrete entities mentioned explicitly
+      - Normalize similar entities (Docker = docker)
+      - Use "user" for first-person references (I, me, my)
+
+      FACT EXTRACTION:
+      - Direction: subject → object (e.g., user → tool, not tool → user)
+      - Completeness: include ALL details (reasons, conditions, timeframes)
+      - Accuracy: only extract explicitly stated relationships
+      - Format: "{subject} {verb} {object} {details}"
+
+      Example: "I prefer VS Code because of extensions"
+      → Entity: user, VS Code
+      → Fact: user → VS Code: "user prefers VS Code because of extensions"
+    description: Test Kimi K2.5 with comprehensive prompt for fact extraction
 
   # === Nemotron-3-Nano Experiments ===
 
