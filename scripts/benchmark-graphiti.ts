@@ -134,10 +134,11 @@ async function extractResults(groupId: string): Promise<ExtractedOutput> {
 async function main() {
   console.log('=== Graphiti LLM Benchmark ===\n')
 
-  // 1. Setup Langfuse
+  // 1. Setup Langfuse (dedicated benchmark project)
   const langfuse = new Langfuse({
-    secretKey: process.env.LANGFUSE_SECRET_KEY!,
-    publicKey: process.env.LANGFUSE_PUBLIC_KEY!,
+    secretKey: process.env.BENCHMARK_LANGFUSE_SECRET_KEY!,
+    publicKey: process.env.BENCHMARK_LANGFUSE_PUBLIC_KEY!,
+    baseUrl: process.env.BENCHMARK_LANGFUSE_BASE_URL
   })
 
   // 2. Load golden dataset
@@ -149,6 +150,35 @@ async function main() {
   console.log(`Version: ${dataset.version}`)
   console.log(`Test cases: ${dataset.cases.length}\n`)
 
+  // Upload golden dataset to Langfuse (if not exists)
+  const datasetName = `graphiti-golden-${dataset.version}`
+  let langfuseDataset = await langfuse.getDataset(datasetName).catch(() => null)
+
+  if (!langfuseDataset) {
+    console.log(`Creating Langfuse dataset: ${datasetName}`)
+    langfuseDataset = await langfuse.createDataset({
+      name: datasetName,
+      description: dataset.description,
+      metadata: { version: dataset.version }
+    })
+
+    // Upload all test cases as dataset items
+    for (const testCase of dataset.cases) {
+      await langfuseDataset.createItem({
+        input: testCase.input,
+        expectedOutput: testCase.expectedOutput,
+        metadata: {
+          id: testCase.id,
+          category: testCase.category,
+          notes: testCase.notes
+        }
+      })
+    }
+    console.log(`  Uploaded ${dataset.cases.length} test cases to dataset`)
+  } else {
+    console.log(`Using existing Langfuse dataset: ${datasetName}`)
+  }
+
   // 3. Load config (env vars for now)
   const config: Config = {
     name: 'env-vars',
@@ -158,6 +188,44 @@ async function main() {
   }
 
   console.log(`Configuration: ${config.model} (temp=${config.temperature})`)
+
+  // Manage system prompt via Langfuse Prompts
+  let promptVersion = null
+  if (config.system_prompt) {
+    const promptName = `graphiti-system-prompt-${config.name}`
+    try {
+      // Try to get existing prompt
+      const existingPrompt = await langfuse.getPrompt(promptName)
+
+      // Check if current config prompt matches latest version
+      if (existingPrompt.prompt !== config.system_prompt) {
+        // Create new version if different
+        promptVersion = await langfuse.createPrompt({
+          name: promptName,
+          prompt: config.system_prompt,
+          config: {
+            model: config.model,
+            temperature: config.temperature
+          }
+        })
+        console.log(`  Created new prompt version: ${promptName}`)
+      } else {
+        promptVersion = existingPrompt
+        console.log(`  Using existing prompt: ${promptName}`)
+      }
+    } catch (error) {
+      // Prompt doesn't exist, create it
+      promptVersion = await langfuse.createPrompt({
+        name: promptName,
+        prompt: config.system_prompt,
+        config: {
+          model: config.model,
+          temperature: config.temperature
+        }
+      })
+      console.log(`  Created new prompt: ${promptName}`)
+    }
+  }
 
   // 4. Create Langfuse session for this run
   const runName = `${config.model}-temp${config.temperature}-${Date.now()}`
@@ -170,7 +238,10 @@ async function main() {
       model: config.model,
       temperature: config.temperature,
       system_prompt: config.system_prompt || 'default',
-      dataset_version: dataset.version
+      prompt_name: promptVersion?.name,
+      prompt_version: promptVersion?.version,
+      dataset_version: dataset.version,
+      dataset_name: datasetName
     },
     tags: ['benchmark', config.model, dataset.version]
   })
@@ -297,7 +368,7 @@ async function main() {
   console.log(`Fact Precision: ${aggregated.fact_precision.toFixed(3)}`)
   console.log(`Fact Recall: ${aggregated.fact_recall.toFixed(3)}`)
   console.log(`Parse Success: ${aggregated.parse_success_rate.toFixed(1)}%`)
-  console.log(`\nView details in Langfuse: ${process.env.LANGFUSE_BASE_URL || 'https://cloud.langfuse.com'}`)
+  console.log(`\nView details in Langfuse: ${process.env.BENCHMARK_LANGFUSE_BASE_URL || 'https://cloud.langfuse.com'}`)
 
   // Save results to file
   const resultsFile = `results/benchmark-${runName}.json`
