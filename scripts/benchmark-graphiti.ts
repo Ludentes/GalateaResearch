@@ -175,82 +175,135 @@ async function main() {
     tags: ['benchmark', config.model, dataset.version]
   })
 
-  // 5. Run test case
-  const testCase = dataset.cases[0]
-  console.log(`Testing: ${testCase.id}`)
+  // 5. Run all test cases
+  const results = []
+  for (let i = 0; i < dataset.cases.length; i++) {
+    const testCase = dataset.cases[i]
+    console.log(`\n[${i + 1}/${dataset.cases.length}] Testing: ${testCase.id}`)
 
-  const testSpan = session.span({
-    name: testCase.id,
-    metadata: {
-      category: testCase.category,
-      notes: testCase.notes
+    const testSpan = session.span({
+      name: testCase.id,
+      metadata: {
+        category: testCase.category,
+        notes: testCase.notes
+      }
+    })
+
+    try {
+      // Ingest
+      console.log('  Ingesting...')
+      await ingestTestCase(testCase)
+
+      // Wait for processing
+      console.log('  Waiting for processing...')
+      await sleep(15000)
+
+      // Extract
+      console.log('  Extracting results...')
+      const extracted = await extractResults(testCase.input.group_id)
+
+      // Score
+      const scores = calculateScores(testCase.expectedOutput, extracted)
+
+      // Log results
+      console.log(`  Entity F1: ${scores.entity_f1.toFixed(3)}  Fact F1: ${scores.fact_f1.toFixed(3)}`)
+
+      // Log to Langfuse
+      testSpan.score({ name: 'entity_f1', value: scores.entity_f1 })
+      testSpan.score({ name: 'entity_precision', value: scores.entity_precision })
+      testSpan.score({ name: 'entity_recall', value: scores.entity_recall })
+      testSpan.score({ name: 'fact_f1', value: scores.fact_f1 })
+      testSpan.score({ name: 'fact_precision', value: scores.fact_precision })
+      testSpan.score({ name: 'fact_recall', value: scores.fact_recall })
+      testSpan.score({ name: 'parse_success', value: scores.parse_success ? 1 : 0 })
+
+      testSpan.update({
+        input: testCase.input,
+        output: extracted
+      })
+
+      // Flag low-performing cases
+      if (scores.entity_f1 < 0.5) {
+        testSpan.update({
+          metadata: {
+            ...testSpan.metadata,
+            warning: 'Low entity F1 score'
+          }
+        })
+      }
+
+      testSpan.end()
+      results.push({ testCase: testCase.id, scores })
+
+    } catch (error) {
+      console.error(`  ✗ Error: ${(error as Error).message}`)
+      testSpan.update({
+        level: 'ERROR',
+        statusMessage: (error as Error).message
+      })
+      testSpan.end()
+      results.push({
+        testCase: testCase.id,
+        scores: {
+          entity_f1: 0,
+          fact_f1: 0,
+          parse_success: false,
+          error: (error as Error).message
+        }
+      })
     }
-  })
-
-  let scores = {
-    entity_f1: 0,
-    entity_precision: 0,
-    entity_recall: 0,
-    fact_f1: 0,
-    fact_precision: 0,
-    fact_recall: 0,
-    parse_success: false
   }
 
-  try {
-    await ingestTestCase(testCase)
-    console.log('  ✓ Ingested to Graphiti')
+  // 6. Aggregate scores
+  const validResults = results.filter(r => r.scores.parse_success !== false)
 
-    console.log('  Waiting 15s for processing...')
-    await sleep(15000)
-
-    console.log('  ✓ Processing complete')
-
-    console.log('  Extracting results from FalkorDB...')
-    const extracted = await extractResults(testCase.input.group_id)
-
-    console.log(`  ✓ Extracted ${extracted.entities.length} entities, ${extracted.facts.length} facts`)
-    console.log(`  Entities: ${extracted.entities.map(e => e.name).join(', ')}`)
-
-    console.log('  Scoring against ground truth...')
-    scores = calculateScores(testCase.expectedOutput, extracted)
-
-    console.log(`  Entity F1: ${scores.entity_f1.toFixed(3)}`)
-    console.log(`  Fact F1: ${scores.fact_f1.toFixed(3)}`)
-    console.log(`  Parse success: ${scores.parse_success}`)
-
-    // Log scores to Langfuse
-    testSpan.score({ name: 'entity_f1', value: scores.entity_f1 })
-    testSpan.score({ name: 'entity_precision', value: scores.entity_precision })
-    testSpan.score({ name: 'entity_recall', value: scores.entity_recall })
-    testSpan.score({ name: 'fact_f1', value: scores.fact_f1 })
-    testSpan.score({ name: 'fact_precision', value: scores.fact_precision })
-    testSpan.score({ name: 'fact_recall', value: scores.fact_recall })
-    testSpan.score({ name: 'parse_success', value: scores.parse_success ? 1 : 0 })
-
-    // Log input/output for debugging
-    testSpan.update({
-      input: testCase.input,
-      output: extracted
-    })
-
-    console.log('  ✓ Logged to Langfuse')
-
-  } catch (error) {
-    console.error(`  ✗ Error: ${error.message}`)
-    testSpan.update({
-      level: 'ERROR',
-      statusMessage: error.message
-    })
-  } finally {
-    testSpan.end()
+  if (validResults.length === 0) {
+    console.log('\n⚠️  All test cases failed - no valid results to aggregate')
+    return
   }
 
-  // Add session-level aggregate score (single test for now)
-  session.score({ name: 'avg_entity_f1', value: scores.entity_f1 })
-  session.score({ name: 'avg_fact_f1', value: scores.fact_f1 })
+  const avg = (arr: number[]) => arr.reduce((a, b) => a + b, 0) / arr.length
 
-  // Shutdown Langfuse
+  const aggregated = {
+    entity_f1: avg(validResults.map(r => r.scores.entity_f1)),
+    entity_precision: avg(validResults.map(r => r.scores.entity_precision)),
+    entity_recall: avg(validResults.map(r => r.scores.entity_recall)),
+    fact_f1: avg(validResults.map(r => r.scores.fact_f1)),
+    fact_precision: avg(validResults.map(r => r.scores.fact_precision)),
+    fact_recall: avg(validResults.map(r => r.scores.fact_recall)),
+    parse_success_rate: (validResults.length / results.length) * 100
+  }
+
+  // Log aggregate scores to session
+  session.score({ name: 'avg_entity_f1', value: aggregated.entity_f1 })
+  session.score({ name: 'avg_entity_precision', value: aggregated.entity_precision })
+  session.score({ name: 'avg_entity_recall', value: aggregated.entity_recall })
+  session.score({ name: 'avg_fact_f1', value: aggregated.fact_f1 })
+  session.score({ name: 'avg_fact_precision', value: aggregated.fact_precision })
+  session.score({ name: 'avg_fact_recall', value: aggregated.fact_recall })
+  session.score({ name: 'parse_success_rate', value: aggregated.parse_success_rate })
+
+  // Display summary
+  console.log('\n=== Summary ===')
+  console.log(`Entity F1: ${aggregated.entity_f1.toFixed(3)}`)
+  console.log(`Entity Precision: ${aggregated.entity_precision.toFixed(3)}`)
+  console.log(`Entity Recall: ${aggregated.entity_recall.toFixed(3)}`)
+  console.log(`Fact F1: ${aggregated.fact_f1.toFixed(3)}`)
+  console.log(`Fact Precision: ${aggregated.fact_precision.toFixed(3)}`)
+  console.log(`Fact Recall: ${aggregated.fact_recall.toFixed(3)}`)
+  console.log(`Parse Success: ${aggregated.parse_success_rate.toFixed(1)}%`)
+  console.log(`\nView details in Langfuse: ${process.env.LANGFUSE_BASE_URL || 'https://cloud.langfuse.com'}`)
+
+  // Save results to file
+  const resultsFile = `results/benchmark-${runName}.json`
+  fs.mkdirSync('results', { recursive: true })
+  fs.writeFileSync(
+    resultsFile,
+    JSON.stringify({ config, results, aggregated }, null, 2)
+  )
+  console.log(`Results saved to: ${resultsFile}`)
+
+  // Shutdown Langfuse (flushes all pending events)
   await langfuse.shutdownAsync()
 
   console.log('\nBenchmark complete!')
