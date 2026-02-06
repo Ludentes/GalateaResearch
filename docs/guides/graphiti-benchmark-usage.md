@@ -89,20 +89,191 @@ Edit `tests/fixtures/graphiti-golden-dataset.json`:
 
 Increment version: `"version": "v2"`
 
-## Interpreting Scores
+## Understanding Metrics in Detail
 
-**F1 Score:**
-- 1.0 = Perfect extraction
-- 0.8-0.9 = Good extraction
-- 0.5-0.7 = Moderate issues
-- < 0.5 = Poor extraction
+The benchmark calculates separate metrics for **entities** and **facts**, each with three core measurements: Precision, Recall, and F1 Score.
 
-**Precision vs Recall:**
-- High precision, low recall = Missing entities (conservative)
-- Low precision, high recall = Extracting noise (aggressive)
+### Entity Metrics
 
-**Parse Success:**
-- < 100% = Model producing invalid JSON
+**Entity Precision** measures accuracy: "Of all entities extracted, how many were correct?"
+
+```
+Entity Precision = (Correctly Extracted Entities) / (Total Extracted Entities)
+```
+
+**Example:**
+- Expected entities: `["Docker", "user"]`
+- Extracted entities: `["Docker", "PostgreSQL", "user"]`
+- Matched: `["Docker", "user"]` (2 matched)
+- Precision = 2 / 3 = **0.667** (67%)
+
+**Interpretation:** Low entity precision means the model is extracting **too many** entities (false positives/noise).
+
+---
+
+**Entity Recall** measures completeness: "Of all expected entities, how many were found?"
+
+```
+Entity Recall = (Correctly Extracted Entities) / (Total Expected Entities)
+```
+
+**Example:**
+- Expected entities: `["Docker", "Redis", "user"]`
+- Extracted entities: `["Docker", "user"]`
+- Matched: `["Docker", "user"]` (2 matched)
+- Recall = 2 / 3 = **0.667** (67%)
+
+**Interpretation:** Low entity recall means the model is **missing** entities (false negatives/too conservative).
+
+---
+
+**Entity F1 Score** balances precision and recall:
+
+```
+Entity F1 = 2 × (Precision × Recall) / (Precision + Recall)
+```
+
+**Example:**
+- Precision = 0.667, Recall = 0.667
+- F1 = 2 × (0.667 × 0.667) / (0.667 + 0.667) = **0.667**
+
+**Interpretation:**
+- **1.0** = Perfect extraction (all entities correct, none missed, no noise)
+- **0.8-0.9** = Good extraction (minor issues)
+- **0.5-0.7** = Moderate issues (missing entities or extracting noise)
+- **< 0.5** = Poor extraction (major problems)
+
+---
+
+### Fact Metrics
+
+**Fact Precision** measures accuracy: "Of all facts extracted, how many were correct?"
+
+```
+Fact Precision = (Correctly Extracted Facts) / (Total Extracted Facts)
+```
+
+**What makes a fact "correct"?** A fact matches if **ALL THREE** components match:
+1. Source entity matches (with normalization: case-insensitive, whitespace collapsed)
+2. Target entity matches (with normalization)
+3. Fact text matches (with normalization)
+
+**Example:**
+- Expected fact: `{source: "user", target: "Docker", fact: "user uses Docker"}`
+- Extracted fact: `{source: "User", target: "docker", fact: "user  uses Docker"}`
+- **Match!** ✅ (after normalization)
+
+**Example of non-match:**
+- Expected fact: `{source: "user", target: "Docker", fact: "user prefers Docker"}`
+- Extracted fact: `{source: "user", target: "Docker", fact: "user uses Docker"}`
+- **No match!** ❌ (fact text differs: "prefers" vs "uses")
+
+**Calculation Example:**
+- Expected facts: 2 facts
+- Extracted facts: `[fact1_correct, fact2_incorrect, fact3_noise]` (3 extracted)
+- Matched: 1 fact
+- Precision = 1 / 3 = **0.333** (33%)
+
+**Interpretation:** Low fact precision means the model creates **incorrect relationships** or **hallucinates** connections.
+
+---
+
+**Fact Recall** measures completeness: "Of all expected facts, how many were found?"
+
+```
+Fact Recall = (Correctly Extracted Facts) / (Total Expected Facts)
+```
+
+**Example:**
+- Expected facts: `[fact1, fact2, fact3]` (3 expected)
+- Extracted facts: `[fact1, fact2]` (only 2 extracted, both correct)
+- Matched: 2 facts
+- Recall = 2 / 3 = **0.667** (67%)
+
+**Interpretation:** Low fact recall means the model **misses relationships** that are present in the text.
+
+---
+
+**Fact F1 Score** balances precision and recall:
+
+```
+Fact F1 = 2 × (Fact Precision × Fact Recall) / (Fact Precision + Fact Recall)
+```
+
+**Interpretation:** Same as Entity F1 - measures overall fact extraction quality.
+
+---
+
+### Key Differences: Entity vs Fact Metrics
+
+| Aspect | Entity Metrics | Fact Metrics |
+|--------|---------------|--------------|
+| **What's measured** | Individual entities (nodes) | Relationships between entities (edges) |
+| **Matching criteria** | Entity name only (normalized) | Source + Target + Fact text (all must match) |
+| **Difficulty** | Easier (single string match) | Harder (triple match required) |
+| **Common issue** | Over-extraction (noise) | Missing relationships (zero facts) |
+
+**Why are fact metrics often lower?**
+1. Facts require **3-way match** (source + target + text)
+2. Graphiti may create relationships without proper `group_id` tagging
+3. Fact text variations ("uses" vs "utilizes") don't match even if semantically similar
+4. LLM may extract facts but database query doesn't find them
+
+---
+
+### Edge Cases
+
+**Empty expected, empty extracted:**
+- Precision = **1.0** (no false positives)
+- Recall = **1.0** (no false negatives)
+- F1 = **1.0** (perfect for empty case)
+
+**Empty expected, non-empty extracted:**
+- Precision = **0** (all extractions are noise)
+- Recall = **1.0** (no ground truth to miss)
+- F1 = **0** (penalized for over-extraction)
+
+**Non-empty expected, empty extracted:**
+- Precision = **0** (no valid extractions)
+- Recall = **0** (missed everything)
+- F1 = **0** (complete failure)
+
+---
+
+### Interpreting Score Combinations
+
+**High Precision, Low Recall:**
+- Model is **conservative** - only extracts when very confident
+- Misses many valid entities/facts
+- **Action:** Lower temperature, adjust prompt to be less cautious
+
+**Low Precision, High Recall:**
+- Model is **aggressive** - extracts everything it sees
+- Creates noise and false positives
+- **Action:** Raise temperature, adjust prompt to be more selective
+
+**Both Low:**
+- Model is fundamentally struggling
+- **Action:** Try different model, improve prompts, check data quality
+
+**Both High:**
+- Model is performing well! 🎉
+- **Action:** Deploy to production, or optimize further
+
+---
+
+### Parse Success Rate
+
+```
+Parse Success = (Tests with valid JSON) / (Total Tests) × 100%
+```
+
+**What it means:**
+- **100%** = Model always produces valid JSON (good!)
+- **< 100%** = Model sometimes produces malformed output
+- **< 90%** = Serious reliability issue
+
+**Note:** Parse failures are excluded from precision/recall calculations (only valid results are scored).
 
 ## Troubleshooting
 
