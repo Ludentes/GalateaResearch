@@ -152,11 +152,11 @@ async function main() {
 
   // Upload golden dataset to Langfuse (if not exists)
   const datasetName = `graphiti-golden-${dataset.version}`
-  let langfuseDataset = await langfuse.getDataset(datasetName).catch(() => null)
+  let langfuseDataset = await langfuse.api.datasetsGet(datasetName).catch(() => null)
 
   if (!langfuseDataset) {
     console.log(`Creating Langfuse dataset: ${datasetName}`)
-    langfuseDataset = await langfuse.createDataset({
+    langfuseDataset = await langfuse.api.datasetsCreate({
       name: datasetName,
       description: dataset.description,
       metadata: { version: dataset.version }
@@ -164,7 +164,8 @@ async function main() {
 
     // Upload all test cases as dataset items
     for (const testCase of dataset.cases) {
-      await langfuseDataset.createItem({
+      await langfuse.api.datasetItemsCreate({
+        datasetName: datasetName,
         input: testCase.input,
         expectedOutput: testCase.expectedOutput,
         metadata: {
