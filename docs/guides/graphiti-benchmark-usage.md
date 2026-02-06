@@ -22,6 +22,15 @@ pnpm benchmark:graphiti --config=granite-balanced --clean
 MODEL_NAME=nemotron TEMPERATURE=0.3 pnpm benchmark:graphiti
 ```
 
+**Adjust processing delay (faster benchmarks):**
+```bash
+# Reduce wait time to 3 seconds (default: 5s)
+BENCHMARK_PROCESSING_DELAY=3000 pnpm benchmark:graphiti --config=granite4-tiny-h-comprehensive
+
+# Or increase if Graphiti needs more time
+BENCHMARK_PROCESSING_DELAY=10000 pnpm benchmark:all
+```
+
 **Test with OpenRouter (requires OPENROUTER_API_KEY in .env.local):**
 ```bash
 pnpm benchmark:graphiti --config=openrouter-glm-free
@@ -112,6 +121,7 @@ pnpm benchmark:gpt-oss
 - `TEMPERATURE` - Temperature (0.0-2.0)
 - `SYSTEM_PROMPT` - Custom system prompt
 - `OPENROUTER_API_KEY` - OpenRouter API key (required for openrouter-* configs)
+- `BENCHMARK_PROCESSING_DELAY` - Wait time after ingestion in ms (default: 5000)
 - `BENCHMARK_LANGFUSE_SECRET_KEY` - Langfuse auth
 - `BENCHMARK_LANGFUSE_PUBLIC_KEY` - Langfuse auth
 - `BENCHMARK_LANGFUSE_BASE_URL` - Langfuse URL (default: http://localhost:3000)

@@ -408,8 +408,9 @@ async function main() {
       await ingestTestCase(testCase, runTimestamp)
 
       // Wait for processing
-      console.log('  Waiting for processing...')
-      await sleep(15000)
+      const processingDelay = parseInt(process.env.BENCHMARK_PROCESSING_DELAY || '5000')
+      console.log(`  Waiting for processing (${processingDelay}ms)...`)
+      await sleep(processingDelay)
 
       // Extract
       console.log('  Extracting results...')
