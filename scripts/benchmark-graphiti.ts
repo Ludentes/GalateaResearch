@@ -6,6 +6,10 @@
  * results to Langfuse for comparison.
  */
 
+import { config } from 'dotenv'
+// Load .env.local for benchmark-specific Langfuse credentials
+config({ path: '.env.local' })
+
 import fs from 'fs'
 import Langfuse from 'langfuse'
 import type { ExtractedOutput } from './lib/scoring'
