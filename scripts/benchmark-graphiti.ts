@@ -334,38 +334,18 @@ async function main() {
   let promptVersion = null
   if (config.system_prompt) {
     const promptName = `graphiti-system-prompt-${config.name}`
-    try {
-      // Try to get existing prompt
-      const existingPrompt = await langfuse.getPrompt(promptName)
 
-      // Check if current config prompt matches latest version
-      if (existingPrompt.prompt !== config.system_prompt) {
-        // Create new version if different
-        promptVersion = await langfuse.createPrompt({
-          name: promptName,
-          prompt: config.system_prompt,
-          config: {
-            model: config.model,
-            temperature: config.temperature
-          }
-        })
-        console.log(`  Created new prompt version: ${promptName}`)
-      } else {
-        promptVersion = existingPrompt
-        console.log(`  Using existing prompt: ${promptName}`)
+    // Always create a new prompt version - Langfuse handles deduplication
+    // This avoids the "prompt not found" error on first run
+    promptVersion = await langfuse.createPrompt({
+      name: promptName,
+      prompt: config.system_prompt,
+      config: {
+        model: config.model,
+        temperature: config.temperature
       }
-    } catch (error) {
-      // Prompt doesn't exist, create it
-      promptVersion = await langfuse.createPrompt({
-        name: promptName,
-        prompt: config.system_prompt,
-        config: {
-          model: config.model,
-          temperature: config.temperature
-        }
-      })
-      console.log(`  Created new prompt: ${promptName}`)
-    }
+    })
+    console.log(`  Using prompt: ${promptName} (version ${promptVersion.version})`)
   }
 
   // 5. Create Langfuse session for this run
