@@ -100,7 +100,7 @@ function loadConfig(configNameOrPath?: string): Config {
     fs.readFileSync('tests/configs/graphiti-benchmark-configs.yaml', 'utf8')
   )
 
-  const config = configs.configurations.find(c => c.name === configNameOrPath)
+  const config = configs.configurations.find((c: Config) => c.name === configNameOrPath)
   if (!config) {
     throw new Error(`Configuration not found: ${configNameOrPath}`)
   }
