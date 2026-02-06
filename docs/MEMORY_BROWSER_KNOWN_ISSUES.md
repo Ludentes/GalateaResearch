@@ -38,36 +38,30 @@ curl "http://localhost:13000/api/memories/search?query=pnpm&group_ids=SESSION_ID
 
 ## "All Sessions" Search Returns Empty (C1)
 
-**Status:** KNOWN LIMITATION - Upstream Graphiti issue
+**Status:** ✅ FIXED - Migrated to single-graph architecture
 
-**Root Cause:** Graphiti's REST API (`POST /search`) returns empty results when `group_ids` field is omitted from the request body. The API treats `group_ids: null` or omitted field as "filter to nothing" instead of "search all groups".
+**Original Issue:** FalkorDB's multi-graph architecture (one graph per session) made cross-session search impossible.
 
-**Investigation:** Our TypeScript code correctly omits `group_ids` when searching all sessions:
-```typescript
-const body: SearchRequest = {
-  query,
-  max_facts: maxFacts * 2,
-  ...(groupIds.length > 0 && { group_ids: groupIds }),  // Omits field when empty
-}
-```
+**Solution:** Migrated to single-graph architecture:
+- All sessions stored in single `galatea_memory` graph
+- Sessions differentiated by `group_id` property (not separate graphs)
+- Aligns with single-user personal memory system use case
 
-But Graphiti's search implementation requires explicit `group_ids` array. Without it, the FalkorDB fulltext search returns no results.
+**Changes Made:**
+1. Modified FalkorDriver to use `galatea_memory` as default database
+2. Removed multi-graph logic
+3. Fresh start with new data model
 
-**Workaround Options:**
-1. **Frontend parallel search** - Fetch all session IDs, search each session, merge results
-2. **Backend aggregation** - Add new API endpoint that queries all sessions server-side
-3. **Wait for upstream fix** - File issue with Graphiti to support `group_ids: null` = search all
-
-**Test:**
+**Test Results:**
 ```bash
-# This returns empty (Graphiti limitation):
-curl "http://localhost:13000/api/memories/search?query=pnpm&max_facts=30"
+# All sessions search - WORKS ✅
+curl "http://localhost:13000/api/memories/search?query=Docker&max_facts=30"
 
-# This works (specific session):
-curl "http://localhost:13000/api/memories/search?query=pnpm&group_ids=SESSION_ID&max_facts=30"
+# Specific session search - WORKS ✅
+curl "http://localhost:13000/api/memories/search?query=Docker&group_ids=SESSION_ID&max_facts=30"
 ```
 
-**Impact:** Medium - "All sessions" dropdown doesn't work, but single-session search works perfectly.
+**Impact:** FIXED - Both "All sessions" and filtered session search now work perfectly!
 
 ---
 
