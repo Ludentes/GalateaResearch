@@ -12,6 +12,11 @@ pnpm benchmark:graphiti
 pnpm benchmark:graphiti --config=granite-balanced
 ```
 
+**Clean previous benchmark data before running:**
+```bash
+pnpm benchmark:graphiti --config=granite-balanced --clean
+```
+
 **Test with custom env vars:**
 ```bash
 MODEL_NAME=nemotron TEMPERATURE=0.3 pnpm benchmark:graphiti
@@ -88,6 +93,28 @@ Edit `tests/fixtures/graphiti-golden-dataset.json`:
 ```
 
 Increment version: `"version": "v2"`
+
+## Data Isolation
+
+Each benchmark run uses **unique group IDs** to prevent duplicate entities across runs:
+
+**How it works:**
+- Group IDs include a timestamp: `test-simple-1738875640123`
+- Each run creates isolated data in FalkorDB
+- Previous runs remain in the database (useful for debugging)
+
+**Cleaning old data:**
+```bash
+# Delete all previous benchmark data before running
+pnpm benchmark:graphiti --clean
+```
+
+The `--clean` flag removes all entities and relationships with `group_id` starting with `test-*`. This is useful when:
+- Database is getting too large
+- You want a fresh start
+- Debugging data corruption issues
+
+**Note:** Without `--clean`, old benchmark data persists indefinitely. This allows comparing extraction results across runs but may slow down FalkorDB over time.
 
 ## Understanding Metrics in Detail
 

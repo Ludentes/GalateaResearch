@@ -53,22 +53,51 @@ interface Config {
 }
 
 /**
+ * Clear previous benchmark data from FalkorDB.
+ */
+async function clearBenchmarkData(): Promise<void> {
+  const { getGraph } = await import('../server/integrations/falkordb')
+  const graph = getGraph('galatea_memory')
+
+  console.log('Clearing previous benchmark data...')
+
+  // Delete all entities with benchmark group_ids (test-*)
+  const entitiesResult = await graph.query(`
+    MATCH (e:Entity)
+    WHERE e.group_id STARTS WITH 'test-'
+    DELETE e
+  `)
+
+  // Delete all relationships with benchmark group_ids
+  const factsResult = await graph.query(`
+    MATCH ()-[r:RELATES_TO]->()
+    WHERE r.group_id STARTS WITH 'test-'
+    DELETE r
+  `)
+
+  console.log('✓ Cleared benchmark data\n')
+}
+
+/**
  * Ingest a test case into Graphiti.
  */
-async function ingestTestCase(testCase: TestCase): Promise<void> {
+async function ingestTestCase(testCase: TestCase, runTimestamp: number): Promise<void> {
+  const uniqueGroupId = `${testCase.input.group_id}-${runTimestamp}`
+
   const graphitiMessages = testCase.input.messages.map((m, idx) => ({
     content: m.content,
     role_type: m.role,
     role: m.role,
     name: `${testCase.id}-msg${idx}`,
-    source_description: `benchmark:${testCase.id}`
+    source_description: `benchmark:${testCase.id}`,
+    group_id: uniqueGroupId
   }))
 
   const response = await fetch('http://localhost:18000/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      group_id: testCase.input.group_id,
+      group_id: uniqueGroupId,
       messages: graphitiMessages
     })
   })
@@ -217,6 +246,7 @@ async function main() {
   const args = process.argv.slice(2)
   const configFlag = args.find(arg => arg.startsWith('--config='))
   const configName = configFlag?.split('=')[1]
+  const cleanFlag = args.includes('--clean')
 
   // 1. Setup Langfuse (dedicated benchmark project)
   const langfuse = new Langfuse({
@@ -224,6 +254,11 @@ async function main() {
     publicKey: process.env.BENCHMARK_LANGFUSE_PUBLIC_KEY!,
     baseUrl: process.env.BENCHMARK_LANGFUSE_BASE_URL
   })
+
+  // Optional cleanup
+  if (cleanFlag) {
+    await clearBenchmarkData()
+  }
 
   // 2. Load golden dataset
   const dataset: GoldenDataset = JSON.parse(
@@ -316,7 +351,8 @@ async function main() {
   }
 
   // 4. Create Langfuse session for this run
-  const runName = `${config.model}-temp${config.temperature}-${Date.now()}`
+  const runTimestamp = Date.now()
+  const runName = `${config.model}-temp${config.temperature}-${runTimestamp}`
   console.log(`\nStarting run: ${runName}\n`)
 
   const session = langfuse.trace({
@@ -351,7 +387,7 @@ async function main() {
     try {
       // Ingest
       console.log('  Ingesting...')
-      await ingestTestCase(testCase)
+      await ingestTestCase(testCase, runTimestamp)
 
       // Wait for processing
       console.log('  Waiting for processing...')
@@ -359,7 +395,7 @@ async function main() {
 
       // Extract
       console.log('  Extracting results...')
-      const extracted = await extractResults(testCase.input.group_id)
+      const extracted = await extractResults(`${testCase.input.group_id}-${runTimestamp}`)
 
       // Score
       const scores = calculateScores(testCase.expectedOutput, extracted)
