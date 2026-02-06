@@ -41,6 +41,39 @@ interface Config {
   description?: string
 }
 
+/**
+ * Ingest a test case into Graphiti.
+ */
+async function ingestTestCase(testCase: TestCase): Promise<void> {
+  const graphitiMessages = testCase.input.messages.map((m, idx) => ({
+    content: m.content,
+    role_type: m.role,
+    role: m.role,
+    name: `${testCase.id}-msg${idx}`,
+    source_description: `benchmark:${testCase.id}`
+  }))
+
+  const response = await fetch('http://localhost:18000/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      group_id: testCase.input.group_id,
+      messages: graphitiMessages
+    })
+  })
+
+  if (!response.ok) {
+    throw new Error(`Graphiti ingestion failed: ${response.statusText}`)
+  }
+}
+
+/**
+ * Sleep for specified milliseconds.
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 async function main() {
   console.log('=== Graphiti LLM Benchmark ===\n')
 
@@ -68,6 +101,22 @@ async function main() {
   }
 
   console.log(`Configuration: ${config.model} (temp=${config.temperature})`)
+
+  // 4. Run test cases (one for now - testing ingestion)
+  const testCase = dataset.cases[0]
+  console.log(`\nTesting ingestion with: ${testCase.id}`)
+
+  try {
+    await ingestTestCase(testCase)
+    console.log('  ✓ Ingested to Graphiti')
+
+    console.log('  Waiting 15s for processing...')
+    await sleep(15000)
+
+    console.log('  ✓ Processing complete')
+  } catch (error) {
+    console.error(`  ✗ Error: ${error.message}`)
+  }
 
   // Shutdown Langfuse
   await langfuse.shutdownAsync()
