@@ -15,6 +15,10 @@ import yaml from 'yaml'
 import Langfuse from 'langfuse'
 import type { ExtractedOutput } from './lib/scoring'
 import { calculateScores } from './lib/scoring'
+import { exec } from 'child_process'
+import { promisify } from 'util'
+
+const execAsync = promisify(exec)
 
 interface GoldenDataset {
   version: string
@@ -106,6 +110,49 @@ function loadConfig(configNameOrPath?: string): Config {
   }
 
   return config
+}
+
+/**
+ * Update Graphiti container environment and restart.
+ */
+async function updateGraphitiConfig(config: Config): Promise<void> {
+  // Write .env.graphiti file
+  const envContent = `
+MODEL_NAME=${config.model}
+TEMPERATURE=${config.temperature}
+${config.system_prompt ? `SYSTEM_PROMPT="${config.system_prompt.replace(/\n/g, '\\n')}"` : ''}
+  `.trim()
+
+  fs.writeFileSync('.env.graphiti', envContent)
+
+  console.log('Restarting Graphiti container...')
+  await execAsync('docker compose restart graphiti')
+
+  console.log('Waiting for Graphiti to be healthy...')
+  await waitForGraphitiHealthy()
+  console.log('✓ Graphiti ready\n')
+}
+
+/**
+ * Wait for Graphiti healthcheck to pass.
+ */
+async function waitForGraphitiHealthy(maxWaitMs = 30000): Promise<void> {
+  const startTime = Date.now()
+  while (Date.now() - startTime < maxWaitMs) {
+    try {
+      const response = await fetch('http://localhost:18000/healthcheck')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.status === 'healthy') {
+          return
+        }
+      }
+    } catch (error) {
+      // Not ready yet
+    }
+    await sleep(1000)
+  }
+  throw new Error('Graphiti did not become healthy in time')
 }
 
 /**
@@ -221,6 +268,14 @@ async function main() {
   const config: Config = loadConfig(configName)
 
   console.log(`Configuration: ${config.model} (temp=${config.temperature})`)
+
+  // Update Graphiti container with config (if using named config)
+  if (configName) {
+    console.log('Updating Graphiti configuration...')
+    await updateGraphitiConfig(config)
+  } else {
+    console.log('Using env vars - Graphiti container not restarted\n')
+  }
 
   // Manage system prompt via Langfuse Prompts
   let promptVersion = null
