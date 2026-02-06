@@ -30,13 +30,41 @@ pnpm benchmark:graphiti --config=openrouter-glm-free
 ## Configuration
 
 **YAML presets** (`tests/configs/graphiti-benchmark-configs.yaml`):
-- `llama3.2-baseline` - Current production
-- `granite-deterministic` - Zero temperature (0.0)
-- `granite-conservative` - Low temp (0.3)
-- `granite-balanced` - Default temp (0.7)
-- `granite-creative` - High temp (1.0)
-- `nemotron-balanced` - Nemotron default
-- `granite-custom-prompt` - Custom system prompt
+
+*Baseline models:*
+- `llama3.2-baseline` - Current production baseline (temp 0.7)
+- `granite-deterministic` - Granite with temp 0.0
+- `granite-conservative` - Granite with temp 0.3
+- `granite-balanced` - Granite with temp 0.7
+- `granite-creative` - Granite with temp 1.0
+- `granite4-deterministic` - Granite4 with temp 0.0
+- `granite-custom-prompt` - Granite with custom system prompt
+
+*Nemotron-3-Nano experiments (9 configs):*
+- `nemotron-deterministic` - Temp 0.0
+- `nemotron-conservative` - Temp 0.3
+- `nemotron-moderate` - Temp 0.5
+- `nemotron-balanced` - Temp 0.7
+- `nemotron-creative` - Temp 1.0
+- `nemotron-very-creative` - Temp 1.5
+- `nemotron-fact-direction-prompt` - Emphasizes correct source→target direction
+- `nemotron-detailed-facts-prompt` - Preserves all details (reasons, conditions)
+- `nemotron-strict-extraction` - Strict rules, low temp 0.3
+- `nemotron-comprehensive-prompt` - Combined best practices, temp 0.5
+
+*GPT-OSS experiments (9 configs):*
+- `gpt-oss-deterministic` - Temp 0.0
+- `gpt-oss-conservative` - Temp 0.3
+- `gpt-oss-moderate` - Temp 0.5
+- `gpt-oss-balanced` - Temp 0.7
+- `gpt-oss-creative` - Temp 1.0
+- `gpt-oss-very-creative` - Temp 1.5
+- `gpt-oss-fact-direction-prompt` - Emphasizes correct source→target direction
+- `gpt-oss-detailed-facts-prompt` - Preserves all details (reasons, conditions)
+- `gpt-oss-strict-extraction` - Strict rules, low temp 0.3
+- `gpt-oss-comprehensive-prompt` - Combined best practices, temp 0.5
+
+*External providers:*
 - `openrouter-glm-free` - OpenRouter's free GLM-4.5-Air model
 
 **Environment variables:**

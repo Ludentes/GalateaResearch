@@ -64,3 +64,184 @@ configurations:
     base_url: https://openrouter.ai/api/v1
     api_key_env: OPENROUTER_API_KEY
     description: Test OpenRouter's free GLM-4.5-Air model
+
+  # === Nemotron-3-Nano Experiments ===
+
+  - name: nemotron-conservative
+    model: nemotron-3-nano:latest
+    temperature: 0.3
+    description: Nemotron with low temperature for consistency
+
+  - name: nemotron-moderate
+    model: nemotron-3-nano:latest
+    temperature: 0.5
+    description: Nemotron with moderate temperature
+
+  - name: nemotron-creative
+    model: nemotron-3-nano:latest
+    temperature: 1.0
+    description: Nemotron with high temperature for variety
+
+  - name: nemotron-very-creative
+    model: nemotron-3-nano:latest
+    temperature: 1.5
+    description: Nemotron with very high temperature
+
+  - name: nemotron-fact-direction-prompt
+    model: nemotron-3-nano:latest
+    temperature: 0.7
+    system_prompt: |
+      You are a knowledge graph fact extractor. When creating relationships:
+
+      CRITICAL: Always use correct relationship direction:
+      - User actions: user → object (e.g., "user prefers dark mode" = user → dark mode)
+      - User uses tool: user → tool (e.g., "I use Docker" = user → Docker)
+      - User works with person: user → person (e.g., "I work with Sarah" = user → Sarah)
+
+      Extract facts with ALL details from the original message.
+      Preserve reasons, conditions, and context in the fact text.
+    description: Nemotron with prompt emphasizing correct fact direction
+
+  - name: nemotron-detailed-facts-prompt
+    model: nemotron-3-nano:latest
+    temperature: 0.7
+    system_prompt: |
+      You are a precise fact extractor for a knowledge graph.
+
+      When extracting facts, you MUST preserve ALL details:
+      - Include reasons: "user prefers VS Code because of extensions ecosystem"
+      - Include timeframes: "user started using Docker 2 years ago"
+      - Include conditions: "user would use Vim if it had better plugins"
+      - Include context: "user uses PostgreSQL for storage"
+
+      Never simplify or summarize facts. Extract the complete statement.
+    description: Nemotron with prompt emphasizing detailed fact preservation
+
+  - name: nemotron-strict-extraction
+    model: nemotron-3-nano:latest
+    temperature: 0.3
+    system_prompt: |
+      You are a strict knowledge graph extractor. Rules:
+
+      1. ONLY extract facts explicitly stated in the message
+      2. Source entity = the subject performing the action (usually "user")
+      3. Target entity = the object being acted upon
+      4. Fact text = complete relationship description with all details
+      5. Never infer or assume relationships not explicitly stated
+      6. Preserve exact wording when possible
+    description: Nemotron with strict extraction rules (low temp)
+
+  - name: nemotron-comprehensive-prompt
+    model: nemotron-3-nano:latest
+    temperature: 0.5
+    system_prompt: |
+      You are an expert knowledge graph builder. Follow these rules precisely:
+
+      ENTITY EXTRACTION:
+      - Extract concrete entities mentioned explicitly
+      - Normalize similar entities (Docker = docker)
+      - Use "user" for first-person references (I, me, my)
+
+      FACT EXTRACTION:
+      - Direction: subject → object (e.g., user → tool, not tool → user)
+      - Completeness: include ALL details (reasons, conditions, timeframes)
+      - Accuracy: only extract explicitly stated relationships
+      - Format: "{subject} {verb} {object} {details}"
+
+      Example: "I prefer VS Code because of extensions"
+      → Entity: user, VS Code
+      → Fact: user → VS Code: "user prefers VS Code because of extensions"
+    description: Nemotron with comprehensive extraction guidelines
+
+  # === GPT-OSS Experiments ===
+
+  - name: gpt-oss-conservative
+    model: gpt-oss:latest
+    temperature: 0.3
+    description: GPT-OSS with low temperature for consistency
+
+  - name: gpt-oss-moderate
+    model: gpt-oss:latest
+    temperature: 0.5
+    description: GPT-OSS with moderate temperature
+
+  - name: gpt-oss-balanced
+    model: gpt-oss:latest
+    temperature: 0.7
+    description: GPT-OSS with balanced temperature
+
+  - name: gpt-oss-creative
+    model: gpt-oss:latest
+    temperature: 1.0
+    description: GPT-OSS with high temperature for variety
+
+  - name: gpt-oss-very-creative
+    model: gpt-oss:latest
+    temperature: 1.5
+    description: GPT-OSS with very high temperature
+
+  - name: gpt-oss-fact-direction-prompt
+    model: gpt-oss:latest
+    temperature: 0.7
+    system_prompt: |
+      You are a knowledge graph fact extractor. When creating relationships:
+
+      CRITICAL: Always use correct relationship direction:
+      - User actions: user → object (e.g., "user prefers dark mode" = user → dark mode)
+      - User uses tool: user → tool (e.g., "I use Docker" = user → Docker)
+      - User works with person: user → person (e.g., "I work with Sarah" = user → Sarah)
+
+      Extract facts with ALL details from the original message.
+      Preserve reasons, conditions, and context in the fact text.
+    description: GPT-OSS with prompt emphasizing correct fact direction
+
+  - name: gpt-oss-detailed-facts-prompt
+    model: gpt-oss:latest
+    temperature: 0.7
+    system_prompt: |
+      You are a precise fact extractor for a knowledge graph.
+
+      When extracting facts, you MUST preserve ALL details:
+      - Include reasons: "user prefers VS Code because of extensions ecosystem"
+      - Include timeframes: "user started using Docker 2 years ago"
+      - Include conditions: "user would use Vim if it had better plugins"
+      - Include context: "user uses PostgreSQL for storage"
+
+      Never simplify or summarize facts. Extract the complete statement.
+    description: GPT-OSS with prompt emphasizing detailed fact preservation
+
+  - name: gpt-oss-strict-extraction
+    model: gpt-oss:latest
+    temperature: 0.3
+    system_prompt: |
+      You are a strict knowledge graph extractor. Rules:
+
+      1. ONLY extract facts explicitly stated in the message
+      2. Source entity = the subject performing the action (usually "user")
+      3. Target entity = the object being acted upon
+      4. Fact text = complete relationship description with all details
+      5. Never infer or assume relationships not explicitly stated
+      6. Preserve exact wording when possible
+    description: GPT-OSS with strict extraction rules (low temp)
+
+  - name: gpt-oss-comprehensive-prompt
+    model: gpt-oss:latest
+    temperature: 0.5
+    system_prompt: |
+      You are an expert knowledge graph builder. Follow these rules precisely:
+
+      ENTITY EXTRACTION:
+      - Extract concrete entities mentioned explicitly
+      - Normalize similar entities (Docker = docker)
+      - Use "user" for first-person references (I, me, my)
+
+      FACT EXTRACTION:
+      - Direction: subject → object (e.g., user → tool, not tool → user)
+      - Completeness: include ALL details (reasons, conditions, timeframes)
+      - Accuracy: only extract explicitly stated relationships
+      - Format: "{subject} {verb} {object} {details}"
+
+      Example: "I prefer VS Code because of extensions"
+      → Entity: user, VS Code
+      → Fact: user → VS Code: "user prefers VS Code because of extensions"
+    description: GPT-OSS with comprehensive extraction guidelines
