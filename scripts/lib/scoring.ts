@@ -98,16 +98,22 @@ export function calculateScores(
   extracted: ExtractedOutput
 ): Scores {
   // Entity scoring
-  const matchedEntities = extracted.entities.filter(e =>
+  // Precision: Of extracted entities, how many match expected?
+  const matchedExtractedEntities = extracted.entities.filter(e =>
     expected.entities.some(exp => matchEntity(e.name, exp.name))
   )
 
   const entity_precision = extracted.entities.length > 0
-    ? matchedEntities.length / extracted.entities.length
+    ? matchedExtractedEntities.length / extracted.entities.length
     : (expected.entities.length === 0 ? 1.0 : 0)
 
+  // Recall: Of expected entities, how many were found in extracted?
+  const matchedExpectedEntities = expected.entities.filter(exp =>
+    extracted.entities.some(e => matchEntity(e.name, exp.name))
+  )
+
   const entity_recall = expected.entities.length > 0
-    ? matchedEntities.length / expected.entities.length
+    ? matchedExpectedEntities.length / expected.entities.length
     : 1.0  // No ground truth to miss
 
   const entity_f1 = (entity_precision + entity_recall) > 0
@@ -115,7 +121,8 @@ export function calculateScores(
     : 0
 
   // Fact scoring
-  const matchedFacts = extracted.facts.filter(f => {
+  // Precision: Of extracted facts, how many match expected?
+  const matchedExtractedFacts = extracted.facts.filter(f => {
     const extractedFact: Fact = {
       fact: f.fact,
       source: f.source,
@@ -132,11 +139,28 @@ export function calculateScores(
   })
 
   const fact_precision = extracted.facts.length > 0
-    ? matchedFacts.length / extracted.facts.length
+    ? matchedExtractedFacts.length / extracted.facts.length
     : (expected.facts.length === 0 ? 1.0 : 0)
 
+  // Recall: Of expected facts, how many were found in extracted?
+  const matchedExpectedFacts = expected.facts.filter(exp => {
+    const expectedFact: Fact = {
+      fact: exp.fact,
+      source: exp.source_entity,
+      target: exp.target_entity
+    }
+    return extracted.facts.some(f => {
+      const extractedFact: Fact = {
+        fact: f.fact,
+        source: f.source,
+        target: f.target
+      }
+      return matchFact(extractedFact, expectedFact)
+    })
+  })
+
   const fact_recall = expected.facts.length > 0
-    ? matchedFacts.length / expected.facts.length
+    ? matchedExpectedFacts.length / expected.facts.length
     : 1.0  // No ground truth to miss
 
   const fact_f1 = (fact_precision + fact_recall) > 0
