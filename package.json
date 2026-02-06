@@ -19,7 +19,13 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx server/db/seed.ts",
-    "benchmark:graphiti": "tsx scripts/benchmark-graphiti.ts"
+    "benchmark:graphiti": "tsx scripts/benchmark-graphiti.ts",
+    "benchmark:all": "scripts/run-all-benchmarks.sh",
+    "benchmark:all:clean": "scripts/run-all-benchmarks.sh --clean",
+    "benchmark:comprehensive": "scripts/run-all-benchmarks.sh --subset=comprehensive",
+    "benchmark:granite4": "scripts/run-all-benchmarks.sh --subset=granite4",
+    "benchmark:nemotron": "scripts/run-all-benchmarks.sh --subset=nemotron",
+    "benchmark:gpt-oss": "scripts/run-all-benchmarks.sh --subset=gpt-oss"
   },
   "dependencies": {
     "@langfuse/otel": "^4.5.1",

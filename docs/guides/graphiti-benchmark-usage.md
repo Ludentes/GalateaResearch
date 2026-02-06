@@ -27,6 +27,31 @@ MODEL_NAME=nemotron TEMPERATURE=0.3 pnpm benchmark:graphiti
 pnpm benchmark:graphiti --config=openrouter-glm-free
 ```
 
+**Run all configurations (44 total, ~6-7 hours):**
+```bash
+pnpm benchmark:all
+```
+
+**Run all with database cleanup before each:**
+```bash
+pnpm benchmark:all:clean
+```
+
+**Run specific subsets:**
+```bash
+# Only comprehensive configs (4 configs, ~40 minutes)
+pnpm benchmark:comprehensive
+
+# Only Granite 4 configs (13 configs, ~2 hours)
+pnpm benchmark:granite4
+
+# Only Nemotron configs (9 configs, ~1.5 hours)
+pnpm benchmark:nemotron
+
+# Only GPT-OSS configs (9 configs, ~1.5 hours)
+pnpm benchmark:gpt-oss
+```
+
 ## Configuration
 
 **YAML presets** (`tests/configs/graphiti-benchmark-configs.yaml`):
