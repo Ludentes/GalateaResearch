@@ -109,7 +109,7 @@ describe("graphiti-client", () => {
       const body = JSON.parse(mockFetch.mock.calls[0][1].body)
       expect(body.query).toBe("dark mode")
       expect(body.group_ids).toEqual(["session-123"])
-      expect(body.max_facts).toBe(10)
+      expect(body.max_facts).toBe(20)  // maxFacts * 2 for client-side filtering
     })
 
     it("returns empty array on failure (graceful degradation)", async () => {
@@ -124,7 +124,7 @@ describe("graphiti-client", () => {
       const { searchFacts } = await import("../graphiti-client")
       await searchFacts("query", ["s1", "s2"], 5)
       const body = JSON.parse(mockFetch.mock.calls[0][1].body)
-      expect(body.max_facts).toBe(5)
+      expect(body.max_facts).toBe(10)  // maxFacts * 2 for client-side filtering
       expect(body.group_ids).toEqual(["s1", "s2"])
     })
   })
