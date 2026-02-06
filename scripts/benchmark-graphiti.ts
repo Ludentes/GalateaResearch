@@ -8,6 +8,7 @@
 
 import fs from 'fs'
 import Langfuse from 'langfuse'
+import type { ExtractedOutput } from './lib/scoring'
 
 interface GoldenDataset {
   version: string
@@ -74,6 +75,61 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
+/**
+ * Extract results from FalkorDB for a test case.
+ */
+async function extractResults(groupId: string): Promise<ExtractedOutput> {
+  const startTime = Date.now()
+
+  try {
+    // Import FalkorDB client
+    const { getGraph } = await import('../server/integrations/falkordb')
+    const graph = await getGraph('galatea_memory')
+
+    // Query entities
+    const entitiesQuery = `
+      MATCH (e:Entity)
+      WHERE e.group_id = $groupId
+      RETURN e.name as name, e.labels as labels
+    `
+    const entitiesResult = await graph.query(entitiesQuery, { params: { groupId } })
+
+    const entities = (entitiesResult.data || []).map((row: any) => ({
+      name: row.name,
+      labels: row.labels || []
+    }))
+
+    // Query facts
+    const factsQuery = `
+      MATCH (s:Entity)-[r:RELATES_TO]->(t:Entity)
+      WHERE r.group_id = $groupId
+      RETURN s.name as source, t.name as target, r.fact as fact
+    `
+    const factsResult = await graph.query(factsQuery, { params: { groupId } })
+
+    const facts = (factsResult.data || []).map((row: any) => ({
+      source: row.source,
+      target: row.target,
+      fact: row.fact
+    }))
+
+    return {
+      entities,
+      facts,
+      parse_success: true,
+      latency_ms: Date.now() - startTime
+    }
+  } catch (error) {
+    return {
+      entities: [],
+      facts: [],
+      parse_success: false,
+      latency_ms: Date.now() - startTime,
+      error: error.message
+    }
+  }
+}
+
 async function main() {
   console.log('=== Graphiti LLM Benchmark ===\n')
 
@@ -114,6 +170,12 @@ async function main() {
     await sleep(15000)
 
     console.log('  ✓ Processing complete')
+
+    console.log('  Extracting results from FalkorDB...')
+    const extracted = await extractResults(testCase.input.group_id)
+
+    console.log(`  ✓ Extracted ${extracted.entities.length} entities, ${extracted.facts.length} facts`)
+    console.log(`  Entities: ${extracted.entities.map(e => e.name).join(', ')}`)
   } catch (error) {
     console.error(`  ✗ Error: ${error.message}`)
   }
