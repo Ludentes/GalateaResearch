@@ -11,6 +11,7 @@ import { config } from 'dotenv'
 config({ path: '.env.local' })
 
 import fs from 'fs'
+import yaml from 'yaml'
 import Langfuse from 'langfuse'
 import type { ExtractedOutput } from './lib/scoring'
 import { calculateScores } from './lib/scoring'
@@ -81,6 +82,33 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
+ * Load configuration from YAML file or env vars.
+ */
+function loadConfig(configNameOrPath?: string): Config {
+  if (!configNameOrPath) {
+    // Load from environment variables
+    return {
+      name: 'env-vars',
+      model: process.env.MODEL_NAME || 'llama3.2',
+      temperature: parseFloat(process.env.TEMPERATURE || '0.7'),
+      system_prompt: process.env.SYSTEM_PROMPT
+    }
+  }
+
+  // Load from YAML file
+  const configs = yaml.parse(
+    fs.readFileSync('tests/configs/graphiti-benchmark-configs.yaml', 'utf8')
+  )
+
+  const config = configs.configurations.find(c => c.name === configNameOrPath)
+  if (!config) {
+    throw new Error(`Configuration not found: ${configNameOrPath}`)
+  }
+
+  return config
+}
+
+/**
  * Extract results from FalkorDB for a test case.
  */
 async function extractResults(groupId: string): Promise<ExtractedOutput> {
@@ -138,6 +166,11 @@ async function extractResults(groupId: string): Promise<ExtractedOutput> {
 async function main() {
   console.log('=== Graphiti LLM Benchmark ===\n')
 
+  // Parse CLI args
+  const args = process.argv.slice(2)
+  const configFlag = args.find(arg => arg.startsWith('--config='))
+  const configName = configFlag?.split('=')[1]
+
   // 1. Setup Langfuse (dedicated benchmark project)
   const langfuse = new Langfuse({
     secretKey: process.env.BENCHMARK_LANGFUSE_SECRET_KEY!,
@@ -184,13 +217,8 @@ async function main() {
     console.log(`Using existing Langfuse dataset: ${datasetName}`)
   }
 
-  // 3. Load config (env vars for now)
-  const config: Config = {
-    name: 'env-vars',
-    model: process.env.MODEL_NAME || 'llama3.2',
-    temperature: parseFloat(process.env.TEMPERATURE || '0.7'),
-    system_prompt: process.env.SYSTEM_PROMPT
-  }
+  // 3. Load config
+  const config: Config = loadConfig(configName)
 
   console.log(`Configuration: ${config.model} (temp=${config.temperature})`)
 
