@@ -25,9 +25,24 @@ configurations:
     description: Test granite with high temp for variety
 
   - name: nemotron-balanced
-    model: nemotron
+    model: nemotron-3-nano:latest
     temperature: 0.7
     description: Test nemotron with default temperature
+
+  - name: nemotron-deterministic
+    model: nemotron-3-nano:latest
+    temperature: 0
+    description: Test nemotron with 0 temperature
+
+  - name: gpt-oss-deterministic
+    model: gpt-oss:latest
+    temperature: 0
+    description: Test gpt with 0 temperature
+
+  - name: granite4-deterministic
+    model: granite4:tiny-h
+    temperature: 0
+    description: Test granite4 with 0 temperature
 
   - name: granite-custom-prompt
     model: granite3.1-dense:8b
@@ -42,3 +57,10 @@ configurations:
       - Create facts only for explicitly stated relationships
       - Use consistent entity names (lowercase for common nouns, proper case for names)
     description: Test custom system prompt for better extraction
+
+  - name: openrouter-glm-free
+    model: z-ai/glm-4.5-air:free
+    temperature: 0.7
+    base_url: https://openrouter.ai/api/v1
+    api_key_env: OPENROUTER_API_KEY
+    description: Test OpenRouter's free GLM-4.5-Air model

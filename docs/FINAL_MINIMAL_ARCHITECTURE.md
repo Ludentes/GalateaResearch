@@ -361,26 +361,43 @@ type EdgeType =
 
 ---
 
-### Phase 3: Homeostasis Engine + Activity Router (Weeks 5-6)
+### Phase 3: Homeostasis Engine + Activity Router (Weeks 5-6) — PLANNED
 
 **Objective:** Implement 6-dimension homeostasis with guidance AND activity-level routing
 
+**Status:** ✅ Implementation plan complete ([2026-02-06-phase3-implementation-plan.md](./plans/2026-02-06-phase3-implementation-plan.md))
+
 **Tasks:**
-- [ ] Create HomeostasisEngine class
+- [ ] Create HomeostasisEngine class (6-dimension assessment + guidance)
 - [ ] Implement assessment logic (hybrid: computed + LLM)
 - [ ] Define guidance text for all dimension states
-- [ ] **NEW:** Create ActivityRouter class
-- [ ] **NEW:** Implement activity classification (Level 0-3)
-- [ ] **NEW:** Implement model selection logic
-- [ ] **NEW:** Implement Level 3 Reflexion loop
-- [ ] Integrate with context builder
+- [ ] Create ActivityRouter class (Level 0-3 classification)
+- [ ] Implement activity classification (no-LLM pattern-based)
+- [ ] Implement model selection logic (none/haiku/sonnet)
+- [ ] Implement Level 3 Reflexion loop (Draft → Critique → Revise)
+- [ ] Integrate cognitive models into context assembly
 - [ ] Add homeostasis state to prompt construction
 - [ ] Add homeostasis/routing visualization to UI
-- [ ] Test with reference scenarios
+- [ ] Test with reference scenarios (Traces 2, 4, 6, 7, 8)
+
+**Implementation Stages:**
+- **Stage A**: Homeostasis Engine (Days 1-3, 18 hours)
+- **Stage B**: Activity Router (Days 3-5, 16 hours)
+- **Stage C**: Reflexion Loop (Days 5-6, 14 hours)
+- **Stage D**: Cognitive Models Integration (Days 6-7, 10 hours)
+- **Stage E**: End-to-End Integration (Days 7-9, 16 hours)
+- **Stage F**: UI Visualization (Days 9-10, 11 hours)
+- **Stage G**: Reference Scenario Testing (Days 10-11, 10 hours)
+- **Stage H**: Documentation (Days 11-12, 7 hours)
 
 **Deliverable:** Agent behavior driven by dimension balance AND appropriate processing depth
 
-**Success Metric:** Agent asks when knowledge LOW, proceeds when HEALTHY; uses Haiku for simple tasks, Sonnet for complex
+**Success Metrics:**
+- Homeostasis accuracy: >85% (reference scenarios)
+- Activity routing accuracy: >80% (manual review)
+- Level 0-1 activities: >60% (cost optimization)
+- Cost reduction vs always-Sonnet: >50%
+- Test coverage: >90%
 
 **Core Implementation:**
 ```typescript

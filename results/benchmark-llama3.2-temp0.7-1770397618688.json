@@ -1,0 +1,93 @@
+{
+  "config": {
+    "name": "env-vars",
+    "model": "llama3.2",
+    "temperature": 0.7
+  },
+  "results": [
+    {
+      "testCase": "preference-simple",
+      "scores": {
+        "entity_precision": 0.8888888888888888,
+        "entity_recall": 4,
+        "entity_f1": 1.4545454545454544,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": true,
+        "total_entities": 9,
+        "total_facts": 1,
+        "latency_ms": 274
+      }
+    },
+    {
+      "testCase": "tech-stack-complex",
+      "scores": {
+        "entity_precision": 0.5,
+        "entity_recall": 0.6666666666666666,
+        "entity_f1": 0.5714285714285715,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": true,
+        "total_entities": 4,
+        "total_facts": 6,
+        "latency_ms": 7
+      }
+    },
+    {
+      "testCase": "dedup-same-entity",
+      "scores": {
+        "entity_precision": 0.8,
+        "entity_recall": 2,
+        "entity_f1": 1.142857142857143,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": true,
+        "total_entities": 5,
+        "total_facts": 5,
+        "latency_ms": 3
+      }
+    },
+    {
+      "testCase": "policy-extraction",
+      "scores": {
+        "entity_precision": 0.3333333333333333,
+        "entity_recall": 0.5,
+        "entity_f1": 0.4,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": true,
+        "total_entities": 3,
+        "total_facts": 1,
+        "latency_ms": 1
+      }
+    },
+    {
+      "testCase": "edge-case-empty",
+      "scores": {
+        "entity_precision": 0,
+        "entity_recall": 1,
+        "entity_f1": 0,
+        "fact_precision": 1,
+        "fact_recall": 1,
+        "fact_f1": 1,
+        "parse_success": true,
+        "total_entities": 2,
+        "total_facts": 0,
+        "latency_ms": 3
+      }
+    }
+  ],
+  "aggregated": {
+    "entity_f1": 0.7137662337662337,
+    "entity_precision": 0.5044444444444445,
+    "entity_recall": 1.6333333333333335,
+    "fact_f1": 0.2,
+    "fact_precision": 0.2,
+    "fact_recall": 0.2,
+    "parse_success_rate": 100
+  }
+}

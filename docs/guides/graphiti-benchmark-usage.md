@@ -22,6 +22,11 @@ pnpm benchmark:graphiti --config=granite-balanced --clean
 MODEL_NAME=nemotron TEMPERATURE=0.3 pnpm benchmark:graphiti
 ```
 
+**Test with OpenRouter (requires OPENROUTER_API_KEY in .env.local):**
+```bash
+pnpm benchmark:graphiti --config=openrouter-glm-free
+```
+
 ## Configuration
 
 **YAML presets** (`tests/configs/graphiti-benchmark-configs.yaml`):
@@ -32,11 +37,13 @@ MODEL_NAME=nemotron TEMPERATURE=0.3 pnpm benchmark:graphiti
 - `granite-creative` - High temp (1.0)
 - `nemotron-balanced` - Nemotron default
 - `granite-custom-prompt` - Custom system prompt
+- `openrouter-glm-free` - OpenRouter's free GLM-4.5-Air model
 
 **Environment variables:**
 - `MODEL_NAME` - Ollama model name
 - `TEMPERATURE` - Temperature (0.0-2.0)
 - `SYSTEM_PROMPT` - Custom system prompt
+- `OPENROUTER_API_KEY` - OpenRouter API key (required for openrouter-* configs)
 - `BENCHMARK_LANGFUSE_SECRET_KEY` - Langfuse auth
 - `BENCHMARK_LANGFUSE_PUBLIC_KEY` - Langfuse auth
 - `BENCHMARK_LANGFUSE_BASE_URL` - Langfuse URL (default: http://localhost:3000)

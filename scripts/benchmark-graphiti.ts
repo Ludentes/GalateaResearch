@@ -50,6 +50,8 @@ interface Config {
   temperature: number
   system_prompt?: string
   description?: string
+  base_url?: string
+  api_key_env?: string
 }
 
 /**
@@ -145,13 +147,29 @@ function loadConfig(configNameOrPath?: string): Config {
  * Update Graphiti container environment and restart.
  */
 async function updateGraphitiConfig(config: Config): Promise<void> {
-  // Write .env.graphiti file
-  const envContent = `
-MODEL_NAME=${config.model}
-TEMPERATURE=${config.temperature}
-${config.system_prompt ? `SYSTEM_PROMPT="${config.system_prompt.replace(/\n/g, '\\n')}"` : ''}
-  `.trim()
+  // Build env content
+  const lines = [
+    `MODEL_NAME=${config.model}`,
+    `TEMPERATURE=${config.temperature}`
+  ]
 
+  if (config.system_prompt) {
+    lines.push(`SYSTEM_PROMPT="${config.system_prompt.replace(/\n/g, '\\n')}"`)
+  }
+
+  if (config.base_url) {
+    lines.push(`OPENAI_BASE_URL=${config.base_url}`)
+  }
+
+  if (config.api_key_env) {
+    const apiKey = process.env[config.api_key_env]
+    if (!apiKey) {
+      throw new Error(`API key not found in environment: ${config.api_key_env}`)
+    }
+    lines.push(`OPENAI_API_KEY=${apiKey}`)
+  }
+
+  const envContent = lines.join('\n')
   fs.writeFileSync('.env.graphiti', envContent)
 
   console.log('Restarting Graphiti container...')

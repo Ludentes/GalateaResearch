@@ -1,0 +1,94 @@
+{
+  "config": {
+    "name": "granite-conservative",
+    "model": "granite3.1-dense:8b",
+    "temperature": 0.3,
+    "description": "Test granite with low temperature for consistency"
+  },
+  "results": [
+    {
+      "testCase": "preference-simple",
+      "scores": {
+        "entity_precision": 0.9090909090909091,
+        "entity_recall": 5,
+        "entity_f1": 1.5384615384615383,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": true,
+        "total_entities": 11,
+        "total_facts": 1,
+        "latency_ms": 279
+      }
+    },
+    {
+      "testCase": "tech-stack-complex",
+      "scores": {
+        "entity_precision": 0.3333333333333333,
+        "entity_recall": 0.6666666666666666,
+        "entity_f1": 0.4444444444444444,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": true,
+        "total_entities": 6,
+        "total_facts": 9,
+        "latency_ms": 3
+      }
+    },
+    {
+      "testCase": "dedup-same-entity",
+      "scores": {
+        "entity_precision": 0.8571428571428571,
+        "entity_recall": 3,
+        "entity_f1": 1.3333333333333333,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": true,
+        "total_entities": 7,
+        "total_facts": 8,
+        "latency_ms": 8
+      }
+    },
+    {
+      "testCase": "policy-extraction",
+      "scores": {
+        "entity_precision": 0.2,
+        "entity_recall": 0.5,
+        "entity_f1": 0.28571428571428575,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": true,
+        "total_entities": 5,
+        "total_facts": 4,
+        "latency_ms": 2
+      }
+    },
+    {
+      "testCase": "edge-case-empty",
+      "scores": {
+        "entity_precision": 0,
+        "entity_recall": 1,
+        "entity_f1": 0,
+        "fact_precision": 1,
+        "fact_recall": 1,
+        "fact_f1": 1,
+        "parse_success": true,
+        "total_entities": 4,
+        "total_facts": 0,
+        "latency_ms": 2
+      }
+    }
+  ],
+  "aggregated": {
+    "entity_f1": 0.7203907203907203,
+    "entity_precision": 0.45991341991341994,
+    "entity_recall": 2.0333333333333337,
+    "fact_f1": 0.2,
+    "fact_precision": 0.2,
+    "fact_recall": 0.2,
+    "parse_success_rate": 100
+  }
+}
