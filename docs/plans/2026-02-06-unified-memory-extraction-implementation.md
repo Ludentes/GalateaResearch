@@ -300,20 +300,257 @@ pnpm vitest run server/memory/patterns.test.ts
 
 ---
 
-### Task 1.3: Shared Extraction Logic
+### Task 1.3: Pluggable Extraction Interface
 
-**File:** `server/memory/fact-extractor.ts`
+**Design Doc:** See [Pluggable Extraction Interface](./2026-02-06-pluggable-extraction-interface.md) for full details.
+
+**File:** `server/memory/extractors/interface.ts`
 
 ```typescript
-import { ALL_PATTERNS, type FactCategory } from './patterns'
-import { generateText } from 'ai'
-import { ollama } from 'ollama-ai-provider'
+export interface MemoryExtractor {
+  name: string
+  estimatedLatency: number
+  cost: number
+  extract(context: ExtractionContext, text: string): Promise<ExtractedFact[]>
+  isAvailable(): Promise<boolean>
+}
+
+export interface ExtractionContext {
+  conversationHistory?: string[]
+  activitySessionIntent?: string
+  sessionId?: string
+  userId?: string
+  categoryHint?: FactCategory
+  confidenceThreshold?: number
+}
 
 export interface ExtractedFact {
   content: string
   category: FactCategory
   confidence: number
-  extractionMethod: 'pattern' | 'llm'
+  extractionMethod: string // extractor name
+  entities: string[]
+}
+```
+
+**File:** `server/memory/extractors/ollama.ts`
+
+```typescript
+import { MemoryExtractor, ExtractionContext, ExtractedFact } from './interface'
+import { generateText } from 'ai'
+import { ollama } from 'ollama-ai-provider'
+
+export class OllamaExtractor implements MemoryExtractor {
+  name = 'ollama'
+  estimatedLatency = 350
+  cost = 0
+
+  constructor(private modelName: string = 'llama3.2:latest') {}
+
+  async isAvailable(): Promise<boolean> {
+    try {
+      await ollama.list()
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  async extract(context: ExtractionContext, text: string): Promise<ExtractedFact[]> {
+    const { text: response } = await generateText({
+      model: ollama(this.modelName),
+      prompt: this.buildPrompt(context, text),
+      temperature: 0.1,
+    })
+
+    return this.parseResponse(response)
+  }
+
+  private buildPrompt(context: ExtractionContext, text: string): string {
+    return `Extract factual statements from text.
+${context.conversationHistory ? `History: ${context.conversationHistory.join('\n')}\n` : ''}
+Text: ${text}
+
+Categories: preference, policy, technology, decision, temporal, other
+
+Output JSON:
+{
+  "facts": [
+    {
+      "content": "fact in natural language",
+      "category": "category",
+      "confidence": 0.0-1.0,
+      "entities": ["entity1", "entity2"]
+    }
+  ]
+}`
+  }
+
+  private parseResponse(response: string): ExtractedFact[] {
+    try {
+      const parsed = JSON.parse(response)
+      return parsed.facts.map((f: any) => ({
+        ...f,
+        extractionMethod: this.name,
+      }))
+    } catch {
+      return []
+    }
+  }
+}
+```
+
+**File:** `server/memory/extractors/mem0.ts` (wraps existing Mem0)
+
+```typescript
+export class Mem0Extractor implements MemoryExtractor {
+  name = 'mem0'
+  estimatedLatency = 800
+  cost = 0.000002
+
+  constructor(private mem0Client: MemoryClient) {}
+
+  async extract(context: ExtractionContext, text: string): Promise<ExtractedFact[]> {
+    // Use existing Mem0 add() method
+    const messages = [{ role: 'user', content: text }]
+    const result = await this.mem0Client.add(messages, {
+      user_id: context.sessionId || 'default',
+    })
+
+    // Convert Mem0's atomic facts to ExtractedFact format
+    return result.results.map((memory: any) => ({
+      content: memory.memory,
+      category: this.inferCategory(memory.memory),
+      confidence: 0.75,
+      extractionMethod: this.name,
+      entities: this.extractEntities(memory.memory),
+    }))
+  }
+
+  private inferCategory(fact: string): FactCategory {
+    // Pattern-based category inference
+    const lower = fact.toLowerCase()
+    if (/\b(prefer|like|love)\b/.test(lower)) return 'preference'
+    if (/\b(always|never|policy)\b/.test(lower)) return 'policy'
+    if (/\b(switch|using|adopt)\b/.test(lower)) return 'technology'
+    if (/\b(decid|chose)\b/.test(lower)) return 'decision'
+    if (/\b(started|ago)\b/.test(lower)) return 'temporal'
+    return 'other'
+  }
+
+  private extractEntities(fact: string): string[] {
+    // Extract capitalized words and technical terms
+    const entities: string[] = []
+    const matches = fact.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/g)
+    if (matches) entities.push(...matches)
+    return [...new Set(entities)]
+  }
+}
+```
+
+**File:** `server/memory/extractors/graphiti.ts` (wraps existing Graphiti)
+
+```typescript
+export class GraphitiExtractor implements MemoryExtractor {
+  name = 'graphiti'
+  estimatedLatency = 1200
+  cost = 0.000003
+
+  constructor(private graphitiClient: Graphiti) {}
+
+  async extract(context: ExtractionContext, text: string): Promise<ExtractedFact[]> {
+    // Use existing Graphiti add_episode() method
+    await this.graphitiClient.add_episode({
+      name: `extract-${Date.now()}`,
+      episode_body: text,
+      source_description: context.activitySessionIntent || 'Conversation',
+      reference_time: new Date(),
+    })
+
+    // Search for extracted edges (facts)
+    const results = await this.graphitiClient.search(text, { num_results: 10 })
+
+    // Convert edges to ExtractedFact format
+    return results.edges.map((edge: any) => ({
+      content: `${edge.source_node.name} ${edge.fact} ${edge.target_node.name}`,
+      category: this.inferCategory(edge.fact),
+      confidence: 0.8,
+      extractionMethod: this.name,
+      entities: [edge.source_node.name, edge.target_node.name],
+    }))
+  }
+}
+```
+
+**File:** `server/memory/extraction-orchestrator.ts`
+
+```typescript
+export type ExtractionStrategy = 'cheap-first' | 'quality-first' | 'parallel' | 'single'
+
+export class ExtractionOrchestrator {
+  constructor(
+    private extractors: MemoryExtractor[],
+    private strategy: ExtractionStrategy = 'cheap-first'
+  ) {}
+
+  async extract(context: ExtractionContext, text: string): Promise<ExtractedFact[]> {
+    switch (this.strategy) {
+      case 'cheap-first':
+        return this.extractCheapFirst(context, text)
+      case 'parallel':
+        return this.extractParallel(context, text)
+      default:
+        return this.extractSingle(context, text)
+    }
+  }
+
+  private async extractCheapFirst(
+    context: ExtractionContext,
+    text: string
+  ): Promise<ExtractedFact[]> {
+    const sorted = [...this.extractors].sort((a, b) => a.cost - b.cost)
+
+    for (const extractor of sorted) {
+      if (!(await extractor.isAvailable())) continue
+
+      try {
+        const facts = await extractor.extract(context, text)
+        if (facts.length > 0) return facts
+      } catch (error) {
+        console.error(`${extractor.name} failed:`, error)
+      }
+    }
+
+    return []
+  }
+
+  private async extractParallel(
+    context: ExtractionContext,
+    text: string
+  ): Promise<ExtractedFact[]> {
+    const results = await Promise.allSettled(
+      this.extractors.map(e => e.extract(context, text))
+    )
+
+    return results
+      .filter((r): r is PromiseFulfilledResult<ExtractedFact[]> => r.status === 'fulfilled')
+      .flatMap(r => r.value)
+  }
+}
+```
+
+**File:** `server/memory/fact-extractor.ts` (updated to use orchestrator)
+
+```typescript
+import { ALL_PATTERNS, type FactCategory } from './patterns'
+import { OllamaExtractor, Mem0Extractor, GraphitiExtractor } from './extractors'
+import { ExtractionOrchestrator } from './extraction-orchestrator'
+
+export interface ExtractedFact {
+  content: string
+  category: FactCategory
+  confidence: number
+  extractionMethod: string
   entities: string[]
 }
 
@@ -339,7 +576,6 @@ export function extractFactsWithPatterns(
         extractionMethod: 'pattern',
         entities: extractEntities ? extractEntities(match) : [],
       })
-      // Return first match (prioritize higher confidence patterns first in ALL_PATTERNS)
       break
     }
   }
@@ -347,67 +583,32 @@ export function extractFactsWithPatterns(
   return facts
 }
 
+// Initialize extractors
+const ollamaExtractor = new OllamaExtractor('llama3.2:latest')
+const mem0Extractor = new Mem0Extractor(mem0Client) // Reuses existing client
+const graphitiExtractor = new GraphitiExtractor(graphitiClient) // Reuses existing client
+
+// Create orchestrator with cheap-first strategy
+const orchestrator = new ExtractionOrchestrator(
+  [ollamaExtractor, mem0Extractor, graphitiExtractor],
+  'cheap-first' // Try Ollama → Mem0 → Graphiti
+)
+
 /**
- * Extract facts using LLM (fallback for ambiguous cases)
+ * Extract facts using LLM (fallback for pattern misses)
+ * Now uses pluggable extractors with automatic fallback
  */
 export async function extractFactsWithLLM(
   context: string,
   text: string
 ): Promise<ExtractedFact[]> {
-  try {
-    const { text: response } = await generateText({
-      model: ollama('llama3.2:latest'),
-      prompt: `You are a fact extraction system. Analyze the conversation and extract factual statements that should be remembered.
-
-Context: ${context}
-Text to analyze: ${text}
-
-Extract facts in these categories:
-- preference: User preferences (tools, approaches, styles)
-- policy: Team policies and standards
-- technology: Technology choices and changes
-- decision: Decisions made with reasoning
-- temporal: Time-based events (started using X, been using Y for Z)
-- other: Other factual statements
-
-Guidelines:
-- Only extract facts that are factual and worth remembering
-- Skip greetings, confirmations, questions, general knowledge
-- Focus on user-specific or project-specific information
-- Be concise and clear
-
-Output JSON:
-{
-  "shouldIngest": boolean,
-  "reason": "brief explanation",
-  "facts": [
+  return orchestrator.extract(
     {
-      "content": "extracted fact in natural language",
-      "category": "preference|policy|technology|decision|temporal|other",
-      "confidence": 0.0-1.0,
-      "entities": ["entity1", "entity2"]
-    }
-  ]
-}`,
-      temperature: 0.1,
-    })
-
-    const parsed = JSON.parse(response)
-    if (!parsed.shouldIngest || !parsed.facts || parsed.facts.length === 0) {
-      return []
-    }
-
-    return parsed.facts.map((f: any) => ({
-      content: f.content,
-      category: f.category,
-      confidence: f.confidence,
-      extractionMethod: 'llm' as const,
-      entities: f.entities || [],
-    }))
-  } catch (error) {
-    console.error('LLM extraction failed:', error)
-    return []
-  }
+      conversationHistory: context.split('\n'),
+      confidenceThreshold: 0.7,
+    },
+    text
+  )
 }
 ```
 
