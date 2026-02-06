@@ -1,6 +1,6 @@
 {
-  "version": "v1",
-  "description": "Golden dataset for Graphiti LLM evaluation - initial 5 core test cases",
+  "version": "v2",
+  "description": "Golden dataset for Graphiti LLM evaluation - expanded to 22 comprehensive test cases",
   "cases": [
     {
       "id": "preference-simple",
@@ -137,6 +137,542 @@
         "facts": []
       },
       "notes": "Greeting with no extractable content - should extract nothing"
+    },
+    {
+      "id": "person-extraction",
+      "category": "entity_extraction",
+      "input": {
+        "messages": [
+          {
+            "content": "I work with Sarah on the backend team",
+            "role": "user"
+          }
+        ],
+        "group_id": "test-person"
+      },
+      "expectedOutput": {
+        "entities": [
+          { "name": "Sarah" },
+          { "name": "backend team" },
+          { "name": "user" }
+        ],
+        "facts": [
+          {
+            "fact": "user works with Sarah",
+            "source_entity": "user",
+            "target_entity": "Sarah"
+          },
+          {
+            "fact": "Sarah is on backend team",
+            "source_entity": "Sarah",
+            "target_entity": "backend team"
+          }
+        ]
+      },
+      "notes": "Person and team extraction with relationships"
+    },
+    {
+      "id": "temporal-started-using",
+      "category": "temporal",
+      "input": {
+        "messages": [
+          {
+            "content": "I started using React in 2020",
+            "role": "user"
+          }
+        ],
+        "group_id": "test-temporal-1"
+      },
+      "expectedOutput": {
+        "entities": [
+          { "name": "React" },
+          { "name": "user" }
+        ],
+        "facts": [
+          {
+            "fact": "user started using React in 2020",
+            "source_entity": "user",
+            "target_entity": "React"
+          }
+        ]
+      },
+      "notes": "Temporal fact with specific year - time reference should be preserved"
+    },
+    {
+      "id": "multi-entity-list",
+      "category": "entity_extraction",
+      "input": {
+        "messages": [
+          {
+            "content": "My favorite languages are Python, JavaScript, and Rust",
+            "role": "user"
+          }
+        ],
+        "group_id": "test-multi-entity"
+      },
+      "expectedOutput": {
+        "entities": [
+          { "name": "Python" },
+          { "name": "JavaScript" },
+          { "name": "Rust" },
+          { "name": "user" }
+        ],
+        "facts": [
+          {
+            "fact": "user's favorite language is Python",
+            "source_entity": "user",
+            "target_entity": "Python"
+          },
+          {
+            "fact": "user's favorite language is JavaScript",
+            "source_entity": "user",
+            "target_entity": "JavaScript"
+          },
+          {
+            "fact": "user's favorite language is Rust",
+            "source_entity": "user",
+            "target_entity": "Rust"
+          }
+        ]
+      },
+      "notes": "List of entities with same relationship - tests handling of lists"
+    },
+    {
+      "id": "edge-case-negation",
+      "category": "edge_case",
+      "input": {
+        "messages": [
+          {
+            "content": "I don't use Windows anymore",
+            "role": "user"
+          }
+        ],
+        "group_id": "test-negation"
+      },
+      "expectedOutput": {
+        "entities": [
+          { "name": "Windows" },
+          { "name": "user" }
+        ],
+        "facts": [
+          {
+            "fact": "user does not use Windows anymore",
+            "source_entity": "user",
+            "target_entity": "Windows"
+          }
+        ]
+      },
+      "notes": "Negation - fact should capture the 'not' relationship"
+    },
+    {
+      "id": "multi-turn-preference",
+      "category": "multi_turn",
+      "input": {
+        "messages": [
+          {
+            "content": "I've been learning Go",
+            "role": "user"
+          },
+          {
+            "content": "That's great! How are you finding it?",
+            "role": "assistant"
+          },
+          {
+            "content": "It's really fast and I love the concurrency model",
+            "role": "user"
+          }
+        ],
+        "group_id": "test-multi-turn-1"
+      },
+      "expectedOutput": {
+        "entities": [
+          { "name": "Go" },
+          { "name": "user" }
+        ],
+        "facts": [
+          {
+            "fact": "user is learning Go",
+            "source_entity": "user",
+            "target_entity": "Go"
+          },
+          {
+            "fact": "user finds Go fast",
+            "source_entity": "user",
+            "target_entity": "Go"
+          },
+          {
+            "fact": "user loves Go's concurrency model",
+            "source_entity": "user",
+            "target_entity": "Go"
+          }
+        ]
+      },
+      "notes": "Multi-turn conversation - information about Go spread across messages"
+    },
+    {
+      "id": "tool-comparison",
+      "category": "fact_extraction",
+      "input": {
+        "messages": [
+          {
+            "content": "We switched from Jenkins to GitHub Actions because it's easier to maintain",
+            "role": "user"
+          }
+        ],
+        "group_id": "test-comparison"
+      },
+      "expectedOutput": {
+        "entities": [
+          { "name": "Jenkins" },
+          { "name": "GitHub Actions" },
+          { "name": "team" }
+        ],
+        "facts": [
+          {
+            "fact": "team switched from Jenkins to GitHub Actions",
+            "source_entity": "team",
+            "target_entity": "GitHub Actions"
+          },
+          {
+            "fact": "GitHub Actions is easier to maintain than Jenkins",
+            "source_entity": "GitHub Actions",
+            "target_entity": "Jenkins"
+          }
+        ]
+      },
+      "notes": "Comparison with migration - tests extraction of 'from X to Y' pattern"
+    },
+    {
+      "id": "preference-with-reason",
+      "category": "fact_extraction",
+      "input": {
+        "messages": [
+          {
+            "content": "I prefer VS Code because of the extensions ecosystem",
+            "role": "user"
+          }
+        ],
+        "group_id": "test-preference-reason"
+      },
+      "expectedOutput": {
+        "entities": [
+          { "name": "VS Code" },
+          { "name": "user" }
+        ],
+        "facts": [
+          {
+            "fact": "user prefers VS Code because of extensions ecosystem",
+            "source_entity": "user",
+            "target_entity": "VS Code"
+          }
+        ]
+      },
+      "notes": "Preference with reasoning - fact should capture the 'because' context"
+    },
+    {
+      "id": "dedup-variant-names",
+      "category": "deduplication",
+      "input": {
+        "messages": [
+          {
+            "content": "We use Postgres for our main database",
+            "role": "user"
+          },
+          {
+            "content": "PostgreSQL has great performance",
+            "role": "assistant"
+          }
+        ],
+        "group_id": "test-dedup-variants"
+      },
+      "expectedOutput": {
+        "entities": [
+          { "name": "PostgreSQL" },
+          { "name": "team" }
+        ],
+        "facts": [
+          {
+            "fact": "team uses PostgreSQL for main database",
+            "source_entity": "team",
+            "target_entity": "PostgreSQL"
+          }
+        ]
+      },
+      "notes": "Postgres vs PostgreSQL - variants should dedupe to single entity"
+    },
+    {
+      "id": "temporal-duration",
+      "category": "temporal",
+      "input": {
+        "messages": [
+          {
+            "content": "I've been using Linux for 5 years",
+            "role": "user"
+          }
+        ],
+        "group_id": "test-temporal-2"
+      },
+      "expectedOutput": {
+        "entities": [
+          { "name": "Linux" },
+          { "name": "user" }
+        ],
+        "facts": [
+          {
+            "fact": "user has been using Linux for 5 years",
+            "source_entity": "user",
+            "target_entity": "Linux"
+          }
+        ]
+      },
+      "notes": "Temporal fact with duration - time context should be preserved"
+    },
+    {
+      "id": "edge-case-conditional",
+      "category": "edge_case",
+      "input": {
+        "messages": [
+          {
+            "content": "I would use Kubernetes if we had more resources",
+            "role": "user"
+          }
+        ],
+        "group_id": "test-conditional"
+      },
+      "expectedOutput": {
+        "entities": [
+          { "name": "Kubernetes" },
+          { "name": "user" }
+        ],
+        "facts": [
+          {
+            "fact": "user would use Kubernetes if had more resources",
+            "source_entity": "user",
+            "target_entity": "Kubernetes"
+          }
+        ]
+      },
+      "notes": "Conditional statement - fact should capture hypothetical nature"
+    },
+    {
+      "id": "complex-tech-stack",
+      "category": "fact_extraction",
+      "input": {
+        "messages": [
+          {
+            "content": "Our stack includes Next.js for the frontend, Express for the API, and MongoDB for data storage",
+            "role": "user"
+          }
+        ],
+        "group_id": "test-complex-stack"
+      },
+      "expectedOutput": {
+        "entities": [
+          { "name": "Next.js" },
+          { "name": "Express" },
+          { "name": "MongoDB" },
+          { "name": "team" }
+        ],
+        "facts": [
+          {
+            "fact": "team uses Next.js for frontend",
+            "source_entity": "team",
+            "target_entity": "Next.js"
+          },
+          {
+            "fact": "team uses Express for API",
+            "source_entity": "team",
+            "target_entity": "Express"
+          },
+          {
+            "fact": "team uses MongoDB for data storage",
+            "source_entity": "team",
+            "target_entity": "MongoDB"
+          }
+        ]
+      },
+      "notes": "Complex tech stack with specific purposes - multiple entities and facts"
+    },
+    {
+      "id": "multi-turn-context",
+      "category": "multi_turn",
+      "input": {
+        "messages": [
+          {
+            "content": "What do you think about GraphQL?",
+            "role": "user"
+          },
+          {
+            "content": "GraphQL is great for flexible APIs. Do you use it?",
+            "role": "assistant"
+          },
+          {
+            "content": "Yes, we've been using it for the last 2 years",
+            "role": "user"
+          }
+        ],
+        "group_id": "test-multi-turn-2"
+      },
+      "expectedOutput": {
+        "entities": [
+          { "name": "GraphQL" },
+          { "name": "team" }
+        ],
+        "facts": [
+          {
+            "fact": "team has been using GraphQL for 2 years",
+            "source_entity": "team",
+            "target_entity": "GraphQL"
+          }
+        ]
+      },
+      "notes": "Multi-turn with pronoun resolution - 'it' refers to GraphQL from earlier"
+    },
+    {
+      "id": "concept-extraction",
+      "category": "entity_extraction",
+      "input": {
+        "messages": [
+          {
+            "content": "I'm a big fan of functional programming and immutability",
+            "role": "user"
+          }
+        ],
+        "group_id": "test-concepts"
+      },
+      "expectedOutput": {
+        "entities": [
+          { "name": "functional programming" },
+          { "name": "immutability" },
+          { "name": "user" }
+        ],
+        "facts": [
+          {
+            "fact": "user is fan of functional programming",
+            "source_entity": "user",
+            "target_entity": "functional programming"
+          },
+          {
+            "fact": "user is fan of immutability",
+            "source_entity": "user",
+            "target_entity": "immutability"
+          }
+        ]
+      },
+      "notes": "Abstract concepts as entities - not just tools or technologies"
+    },
+    {
+      "id": "relationship-between-tools",
+      "category": "fact_extraction",
+      "input": {
+        "messages": [
+          {
+            "content": "Tailwind works really well with React",
+            "role": "user"
+          }
+        ],
+        "group_id": "test-tool-relationship"
+      },
+      "expectedOutput": {
+        "entities": [
+          { "name": "Tailwind" },
+          { "name": "React" }
+        ],
+        "facts": [
+          {
+            "fact": "Tailwind works well with React",
+            "source_entity": "Tailwind",
+            "target_entity": "React"
+          }
+        ]
+      },
+      "notes": "Relationship between tools without user - direct entity-to-entity fact"
+    },
+    {
+      "id": "temporal-recency",
+      "category": "temporal",
+      "input": {
+        "messages": [
+          {
+            "content": "I just started learning Rust last month",
+            "role": "user"
+          }
+        ],
+        "group_id": "test-temporal-3"
+      },
+      "expectedOutput": {
+        "entities": [
+          { "name": "Rust" },
+          { "name": "user" }
+        ],
+        "facts": [
+          {
+            "fact": "user started learning Rust last month",
+            "source_entity": "user",
+            "target_entity": "Rust"
+          }
+        ]
+      },
+      "notes": "Recent temporal reference - 'last month' should be preserved"
+    },
+    {
+      "id": "edge-case-question",
+      "category": "edge_case",
+      "input": {
+        "messages": [
+          {
+            "content": "Have you heard of Deno?",
+            "role": "user"
+          }
+        ],
+        "group_id": "test-question"
+      },
+      "expectedOutput": {
+        "entities": [
+          { "name": "Deno" }
+        ],
+        "facts": []
+      },
+      "notes": "Question without factual claim - entity mentioned but no fact about it"
+    },
+    {
+      "id": "long-context-multiple-facts",
+      "category": "fact_extraction",
+      "input": {
+        "messages": [
+          {
+            "content": "I work at a startup where we're building a mobile app. We use React Native for cross-platform development, Firebase for backend services, and GitHub for version control. The team is small but growing.",
+            "role": "user"
+          }
+        ],
+        "group_id": "test-long-context"
+      },
+      "expectedOutput": {
+        "entities": [
+          { "name": "React Native" },
+          { "name": "Firebase" },
+          { "name": "GitHub" },
+          { "name": "team" }
+        ],
+        "facts": [
+          {
+            "fact": "team uses React Native for cross-platform development",
+            "source_entity": "team",
+            "target_entity": "React Native"
+          },
+          {
+            "fact": "team uses Firebase for backend services",
+            "source_entity": "team",
+            "target_entity": "Firebase"
+          },
+          {
+            "fact": "team uses GitHub for version control",
+            "source_entity": "team",
+            "target_entity": "GitHub"
+          }
+        ]
+      },
+      "notes": "Long message with multiple facts - tests extraction from longer context"
     }
   ]
 }
