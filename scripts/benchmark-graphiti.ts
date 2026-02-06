@@ -503,9 +503,16 @@ async function main() {
   console.log(`Results saved to: ${resultsFile}`)
 
   // Shutdown Langfuse (flushes all pending events)
-  await langfuse.shutdownAsync()
+  // Add timeout to prevent hanging
+  await Promise.race([
+    langfuse.shutdownAsync(),
+    new Promise(resolve => setTimeout(resolve, 5000))
+  ])
 
   console.log('\nBenchmark complete!')
+
+  // Force exit to prevent hanging (Langfuse sometimes keeps event loop alive)
+  process.exit(0)
 }
 
 main().catch(error => {
