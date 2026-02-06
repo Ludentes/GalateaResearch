@@ -1,0 +1,7 @@
+Benchmark Run Summary
+Started: Fri Feb  6 12:37:46 PM CST 2026
+Clean flag: 
+Subset: comprehensive
+
+✅ granite4-tiny-h-comprehensive (0m 4s)
+✅ granite4-standard-comprehensive (0m 4s)

@@ -1,0 +1,10 @@
+Benchmark Run Summary
+Started: Fri Feb  6 12:49:13 PM CST 2026
+Clean flag: --clean
+Subset: all
+
+✅ llama3.2-baseline (1m 53s)
+✅ granite-deterministic (1m 53s)
+✅ granite-conservative (1m 54s)
+✅ granite-balanced (0m 13s)
+✅ granite-creative (1m 22s)

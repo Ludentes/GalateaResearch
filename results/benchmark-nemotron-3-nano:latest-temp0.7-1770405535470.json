@@ -1,0 +1,349 @@
+{
+  "config": {
+    "name": "nemotron-balanced",
+    "model": "nemotron-3-nano:latest",
+    "temperature": 0.7,
+    "description": "Test nemotron with default temperature"
+  },
+  "results": [
+    {
+      "testCase": "preference-simple",
+      "scores": {
+        "entity_precision": 1,
+        "entity_recall": 0.5,
+        "entity_f1": 0.6666666666666666,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": true,
+        "total_entities": 1,
+        "total_facts": 0,
+        "latency_ms": 3
+      }
+    },
+    {
+      "testCase": "tech-stack-complex",
+      "scores": {
+        "entity_precision": 0,
+        "entity_recall": 0,
+        "entity_f1": 0,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": true,
+        "total_entities": 1,
+        "total_facts": 0,
+        "latency_ms": 1
+      }
+    },
+    {
+      "testCase": "dedup-same-entity",
+      "scores": {
+        "entity_precision": 0,
+        "entity_recall": 0,
+        "entity_f1": 0,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": false,
+        "total_entities": 0,
+        "total_facts": 0,
+        "latency_ms": 0
+      }
+    },
+    {
+      "testCase": "policy-extraction",
+      "scores": {
+        "entity_precision": 0,
+        "entity_recall": 0,
+        "entity_f1": 0,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": false,
+        "total_entities": 0,
+        "total_facts": 0,
+        "latency_ms": 0
+      }
+    },
+    {
+      "testCase": "edge-case-empty",
+      "scores": {
+        "entity_precision": 0,
+        "entity_recall": 0,
+        "entity_f1": 0,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": false,
+        "total_entities": 0,
+        "total_facts": 0,
+        "latency_ms": 0
+      }
+    },
+    {
+      "testCase": "person-extraction",
+      "scores": {
+        "entity_precision": 0,
+        "entity_recall": 0,
+        "entity_f1": 0,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": false,
+        "total_entities": 0,
+        "total_facts": 0,
+        "latency_ms": 0
+      }
+    },
+    {
+      "testCase": "temporal-started-using",
+      "scores": {
+        "entity_precision": 0,
+        "entity_recall": 0,
+        "entity_f1": 0,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": false,
+        "total_entities": 0,
+        "total_facts": 0,
+        "latency_ms": 0
+      }
+    },
+    {
+      "testCase": "multi-entity-list",
+      "scores": {
+        "entity_precision": 0,
+        "entity_recall": 0,
+        "entity_f1": 0,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": false,
+        "total_entities": 0,
+        "total_facts": 0,
+        "latency_ms": 0
+      }
+    },
+    {
+      "testCase": "edge-case-negation",
+      "scores": {
+        "entity_precision": 0,
+        "entity_recall": 0,
+        "entity_f1": 0,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": false,
+        "total_entities": 0,
+        "total_facts": 0,
+        "latency_ms": 0
+      }
+    },
+    {
+      "testCase": "multi-turn-preference",
+      "scores": {
+        "entity_precision": 0,
+        "entity_recall": 0,
+        "entity_f1": 0,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": false,
+        "total_entities": 0,
+        "total_facts": 0,
+        "latency_ms": 0
+      }
+    },
+    {
+      "testCase": "tool-comparison",
+      "scores": {
+        "entity_precision": 0,
+        "entity_recall": 0,
+        "entity_f1": 0,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": false,
+        "total_entities": 0,
+        "total_facts": 0,
+        "latency_ms": 0
+      }
+    },
+    {
+      "testCase": "preference-with-reason",
+      "scores": {
+        "entity_precision": 0,
+        "entity_recall": 0,
+        "entity_f1": 0,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": false,
+        "total_entities": 0,
+        "total_facts": 0,
+        "latency_ms": 0
+      }
+    },
+    {
+      "testCase": "dedup-variant-names",
+      "scores": {
+        "entity_precision": 0,
+        "entity_recall": 0,
+        "entity_f1": 0,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": false,
+        "total_entities": 0,
+        "total_facts": 0,
+        "latency_ms": 0
+      }
+    },
+    {
+      "testCase": "temporal-duration",
+      "scores": {
+        "entity_precision": 0,
+        "entity_recall": 0,
+        "entity_f1": 0,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": false,
+        "total_entities": 0,
+        "total_facts": 0,
+        "latency_ms": 0
+      }
+    },
+    {
+      "testCase": "edge-case-conditional",
+      "scores": {
+        "entity_precision": 0,
+        "entity_recall": 0,
+        "entity_f1": 0,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": false,
+        "total_entities": 0,
+        "total_facts": 0,
+        "latency_ms": 0
+      }
+    },
+    {
+      "testCase": "complex-tech-stack",
+      "scores": {
+        "entity_precision": 0,
+        "entity_recall": 0,
+        "entity_f1": 0,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": false,
+        "total_entities": 0,
+        "total_facts": 0,
+        "latency_ms": 0
+      }
+    },
+    {
+      "testCase": "multi-turn-context",
+      "scores": {
+        "entity_precision": 0,
+        "entity_recall": 0,
+        "entity_f1": 0,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": false,
+        "total_entities": 0,
+        "total_facts": 0,
+        "latency_ms": 0
+      }
+    },
+    {
+      "testCase": "concept-extraction",
+      "scores": {
+        "entity_precision": 0,
+        "entity_recall": 0,
+        "entity_f1": 0,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": false,
+        "total_entities": 0,
+        "total_facts": 0,
+        "latency_ms": 0
+      }
+    },
+    {
+      "testCase": "relationship-between-tools",
+      "scores": {
+        "entity_precision": 0,
+        "entity_recall": 0,
+        "entity_f1": 0,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": false,
+        "total_entities": 0,
+        "total_facts": 0,
+        "latency_ms": 0
+      }
+    },
+    {
+      "testCase": "temporal-recency",
+      "scores": {
+        "entity_precision": 0,
+        "entity_recall": 0,
+        "entity_f1": 0,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": false,
+        "total_entities": 0,
+        "total_facts": 0,
+        "latency_ms": 0
+      }
+    },
+    {
+      "testCase": "edge-case-question",
+      "scores": {
+        "entity_precision": 0,
+        "entity_recall": 0,
+        "entity_f1": 0,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": false,
+        "total_entities": 0,
+        "total_facts": 0,
+        "latency_ms": 0
+      }
+    },
+    {
+      "testCase": "long-context-multiple-facts",
+      "scores": {
+        "entity_precision": 0,
+        "entity_recall": 0,
+        "entity_f1": 0,
+        "fact_precision": 0,
+        "fact_recall": 0,
+        "fact_f1": 0,
+        "parse_success": false,
+        "total_entities": 0,
+        "total_facts": 0,
+        "latency_ms": 0
+      }
+    }
+  ],
+  "aggregated": {
+    "entity_f1": 0.3333333333333333,
+    "entity_precision": 0.5,
+    "entity_recall": 0.25,
+    "fact_f1": 0,
+    "fact_precision": 0,
+    "fact_recall": 0,
+    "parse_success_rate": 9.090909090909092
+  }
+}
