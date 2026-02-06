@@ -2,7 +2,11 @@ import type { LanguageModel } from "ai"
 import { generateText, streamText } from "ai"
 import { asc, eq } from "drizzle-orm"
 import { db } from "../db"
-import { messages, preprompts, sessions } from "../db/schema"
+import { messages, sessions } from "../db/schema"
+import { assembleContext } from "../memory/context-assembler"
+import { evaluateGatekeeper } from "../memory/gatekeeper"
+import { ingestMessages } from "../memory/graphiti-client"
+import type { GraphitiMessage } from "../memory/types"
 
 /**
  * Create a new chat session.
@@ -50,17 +54,16 @@ export async function sendMessageLogic(
     .where(eq(messages.sessionId, sessionId))
     .orderBy(asc(messages.createdAt))
 
-  // Get active preprompts ordered by priority (core + hard rules)
-  const activePrompts = await db
-    .select()
-    .from(preprompts)
-    .where(eq(preprompts.active, true))
-    .orderBy(asc(preprompts.priority))
+  // Assemble context: preprompts + Graphiti knowledge (graceful degradation)
+  let systemPrompt = ""
+  try {
+    const ctx = await assembleContext(sessionId, message)
+    systemPrompt = ctx.systemPrompt
+  } catch {
+    console.warn("[memory] assembleContext failed, using empty system prompt")
+  }
 
-  // Build system prompt from active preprompts
-  const systemPrompt = activePrompts.map((p) => p.content).join("\n\n")
-
-  // Generate response (Phase 1: non-streaming)
+  // Generate response (non-streaming fallback)
   const result = await generateText({
     model,
     system: systemPrompt,
@@ -78,7 +81,33 @@ export async function sendMessageLogic(
     content: result.text,
     model: modelName,
     tokenCount: result.usage.totalTokens,
+    inputTokens: result.usage.inputTokens,
+    outputTokens: result.usage.outputTokens,
   })
+
+  // Gatekeeper: decide whether to ingest into knowledge graph
+  const decision = evaluateGatekeeper(message, result.text)
+  if (decision.shouldIngest) {
+    const graphitiMessages: GraphitiMessage[] = [
+      {
+        content: message,
+        role_type: "user",
+        role: "user",
+        name: `msg-${Date.now()}-user`,
+        source_description: `session:${sessionId}`,
+      },
+      {
+        content: result.text,
+        role_type: "assistant",
+        role: "assistant",
+        name: `msg-${Date.now()}-assistant`,
+        source_description: `session:${sessionId}`,
+      },
+    ]
+    ingestMessages(sessionId, graphitiMessages).catch(() => {
+      // Silently swallow — graceful degradation
+    })
+  }
 
   return { text: result.text }
 }
@@ -86,8 +115,9 @@ export async function sendMessageLogic(
 /**
  * Stream a message response in a chat session.
  *
- * Stores user message, builds context, calls streamText().
- * The onFinish callback saves the assistant response + token usage to DB.
+ * Stores user message, builds context (with Graphiti knowledge), calls
+ * streamText(). The onFinish callback saves the assistant response + token
+ * usage to DB and ingests the exchange into the knowledge graph.
  * Returns the StreamTextResult for the API route to consume.
  */
 export async function streamMessageLogic(
@@ -110,14 +140,14 @@ export async function streamMessageLogic(
     .where(eq(messages.sessionId, sessionId))
     .orderBy(asc(messages.createdAt))
 
-  // Get active preprompts
-  const activePrompts = await db
-    .select()
-    .from(preprompts)
-    .where(eq(preprompts.active, true))
-    .orderBy(asc(preprompts.priority))
-
-  const systemPrompt = activePrompts.map((p) => p.content).join("\n\n")
+  // Assemble context: preprompts + Graphiti knowledge (graceful degradation)
+  let systemPrompt = ""
+  try {
+    const ctx = await assembleContext(sessionId, message)
+    systemPrompt = ctx.systemPrompt
+  } catch {
+    console.warn("[memory] assembleContext failed, using empty system prompt")
+  }
 
   // Stream response
   const result = streamText({
@@ -129,6 +159,7 @@ export async function streamMessageLogic(
     })),
     experimental_telemetry: { isEnabled: true },
     onFinish: async ({ text, usage }) => {
+      // Save assistant response to DB
       await db.insert(messages).values({
         sessionId,
         role: "assistant",
@@ -138,6 +169,30 @@ export async function streamMessageLogic(
         inputTokens: usage.inputTokens,
         outputTokens: usage.outputTokens,
       })
+
+      // Gatekeeper: decide whether to ingest into knowledge graph
+      const decision = evaluateGatekeeper(message, text)
+      if (decision.shouldIngest) {
+        const graphitiMessages: GraphitiMessage[] = [
+          {
+            content: message,
+            role_type: "user",
+            role: "user",
+            name: `msg-${Date.now()}-user`,
+            source_description: `session:${sessionId}`,
+          },
+          {
+            content: text,
+            role_type: "assistant",
+            role: "assistant",
+            name: `msg-${Date.now()}-assistant`,
+            source_description: `session:${sessionId}`,
+          },
+        ]
+        ingestMessages(sessionId, graphitiMessages).catch(() => {
+          // Silently swallow — graceful degradation
+        })
+      }
     },
   })
 
