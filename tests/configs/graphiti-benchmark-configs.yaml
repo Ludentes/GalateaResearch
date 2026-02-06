@@ -1,0 +1,39 @@
+configurations:
+  - name: llama3.2-baseline
+    model: llama3.2
+    temperature: 0.7
+    description: Current production baseline
+
+  - name: granite-conservative
+    model: granite3.1-dense:8b
+    temperature: 0.3
+    description: Test granite with low temperature for consistency
+
+  - name: granite-balanced
+    model: granite3.1-dense:8b
+    temperature: 0.7
+    description: Test granite with default temperature
+
+  - name: granite-creative
+    model: granite3.1-dense:8b
+    temperature: 1.0
+    description: Test granite with high temp for variety
+
+  - name: nemotron-balanced
+    model: nemotron
+    temperature: 0.7
+    description: Test nemotron with default temperature
+
+  - name: granite-custom-prompt
+    model: granite3.1-dense:8b
+    temperature: 0.7
+    system_prompt: |
+      You are a precise entity and relationship extractor for a knowledge graph.
+
+      Rules:
+      - Extract only concrete entities mentioned explicitly
+      - Avoid extracting pronouns (I, you, we) as separate entities
+      - Deduplicate similar entities (e.g., "Docker" and "docker" are the same)
+      - Create facts only for explicitly stated relationships
+      - Use consistent entity names (lowercase for common nouns, proper case for names)
+    description: Test custom system prompt for better extraction
