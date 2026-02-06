@@ -9,6 +9,7 @@
 import fs from 'fs'
 import Langfuse from 'langfuse'
 import type { ExtractedOutput } from './lib/scoring'
+import { calculateScores } from './lib/scoring'
 
 interface GoldenDataset {
   version: string
@@ -176,6 +177,13 @@ async function main() {
 
     console.log(`  ✓ Extracted ${extracted.entities.length} entities, ${extracted.facts.length} facts`)
     console.log(`  Entities: ${extracted.entities.map(e => e.name).join(', ')}`)
+
+    console.log('  Scoring against ground truth...')
+    const scores = calculateScores(testCase.expectedOutput, extracted)
+
+    console.log(`  Entity F1: ${scores.entity_f1.toFixed(3)}`)
+    console.log(`  Fact F1: ${scores.fact_f1.toFixed(3)}`)
+    console.log(`  Parse success: ${scores.parse_success}`)
   } catch (error) {
     console.error(`  ✗ Error: ${error.message}`)
   }
