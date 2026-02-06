@@ -33,12 +33,27 @@ pnpm benchmark:graphiti --config=openrouter-glm-free
 
 *Baseline models:*
 - `llama3.2-baseline` - Current production baseline (temp 0.7)
-- `granite-deterministic` - Granite with temp 0.0
-- `granite-conservative` - Granite with temp 0.3
-- `granite-balanced` - Granite with temp 0.7
-- `granite-creative` - Granite with temp 1.0
-- `granite4-deterministic` - Granite4 with temp 0.0
-- `granite-custom-prompt` - Granite with custom system prompt
+
+*Granite 3.1 baseline:*
+- `granite-deterministic` - Granite 3.1 with temp 0.0
+- `granite-conservative` - Granite 3.1 with temp 0.3
+- `granite-balanced` - Granite 3.1 with temp 0.7
+- `granite-creative` - Granite 3.1 with temp 1.0
+- `granite-custom-prompt` - Granite 3.1 with custom system prompt
+
+*Granite 4 experiments (13 configs):*
+- `granite4-tiny-h-deterministic` - Tiny-h with temp 0.0
+- `granite4-tiny-h-conservative` - Tiny-h with temp 0.3
+- `granite4-tiny-h-moderate` - Tiny-h with temp 0.5
+- `granite4-tiny-h-balanced` - Tiny-h with temp 0.7
+- `granite4-tiny-h-creative` - Tiny-h with temp 1.0
+- `granite4-tiny-h-fact-direction` - Tiny-h with fact direction prompt
+- `granite4-tiny-h-detailed-facts` - Tiny-h with detailed facts prompt
+- `granite4-tiny-h-strict` - Tiny-h with strict extraction (temp 0.3)
+- `granite4-tiny-h-comprehensive` - Tiny-h with comprehensive prompt (temp 0.5)
+- `granite4-standard-deterministic` - Standard with temp 0.0
+- `granite4-standard-balanced` - Standard with temp 0.7
+- `granite4-standard-comprehensive` - Standard with comprehensive prompt
 
 *Nemotron-3-Nano experiments (9 configs):*
 - `nemotron-deterministic` - Temp 0.0

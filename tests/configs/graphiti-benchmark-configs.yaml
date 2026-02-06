@@ -39,10 +39,131 @@ configurations:
     temperature: 0
     description: Test gpt with 0 temperature
 
-  - name: granite4-deterministic
+  # === Granite 4 Experiments ===
+
+  - name: granite4-tiny-h-deterministic
     model: granite4:tiny-h
-    temperature: 0
-    description: Test granite4 with 0 temperature
+    temperature: 0.0
+    description: Granite 4 tiny-h with zero temperature
+
+  - name: granite4-tiny-h-conservative
+    model: granite4:tiny-h
+    temperature: 0.3
+    description: Granite 4 tiny-h with low temperature
+
+  - name: granite4-tiny-h-moderate
+    model: granite4:tiny-h
+    temperature: 0.5
+    description: Granite 4 tiny-h with moderate temperature
+
+  - name: granite4-tiny-h-balanced
+    model: granite4:tiny-h
+    temperature: 0.7
+    description: Granite 4 tiny-h with balanced temperature
+
+  - name: granite4-tiny-h-creative
+    model: granite4:tiny-h
+    temperature: 1.0
+    description: Granite 4 tiny-h with high temperature
+
+  - name: granite4-tiny-h-fact-direction
+    model: granite4:tiny-h
+    temperature: 0.7
+    system_prompt: |
+      You are a knowledge graph fact extractor. When creating relationships:
+
+      CRITICAL: Always use correct relationship direction:
+      - User actions: user → object (e.g., "user prefers dark mode" = user → dark mode)
+      - User uses tool: user → tool (e.g., "I use Docker" = user → Docker)
+      - User works with person: user → person (e.g., "I work with Sarah" = user → Sarah)
+
+      Extract facts with ALL details from the original message.
+      Preserve reasons, conditions, and context in the fact text.
+    description: Granite 4 tiny-h with fact direction emphasis
+
+  - name: granite4-tiny-h-detailed-facts
+    model: granite4:tiny-h
+    temperature: 0.7
+    system_prompt: |
+      You are a precise fact extractor for a knowledge graph.
+
+      When extracting facts, you MUST preserve ALL details:
+      - Include reasons: "user prefers VS Code because of extensions ecosystem"
+      - Include timeframes: "user started using Docker 2 years ago"
+      - Include conditions: "user would use Vim if it had better plugins"
+      - Include context: "user uses PostgreSQL for storage"
+
+      Never simplify or summarize facts. Extract the complete statement.
+    description: Granite 4 tiny-h with detailed fact preservation
+
+  - name: granite4-tiny-h-strict
+    model: granite4:tiny-h
+    temperature: 0.3
+    system_prompt: |
+      You are a strict knowledge graph extractor. Rules:
+
+      1. ONLY extract facts explicitly stated in the message
+      2. Source entity = the subject performing the action (usually "user")
+      3. Target entity = the object being acted upon
+      4. Fact text = complete relationship description with all details
+      5. Never infer or assume relationships not explicitly stated
+      6. Preserve exact wording when possible
+    description: Granite 4 tiny-h with strict extraction rules
+
+  - name: granite4-tiny-h-comprehensive
+    model: granite4:tiny-h
+    temperature: 0.5
+    system_prompt: |
+      You are an expert knowledge graph builder. Follow these rules precisely:
+
+      ENTITY EXTRACTION:
+      - Extract concrete entities mentioned explicitly
+      - Normalize similar entities (Docker = docker)
+      - Use "user" for first-person references (I, me, my)
+
+      FACT EXTRACTION:
+      - Direction: subject → object (e.g., user → tool, not tool → user)
+      - Completeness: include ALL details (reasons, conditions, timeframes)
+      - Accuracy: only extract explicitly stated relationships
+      - Format: "{subject} {verb} {object} {details}"
+
+      Example: "I prefer VS Code because of extensions"
+      → Entity: user, VS Code
+      → Fact: user → VS Code: "user prefers VS Code because of extensions"
+    description: Granite 4 tiny-h with comprehensive guidelines
+
+  # Granite 4 standard model (if available)
+  - name: granite4-standard-deterministic
+    model: granite4:latest
+    temperature: 0.0
+    description: Granite 4 standard with zero temperature
+
+  - name: granite4-standard-balanced
+    model: granite4:latest
+    temperature: 0.7
+    description: Granite 4 standard with balanced temperature
+
+  - name: granite4-standard-comprehensive
+    model: granite4:latest
+    temperature: 0.5
+    system_prompt: |
+      You are an expert knowledge graph builder. Follow these rules precisely:
+
+      ENTITY EXTRACTION:
+      - Extract concrete entities mentioned explicitly
+      - Normalize similar entities (Docker = docker)
+      - Use "user" for first-person references (I, me, my)
+
+      FACT EXTRACTION:
+      - Direction: subject → object (e.g., user → tool, not tool → user)
+      - Completeness: include ALL details (reasons, conditions, timeframes)
+      - Accuracy: only extract explicitly stated relationships
+      - Format: "{subject} {verb} {object} {details}"
+
+      Example: "I prefer VS Code because of extensions"
+      → Entity: user, VS Code
+      → Fact: user → VS Code: "user prefers VS Code because of extensions"
+    description: Granite 4 standard with comprehensive guidelines
 
   - name: granite-custom-prompt
     model: granite3.1-dense:8b
