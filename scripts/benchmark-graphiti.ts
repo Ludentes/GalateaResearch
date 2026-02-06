@@ -57,19 +57,19 @@ interface Config {
  */
 async function clearBenchmarkData(): Promise<void> {
   const { getGraph } = await import('../server/integrations/falkordb')
-  const graph = getGraph('galatea_memory')
+  const graph = await getGraph('galatea_memory')
 
   console.log('Clearing previous benchmark data...')
 
   // Delete all entities with benchmark group_ids (test-*)
-  const entitiesResult = await graph.query(`
+  await graph.query(`
     MATCH (e:Entity)
     WHERE e.group_id STARTS WITH 'test-'
     DELETE e
   `)
 
   // Delete all relationships with benchmark group_ids
-  const factsResult = await graph.query(`
+  await graph.query(`
     MATCH ()-[r:RELATES_TO]->()
     WHERE r.group_id STARTS WITH 'test-'
     DELETE r
@@ -255,12 +255,12 @@ async function main() {
     baseUrl: process.env.BENCHMARK_LANGFUSE_BASE_URL
   })
 
-  // Optional cleanup
+  // 2. Optional cleanup
   if (cleanFlag) {
     await clearBenchmarkData()
   }
 
-  // 2. Load golden dataset
+  // 3. Load golden dataset
   const dataset: GoldenDataset = JSON.parse(
     fs.readFileSync('tests/fixtures/graphiti-golden-dataset.json', 'utf8')
   )
@@ -299,7 +299,7 @@ async function main() {
     console.log(`Using existing Langfuse dataset: ${datasetName}`)
   }
 
-  // 3. Load config
+  // 4. Load config
   const config: Config = loadConfig(configName)
 
   console.log(`Configuration: ${config.model} (temp=${config.temperature})`)
@@ -350,7 +350,7 @@ async function main() {
     }
   }
 
-  // 4. Create Langfuse session for this run
+  // 5. Create Langfuse session for this run
   const runTimestamp = Date.now()
   const runName = `${config.model}-temp${config.temperature}-${runTimestamp}`
   console.log(`\nStarting run: ${runName}\n`)
@@ -370,7 +370,7 @@ async function main() {
     tags: ['benchmark', config.model, dataset.version]
   })
 
-  // 5. Run all test cases
+  // 6. Run all test cases
   const results = []
   for (let i = 0; i < dataset.cases.length; i++) {
     const testCase = dataset.cases[i]
@@ -454,7 +454,7 @@ async function main() {
     }
   }
 
-  // 6. Aggregate scores
+  // 7. Aggregate scores
   const validResults = results.filter(r => r.scores.parse_success !== false && 'entity_precision' in r.scores)
 
   if (validResults.length === 0) {
