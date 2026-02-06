@@ -164,6 +164,58 @@ describe("graphiti-client", () => {
     })
   })
 
+  describe("getEpisodes", () => {
+    it("returns episodes for a group", async () => {
+      const episodes = [
+        {
+          uuid: "ep-001",
+          name: "msg-1707091200-user",
+          group_id: "session-123",
+          content: "I prefer dark mode",
+          source: "message",
+          source_description: "session:session-123",
+          created_at: "2026-02-05T12:00:00Z",
+          valid_at: "2026-02-05T12:00:00Z",
+          entity_edges: ["edge-1", "edge-2"],
+        },
+      ]
+      mockFetch.mockResolvedValueOnce(jsonResponse(episodes))
+      const { getEpisodes } = await import("../graphiti-client")
+      const result = await getEpisodes("session-123", 10)
+      expect(result).toHaveLength(1)
+      expect(result[0].content).toBe("I prefer dark mode")
+      expect(result[0].entity_edges).toEqual(["edge-1", "edge-2"])
+
+      const [url] = mockFetch.mock.calls[0]
+      expect(url).toBe(
+        "http://graphiti-test:18000/episodes/session-123?last_n=10",
+      )
+    })
+
+    it("returns empty array on failure (graceful degradation)", async () => {
+      mockFetch.mockResolvedValueOnce(errorResponse(500))
+      const { getEpisodes } = await import("../graphiti-client")
+      const result = await getEpisodes("session-123")
+      expect(result).toEqual([])
+    })
+
+    it("uses default lastN of 20", async () => {
+      mockFetch.mockResolvedValueOnce(jsonResponse([]))
+      const { getEpisodes } = await import("../graphiti-client")
+      await getEpisodes("session-123")
+      const [url] = mockFetch.mock.calls[0]
+      expect(url).toContain("last_n=20")
+    })
+
+    it("URL-encodes the group ID", async () => {
+      mockFetch.mockResolvedValueOnce(jsonResponse([]))
+      const { getEpisodes } = await import("../graphiti-client")
+      await getEpisodes("session/with spaces")
+      const [url] = mockFetch.mock.calls[0]
+      expect(url).toContain("episodes/session%2Fwith%20spaces")
+    })
+  })
+
   describe("deleteGroup", () => {
     it("returns true on successful deletion", async () => {
       mockFetch.mockResolvedValueOnce(

@@ -1,7 +1,7 @@
 # Galatea Observation Pipeline
 
-**Date**: 2026-02-02
-**Status**: Formalized Architecture
+**Date**: 2026-02-06 (Updated)
+**Status**: OTEL-First Architecture
 **Purpose**: Define how Galatea observes, enriches, validates, and learns from user activity
 
 ---
@@ -11,7 +11,7 @@
 Galatea is an **active companion**, not a passive logger. It:
 
 1. **Asks** about your plans at the start of the day
-2. **Observes** your activity across browser, terminal, IDE
+2. **Observes** your activity across browser, terminal, IDE, Claude Code
 3. **Guesses** what you're trying to accomplish
 4. **Validates** guesses through natural dialogue
 5. **Learns** from validated observations
@@ -19,96 +19,160 @@ Galatea is an **active companion**, not a passive logger. It:
 
 The goal is to transform noisy raw activity into rich, validated memories through natural interaction.
 
+## Architectural Decision: OpenTelemetry as Unified Backbone
+
+**2026-02-06 Update**: After comprehensive analysis (see [research/2026-02-06-otel-vs-mqtt-comparison.md](./research/2026-02-06-otel-vs-mqtt-comparison.md)), we've adopted **OpenTelemetry (OTEL) as the unified observation backbone**.
+
+**Why OTEL?**
+- **Claude Code has native OTEL support** (hooks, telemetry)
+- **Single unified interface** for pipeline code (only consumes OTEL events)
+- **Infrastructure-level bridging** (OTEL Collector MQTT receiver for Home Assistant/Frigate)
+- **Extensible** (add sources by emitting OTEL)
+- **Ecosystem integration** (Langfuse, Jaeger for debugging)
+
+**MQTT Role**: Home Assistant and Frigate keep using MQTT (they're MQTT-native), but the OTEL Collector bridges MQTT→OTEL at infrastructure level. Your pipeline code never touches MQTT.
+
+See detailed implementation docs: [observation-pipeline/](./observation-pipeline/)
+
 ---
 
-## Pipeline Architecture
+## Pipeline Architecture (OTEL-First)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
+│   LAYER 0: ACTIVITY SOURCES (Emit OTEL Events)                 │
+├─────────────────────────────────────────────────────────────────┤
+│  Primary (Native OTEL):                                         │
+│  ├─ Claude Code (hooks → OTEL)                                  │
+│  ├─ VSCode (extension → OTEL)                                   │
+│  ├─ Browser (extension → OTEL)                                  │
+│  ├─ Linux Activity (systemd → OTEL)                            │
+│  └─ Discord (bot → OTEL, optional)                             │
 │                                                                 │
-│   LAYER 1: ACTIVITY CAPTURE                                     │
-│   Raw events from browser, terminal, VSCode                     │
-│                                                                 │
+│  Secondary (MQTT → OTEL Bridge):                                │
+│  ├─ Home Assistant (MQTT)                                       │
+│  └─ Frigate NVR (MQTT)                                         │
+└────────────────────────────┬────────────────────────────────────┘
+                             │ OTLP (OpenTelemetry Protocol)
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│   OPENTELEMETRY COLLECTOR (Infrastructure Layer)                │
+├─────────────────────────────────────────────────────────────────┤
+│  Receivers: OTLP + MQTT                                         │
+│  Processors: Filter (noise), Transform (normalize), Batch       │
+│  Exporters: HTTP (Galatea API) + File (debug/replay)           │
+└────────────────────────────┬────────────────────────────────────┘
+                             │ HTTP POST (unified OTEL format)
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│   LAYER 1: ACTIVITY INGESTION (Galatea API)                    │
+│   POST /api/observation/ingest                                  │
+│   Single interface consuming OTEL events                        │
 └────────────────────────────┬────────────────────────────────────┘
                              │
                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
 │   LAYER 2: ENRICHMENT                                           │
 │   Group events, guess intent, compute confidence                │
-│                                                                 │
 └────────────────────────────┬────────────────────────────────────┘
                              │
                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
 │   LAYER 3: DIALOGUE                                             │
 │   Validate guesses, ask learning questions, check in            │
-│                                                                 │
 └────────────────────────────┬────────────────────────────────────┘
                              │
                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│   LAYER 4: MEMORY FORMATION                                     │
+│   LAYER 4: MEMORY FORMATION (Graphiti + FalkorDB)              │
 │   Store validated knowledge as episodic/semantic/procedural     │
-│                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+**Key Change**: Added OTEL Collector as infrastructure layer that unifies all sources into single OTEL format before Galatea processes them.
+
 ---
 
-## Layer 1: Activity Capture
+## Layer 0: Activity Sources (OTEL Emitters)
 
 ### Purpose
-Collect raw activity events from user's environment without interpretation.
+Capture user activity from all sources and emit standardized OTEL events.
 
 ### Activity Sources
 
-| Source | Events Captured | Capture Method |
-|--------|----------------|----------------|
-| **Browser** | Active tab (domain, title), searches, time on page | Browser extension or ActivityWatch |
-| **Terminal** | Commands executed, output summary, exit codes, working directory | Shell wrapper or ActivityWatch |
-| **VSCode** | Files opened, files saved, extensions used, debug sessions | VSCode extension |
-| **MQTT** | Home Assistant state changes, Frigate NVR detections (person, car), Zigbee device events | Mosquitto broker subscription |
-| **Manual** | User explicitly tells Galatea something | Chat interface |
+| Source | Events Captured | Implementation | Priority | Doc |
+|--------|----------------|----------------|----------|-----|
+| **Claude Code** | Prompts, tool usage, file context | Native OTEL hooks | **HIGH** | [01-claude-code-otel.md](./observation-pipeline/01-claude-code-otel.md) |
+| **VSCode** | Files opened/saved, debug sessions, git operations | VSCode extension → OTEL | **HIGH** | [02-vscode-otel.md](./observation-pipeline/02-vscode-otel.md) |
+| **Browser** | Sites visited, searches, time on page | Browser extension → OTEL | **HIGH** | [05-browser-otel.md](./observation-pipeline/05-browser-otel.md) |
+| **Linux Activity** | App launches, window focus, system sleep/wake | systemd/X11 → OTEL | **MEDIUM** | [03-linux-activity-otel.md](./observation-pipeline/03-linux-activity-otel.md) |
+| **Home Assistant** | State changes (doors, lights, motion sensors) | MQTT → OTEL Collector | **MEDIUM** | [06-mqtt-to-otel-bridge.md](./observation-pipeline/06-mqtt-to-otel-bridge.md) |
+| **Frigate NVR** | Person/vehicle detections from cameras | MQTT → OTEL Collector | **MEDIUM** | [06-mqtt-to-otel-bridge.md](./observation-pipeline/06-mqtt-to-otel-bridge.md) |
+| **Discord** | Messages sent (metadata), voice chat | Discord bot → OTEL | **LOW** | [04-discord-otel.md](./observation-pipeline/04-discord-otel.md) |
+| **Manual** | User explicitly tells Galatea something | Chat interface | **HIGH** | Built-in |
 
-### Data Schema
+**See**: [observation-pipeline/00-architecture-overview.md](./observation-pipeline/00-architecture-overview.md) for complete architecture.
+
+### OTEL Event Format
+
+All sources emit standardized OpenTelemetry events (OTLP format):
+
+```json
+{
+  "resourceLogs": [{
+    "resource": {
+      "attributes": [
+        { "key": "service.name", "value": { "stringValue": "galatea-observer" }},
+        { "key": "source.type", "value": { "stringValue": "claude_code" }}
+      ]
+    },
+    "scopeLogs": [{
+      "logRecords": [{
+        "timeUnixNano": "1675700000000000000",
+        "body": { "stringValue": "Add JWT auth to API" },
+        "attributes": [
+          { "key": "activity.type", "value": { "stringValue": "claude_code_prompt" }},
+          { "key": "claude_code.working_directory", "value": { "stringValue": "/home/user/project" }},
+          { "key": "session.id", "value": { "stringValue": "abc123" }}
+        ]
+      }]
+    }]
+  }]
+}
+```
+
+**Standard Attributes** (all events):
+- `service.name`: Always "galatea-observer"
+- `source.type`: Source identifier (`claude_code`, `vscode`, `browser`, etc.)
+- `activity.type`: Specific event type (`claude_code_prompt`, `vscode_file_open`, etc.)
+- `session.id`: Galatea session ID
+
+**Source-specific attributes** are namespaced (e.g., `claude_code.*`, `vscode.*`, `browser.*`).
+
+### Internal Storage (After Ingestion)
+
+After OTEL events are ingested, they're stored internally:
 
 ```typescript
-// convex/schema.ts
+// Internal activity record (PostgreSQL via Drizzle)
+interface ActivityRecord {
+  id: string;
+  sessionId: string;
 
-activities: defineTable({
-  sessionId: v.id("sessions"),
-
-  // Source identification
-  source: v.union(
-    v.literal("browser"),
-    v.literal("terminal"),
-    v.literal("vscode"),
-    v.literal("manual"),
-    v.literal("activitywatch")
-  ),
-
-  // Event type (source-specific)
-  eventType: v.string(),
-
-  // Human-readable summary (always present)
-  summary: v.string(),
-
-  // Source-specific details (optional)
-  details: v.optional(v.any()),
+  // From OTEL
+  source: string;              // From source.type
+  activityType: string;        // From activity.type
+  body: string;                // Human-readable summary
+  attributes: Record<string, any>;  // All OTEL attributes
 
   // Timing
-  timestamp: v.number(),
-  duration: v.optional(v.number()),  // For timed events
+  timestamp: Date;
+  duration?: number;
 
-  // Processing state
-  processed: v.boolean(),
-  activitySessionId: v.optional(v.id("activitySessions")),
-})
-  .index("by_session_time", ["sessionId", "timestamp"])
-  .index("by_unprocessed", ["sessionId", "processed"]),
+  // Processing
+  processed: boolean;
+  activitySessionId?: string;
+}
 ```
 
 ### Event Types by Source
@@ -182,9 +246,54 @@ interface ManualActivity {
 }
 ```
 
-### Capture Implementations
+### OTEL-Based Implementations
 
-#### Option A: ActivityWatch Integration (Recommended for MVP)
+**See detailed implementation guides**: [observation-pipeline/](./observation-pipeline/)
+
+#### Quick Overview
+
+**Claude Code** (PRIORITY 1):
+```bash
+# Create OTEL hook in ~/.claude/hooks/otel-prompt-observer.sh
+# Emits OTEL events on user prompts, tool usage
+# See: observation-pipeline/01-claude-code-otel.md
+```
+
+**Browser** (PRIORITY 1):
+```javascript
+// Chrome/Firefox extension
+// Tracks tabs, searches, page visits → emits OTEL
+// See: observation-pipeline/05-browser-otel.md
+```
+
+**VSCode** (PRIORITY 2):
+```typescript
+// VSCode extension
+// Tracks files opened/saved, debug sessions → emits OTEL
+// See: observation-pipeline/02-vscode-otel.md
+```
+
+**OTEL Collector** (Infrastructure):
+```yaml
+# otel-collector-config.yaml
+receivers:
+  otlp:  # For Claude Code, VSCode, Browser
+  mqtt:  # For Home Assistant, Frigate
+
+processors:
+  filter:  # Remove noise
+  transform:  # Normalize formats
+
+exporters:
+  otlphttp:
+    endpoint: http://galatea:3000/api/observation/ingest
+```
+
+---
+
+### Legacy Approaches (Pre-OTEL, Archived)
+
+#### Option A: ActivityWatch Integration (Deprecated)
 
 ActivityWatch is open-source and already captures window/browser activity.
 

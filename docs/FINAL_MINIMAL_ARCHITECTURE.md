@@ -1,8 +1,14 @@
 # Galatea: Final Minimal Architecture
 
-**Date**: 2026-02-02
+**Date**: 2026-02-06 (Updated)
 **Status**: Ready for Implementation
-**Timeline**: 10 weeks to working core
+**Timeline**: 11 weeks to working core (added Observation Pipeline as Phase 4)
+
+**Latest Update (2026-02-06)**:
+- Adopted OpenTelemetry (OTEL) as unified observation pipeline backbone
+- Added explicit **Phase 4: Observation Pipeline** to roadmap (Week 7)
+- Renumbered subsequent phases (MCP Tools → Phase 5, Learning → Phase 6, Personas → Phase 7)
+- See [observation-pipeline/](./observation-pipeline/) for implementation details
 
 ---
 
@@ -118,14 +124,35 @@ After evaluating multiple approaches, we selected **homeostasis-based architectu
 
 See [2026-02-02-memory-system-design.md](./plans/2026-02-02-memory-system-design.md) for full design.
 
-### The Observation Pipeline (4 Layers)
+### The Observation Pipeline (OTEL-First)
+
+**2026-02-06 Update**: Adopted **OpenTelemetry (OTEL) as unified backbone** for observation pipeline.
 
 ```
-RAW ACTIVITY → ENRICHMENT → DIALOGUE → MEMORY FORMATION
-(OS-level)    (guess intent) (validate) (store in Graphiti)
+ACTIVITY SOURCES → OTEL COLLECTOR → GALATEA API → ENRICHMENT → DIALOGUE → MEMORY
+(Claude Code,      (Filter,         (Ingest)      (Guess      (Validate) (Graphiti)
+ VSCode,            Transform,                      intent)
+ Browser,           Batch)
+ Home Assistant)
 ```
 
-See [OBSERVATION_PIPELINE.md](OBSERVATION_PIPELINE.md) for full details.
+**Why OTEL?**
+- Claude Code has native OTEL support (hooks)
+- Single unified interface for all sources
+- Infrastructure-level MQTT→OTEL bridging (Home Assistant/Frigate)
+- Ecosystem integration (Langfuse, Jaeger)
+
+**Primary Sources** (High Priority):
+1. **Claude Code** - User prompts, tool usage (how you code)
+2. **Browser** - Sites visited, searches (what you research)
+3. **VSCode** - Files opened/edited (what you work on)
+
+**Secondary Sources**:
+4. Linux Activity - App launches, window focus
+5. Home Assistant - Presence, smart home context
+6. Frigate NVR - Person detections
+
+See [OBSERVATION_PIPELINE.md](OBSERVATION_PIPELINE.md) and [observation-pipeline/](./observation-pipeline/) for full details.
 
 ---
 
@@ -370,7 +397,48 @@ class ActivityRouter {
 
 ---
 
-### Phase 4: MCP Tool Integration (Week 7)
+### Phase 4: Observation Pipeline (OTEL) (Week 7)
+
+**Objective:** Implement OTEL-based observation pipeline for shadow learning
+
+**Decision**: OpenTelemetry (OTEL) as unified backbone (see [observation-pipeline/](./observation-pipeline/))
+
+**Tasks:**
+- [ ] Deploy OTEL Collector (Docker Compose)
+- [ ] Configure OTEL Collector (receivers, processors, exporters)
+- [ ] Implement `/api/observation/ingest` endpoint
+- [ ] Create Claude Code OTEL hooks (~/.claude/hooks/)
+- [ ] Build Browser extension (Chrome/Firefox) → OTEL
+- [ ] **Optional:** Build VSCode extension → OTEL
+- [ ] **Optional:** Setup MQTT→OTEL bridge (Home Assistant/Frigate)
+- [ ] Implement enrichment layer (group events, guess intent)
+- [ ] Add activity session tracking
+- [ ] Test end-to-end: source → collector → API → storage
+
+**Deliverable:** System observes user activity from Claude Code and Browser
+
+**Success Metric:** Can capture and store user prompts, file edits, browser activity
+
+**Priority Sources:**
+1. **Claude Code** (hooks) - How you code
+2. **Browser** (extension) - What you research
+3. **VSCode** (extension) - What you work on (optional for Phase 4)
+
+**Infrastructure:**
+```yaml
+# docker-compose.yml
+otel-collector:
+  image: otel/opentelemetry-collector-contrib:latest
+  ports:
+    - "4317:4317"  # OTLP gRPC
+    - "4318:4318"  # OTLP HTTP
+```
+
+**Documentation**: [observation-pipeline/](./observation-pipeline/), [OBSERVATION_PIPELINE.md](./OBSERVATION_PIPELINE.md)
+
+---
+
+### Phase 5: MCP Tool Integration (Week 8)
 
 **Objective:** Add MCP tool execution with approval gates
 
@@ -394,9 +462,9 @@ class ActivityRouter {
 
 ---
 
-### Phase 5: Memory Promotion & Learning (Weeks 8-9)
+### Phase 6: Memory Promotion & Learning (Weeks 9-10)
 
-**Objective:** Implement memory promotion pipeline
+**Objective:** Implement memory promotion pipeline (uses observations from Phase 4)
 
 **Tasks:**
 - [ ] Implement promotion rules engine
@@ -418,7 +486,7 @@ episode → observation → fact → rule → procedure → shared
 
 ---
 
-### Phase 6: Personas & Instantiation (Week 10)
+### Phase 7: Personas & Instantiation (Week 11)
 
 **Objective:** Same core, different personalities + export/import
 
@@ -472,19 +540,27 @@ hard_blocks:
 - ✅ Agent updates team when communication_health LOW
 - **Metric:** Dimension-appropriate behavior in > 85% of cases
 
-### Phase 4 (Tools)
+### Phase 4 (Observation Pipeline)
+- ✅ Claude Code prompts captured via OTEL hooks
+- ✅ Browser activity captured via extension
+- ✅ Events flow through OTEL Collector to Galatea API
+- ✅ Activity sessions grouped correctly
+- **Metric:** > 95% of user activity captured accurately
+
+### Phase 5 (Tools)
 - ✅ Agent successfully executes tools
 - ✅ Tool results inform responses
 - ✅ Approval gates prevent unauthorized actions
 - **Metric:** Tool success rate > 85%
 
-### Phase 5 (Learning)
+### Phase 6 (Learning)
 - ✅ Episodes promote to facts (2+ similar episodes)
 - ✅ Procedure success_rate updates after use
 - ✅ Superseded knowledge marked, not deleted
+- ✅ Observations from Phase 4 feed memory formation
 - **Metric:** Memory promotion occurs correctly
 
-### Phase 6 (Instantiation)
+### Phase 7 (Instantiation)
 - ✅ Programmer and Assistant behave distinctly
 - ✅ Both share same homeostasis dimensions
 - ✅ Export includes semantic + procedural, excludes episodic
@@ -509,8 +585,9 @@ hard_blocks:
 | **Streaming** | Nitro API route + client ReadableStream | Phase 1 DONE |
 | **Graph DB** | FalkorDB (port 16379, Browser on 13001) | Phase 1 DONE |
 | **Memory** | Graphiti | Phase 2 |
-| **Events** | MQTT (Mosquitto, port 11883/19001) | Infrastructure ready |
-| **Tools** | MCP (1000+ servers) | Phase 4 |
+| **Observation** | OpenTelemetry Collector (ports 4317/4318) | Phase 4 |
+| **Events** | MQTT (Mosquitto, port 11883/19001) → OTEL bridge | Phase 4 (optional) |
+| **Tools** | MCP (1000+ servers) | Phase 5 |
 | **Embeddings** | Voyage AI | Phase 2+ |
 | **Observability** | Langfuse (OTel via `@langfuse/otel`) | Phase 1 DONE |
 | **Static Content** | MD files (Obsidian-friendly) | New |

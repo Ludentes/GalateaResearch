@@ -1,8 +1,10 @@
 # Galatea Psychological Architecture
 
-**Date**: 2026-02-02
+**Date**: 2026-02-06 (Updated)
 **Status**: Accepted
 **Thesis**: Psychological architecture (homeostasis + memory + models) + LLM > Plain LLM
+
+**Latest Update (2026-02-06)**: Observation pipeline now uses OpenTelemetry (OTEL) as unified backbone. See [OBSERVATION_PIPELINE.md](./OBSERVATION_PIPELINE.md) and [observation-pipeline/](./observation-pipeline/) for details.
 
 ---
 

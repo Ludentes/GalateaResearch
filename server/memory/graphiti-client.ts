@@ -9,6 +9,7 @@ import type {
   AddEntityNodeRequest,
   AddMessagesRequest,
   AddMessagesResponse,
+  EpisodeResult,
   FactResult,
   GetMemoryRequest,
   GraphitiMessage,
@@ -101,8 +102,9 @@ export async function searchFacts(
 ): Promise<FactResult[]> {
   const body: SearchRequest = {
     query,
-    group_ids: groupIds,
     max_facts: maxFacts,
+    // Only include group_ids if non-empty (empty array causes Graphiti to return nothing)
+    ...(groupIds.length > 0 && { group_ids: groupIds }),
   }
 
   const res = await graphitiFetch<SearchResponse>("/search", {
@@ -155,6 +157,20 @@ export async function addEntityNode(
     },
   )
   return res?.success ?? false
+}
+
+/**
+ * Retrieve recent episodes for a group.
+ * Returns an empty array on failure (graceful degradation).
+ */
+export async function getEpisodes(
+  groupId: string,
+  lastN = 20,
+): Promise<EpisodeResult[]> {
+  const res = await graphitiFetch<EpisodeResult[]>(
+    `/episodes/${encodeURIComponent(groupId)}?last_n=${lastN}`,
+  )
+  return res ?? []
 }
 
 /**

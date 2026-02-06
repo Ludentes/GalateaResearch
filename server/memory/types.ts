@@ -75,6 +75,19 @@ export interface HealthcheckResponse {
   status: string
 }
 
+/** Episode result returned by GET /episodes/{group_id} */
+export interface EpisodeResult {
+  uuid: string
+  name: string
+  group_id: string
+  content: string
+  source: string
+  source_description: string
+  created_at: string
+  valid_at: string
+  entity_edges: string[]
+}
+
 // ---------------------------------------------------------------------------
 // Context assembly types
 // ---------------------------------------------------------------------------

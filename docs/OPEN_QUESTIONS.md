@@ -1,14 +1,35 @@
 # Galatea Open Questions
 
-**Date**: 2026-02-02
+**Date**: 2026-02-06 (Updated)
 **Status**: Active research topics requiring dedicated sessions
 
 ---
 
-## 1. Logging & Observation Infrastructure
+## 1. ~~Logging & Observation Infrastructure~~ ✅ RESOLVED
 
-**Priority**: High
-**Status**: Needs dedicated brainstorm session
+**Priority**: ~~High~~ **RESOLVED (2026-02-06)**
+**Status**: ~~Needs dedicated brainstorm session~~ **Decided: OpenTelemetry (OTEL)**
+
+**Decision**: Adopted **OpenTelemetry (OTEL) as unified observation backbone**.
+
+**Solution**:
+- Claude Code → OTEL (native hooks)
+- VSCode → OTEL (custom extension)
+- Browser → OTEL (custom extension)
+- Linux Activity → OTEL (systemd/X11)
+- Home Assistant/Frigate → MQTT → OTEL Collector (infrastructure bridge)
+
+**Documentation**:
+- [observation-pipeline/00-architecture-overview.md](./observation-pipeline/00-architecture-overview.md)
+- [research/2026-02-06-otel-vs-mqtt-comparison.md](./research/2026-02-06-otel-vs-mqtt-comparison.md)
+- [OBSERVATION_PIPELINE.md](./OBSERVATION_PIPELINE.md)
+
+---
+
+### ~~Original Question (Archived)~~
+
+<details>
+<summary>Click to expand original question</summary>
 
 ### The Problem
 
@@ -72,6 +93,8 @@ OUTPUT:
 
 DELIVERABLE: docs/LOGGING_ARCHITECTURE.md
 ```
+
+</details>
 
 ---
 
@@ -252,7 +275,7 @@ We dropped these in minimal architecture. May need to reconsider for production.
 
 | Question | Priority | Status | Next Step |
 |----------|----------|--------|-----------|
-| Logging infrastructure | High | Needs session | Schedule brainstorm |
+| ~~Logging infrastructure~~ | ~~High~~ | **✅ RESOLVED** | **OTEL adopted (see observation-pipeline/)** |
 | Claude Code relationship | Medium | Deferred | Using LLM+MCP for v1 |
 | Emergence vs explicit | High | Ongoing | Validate with implementation |
 | Multi-agent | Low | Deferred | Phase 3 |
@@ -262,4 +285,4 @@ We dropped these in minimal architecture. May need to reconsider for production.
 
 ---
 
-*Last updated: 2026-02-02*
+*Last updated: 2026-02-06*
