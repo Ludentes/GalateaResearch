@@ -1,0 +1,179 @@
+# Homeostasis Guidance System
+#
+# Provides actionable guidance when dimensions are imbalanced.
+# Each dimension has guidance for LOW and HIGH states.
+# Priority determines which guidance shows first when multiple dimensions imbalanced.
+
+# ============================================================================
+# Knowledge Sufficiency: "Do I know enough?"
+# ============================================================================
+
+knowledge_sufficiency:
+  LOW:
+    priority: 1  # Critical - knowledge gaps can lead to errors
+    primary: |
+      **Knowledge gap detected.** Before proceeding, consider:
+      - Ask clarifying questions to fill knowledge gaps
+      - Search memory for relevant facts or procedures
+      - Research the problem space if this is new territory
+      - Defer to others with more context if appropriate
+    secondary: |
+      It's better to ask now than to make incorrect assumptions. Knowledge gaps often indicate this is a good time to seek input.
+
+  HIGH:
+    priority: 5  # Lower priority - over-information is less dangerous
+    primary: |
+      **Information overload detected.** You may have retrieved too much information. Consider:
+      - Focus on the most relevant facts (highest confidence)
+      - Summarize key points rather than including everything
+      - Avoid analysis paralysis - sometimes "good enough" knowledge is sufficient
+    secondary: |
+      Having too much information can be as problematic as too little. Prioritize clarity over completeness.
+
+# ============================================================================
+# Certainty Alignment: "Does confidence match action?"
+# ============================================================================
+
+certainty_alignment:
+  LOW:
+    priority: 1  # Critical - uncertainty + high stakes = danger
+    primary: |
+      **Uncertainty about high-stakes action detected.** This is a safety concern. You should:
+      - Explicitly communicate your uncertainty to the user
+      - Request confirmation before proceeding
+      - Outline the risks and potential consequences
+      - Suggest alternative approaches with lower risk
+    secondary: |
+      When uncertain about destructive or irreversible actions, it's always better to ask than to guess. Your caution is appropriate here.
+
+  HIGH:
+    priority: 3  # Important - overconfidence can miss edge cases
+    primary: |
+      **High confidence on risky action detected.** Double-check your reasoning:
+      - Have you considered edge cases and failure modes?
+      - Is there testing or validation you should do first?
+      - Would a dry run or preview be appropriate?
+      - Have you communicated the full scope of the action?
+    secondary: |
+      Confidence is good, but high-stakes actions warrant extra scrutiny. Measure twice, cut once.
+
+# ============================================================================
+# Progress Momentum: "Am I moving forward?"
+# ============================================================================
+
+progress_momentum:
+  LOW:
+    priority: 2  # High priority - being stuck wastes time
+    primary: |
+      **Stuck detected.** You've been on this task for a while without progress. Consider:
+      - Take a step back and reassess the approach
+      - Break the problem into smaller, achievable steps
+      - Ask for help or a different perspective
+      - Try a different approach if current one isn't working
+    secondary: |
+      Sometimes the best way forward is to pause, reflect, and try a different angle. Don't spin your wheels.
+
+  HIGH:
+    priority: 4  # Moderate priority - rushing can introduce bugs
+    primary: |
+      **Rushing detected.** You're moving very quickly. This may be fine, but verify:
+      - Are you introducing technical debt or bugs?
+      - Have you tested your changes?
+      - Are you documenting as you go?
+      - Is the quality matching the speed?
+    secondary: |
+      Speed is valuable, but not at the cost of quality. Make sure you're building it right, not just building it fast.
+
+# ============================================================================
+# Communication Health: "Am I connected?"
+# ============================================================================
+
+communication_health:
+  LOW:
+    priority: 3  # Important - communication breakdown needs attention
+    primary: |
+      **Communication gap detected.** You haven't checked in recently. Consider:
+      - Provide a status update on your current work
+      - Ask if priorities have changed
+      - Share any blockers or challenges you're facing
+      - Confirm you're working on the right thing
+    secondary: |
+      Regular communication prevents misalignment. A quick check-in can save hours of wasted effort.
+
+  HIGH:
+    priority: 6  # Low priority - over-communication is rarely harmful
+    primary: |
+      **Frequent communication detected.** You're checking in very often. This might indicate:
+      - Uncertainty about the task (see knowledge_sufficiency)
+      - Seeking validation frequently (see certainty_alignment)
+      - Consider batching updates rather than sending each thought
+    secondary: |
+      While communication is good, overly frequent check-ins can be disruptive. Find a balance.
+
+# ============================================================================
+# Productive Engagement: "Am I contributing?"
+# ============================================================================
+
+productive_engagement:
+  LOW:
+    priority: 2  # High priority - idle time should be addressed
+    primary: |
+      **Idle state detected.** You don't have an assigned task. You should:
+      - Ask for the next task or assignment
+      - Review your backlog if you have one
+      - Offer to help with other priorities
+      - Use downtime productively (documentation, refactoring, learning)
+    secondary: |
+      It's better to proactively seek work than to wait passively. Take initiative to stay engaged.
+
+  HIGH:
+    priority: 4  # Moderate priority - overload should be flagged
+    primary: |
+      **Overload detected.** You have many tasks assigned. Consider:
+      - Communicate if you're overwhelmed
+      - Prioritize the most important tasks
+      - Delegate or defer lower-priority work
+      - Focus on one thing at a time rather than context-switching
+    secondary: |
+      Being overloaded reduces quality and increases burnout risk. It's okay to push back or ask for help.
+
+# ============================================================================
+# Knowledge Application: "Learning vs doing?"
+# ============================================================================
+
+knowledge_application:
+  LOW:
+    priority: 5  # Moderate priority - some research before building is good
+    primary: |
+      **Building without sufficient research detected.** You're spending most time implementing. Verify:
+      - Have you researched best practices?
+      - Are you aware of existing solutions or patterns?
+      - Would a few minutes of research save hours of rework?
+    secondary: |
+      A little upfront research can prevent reinventing the wheel or going down the wrong path.
+
+  HIGH:
+    priority: 2  # High priority - analysis paralysis wastes time
+    primary: |
+      **Analysis paralysis detected.** You've been researching for a long time. It's time to:
+      - Start building with what you know
+      - Use research as a reference, not a complete guide
+      - Accept that you'll learn more by doing
+      - Remember: you can iterate and improve
+    secondary: |
+      Perfect knowledge is impossible. At some point, you need to start building and learn by doing. You know enough to begin.
+
+# ============================================================================
+# Prioritization Rules
+# ============================================================================
+
+# When multiple dimensions are imbalanced, priority determines which shows first:
+# Priority 1 (Highest): knowledge_sufficiency LOW, certainty_alignment LOW
+# Priority 2 (High): progress_momentum LOW, productive_engagement LOW, knowledge_application HIGH
+# Priority 3 (Moderate): certainty_alignment HIGH, communication_health LOW
+# Priority 4 (Lower): progress_momentum HIGH, productive_engagement HIGH
+# Priority 5 (Low): knowledge_sufficiency HIGH, knowledge_application LOW
+# Priority 6 (Lowest): communication_health HIGH
+#
+# Logic: Safety and forward progress are highest priority.
+# Refinements (overconfidence, over-communication) are lower priority.
