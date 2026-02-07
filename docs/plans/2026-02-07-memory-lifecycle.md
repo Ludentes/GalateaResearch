@@ -748,6 +748,319 @@ History preserved — we can still query "what did we use before?"
 
 ---
 
+## Foundational Principle: Raw Data Preservation & Iterative Improvement
+
+### Philosophy
+
+> If we save the original data, we can improve memory later.
+
+Memory extraction quality will be imperfect at launch. That's acceptable IF:
+1. We preserve all raw data that memories were derived from
+2. We can measure practical memory quality
+3. We can reprocess raw data with improved extraction when needed
+
+This means: **start simple, measure, iterate.** A basic heuristic-based
+extraction that saves its source data is more valuable than a sophisticated
+extraction that can't be improved.
+
+### What "Raw Data" Means at Each Layer
+
+```
+Layer 0: OTEL Events (raw activity)
+  ├── Stored in: PostgreSQL `activities` table
+  ├── Never deleted, marked processed: boolean
+  ├── Contains: full OTEL attributes, timestamps, source info
+  └── Reprocess: re-enrich, re-group into sessions
+
+Layer 1: ActivityRecord (ingested events)
+  ├── Stored in: PostgreSQL
+  ├── Links to: raw OTEL event
+  └── Reprocess: re-classify activity type
+
+Layer 2: ActivitySession (enriched groups)
+  ├── Stored in: PostgreSQL
+  ├── Links to: ActivityRecord[] via activityIds
+  ├── Contains: guessedIntent, guessedIntentConfidence
+  └── Reprocess: re-guess intent with better model
+
+Layer 3: Dialogue (validation exchanges)
+  ├── Stored in: PostgreSQL
+  ├── Links to: ActivitySession
+  ├── Contains: agent question, user response, corrections
+  └── Reprocess: re-extract from validated dialogues
+
+Layer 4: Memory Formation (extracted memories)
+  ├── Stored in: memory storage (PostgreSQL / FalkorDB)
+  ├── Links to: source_session, source_user_message, source_assistant_message
+  └── Reprocess: re-extract with improved patterns/models
+
+Chat Conversations:
+  ├── Stored in: PostgreSQL `messages` table
+  ├── Contains: full user message + assistant response
+  ├── Gatekeeper decision logged (skip/ingest/needs_llm)
+  └── Reprocess: re-gate with improved patterns, re-extract
+```
+
+### The Reprocessing Contract
+
+Every extracted memory MUST link back to its raw source:
+
+```typescript
+interface ExtractedMemory {
+  // ... memory fields ...
+
+  // Source provenance (required)
+  source_type: 'observation' | 'gatekeeper' | 'dialogue' | 'manual' | 'promotion'
+  source_id: string           // ActivitySession ID, message ID, dialogue ID, etc.
+  extraction_method: string   // 'pattern:preference_re' | 'ollama' | 'mem0' | 'claude'
+  extraction_version: string  // 'v1' — bumped when extraction logic changes
+  extracted_at: Date
+
+  // Raw data reference (for reprocessing)
+  raw_user_message?: string   // Original user text
+  raw_assistant_message?: string
+  raw_activity_ids?: string[] // For observation pipeline
+}
+```
+
+This means we can always:
+1. Find all memories extracted by a specific method/version
+2. Find the raw data that produced each memory
+3. Re-extract from raw data using a new method
+4. Compare old vs new extraction quality
+
+### Reprocessing Pipeline
+
+When extraction improves (new patterns, better model, new extractor):
+
+```
+1. Query: all memories where extraction_version < current_version
+   AND source_type = 'gatekeeper'
+
+2. For each batch:
+   a. Load raw_user_message + raw_assistant_message
+   b. Run new extraction pipeline
+   c. Compare new facts vs existing facts
+   d. If materially different:
+      - Supersede old facts (not delete)
+      - Store new facts with new extraction_version
+      - Log reprocessing event
+
+3. For observation pipeline memories:
+   a. Load raw activity sessions (via raw_activity_ids)
+   b. Re-run Layer 4 extraction
+   c. Same compare/supersede flow
+```
+
+```typescript
+async function reprocessMemories(
+  sourceType: 'gatekeeper' | 'observation',
+  oldVersion: string,
+  newVersion: string
+): Promise<ReprocessingReport> {
+  const staleMemories = await db.query(`
+    SELECT * FROM memories
+    WHERE extraction_version = $1
+      AND source_type = $2
+  `, [oldVersion, sourceType])
+
+  const report = { processed: 0, changed: 0, unchanged: 0, errors: 0 }
+
+  for (const batch of chunk(staleMemories, 100)) {
+    for (const memory of batch) {
+      try {
+        // Load raw source data
+        const rawData = await loadRawSource(memory.source_type, memory.source_id)
+
+        // Re-extract with current pipeline
+        const newFacts = await extractionPipeline.extract(rawData)
+
+        // Compare
+        if (factsAreMateriallyDifferent(memory, newFacts)) {
+          // Supersede old, store new
+          await supersede(memory.id, newFacts, {
+            reason: `Reprocessed: ${oldVersion} → ${newVersion}`,
+            extraction_version: newVersion
+          })
+          report.changed++
+        } else {
+          // Just bump version, facts are equivalent
+          await updateVersion(memory.id, newVersion)
+          report.unchanged++
+        }
+        report.processed++
+      } catch (error) {
+        report.errors++
+        log.error('Reprocessing failed', { memoryId: memory.id, error })
+      }
+    }
+  }
+
+  return report
+}
+```
+
+### What To Save From Day 1
+
+Even if we start with basic heuristic extraction, save:
+
+| Data | Where | Why |
+|------|-------|-----|
+| Every chat turn (user + assistant) | PostgreSQL `messages` | Re-gate, re-extract |
+| Gatekeeper decision per turn | PostgreSQL `gatekeeper_log` | Measure skip/ingest accuracy |
+| Extraction method + version | On each memory | Know what to reprocess |
+| Raw OTEL events | PostgreSQL `activities` | Re-enrich, re-extract |
+| Activity sessions | PostgreSQL `activity_sessions` | Re-run Layer 4 |
+| Dialogue exchanges | PostgreSQL `dialogues` | Re-extract from validated data |
+
+### Gatekeeper Decision Log
+
+Every gatekeeper evaluation should be logged, not just the ones that produce memories:
+
+```typescript
+interface GatekeeperLogEntry {
+  id: string
+  timestamp: Date
+
+  // Input
+  user_message: string
+  assistant_message: string
+  session_id: string
+
+  // Decision
+  decision: 'skip' | 'ingest_pattern' | 'ingest_llm' | 'ingest_failopen'
+  reason: string                    // "GREETING_RE match" | "PREFERENCE_RE match" | "LLM extraction"
+  pattern_matched?: string          // Which specific pattern matched
+  extraction_method?: string        // 'pattern' | 'ollama' | 'mem0' | etc.
+
+  // Output
+  facts_extracted: number
+  fact_ids?: string[]               // Links to extracted memories
+
+  // Versioning
+  gatekeeper_version: string        // 'v1' — bumped when patterns change
+}
+```
+
+This log enables:
+1. **Measuring skip accuracy:** Were skipped messages truly noise?
+2. **Measuring extraction recall:** Did we miss important facts?
+3. **Pattern coverage:** What % is handled by patterns vs LLM?
+4. **Reprocessing:** When patterns improve, re-gate old conversations
+
+### Practical Quality Measurement
+
+#### Metric 1: Retrieval Usefulness (Runtime)
+
+After each task where memory is retrieved, track:
+
+```typescript
+interface RetrievalFeedback {
+  task_id: string
+  facts_retrieved: string[]     // Memory IDs
+  facts_used_in_response: string[]  // Subset actually referenced by LLM
+
+  // Implicit signal
+  task_outcome: 'success' | 'failure' | 'partial'
+
+  // Optional explicit signal
+  user_feedback?: 'helpful' | 'unhelpful' | 'wrong' | 'missing'
+}
+```
+
+**Derived metrics:**
+- **Retrieval precision:** facts_used / facts_retrieved (are we retrieving junk?)
+- **Retrieval recall:** Did the agent ask for info that existed in memory but wasn't retrieved?
+- **Outcome correlation:** Do tasks with better memory retrieval succeed more?
+
+#### Metric 2: Extraction Audit (Periodic)
+
+Sample 100 random gatekeeper log entries per week:
+
+```sql
+-- Random sample of recent gatekeeper decisions
+SELECT * FROM gatekeeper_log
+WHERE timestamp > NOW() - INTERVAL '7 days'
+ORDER BY RANDOM()
+LIMIT 100
+```
+
+Manual (or LLM-assisted) review:
+- **Skip accuracy:** Of skipped messages, how many actually contained facts? (false negative rate)
+- **Extraction accuracy:** Of extracted facts, how many are correct? (precision)
+- **Extraction completeness:** Of extractable facts, how many were found? (recall)
+
+Target: <5% false negatives on skip, >85% precision on extraction.
+
+#### Metric 3: Memory Freshness (Automated)
+
+```sql
+-- Facts that are potentially stale
+SELECT id, content, valid_from,
+       EXTRACT(DAYS FROM NOW() - last_retrieved_at) as days_since_retrieval
+FROM memories
+WHERE valid_until IS NULL  -- Still "active"
+  AND last_retrieved_at < NOW() - INTERVAL '60 days'
+ORDER BY days_since_retrieval DESC
+```
+
+#### Metric 4: Promotion Health (Automated)
+
+```sql
+-- Episodes that should have promoted but didn't
+SELECT e1.id, e1.summary, COUNT(*) as similar_count
+FROM episodes e1
+JOIN episodes e2 ON cosine_similarity(e1.embedding, e2.embedding) > 0.85
+  AND e1.id != e2.id
+  AND ABS(EXTRACT(EPOCH FROM e1.timestamp - e2.timestamp)) > 3600
+GROUP BY e1.id, e1.summary
+HAVING COUNT(*) >= 2
+  AND NOT EXISTS (
+    SELECT 1 FROM memories m WHERE m.learned_from @> ARRAY[e1.id]
+  )
+```
+
+### Iteration Strategy
+
+**Week 1-2: Launch with heuristics**
+- Pattern-based extraction (PREFERENCE_RE, POLICY_RE, etc.)
+- Ollama LLM fallback for pattern misses
+- Save ALL raw data + gatekeeper log
+- Basic retrieval metrics
+
+**Week 3-4: First quality audit**
+- Sample 100 gatekeeper decisions, measure false negatives
+- Sample 100 extracted facts, measure precision
+- Identify top pattern misses → add new patterns
+- Identify top false skips → adjust gatekeeper rules
+
+**Month 2: Reprocess if needed**
+- If extraction quality is below target:
+  - Add patterns for common misses
+  - Try different LLM extractor (Mem0, Graphiti, Claude)
+  - Reprocess all gatekeeper_version='v1' data with v2
+- If retrieval quality is below target:
+  - Tune scoring formula weights
+  - Adjust token budget allocation
+  - Add domain-specific retrieval paths
+
+**Month 3+: Automated quality loop**
+- Weekly automated audit (LLM reviews sample)
+- Automatic pattern miss detection
+- Promotion health monitoring
+- Confidence calibration based on retrieval usefulness
+
+### What This Means For Implementation
+
+1. **Start simple:** Basic patterns + Ollama. Don't over-engineer extraction.
+2. **Save everything:** Raw data, gatekeeper decisions, extraction metadata.
+3. **Measure from day 1:** Retrieval feedback, gatekeeper audit logs.
+4. **Extraction version on every memory:** Know what to reprocess.
+5. **Reprocessing pipeline ready:** But don't build it until needed.
+6. **Iterate based on data:** Not guesses about what patterns to add.
+
+---
+
 ## Scenario Traces
 
 Every scenario from REFERENCE_SCENARIOS.md traced through the full lifecycle.
