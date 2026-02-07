@@ -488,6 +488,107 @@ Knowledge evolving over time.
 
 ---
 
+## Epic 9: Memory Lifecycle (Added 2026-02-07)
+
+Scenarios for memory aging, promotion, and cognitive model updates.
+See [plans/2026-02-07-memory-lifecycle.md](./plans/2026-02-07-memory-lifecycle.md) for full lifecycle documentation.
+See REFERENCE_SCENARIOS.md Memory Scenarios 7-13 for concrete traces.
+
+### US-9.1: Memory Promotion Pipeline
+**As an** Agent
+**I want** repeated experiences to automatically become structured knowledge
+**So that** patterns are recognized without manual intervention
+
+**Acceptance Criteria:**
+- 2 similar episodes (>0.85 similarity, >1h apart) → observation
+- 3 observations (no contradictions, confidence >0.7) → fact
+- Fact (confidence ≥0.9) + consequence severity → rule
+- Rule + 2 successful uses + trigger/steps → procedure
+- 3 agents with same pattern → shared fact
+- Circular promotion prevented (self-reinforcing evidence discounted 50%)
+- Each promotion creates links to source memories
+
+### US-9.2: Confidence Decay & Archival
+**As an** Agent
+**I want** unused memories to gradually fade rather than clutter my context
+**So that** stale knowledge doesn't compete with relevant knowledge
+
+**Acceptance Criteria:**
+- Memories unused for 30+ days begin confidence decay
+- Memories below confidence threshold after 90 days → archived to cold storage
+- Stub remains in main storage (provenance)
+- Archived memories retrievable via explicit search
+- Hard rules NEVER decay (exempt from all decay)
+- Decay is gradual (not sudden drop)
+- Archival logged for auditability
+
+### US-9.3: Token Budget Management
+**As an** Agent
+**I want** my context to prioritize the most relevant memories
+**So that** limited token budget is used optimally
+
+**Acceptance Criteria:**
+- Hard rules: reserved budget (500 tokens), never dropped
+- Procedures: up to 1500 tokens, ranked by trigger_similarity * success_rate
+- Facts: up to 4000 tokens, ranked by similarity*0.4 + recency*0.2 + confidence*0.3 + source*0.1
+- Models: up to 1000 tokens (self + user context)
+- Episodes: up to 1000 tokens (recent context)
+- Dropped facts logged for debugging retrieval quality
+
+### US-9.4: Cognitive Model Updates
+**As an** Agent
+**I want** my understanding of myself, the user, and our relationship to evolve
+**So that** my behavior adapts based on accumulated experience
+
+**Acceptance Criteria:**
+- **Self Model:** Updated after mistakes (add weakness) and improvements (remove weakness)
+- **User Model:** Theories with evidence_for/against, adjusted by new observations
+- **User Model:** Expertise scores updated based on observed proficiency
+- **User Model:** Direct user dialogue can clarify/override any theory
+- **Relationship Model:** Trust builds over successful interactions
+- **Relationship Model:** Phase transitions (initial → learning → productive → mature)
+- **Domain Model:** Updated from domain-specific observations
+
+### US-9.5: Procedure Success Tracking
+**As an** Agent
+**I want** to track whether procedures actually work
+**So that** unreliable procedures are flagged and updated
+
+**Acceptance Criteria:**
+- Success rate updated after each use (rolling average)
+- Failed use creates episode + investigation trigger
+- Procedure steps can be updated (with supersession of old version)
+- Low success rate (<0.5) triggers review alert
+- Success rate context preserved ("failed due to SDK change")
+
+### US-9.6: Daily Ritual Memory Formation
+**As a** User
+**I want** morning/evening rituals to capture plans and validate observations
+**So that** context is established daily and corrections are captured
+
+**Acceptance Criteria:**
+- Morning prompt creates temporal facts (today's plan, meetings)
+- Evening summary validates observations with user
+- User corrections get confidence 1.0
+- Temporal facts (meetings) expire at end of day
+- Incomplete goals carry over to next morning
+- Rituals don't create noise (greetings filtered)
+
+### US-9.7: Gatekeeper LLM Fallback
+**As an** Agent
+**I want** ambiguous messages to be processed by LLM when patterns fail
+**So that** important facts aren't lost because regex didn't match
+
+**Acceptance Criteria:**
+- Pattern miss correctly detected
+- ExtractionOrchestrator tries extractors in order (cheap-first)
+- If first extractor fails, falls back to next
+- Facts stored with extraction_method for tracking
+- Pattern misses logged for future pattern library improvements
+- Fallback latency <500ms for Ollama, <2000ms for Claude
+
+---
+
 ## Priority Matrix
 
 ### P0 - Must Have (MVP)
@@ -532,6 +633,13 @@ Knowledge evolving over time.
 | US-6.4 | Persona Import | Phase 6 |
 | US-7.1-4 | Multi-Agent Coordination | Future |
 | US-8.1-5 | Learning & Promotion | Phase 5 |
+| US-9.1 | Memory Promotion Pipeline | Phase 5 |
+| US-9.2 | Confidence Decay & Archival | Phase 5 |
+| US-9.3 | Token Budget Management | Phase 2 |
+| US-9.4 | Cognitive Model Updates | Phase 5 |
+| US-9.5 | Procedure Success Tracking | Phase 2 |
+| US-9.6 | Daily Ritual Memory Formation | Phase 5 |
+| US-9.7 | Gatekeeper LLM Fallback | Phase 2 |
 
 ---
 
