@@ -199,7 +199,7 @@ export async function assembleContext(
   // Step 3: Score and rank
   const scored = scoreFacts(facts)
 
-  // Step 4: Allocate budget — trim facts to fit
+  // Step 5a: Allocate budget for facts (part of token budget allocation)
   let factsContent = ""
   let factsIncluded = 0
   const factsTokenBudget = budget.facts
@@ -270,7 +270,7 @@ export async function assembleContext(
     }
   }
 
-  // Step 5: Assemble by priority
+  // Step 6: Assemble by priority
   sections.sort((a, b) => a.priority - b.priority)
 
   const systemPrompt = sections
