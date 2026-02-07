@@ -72,6 +72,7 @@ export class ReflexionLoop {
     const iterations: ReflexionIteration[] = []
     let currentDraft = ""
     let totalLlmCalls = 0
+    let totalTokens = 0
 
     // Main reflexion loop
     for (let i = 0; i < maxIterations; i++) {
@@ -79,16 +80,20 @@ export class ReflexionLoop {
 
       // Step 1: Generate draft (or revise previous)
       if (i === 0) {
-        currentDraft = await this._generateInitialDraft(task, context)
+        const result = await this._generateInitialDraft(task, context)
+        currentDraft = result.text
+        totalTokens += result.usage.totalTokens || 0
         totalLlmCalls++
       } else {
         const previousCritique = iterations[i - 1].critique
-        currentDraft = await this._reviseDraft(
+        const result = await this._reviseDraft(
           task,
           context,
           currentDraft,
           previousCritique,
         )
+        currentDraft = result.text
+        totalTokens += result.usage.totalTokens || 0
         totalLlmCalls++
       }
 
@@ -96,12 +101,14 @@ export class ReflexionLoop {
       const evidence = await this._gatherEvidence(task, currentDraft, context)
 
       // Step 3: Generate critique
-      const critique = await this._generateCritique(
+      const critiqueResult = await this._generateCritique(
         task,
         currentDraft,
         evidence,
       )
+      totalTokens += critiqueResult.usage.totalTokens || 0
       totalLlmCalls++
+      const critique = critiqueResult.critique
 
       // Store iteration
       iterations.push({
@@ -118,6 +125,7 @@ export class ReflexionLoop {
           final_draft: currentDraft,
           iterations,
           total_llm_calls: totalLlmCalls,
+          total_tokens: totalTokens,
           success: true,
         }
       }
@@ -128,6 +136,7 @@ export class ReflexionLoop {
           final_draft: currentDraft,
           iterations,
           total_llm_calls: totalLlmCalls,
+          total_tokens: totalTokens,
           success: false,
         }
       }
@@ -138,6 +147,7 @@ export class ReflexionLoop {
       final_draft: currentDraft,
       iterations,
       total_llm_calls: totalLlmCalls,
+      total_tokens: totalTokens,
       success: false,
     }
   }
@@ -148,12 +158,12 @@ export class ReflexionLoop {
    *
    * @param task - Task to draft response for
    * @param context - Agent context with history and retrieved knowledge
-   * @returns Initial draft text
+   * @returns Generate result with text and usage
    */
   private async _generateInitialDraft(
     task: Task,
     context: AgentContext,
-  ): Promise<string> {
+  ): Promise<Awaited<ReturnType<typeof generateText>>> {
     const prompt = `Generate a response to this task. Focus on addressing the core request with available knowledge.
 
 Task: ${task.message}
@@ -173,7 +183,7 @@ Generate a comprehensive draft response. Don't worry about perfection - this dra
       prompt,
     })
 
-    return result.text
+    return result
   }
 
   /**
@@ -183,14 +193,14 @@ Generate a comprehensive draft response. Don't worry about perfection - this dra
    * @param context - Agent context
    * @param previousDraft - Draft that failed critique
    * @param critique - Critique with issues to address
-   * @returns Revised draft
+   * @returns Generate result with text and usage
    */
   private async _reviseDraft(
     task: Task,
     context: AgentContext,
     previousDraft: string,
     critique: Critique,
-  ): Promise<string> {
+  ): Promise<Awaited<ReturnType<typeof generateText>>> {
     const issuesText = critique.issues
       .map((issue) => {
         let text = `[${issue.severity.toUpperCase()}] ${issue.type}: ${issue.description}`
@@ -230,7 +240,7 @@ Return ONLY the revised draft (no meta-commentary).`
       prompt,
     })
 
-    return result.text
+    return result
   }
 
   /**
@@ -285,13 +295,13 @@ Return ONLY the revised draft (no meta-commentary).`
    * @param task - Original task
    * @param draft - Draft to critique
    * @param evidence - Evidence gathered
-   * @returns Critique with pass/fail decision
+   * @returns Critique with pass/fail decision and token usage
    */
   private async _generateCritique(
     task: Task,
     draft: string,
     evidence: Evidence[],
-  ): Promise<Critique> {
+  ): Promise<{ critique: Critique; usage: { totalTokens: number } }> {
     const prompt = `Review this draft response and identify any issues.
 
 Original Task: ${task.message}
@@ -344,17 +354,23 @@ IMPORTANT: Be strict but fair. Only flag real issues. If the draft is good, retu
 
       // Validate and return
       return {
-        issues: parsed.issues || [],
-        confidence: parsed.confidence || 0.5,
-        passes: parsed.passes !== undefined ? parsed.passes : true,
+        critique: {
+          issues: parsed.issues || [],
+          confidence: parsed.confidence || 0.5,
+          passes: parsed.passes !== undefined ? parsed.passes : true,
+        },
+        usage: { totalTokens: result.usage.totalTokens || 0 },
       }
     } catch (error) {
       // If JSON parsing fails, assume draft passes (graceful degradation)
       console.warn("[ReflexionLoop] Failed to parse critique JSON:", error)
       return {
-        issues: [],
-        confidence: 0.5,
-        passes: true,
+        critique: {
+          issues: [],
+          confidence: 0.5,
+          passes: true,
+        },
+        usage: { totalTokens: result.usage.totalTokens || 0 },
       }
     }
   }

@@ -117,10 +117,11 @@ export async function sendMessageLogic(
     try {
       const reflexionResult = await reflexionLoop.execute(task, agentContext, 3)
       responseText = reflexionResult.final_draft
-      // Estimate tokens for reflexion loop (actual usage would come from LLM calls)
-      totalTokens = reflexionResult.total_llm_calls * 500 || 0 // rough estimate
-      inputTokens = reflexionResult.total_llm_calls * 300 || 0
-      outputTokens = reflexionResult.total_llm_calls * 200 || 0
+      // Use actual token usage from reflexion loop
+      totalTokens = reflexionResult.total_tokens || 0
+      // Approximate input/output split (60/40 ratio typical for generation)
+      inputTokens = Math.floor(totalTokens * 0.6)
+      outputTokens = Math.floor(totalTokens * 0.4)
     } catch (error) {
       console.warn(
         "[reflexion-loop] Reflexion loop failed, falling back to direct LLM",

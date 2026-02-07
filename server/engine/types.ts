@@ -165,6 +165,7 @@ export interface ReflexionResult {
   final_draft: string
   iterations: ReflexionIteration[]
   total_llm_calls: number
+  total_tokens: number // Total tokens used across all LLM calls
   success: boolean // Did critique pass, or hit max iterations?
 }
 
