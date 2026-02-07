@@ -1,0 +1,133 @@
+# Phase 3: Model Configuration
+#
+# Defines available models and their characteristics for activity routing.
+# Models are selected based on activity level (0-3).
+
+models:
+  # Level 0: No model needed (direct execution)
+  none:
+    id: none
+    provider: none
+    model_id: none
+    characteristics:
+      - direct-execution
+    suitable_for:
+      - 0
+    cost_per_1k_tokens: 0
+
+  # Level 1: Fast, cheap model for pattern-following
+  haiku:
+    id: haiku
+    provider: anthropic
+    model_id: claude-haiku-4-5-20251001
+    characteristics:
+      - fast
+      - cheap
+      - pattern-following
+      - procedure-execution
+    suitable_for:
+      - 1
+    cost_per_1k_tokens: 0.001
+    max_tokens: 4096
+    temperature: 0.3  # Lower temperature for consistent procedure following
+
+  # Level 2-3: Capable model for reasoning and implementation
+  sonnet:
+    id: sonnet
+    provider: anthropic
+    model_id: claude-sonnet-4-5-20250929
+    characteristics:
+      - capable
+      - reasoning
+      - implementation
+      - analysis
+      - reflexion
+    suitable_for:
+      - 2
+      - 3
+    cost_per_1k_tokens: 0.015
+    max_tokens: 8192
+    temperature: 0.7  # Higher temperature for creative problem-solving
+
+  # Optional: Opus for extremely complex tasks (not used by default)
+  opus:
+    id: opus
+    provider: anthropic
+    model_id: claude-opus-4-6
+    characteristics:
+      - most-capable
+      - deep-reasoning
+      - complex-implementation
+    suitable_for: []  # Not assigned to any level by default
+    cost_per_1k_tokens: 0.075
+    max_tokens: 8192
+    temperature: 0.7
+
+# ============================================================================
+# Activity Level to Model Mapping
+# ============================================================================
+
+# Level 0 (Direct): none
+#   - Tool calls (git status, file operations)
+#   - Templates ("done", "ok", "completed")
+#   - No LLM needed, direct execution
+#   - Cost: $0
+
+# Level 1 (Pattern): haiku
+#   - Strong procedure match (>80% success, >5 uses)
+#   - Following established patterns
+#   - Low-risk, well-understood tasks
+#   - Cost: ~$0.001 per 1k tokens
+
+# Level 2 (Reason): sonnet
+#   - Standard implementation tasks
+#   - Requires reasoning and decision-making
+#   - Most tasks fall into this category
+#   - Cost: ~$0.015 per 1k tokens
+
+# Level 3 (Reflect): sonnet + reflexion
+#   - High-stakes or irreversible actions
+#   - Knowledge gaps + high stakes
+#   - Uncertainty + irreversible actions
+#   - Requires Draft → Critique → Revise loop
+#   - Cost: ~$0.015 per 1k tokens × 2-3 iterations
+
+# ============================================================================
+# Provider Configuration
+# ============================================================================
+
+# Supported providers:
+# - anthropic: Claude models via Anthropic API
+# - openrouter: Multi-provider routing
+# - ollama: Local models (future)
+
+# Override provider at runtime with environment variable:
+#   AI_PROVIDER=openrouter
+
+# ============================================================================
+# Cost Optimization Strategy
+# ============================================================================
+
+# Target distribution (based on Phase 3 success criteria):
+# - Level 0-1: >60% of activities
+# - Level 2: ~30% of activities
+# - Level 3: <10% of activities
+
+# Expected cost reduction vs always-Sonnet:
+# - Level 0: 100% savings
+# - Level 1: ~93% savings (haiku vs sonnet)
+# - Level 2: 0% (same model)
+# - Level 3: -100% to -200% (reflexion overhead)
+
+# Overall target: >50% cost reduction
+
+# ============================================================================
+# Future Enhancements
+# ============================================================================
+
+# Phase 4+:
+# - Add Ollama local models for Level 0-1
+# - Add model-specific tool support
+# - Add cost tracking and analytics
+# - Add dynamic model selection based on context size
+# - Add persona-specific model preferences

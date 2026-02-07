@@ -25,6 +25,10 @@
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import YAML from "yaml"
+import {
+  enrichTaskWithFlags,
+  hasProcedureMatch,
+} from "./classification-helpers"
 import type {
   ActivityClassification,
   ActivityLevel,
@@ -136,11 +140,14 @@ export class ActivityRouter {
     procedure: Procedure | null,
     homeostasis: HomeostasisState | null,
   ): Promise<ActivityClassification> {
+    // Enrich task with computed flags if not already present
+    const enrichedTask = enrichTaskWithFlags(task)
+
     // Level 0: Direct execution (no LLM needed)
-    if (task.isToolCall || task.isTemplate) {
+    if (enrichedTask.isToolCall || enrichedTask.isTemplate) {
       return {
         level: 0,
-        reason: task.isToolCall
+        reason: enrichedTask.isToolCall
           ? "Direct tool call - no LLM needed"
           : "Template message - no LLM needed",
         model: "none",
@@ -150,7 +157,7 @@ export class ActivityRouter {
     }
 
     // Level 3: High-risk situations requiring deep reflection
-    const needsReflection = this._needsReflexion(task, homeostasis)
+    const needsReflection = this._needsReflexion(enrichedTask, homeostasis)
     if (needsReflection.needs) {
       return {
         level: 3,
@@ -161,11 +168,11 @@ export class ActivityRouter {
       }
     }
 
-    // Level 1: Strong procedure match (>0.8 success rate)
-    if (procedure && procedure.success_rate > 0.8) {
+    // Level 1: Strong procedure match
+    if (hasProcedureMatch(procedure)) {
       return {
         level: 1,
-        reason: `Strong procedure match: "${procedure.name}" (${(procedure.success_rate * 100).toFixed(0)}% success rate)`,
+        reason: `Strong procedure match: "${procedure!.name}" (${(procedure!.success_rate * 100).toFixed(0)}% success, ${procedure!.times_used} uses)`,
         model: "haiku",
         skipMemory: false,
         skipHomeostasis: true, // Computed-only for Level 1
