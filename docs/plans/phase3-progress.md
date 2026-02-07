@@ -13,8 +13,8 @@
 |-------|--------|----------|-------|
 | A: Homeostasis Engine | 🟢 Complete | 5/5 tasks | 18h est, ~2h actual |
 | B: Activity Router | 🟢 Complete | 5/5 tasks | 16h est, ~2h actual |
-| C: Reflexion Loop | ⚪ Pending | 0/4 tasks | 14h est |
-| D: Homeostasis Guidance | ⚪ Pending | 0/4 tasks | 10h est |
+| C: Reflexion Loop | 🟢 Complete | 4/4 tasks | 14h est, ~1h actual |
+| D: Cognitive Models Integration | ⚪ Pending | 0/4 tasks | 10h est |
 | E: End-to-End Integration | ⚪ Pending | 0/5 tasks | 16h est |
 | F: UI Visualization | ⚪ Pending | 0/4 tasks | 11h est |
 | G: Reference Scenarios | ⚪ Pending | 0/5 tasks | 10h est |
@@ -208,9 +208,89 @@
 
 ## Stage C: Reflexion Loop
 
-**Status**: ⚪ Pending
+**Status**: 🟢 Complete
 **Estimated**: 14 hours
-**Actual**: TBD
+**Actual**: ~1 hour
+
+### Tasks
+
+#### C1: Create ReflexionLoop class (~4h) ✅
+- ✅ Create `server/engine/reflexion-loop.ts` (241 lines)
+- ✅ Implement execute() method with iteration loop
+- ✅ Add method stubs for draft(), critique(), revise(), gatherEvidence()
+- ✅ TypeScript compiles cleanly
+
+**Deliverable**: ✅ Compilable ReflexionLoop class with loop structure
+
+#### C2: Implement loop logic (~4h) ✅
+- ✅ Implement executeReflexion() main loop
+- ✅ Draft → Evidence → Critique → Revise cycle
+- ✅ Exit conditions: critique passes OR max iterations reached
+- ✅ Trace storage (iterations array with all details)
+- ✅ Error handling (graceful fallback)
+
+**Deliverable**: ✅ Complete loop logic with exit conditions
+
+#### C3: Implement evidence gathering (~3h) ✅
+- ✅ Implemented _gatherEvidence() method
+- ✅ Memory-only approach (Option A from plan)
+- ✅ Structured Evidence[] array format
+- ✅ Placeholder returns memory evidence for testing
+
+**Deliverable**: ✅ Evidence gathering infrastructure (placeholder implementation)
+
+#### C4: Comprehensive unit tests (~3h) ✅
+- ✅ Test loop with placeholder methods
+- ✅ Test early exit (critique passes on iteration 1)
+- ✅ Test max iterations enforcement
+- ✅ Test evidence gathering
+- ✅ Test iteration tracking (numbering, revised flag, draft storage)
+- ✅ Test LLM call tracking
+- ✅ Test result structure
+- ✅ Test edge cases (empty message, single iteration, minimal context)
+- ✅ Test placeholder behavior
+- ✅ Test integration readiness (type compatibility)
+- ✅ 24 tests total, all passing
+
+**Deliverable**: ✅ Stage C complete with 24 comprehensive tests
+
+### Summary
+
+**Files Created** (2):
+- `server/engine/reflexion-loop.ts` (241 lines) - Core reflexion loop
+- `server/engine/__tests__/reflexion-loop.unit.test.ts` (371 lines, 24 tests)
+
+**Files Modified** (0):
+- `server/engine/types.ts` - No changes (existing types reused)
+
+**Total New Code**: ~612 lines
+
+**Tests Added**: 24 tests
+**Tests Passing**: 133 total (Stage A: 38 + Stage B: 71 + Stage C: 24)
+
+**Loop Flow**:
+1. Generate initial draft
+2. Gather evidence to support/refute draft
+3. Critique draft against evidence
+4. If critique fails: revise draft and repeat
+5. If critique passes OR max iterations: return final draft
+
+**Exit Conditions**:
+- Critique passes (issues.length === 0 or all minor)
+- Max iterations reached (default: 3)
+
+**Implementation Approach**:
+- Placeholder methods for draft, critique, revision
+- Real loop logic with iteration tracking
+- Evidence gathering returns memory placeholder
+- All infrastructure ready for Stage E LLM integration
+- Enables testing of loop mechanics without LLM dependency
+
+**Key Design Decisions**:
+- Memory-only evidence (Option A) for Stage C
+- Placeholder LLM calls (actual implementation in Stage E)
+- Comprehensive iteration tracking for debugging
+- Type-safe interfaces using existing Phase 3 types
 
 ---
 
