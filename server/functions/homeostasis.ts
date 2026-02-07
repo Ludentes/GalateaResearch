@@ -31,7 +31,7 @@ export async function getHomeostasisStateLogic(sessionId: string) {
       productive_engagement: state.productiveEngagement,
       knowledge_application: state.knowledgeApplication,
     },
-    assessmentMethod: state.assessmentMethod as Record<string, "computed" | "llm">,
+    assessmentMethod: (state.assessmentMethod ?? {}) as Record<string, "computed" | "llm">,
     assessedAt: state.assessedAt.toISOString(),
   }
 }
@@ -41,7 +41,12 @@ export async function getHomeostasisStateLogic(sessionId: string) {
  * Returns null if no state exists (404 equivalent).
  */
 export const getHomeostasisState = createServerFn({ method: "GET" })
-  .inputValidator((input: { sessionId: string }) => input)
+  .inputValidator((input: { sessionId: string }) => {
+    if (!input.sessionId || input.sessionId.trim() === "") {
+      throw new Error("sessionId is required")
+    }
+    return input
+  })
   .handler(async ({ data }) => {
     return getHomeostasisStateLogic(data.sessionId)
   })
