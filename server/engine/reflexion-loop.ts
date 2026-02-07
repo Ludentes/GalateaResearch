@@ -1,5 +1,5 @@
 /**
- * Phase 3: Reflexion Loop (Stage C)
+ * Phase 3: Reflexion Loop (Stage C + Stage E LLM Integration)
  *
  * Implements Draft → Critique → Revise loop for Level 3 tasks.
  * Used when tasks require deep reasoning, have knowledge gaps,
@@ -17,14 +17,17 @@
  * - Max iterations reached (default: 3)
  *
  * Usage:
- *   const loop = new ReflexionLoop()
+ *   const loop = new ReflexionLoop(model)
  *   const result = await loop.execute(task, context, maxIterations)
  */
 
+import type { LanguageModel } from "ai"
+import { generateText } from "ai"
 import type {
   AgentContext,
   Critique,
   Evidence,
+  Issue,
   ReflexionIteration,
   ReflexionResult,
   Task,
@@ -47,6 +50,12 @@ const DEFAULT_MAX_ITERATIONS = 3
  * critique or max iterations reached.
  */
 export class ReflexionLoop {
+  private model: LanguageModel
+
+  constructor(model: LanguageModel) {
+    this.model = model
+  }
+
   /**
    * Execute reflexion loop for a task.
    *
@@ -138,66 +147,134 @@ export class ReflexionLoop {
    * This is the first attempt before any critique.
    *
    * @param task - Task to draft response for
-   * @param _context - Agent context (unused in placeholder)
+   * @param context - Agent context with history and retrieved knowledge
    * @returns Initial draft text
    */
   private async _generateInitialDraft(
     task: Task,
-    _context: AgentContext,
+    context: AgentContext,
   ): Promise<string> {
-    // TODO: In Stage E, replace with actual LLM call
-    // For now, return placeholder to enable testing
-    return `[DRAFT] Response to: ${task.message}\n\nThis is a placeholder draft that will be replaced with actual LLM generation in Stage E.`
+    const prompt = `Generate a response to this task. Focus on addressing the core request with available knowledge.
+
+Task: ${task.message}
+
+Context from conversation history:
+${context.messageHistory?.slice(-3).map((m) => `${m.role}: ${m.content}`).join("\n") || "No previous messages"}
+
+Retrieved Knowledge:
+${context.retrievedFacts?.map((f) => `- ${f.content} (confidence: ${f.confidence})`).join("\n") || "No retrieved facts"}
+
+${context.retrievedProcedures && context.retrievedProcedures.length > 0 ? `Available Procedures:\n${context.retrievedProcedures.map((p) => `- ${p.name} (success rate: ${(p.success_rate * 100).toFixed(0)}%)`).join("\n")}` : ""}
+
+Generate a comprehensive draft response. Don't worry about perfection - this draft will be critiqued and revised if needed.`
+
+    const result = await generateText({
+      model: this.model,
+      prompt,
+    })
+
+    return result.text
   }
 
   /**
    * Revise draft based on critique feedback.
    *
    * @param task - Original task
-   * @param _context - Agent context (unused in placeholder)
-   * @param _previousDraft - Draft that failed critique (unused in placeholder)
+   * @param context - Agent context
+   * @param previousDraft - Draft that failed critique
    * @param critique - Critique with issues to address
    * @returns Revised draft
    */
   private async _reviseDraft(
     task: Task,
-    _context: AgentContext,
-    _previousDraft: string,
+    context: AgentContext,
+    previousDraft: string,
     critique: Critique,
   ): Promise<string> {
-    // TODO: In Stage E, replace with actual LLM call
-    // For now, return modified placeholder
-    const issueDescriptions = critique.issues
-      .map((issue) => `- ${issue.type}: ${issue.description}`)
-      .join("\n")
+    const issuesText = critique.issues
+      .map((issue) => {
+        let text = `[${issue.severity.toUpperCase()}] ${issue.type}: ${issue.description}`
+        if (issue.suggested_fix) {
+          text += `\n  Suggestion: ${issue.suggested_fix}`
+        }
+        return text
+      })
+      .join("\n\n")
 
-    return `[REVISED DRAFT] Response to: ${task.message}\n\nAddressing issues:\n${issueDescriptions}\n\nThis is a placeholder revision that will be replaced with actual LLM generation in Stage E.`
+    const prompt = `Revise the draft to address the identified issues.
+
+Original Task: ${task.message}
+
+Previous Draft:
+${previousDraft}
+
+Issues to Address:
+${issuesText}
+
+Context from conversation history:
+${context.messageHistory?.slice(-3).map((m) => `${m.role}: ${m.content}`).join("\n") || "No previous messages"}
+
+Retrieved Knowledge:
+${context.retrievedFacts?.map((f) => `- ${f.content}`).join("\n") || "No retrieved facts"}
+
+Generate an improved version that:
+1. Fixes all CRITICAL and MAJOR issues
+2. Addresses MINOR issues where possible
+3. Preserves correct parts of the previous draft
+4. Maintains clarity and coherence
+
+Return ONLY the revised draft (no meta-commentary).`
+
+    const result = await generateText({
+      model: this.model,
+      prompt,
+    })
+
+    return result.text
   }
 
   /**
    * Gather evidence to support or refute draft.
-   * Currently memory-only (Option A from plan).
+   * Uses memory from agent context (retrieved facts and procedures).
    *
-   * @param _task - Task being drafted for (unused in placeholder)
-   * @param _draft - Current draft to gather evidence for (unused in placeholder)
-   * @param _context - Agent context (includes memory, unused in placeholder)
+   * @param _task - Task being drafted for
+   * @param _draft - Current draft to gather evidence for
+   * @param context - Agent context with retrieved facts and procedures
    * @returns Evidence array
    */
   private async _gatherEvidence(
     _task: Task,
     _draft: string,
-    _context: AgentContext,
+    context: AgentContext,
   ): Promise<Evidence[]> {
-    // TODO: In Stage C3, implement actual evidence gathering
-    // For now, return placeholder to enable testing
-    return [
-      {
-        source: "memory",
-        content: "Placeholder evidence from memory",
-        relevance: 0.8,
-        supports_claim: "Retrieved from agent context",
-      },
-    ]
+    const evidence: Evidence[] = []
+
+    // Gather from retrieved facts
+    if (context.retrievedFacts) {
+      for (const fact of context.retrievedFacts) {
+        evidence.push({
+          source: "memory",
+          content: fact.content,
+          relevance: fact.confidence,
+          supports_claim: `Fact from memory (confidence: ${fact.confidence})`,
+        })
+      }
+    }
+
+    // Gather from retrieved procedures
+    if (context.retrievedProcedures) {
+      for (const proc of context.retrievedProcedures) {
+        evidence.push({
+          source: "memory",
+          content: `Procedure: ${proc.name} (${(proc.success_rate * 100).toFixed(0)}% success rate)`,
+          relevance: proc.success_rate,
+          supports_claim: `Established procedure`,
+        })
+      }
+    }
+
+    // If no evidence from context, return empty array
+    return evidence
   }
 
   /**
@@ -205,22 +282,80 @@ export class ReflexionLoop {
    *
    * Determines if draft is acceptable or needs revision.
    *
-   * @param _task - Original task (unused in placeholder)
-   * @param _draft - Draft to critique (unused in placeholder)
-   * @param _evidence - Evidence gathered (unused in placeholder)
+   * @param task - Original task
+   * @param draft - Draft to critique
+   * @param evidence - Evidence gathered
    * @returns Critique with pass/fail decision
    */
   private async _generateCritique(
-    _task: Task,
-    _draft: string,
-    _evidence: Evidence[],
+    task: Task,
+    draft: string,
+    evidence: Evidence[],
   ): Promise<Critique> {
-    // TODO: In Stage E, replace with actual LLM call
-    // For now, return placeholder that passes to enable testing
-    return {
-      issues: [],
-      confidence: 0.9,
-      passes: true,
+    const prompt = `Review this draft response and identify any issues.
+
+Original Task: ${task.message}
+
+Draft Response:
+${draft}
+
+Available Evidence:
+${evidence.length > 0 ? evidence.map((e) => `- [${e.source}] ${e.content} (relevance: ${e.relevance})`).join("\n") : "No evidence available"}
+
+Identify issues in THREE categories:
+
+1. MISSING: What key information is absent from the draft?
+2. UNSUPPORTED: What claims in the draft lack evidence?
+3. INCORRECT: What statements contradict the available evidence?
+
+For each issue found, provide:
+- type: "missing" | "unsupported" | "incorrect"
+- description: Clear explanation of the issue
+- severity: "minor" | "major" | "critical"
+- suggested_fix: Actionable suggestion (optional)
+
+Format your response as JSON:
+{
+  "issues": [
+    {"type": "missing", "description": "...", "severity": "major", "suggested_fix": "..."}
+  ],
+  "confidence": 0.8,
+  "passes": false
+}
+
+Rules for "passes":
+- true if issues array is empty OR all issues are "minor"
+- false if there are any "major" or "critical" issues
+
+IMPORTANT: Be strict but fair. Only flag real issues. If the draft is good, return empty issues array with passes: true.`
+
+    const result = await generateText({
+      model: this.model,
+      prompt,
+    })
+
+    // Parse JSON response
+    try {
+      const parsed = JSON.parse(result.text) as {
+        issues: Issue[]
+        confidence: number
+        passes: boolean
+      }
+
+      // Validate and return
+      return {
+        issues: parsed.issues || [],
+        confidence: parsed.confidence || 0.5,
+        passes: parsed.passes !== undefined ? parsed.passes : true,
+      }
+    } catch (error) {
+      // If JSON parsing fails, assume draft passes (graceful degradation)
+      console.warn("[ReflexionLoop] Failed to parse critique JSON:", error)
+      return {
+        issues: [],
+        confidence: 0.5,
+        passes: true,
+      }
     }
   }
 }
@@ -229,6 +364,6 @@ export class ReflexionLoop {
  * Create a new ReflexionLoop instance.
  * Convenience factory function.
  */
-export function createReflexionLoop(): ReflexionLoop {
-  return new ReflexionLoop()
+export function createReflexionLoop(model: LanguageModel): ReflexionLoop {
+  return new ReflexionLoop(model)
 }

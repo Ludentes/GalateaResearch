@@ -1,14 +1,71 @@
 /**
- * Phase 3: Reflexion Loop Unit Tests (Stage C)
+ * Phase 3: Reflexion Loop Unit Tests (Stage E)
  */
 
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { ReflexionLoop, createReflexionLoop } from "../reflexion-loop"
 import type { AgentContext, Task } from "../types"
 
 // ============================================================================
+// Mock AI SDK
+// ============================================================================
+
+// Mock the generateText function from AI SDK
+vi.mock("ai", () => ({
+  generateText: vi.fn(async ({ prompt }: { prompt: string; model: unknown }) => {
+    // Detect which method is calling based on prompt content
+    if (prompt.includes("Generate a response to this task")) {
+      // _generateInitialDraft
+      return {
+        text: `[DRAFT] Response to task`,
+        finishReason: "stop",
+        usage: { promptTokens: 100, completionTokens: 50 },
+      }
+    }
+    if (prompt.includes("Revise the draft")) {
+      // _reviseDraft
+      return {
+        text: `[REVISED DRAFT] Improved version addressing issues`,
+        finishReason: "stop",
+        usage: { promptTokens: 150, completionTokens: 75 },
+      }
+    }
+    if (prompt.includes("Review this draft response")) {
+      // _generateCritique
+      return {
+        text: JSON.stringify({
+          issues: [],
+          confidence: 0.9,
+          passes: true,
+        }),
+        finishReason: "stop",
+        usage: { promptTokens: 120, completionTokens: 30 },
+      }
+    }
+
+    // Default fallback
+    return {
+      text: "Mock response",
+      finishReason: "stop",
+      usage: { promptTokens: 100, completionTokens: 50 },
+    }
+  }),
+}))
+
+// ============================================================================
 // Test Helpers
 // ============================================================================
+
+/**
+ * Create mock LanguageModel for testing.
+ * Can be any object since we're mocking generateText at the module level.
+ */
+function createMockLanguageModel() {
+  return {
+    provider: "mock",
+    modelId: "mock-model",
+  } as any
+}
 
 function createMockTask(message: string, overrides?: Partial<Task>): Task {
   return {
@@ -34,12 +91,14 @@ function createMockContext(overrides?: Partial<AgentContext>): AgentContext {
 describe("ReflexionLoop", () => {
   describe("constructor and factory", () => {
     it("creates instance via constructor", () => {
-      const loop = new ReflexionLoop()
+      const model = createMockLanguageModel()
+      const loop = new ReflexionLoop(model)
       expect(loop).toBeInstanceOf(ReflexionLoop)
     })
 
     it("creates instance via factory function", () => {
-      const loop = createReflexionLoop()
+      const model = createMockLanguageModel()
+      const loop = createReflexionLoop(model)
       expect(loop).toBeInstanceOf(ReflexionLoop)
     })
   })
@@ -50,7 +109,7 @@ describe("ReflexionLoop", () => {
 
   describe("execute - happy path", () => {
     it("executes single iteration when critique passes immediately", async () => {
-      const loop = createReflexionLoop()
+      const loop = createReflexionLoop(createMockLanguageModel())
       const task = createMockTask("Implement authentication")
       const context = createMockContext()
 
@@ -65,9 +124,14 @@ describe("ReflexionLoop", () => {
     })
 
     it("includes evidence in iteration", async () => {
-      const loop = createReflexionLoop()
+      const loop = createReflexionLoop(createMockLanguageModel())
       const task = createMockTask("Add button to UI")
-      const context = createMockContext()
+      const context = createMockContext({
+        retrievedFacts: [
+          { content: "User prefers dark mode", confidence: 0.9 },
+          { content: "App uses Material UI", confidence: 0.8 },
+        ],
+      })
 
       const result = await loop.execute(task, context, 3)
 
@@ -78,7 +142,7 @@ describe("ReflexionLoop", () => {
     })
 
     it("includes critique in iteration", async () => {
-      const loop = createReflexionLoop()
+      const loop = createReflexionLoop(createMockLanguageModel())
       const task = createMockTask("Deploy to production")
       const context = createMockContext()
 
@@ -99,7 +163,7 @@ describe("ReflexionLoop", () => {
 
   describe("execute - max iterations", () => {
     it("respects maxIterations parameter", async () => {
-      const loop = createReflexionLoop()
+      const loop = createReflexionLoop(createMockLanguageModel())
       const task = createMockTask("Complex task")
       const context = createMockContext()
 
@@ -110,7 +174,7 @@ describe("ReflexionLoop", () => {
     })
 
     it("uses default max iterations of 3", async () => {
-      const loop = createReflexionLoop()
+      const loop = createReflexionLoop(createMockLanguageModel())
       const task = createMockTask("Another task")
       const context = createMockContext()
 
@@ -128,7 +192,7 @@ describe("ReflexionLoop", () => {
 
   describe("iteration tracking", () => {
     it("assigns correct iteration numbers", async () => {
-      const loop = createReflexionLoop()
+      const loop = createReflexionLoop(createMockLanguageModel())
       const task = createMockTask("Test iteration numbers")
       const context = createMockContext()
 
@@ -140,7 +204,7 @@ describe("ReflexionLoop", () => {
     })
 
     it("marks first iteration as not revised", async () => {
-      const loop = createReflexionLoop()
+      const loop = createReflexionLoop(createMockLanguageModel())
       const task = createMockTask("First iteration test")
       const context = createMockContext()
 
@@ -150,7 +214,7 @@ describe("ReflexionLoop", () => {
     })
 
     it("stores draft in each iteration", async () => {
-      const loop = createReflexionLoop()
+      const loop = createReflexionLoop(createMockLanguageModel())
       const task = createMockTask("Draft storage test")
       const context = createMockContext()
 
@@ -170,7 +234,7 @@ describe("ReflexionLoop", () => {
 
   describe("LLM call tracking", () => {
     it("counts LLM calls correctly", async () => {
-      const loop = createReflexionLoop()
+      const loop = createReflexionLoop(createMockLanguageModel())
       const task = createMockTask("LLM call tracking test")
       const context = createMockContext()
 
@@ -182,7 +246,7 @@ describe("ReflexionLoop", () => {
     })
 
     it("tracks total LLM calls across iterations", async () => {
-      const loop = createReflexionLoop()
+      const loop = createReflexionLoop(createMockLanguageModel())
       const task = createMockTask("Multi-iteration LLM tracking")
       const context = createMockContext()
 
@@ -199,7 +263,7 @@ describe("ReflexionLoop", () => {
 
   describe("result structure", () => {
     it("returns ReflexionResult with required fields", async () => {
-      const loop = createReflexionLoop()
+      const loop = createReflexionLoop(createMockLanguageModel())
       const task = createMockTask("Result structure test")
       const context = createMockContext()
 
@@ -212,7 +276,7 @@ describe("ReflexionLoop", () => {
     })
 
     it("final_draft matches last iteration's draft", async () => {
-      const loop = createReflexionLoop()
+      const loop = createReflexionLoop(createMockLanguageModel())
       const task = createMockTask("Final draft match test")
       const context = createMockContext()
 
@@ -223,7 +287,7 @@ describe("ReflexionLoop", () => {
     })
 
     it("iterations array is not empty", async () => {
-      const loop = createReflexionLoop()
+      const loop = createReflexionLoop(createMockLanguageModel())
       const task = createMockTask("Iterations array test")
       const context = createMockContext()
 
@@ -239,7 +303,7 @@ describe("ReflexionLoop", () => {
 
   describe("edge cases", () => {
     it("handles empty task message", async () => {
-      const loop = createReflexionLoop()
+      const loop = createReflexionLoop(createMockLanguageModel())
       const task = createMockTask("")
       const context = createMockContext()
 
@@ -251,7 +315,7 @@ describe("ReflexionLoop", () => {
     })
 
     it("handles maxIterations = 1", async () => {
-      const loop = createReflexionLoop()
+      const loop = createReflexionLoop(createMockLanguageModel())
       const task = createMockTask("Single iteration test")
       const context = createMockContext()
 
@@ -261,7 +325,7 @@ describe("ReflexionLoop", () => {
     })
 
     it("handles context with minimal data", async () => {
-      const loop = createReflexionLoop()
+      const loop = createReflexionLoop(createMockLanguageModel())
       const task = createMockTask("Minimal context test")
       const context = createMockContext({
         messageHistory: [],
@@ -276,44 +340,50 @@ describe("ReflexionLoop", () => {
   })
 
   // ============================================================================
-  // Placeholder Behavior (Stage C)
+  // LLM Integration Behavior (Stage E)
   // ============================================================================
 
-  describe("placeholder behavior (Stage C)", () => {
-    it("generates draft with placeholder text", async () => {
-      const loop = createReflexionLoop()
-      const task = createMockTask("Test placeholder draft")
+  describe("LLM integration behavior (Stage E)", () => {
+    it("generates draft with LLM", async () => {
+      const loop = createReflexionLoop(createMockLanguageModel())
+      const task = createMockTask("Test LLM draft")
       const context = createMockContext()
 
       const result = await loop.execute(task, context, 3)
 
       expect(result.final_draft).toContain("[DRAFT]")
-      expect(result.final_draft).toContain("placeholder")
+      expect(result.final_draft).toBeDefined()
+      expect(result.final_draft.length).toBeGreaterThan(0)
     })
 
-    it("critique always passes (placeholder)", async () => {
-      const loop = createReflexionLoop()
-      const task = createMockTask("Test placeholder critique")
+    it("critique passes with valid draft", async () => {
+      const loop = createReflexionLoop(createMockLanguageModel())
+      const task = createMockTask("Test LLM critique")
       const context = createMockContext()
 
       const result = await loop.execute(task, context, 3)
 
-      // With placeholder implementation, critique should pass immediately
+      // Mock returns passing critique
       expect(result.success).toBe(true)
       expect(result.iterations[0].critique.passes).toBe(true)
+      expect(result.iterations[0].critique.confidence).toBeGreaterThan(0)
     })
 
-    it("evidence comes from memory placeholder", async () => {
-      const loop = createReflexionLoop()
-      const task = createMockTask("Test placeholder evidence")
-      const context = createMockContext()
+    it("evidence comes from memory context", async () => {
+      const loop = createReflexionLoop(createMockLanguageModel())
+      const task = createMockTask("Test memory evidence")
+      const context = createMockContext({
+        retrievedFacts: [
+          { content: "Test fact from memory", confidence: 0.85 },
+        ],
+      })
 
       const result = await loop.execute(task, context, 3)
 
       const evidence = result.iterations[0].evidence
       expect(evidence.length).toBeGreaterThan(0)
       expect(evidence[0].source).toBe("memory")
-      expect(evidence[0].content).toContain("Placeholder")
+      expect(evidence[0].content).toContain("Test fact")
     })
   })
 
@@ -323,7 +393,7 @@ describe("ReflexionLoop", () => {
 
   describe("integration readiness", () => {
     it("accepts Task from types.ts", async () => {
-      const loop = createReflexionLoop()
+      const loop = createReflexionLoop(createMockLanguageModel())
       const task: Task = {
         message: "Type compatibility test",
         sessionId: "test-session",
@@ -338,7 +408,7 @@ describe("ReflexionLoop", () => {
     })
 
     it("accepts AgentContext from types.ts", async () => {
-      const loop = createReflexionLoop()
+      const loop = createReflexionLoop(createMockLanguageModel())
       const task = createMockTask("Context type test")
       const context: AgentContext = {
         sessionId: "test-session",
@@ -358,7 +428,7 @@ describe("ReflexionLoop", () => {
     })
 
     it("returns properly typed ReflexionResult", async () => {
-      const loop = createReflexionLoop()
+      const loop = createReflexionLoop(createMockLanguageModel())
       const task = createMockTask("Result type test")
       const context = createMockContext()
 
