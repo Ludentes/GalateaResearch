@@ -1,0 +1,789 @@
+{
+  "config": {
+    "name": "mem0-nemotron-3-nano",
+    "model": "nemotron-3-nano:latest",
+    "temperature": 0.7,
+    "description": "Mem0 with nemotron-3-nano:latest"
+  },
+  "run_timestamp": 1770411741406,
+  "dataset_version": "v2",
+  "results": [
+    {
+      "test_case_id": "preference-simple",
+      "category": "entity_extraction",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 0,
+      "total_facts": 1,
+      "latency_ms": 21216,
+      "extracted": {
+        "entities": [],
+        "facts": [
+          {
+            "source": "I",
+            "target": "dark mode",
+            "fact": "I prefer dark mode"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 5
+      }
+    },
+    {
+      "test_case_id": "tech-stack-complex",
+      "category": "fact_extraction",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 2,
+      "total_facts": 2,
+      "latency_ms": 10718,
+      "extracted": {
+        "entities": [
+          {
+            "name": "Uses Redis",
+            "labels": []
+          },
+          {
+            "name": "Uses",
+            "labels": []
+          }
+        ],
+        "facts": [
+          {
+            "source": "user",
+            "target": "user",
+            "fact": "Uses Redis for caching"
+          },
+          {
+            "source": "user",
+            "target": "user",
+            "fact": "Uses PostgreSQL for the database"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 2
+      }
+    },
+    {
+      "test_case_id": "dedup-same-entity",
+      "category": "deduplication",
+      "entity_precision": 1,
+      "entity_recall": 1,
+      "entity_f1": 1,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 2,
+      "total_facts": 1,
+      "latency_ms": 10629,
+      "extracted": {
+        "entities": [
+          {
+            "name": "User",
+            "labels": []
+          },
+          {
+            "name": "Docker",
+            "labels": []
+          }
+        ],
+        "facts": [
+          {
+            "source": "User",
+            "target": "Docker for containers",
+            "fact": "User uses Docker for containers"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 10
+      }
+    },
+    {
+      "test_case_id": "policy-extraction",
+      "category": "fact_extraction",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 1,
+      "total_facts": 1,
+      "latency_ms": 10338,
+      "extracted": {
+        "entities": [
+          {
+            "name": "Always",
+            "labels": []
+          }
+        ],
+        "facts": [
+          {
+            "source": "Always",
+            "target": "TypeScript for new projects",
+            "fact": "Always uses TypeScript for new projects"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 3
+      }
+    },
+    {
+      "test_case_id": "edge-case-empty",
+      "category": "edge_case",
+      "entity_precision": 1,
+      "entity_recall": 1,
+      "entity_f1": 1,
+      "fact_precision": 1,
+      "fact_recall": 1,
+      "fact_f1": 1,
+      "parse_success": false,
+      "total_entities": 0,
+      "total_facts": 0,
+      "latency_ms": 8957,
+      "extracted": {
+        "entities": [],
+        "facts": [],
+        "parse_success": false,
+        "latency_ms": 6
+      }
+    },
+    {
+      "test_case_id": "person-extraction",
+      "category": "entity_extraction",
+      "entity_precision": 0.3333333333333333,
+      "entity_recall": 0.3333333333333333,
+      "entity_f1": 0.3333333333333333,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 3,
+      "total_facts": 2,
+      "latency_ms": 12301,
+      "extracted": {
+        "entities": [
+          {
+            "name": "Backend",
+            "labels": []
+          },
+          {
+            "name": "Works",
+            "labels": []
+          },
+          {
+            "name": "Sarah",
+            "labels": []
+          }
+        ],
+        "facts": [
+          {
+            "source": "user",
+            "target": "user",
+            "fact": "Backend team"
+          },
+          {
+            "source": "user",
+            "target": "user",
+            "fact": "Works with Sarah"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 3
+      }
+    },
+    {
+      "test_case_id": "temporal-started-using",
+      "category": "temporal",
+      "entity_precision": 0.5,
+      "entity_recall": 0.5,
+      "entity_f1": 0.5,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 2,
+      "total_facts": 1,
+      "latency_ms": 10333,
+      "extracted": {
+        "entities": [
+          {
+            "name": "Started",
+            "labels": []
+          },
+          {
+            "name": "React",
+            "labels": []
+          }
+        ],
+        "facts": [
+          {
+            "source": "user",
+            "target": "user",
+            "fact": "Started using React in 2020"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 4
+      }
+    },
+    {
+      "test_case_id": "multi-entity-list",
+      "category": "entity_extraction",
+      "entity_precision": 0.6666666666666666,
+      "entity_recall": 0.5,
+      "entity_f1": 0.5714285714285715,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 3,
+      "total_facts": 1,
+      "latency_ms": 10406,
+      "extracted": {
+        "entities": [
+          {
+            "name": "Favourite",
+            "labels": []
+          },
+          {
+            "name": "Python",
+            "labels": []
+          },
+          {
+            "name": "Rust",
+            "labels": []
+          }
+        ],
+        "facts": [
+          {
+            "source": "user",
+            "target": "user",
+            "fact": "Favourite programming languages are Python, JavaScript, and Rust"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 9
+      }
+    },
+    {
+      "test_case_id": "edge-case-negation",
+      "category": "edge_case",
+      "entity_precision": 0.5,
+      "entity_recall": 0.5,
+      "entity_f1": 0.5,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 2,
+      "total_facts": 1,
+      "latency_ms": 9940,
+      "extracted": {
+        "entities": [
+          {
+            "name": "Does",
+            "labels": []
+          },
+          {
+            "name": "Windows",
+            "labels": []
+          }
+        ],
+        "facts": [
+          {
+            "source": "user",
+            "target": "user",
+            "fact": "Does not use Windows"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 3
+      }
+    },
+    {
+      "test_case_id": "multi-turn-preference",
+      "category": "multi_turn",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": false,
+      "total_entities": 0,
+      "total_facts": 0,
+      "latency_ms": 10566,
+      "extracted": {
+        "entities": [],
+        "facts": [],
+        "parse_success": false,
+        "latency_ms": 3
+      }
+    },
+    {
+      "test_case_id": "tool-comparison",
+      "category": "fact_extraction",
+      "entity_precision": 0.25,
+      "entity_recall": 0.3333333333333333,
+      "entity_f1": 0.28571428571428575,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 4,
+      "total_facts": 2,
+      "latency_ms": 10969,
+      "extracted": {
+        "entities": [
+          {
+            "name": "Switched",
+            "labels": []
+          },
+          {
+            "name": "Jenkins",
+            "labels": []
+          },
+          {
+            "name": "Actions",
+            "labels": []
+          },
+          {
+            "name": "Easier",
+            "labels": []
+          }
+        ],
+        "facts": [
+          {
+            "source": "user",
+            "target": "user",
+            "fact": "Switched from Jenkins to GitHub Actions"
+          },
+          {
+            "source": "user",
+            "target": "user",
+            "fact": "Easier to maintain"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 4
+      }
+    },
+    {
+      "test_case_id": "preference-with-reason",
+      "category": "fact_extraction",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 2,
+      "total_facts": 1,
+      "latency_ms": 10159,
+      "extracted": {
+        "entities": [
+          {
+            "name": "Prefers",
+            "labels": []
+          },
+          {
+            "name": "Code",
+            "labels": []
+          }
+        ],
+        "facts": [
+          {
+            "source": "user",
+            "target": "user",
+            "fact": "Prefers VS Code because of the extensions ecosystem"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 3
+      }
+    },
+    {
+      "test_case_id": "dedup-variant-names",
+      "category": "deduplication",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 1,
+      "total_facts": 1,
+      "latency_ms": 12569,
+      "extracted": {
+        "entities": [
+          {
+            "name": "Uses Postgres",
+            "labels": []
+          }
+        ],
+        "facts": [
+          {
+            "source": "user",
+            "target": "user",
+            "fact": "Uses Postgres for main database"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 5
+      }
+    },
+    {
+      "test_case_id": "temporal-duration",
+      "category": "temporal",
+      "entity_precision": 1,
+      "entity_recall": 1,
+      "entity_f1": 1,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 2,
+      "total_facts": 1,
+      "latency_ms": 10293,
+      "extracted": {
+        "entities": [
+          {
+            "name": "User",
+            "labels": []
+          },
+          {
+            "name": "Linux",
+            "labels": []
+          }
+        ],
+        "facts": [
+          {
+            "source": "User",
+            "target": "been using Linux for 5 years",
+            "fact": "User has been using Linux for 5 years"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 3
+      }
+    },
+    {
+      "test_case_id": "edge-case-conditional",
+      "category": "edge_case",
+      "entity_precision": 0.5,
+      "entity_recall": 0.5,
+      "entity_f1": 0.5,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 2,
+      "total_facts": 1,
+      "latency_ms": 9957,
+      "extracted": {
+        "entities": [
+          {
+            "name": "Would",
+            "labels": []
+          },
+          {
+            "name": "Kubernetes",
+            "labels": []
+          }
+        ],
+        "facts": [
+          {
+            "source": "user",
+            "target": "user",
+            "fact": "Would use Kubernetes if more resources were available"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 12
+      }
+    },
+    {
+      "test_case_id": "complex-tech-stack",
+      "category": "fact_extraction",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 3,
+      "total_facts": 3,
+      "latency_ms": 11859,
+      "extracted": {
+        "entities": [
+          {
+            "name": "Uses",
+            "labels": []
+          },
+          {
+            "name": "Uses Next",
+            "labels": []
+          },
+          {
+            "name": "Uses Express",
+            "labels": []
+          }
+        ],
+        "facts": [
+          {
+            "source": "user",
+            "target": "user",
+            "fact": "Uses MongoDB for data storage"
+          },
+          {
+            "source": "user",
+            "target": "user",
+            "fact": "Uses Next.js for frontend"
+          },
+          {
+            "source": "user",
+            "target": "user",
+            "fact": "Uses Express for API"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 10
+      }
+    },
+    {
+      "test_case_id": "multi-turn-context",
+      "category": "multi_turn",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 1,
+      "total_facts": 1,
+      "latency_ms": 11027,
+      "extracted": {
+        "entities": [
+          {
+            "name": "User",
+            "labels": []
+          }
+        ],
+        "facts": [
+          {
+            "source": "User",
+            "target": "been using GraphQL for the last 2 years",
+            "fact": "User has been using GraphQL for the last 2 years"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 4
+      }
+    },
+    {
+      "test_case_id": "concept-extraction",
+      "category": "entity_extraction",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 0,
+      "total_facts": 1,
+      "latency_ms": 11700,
+      "extracted": {
+        "entities": [],
+        "facts": [
+          {
+            "source": "user",
+            "target": "user",
+            "fact": "I'm a big fan of functional programming and immutability"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 12
+      }
+    },
+    {
+      "test_case_id": "relationship-between-tools",
+      "category": "fact_extraction",
+      "entity_precision": 1,
+      "entity_recall": 1,
+      "entity_f1": 1,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 2,
+      "total_facts": 1,
+      "latency_ms": 10197,
+      "extracted": {
+        "entities": [
+          {
+            "name": "Tailwind",
+            "labels": []
+          },
+          {
+            "name": "React",
+            "labels": []
+          }
+        ],
+        "facts": [
+          {
+            "source": "user",
+            "target": "user",
+            "fact": "Tailwind works really well with React"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 1
+      }
+    },
+    {
+      "test_case_id": "temporal-recency",
+      "category": "temporal",
+      "entity_precision": 0.5,
+      "entity_recall": 0.5,
+      "entity_f1": 0.5,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 2,
+      "total_facts": 1,
+      "latency_ms": 9185,
+      "extracted": {
+        "entities": [
+          {
+            "name": "Started",
+            "labels": []
+          },
+          {
+            "name": "Rust",
+            "labels": []
+          }
+        ],
+        "facts": [
+          {
+            "source": "user",
+            "target": "user",
+            "fact": "Started learning Rust last month"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 6
+      }
+    },
+    {
+      "test_case_id": "edge-case-question",
+      "category": "edge_case",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 1,
+      "fact_recall": 1,
+      "fact_f1": 1,
+      "parse_success": false,
+      "total_entities": 0,
+      "total_facts": 0,
+      "latency_ms": 8484,
+      "extracted": {
+        "entities": [],
+        "facts": [],
+        "parse_success": false,
+        "latency_ms": 3
+      }
+    },
+    {
+      "test_case_id": "long-context-multiple-facts",
+      "category": "fact_extraction",
+      "entity_precision": 0.2,
+      "entity_recall": 0.25,
+      "entity_f1": 0.22222222222222224,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 5,
+      "total_facts": 5,
+      "latency_ms": 15117,
+      "extracted": {
+        "entities": [
+          {
+            "name": "User",
+            "labels": []
+          },
+          {
+            "name": "Uses Firebase",
+            "labels": []
+          },
+          {
+            "name": "Uses React Native",
+            "labels": []
+          },
+          {
+            "name": "Team",
+            "labels": []
+          },
+          {
+            "name": "Uses",
+            "labels": []
+          }
+        ],
+        "facts": [
+          {
+            "source": "user",
+            "target": "user",
+            "fact": "User works at a startup building a mobile app"
+          },
+          {
+            "source": "user",
+            "target": "user",
+            "fact": "Uses Firebase for backend services"
+          },
+          {
+            "source": "user",
+            "target": "user",
+            "fact": "Uses React Native for cross-platform development"
+          },
+          {
+            "source": "Team",
+            "target": "small but growing",
+            "fact": "Team is small but growing"
+          },
+          {
+            "source": "user",
+            "target": "user",
+            "fact": "Uses GitHub for version control"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 3
+      }
+    }
+  ],
+  "aggregate": {
+    "parse_success_rate": 0.8636363636363636,
+    "avg_entity_f1": 0.33694083694083693,
+    "avg_fact_f1": 0.09090909090909091
+  }
+}

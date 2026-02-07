@@ -18,14 +18,7 @@
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:seed": "tsx server/db/seed.ts",
-    "benchmark:graphiti": "tsx scripts/benchmark-graphiti.ts",
-    "benchmark:all": "scripts/run-all-benchmarks.sh",
-    "benchmark:all:clean": "scripts/run-all-benchmarks.sh --clean",
-    "benchmark:comprehensive": "scripts/run-all-benchmarks.sh --subset=comprehensive",
-    "benchmark:granite4": "scripts/run-all-benchmarks.sh --subset=granite4",
-    "benchmark:nemotron": "scripts/run-all-benchmarks.sh --subset=nemotron",
-    "benchmark:gpt-oss": "scripts/run-all-benchmarks.sh --subset=gpt-oss"
+    "db:seed": "tsx server/db/seed.ts"
   },
   "dependencies": {
     "@langfuse/otel": "^4.5.1",
@@ -44,7 +37,6 @@
     "clsx": "^2.1.1",
     "dotenv": "^17.2.4",
     "drizzle-orm": "^0.45.1",
-    "falkordb": "^6.6.0",
     "langfuse": "^3.38.6",
     "lucide-react": "^0.563.0",
     "postgres": "^3.4.8",
@@ -69,6 +61,7 @@
     "h3": "2.0.1-rc.11",
     "jsdom": "^28.0.0",
     "nitro": "3.0.1-alpha.2",
+    "ollama": "^0.5.14",
     "tsx": "^4.21.0",
     "typescript": "^5.7.2",
     "vite": "^7.3.1",

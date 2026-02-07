@@ -7,13 +7,13 @@ vi.mock("../graphiti-client", () => ({
   ingestMessages: vi.fn(),
 }))
 
-import { ingestMessages, searchFacts } from "../graphiti-client"
 import {
   getSelfModel,
   getUserModel,
   updateSelfModel,
   updateUserModel,
 } from "../cognitive-models"
+import { ingestMessages, searchFacts } from "../graphiti-client"
 import type { FactResult } from "../types"
 
 function makeFact(fact: string, createdAt?: string): FactResult {
@@ -194,11 +194,7 @@ describe("cognitive-models", () => {
     it("ingests a weakness observation", async () => {
       vi.mocked(ingestMessages).mockResolvedValue(true)
 
-      await updateSelfModel(
-        "galatea",
-        "weakness",
-        "Struggles with complex SQL",
-      )
+      await updateSelfModel("galatea", "weakness", "Struggles with complex SQL")
 
       const msg = vi.mocked(ingestMessages).mock.calls[0][1][0]
       expect(msg.content).toContain("weakness")
@@ -208,11 +204,7 @@ describe("cognitive-models", () => {
     it("ingests a recent miss observation", async () => {
       vi.mocked(ingestMessages).mockResolvedValue(true)
 
-      await updateSelfModel(
-        "galatea",
-        "recent_miss",
-        "Forgot loading state",
-      )
+      await updateSelfModel("galatea", "recent_miss", "Forgot loading state")
 
       const msg = vi.mocked(ingestMessages).mock.calls[0][1][0]
       expect(msg.content).toContain("recent miss")
@@ -221,11 +213,7 @@ describe("cognitive-models", () => {
     it("returns false on ingestion failure", async () => {
       vi.mocked(ingestMessages).mockResolvedValue(false)
 
-      const result = await updateSelfModel(
-        "galatea",
-        "strength",
-        "anything",
-      )
+      const result = await updateSelfModel("galatea", "strength", "anything")
 
       expect(result).toBe(false)
     })

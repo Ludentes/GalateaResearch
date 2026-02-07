@@ -1,0 +1,597 @@
+{
+  "config": {
+    "name": "mem0-granite4-tiny-h",
+    "model": "granite4:tiny-h",
+    "temperature": 0.7,
+    "description": "Mem0 with granite4:tiny-h"
+  },
+  "run_timestamp": 1770410938808,
+  "dataset_version": "v2",
+  "results": [
+    {
+      "test_case_id": "preference-simple",
+      "category": "entity_extraction",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": false,
+      "total_entities": 0,
+      "total_facts": 0,
+      "latency_ms": 8935,
+      "extracted": {
+        "entities": [],
+        "facts": [],
+        "parse_success": false,
+        "latency_ms": 2
+      }
+    },
+    {
+      "test_case_id": "tech-stack-complex",
+      "category": "fact_extraction",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": false,
+      "total_entities": 0,
+      "total_facts": 0,
+      "latency_ms": 7076,
+      "extracted": {
+        "entities": [],
+        "facts": [],
+        "parse_success": false,
+        "latency_ms": 4
+      }
+    },
+    {
+      "test_case_id": "dedup-same-entity",
+      "category": "deduplication",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": false,
+      "total_entities": 0,
+      "total_facts": 0,
+      "latency_ms": 6988,
+      "extracted": {
+        "entities": [],
+        "facts": [],
+        "parse_success": false,
+        "latency_ms": 7
+      }
+    },
+    {
+      "test_case_id": "policy-extraction",
+      "category": "fact_extraction",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": false,
+      "total_entities": 0,
+      "total_facts": 0,
+      "latency_ms": 6378,
+      "extracted": {
+        "entities": [],
+        "facts": [],
+        "parse_success": false,
+        "latency_ms": 3
+      }
+    },
+    {
+      "test_case_id": "edge-case-empty",
+      "category": "edge_case",
+      "entity_precision": 1,
+      "entity_recall": 1,
+      "entity_f1": 1,
+      "fact_precision": 1,
+      "fact_recall": 1,
+      "fact_f1": 1,
+      "parse_success": false,
+      "total_entities": 0,
+      "total_facts": 0,
+      "latency_ms": 6069,
+      "extracted": {
+        "entities": [],
+        "facts": [],
+        "parse_success": false,
+        "latency_ms": 2
+      }
+    },
+    {
+      "test_case_id": "person-extraction",
+      "category": "entity_extraction",
+      "entity_precision": 0.5,
+      "entity_recall": 0.3333333333333333,
+      "entity_f1": 0.4,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 2,
+      "total_facts": 1,
+      "latency_ms": 8568,
+      "extracted": {
+        "entities": [
+          {
+            "name": "Work",
+            "labels": []
+          },
+          {
+            "name": "Sarah",
+            "labels": []
+          }
+        ],
+        "facts": [
+          {
+            "source": "user",
+            "target": "user",
+            "fact": "Work with Sarah on the backend team"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 9
+      }
+    },
+    {
+      "test_case_id": "temporal-started-using",
+      "category": "temporal",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 2,
+      "total_facts": 1,
+      "latency_ms": 6944,
+      "extracted": {
+        "entities": [
+          {
+            "name": "Name",
+            "labels": []
+          },
+          {
+            "name": "John",
+            "labels": []
+          }
+        ],
+        "facts": [
+          {
+            "source": "Name",
+            "target": "John",
+            "fact": "Name is John"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 2
+      }
+    },
+    {
+      "test_case_id": "multi-entity-list",
+      "category": "entity_extraction",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 2,
+      "total_facts": 1,
+      "latency_ms": 7757,
+      "extracted": {
+        "entities": [
+          {
+            "name": "Name",
+            "labels": []
+          },
+          {
+            "name": "John",
+            "labels": []
+          }
+        ],
+        "facts": [
+          {
+            "source": "Name",
+            "target": "John",
+            "fact": "Name is John"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 5
+      }
+    },
+    {
+      "test_case_id": "edge-case-negation",
+      "category": "edge_case",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": false,
+      "total_entities": 0,
+      "total_facts": 0,
+      "latency_ms": 6137,
+      "extracted": {
+        "entities": [],
+        "facts": [],
+        "parse_success": false,
+        "latency_ms": 5
+      }
+    },
+    {
+      "test_case_id": "multi-turn-preference",
+      "category": "multi_turn",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 2,
+      "total_facts": 1,
+      "latency_ms": 8933,
+      "extracted": {
+        "entities": [
+          {
+            "name": "Name",
+            "labels": []
+          },
+          {
+            "name": "John",
+            "labels": []
+          }
+        ],
+        "facts": [
+          {
+            "source": "Name",
+            "target": "John",
+            "fact": "Name is John"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 5
+      }
+    },
+    {
+      "test_case_id": "tool-comparison",
+      "category": "fact_extraction",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": false,
+      "total_entities": 0,
+      "total_facts": 0,
+      "latency_ms": 6647,
+      "extracted": {
+        "entities": [],
+        "facts": [],
+        "parse_success": false,
+        "latency_ms": 9
+      }
+    },
+    {
+      "test_case_id": "preference-with-reason",
+      "category": "fact_extraction",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": false,
+      "total_entities": 0,
+      "total_facts": 0,
+      "latency_ms": 7987,
+      "extracted": {
+        "entities": [],
+        "facts": [],
+        "parse_success": false,
+        "latency_ms": 4
+      }
+    },
+    {
+      "test_case_id": "dedup-variant-names",
+      "category": "deduplication",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 2,
+      "total_facts": 2,
+      "latency_ms": 7415,
+      "extracted": {
+        "entities": [
+          {
+            "name": "We",
+            "labels": []
+          },
+          {
+            "name": "Postgres",
+            "labels": []
+          }
+        ],
+        "facts": [
+          {
+            "source": "PostgreSQL",
+            "target": "great performance",
+            "fact": "PostgreSQL has great performance"
+          },
+          {
+            "source": "user",
+            "target": "user",
+            "fact": "We use Postgres for our main database"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 5
+      }
+    },
+    {
+      "test_case_id": "temporal-duration",
+      "category": "temporal",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": false,
+      "total_entities": 0,
+      "total_facts": 0,
+      "latency_ms": 6564,
+      "extracted": {
+        "entities": [],
+        "facts": [],
+        "parse_success": false,
+        "latency_ms": 2
+      }
+    },
+    {
+      "test_case_id": "edge-case-conditional",
+      "category": "edge_case",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": false,
+      "total_entities": 0,
+      "total_facts": 0,
+      "latency_ms": 6156,
+      "extracted": {
+        "entities": [],
+        "facts": [],
+        "parse_success": false,
+        "latency_ms": 4
+      }
+    },
+    {
+      "test_case_id": "complex-tech-stack",
+      "category": "fact_extraction",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": false,
+      "total_entities": 0,
+      "total_facts": 0,
+      "latency_ms": 7293,
+      "extracted": {
+        "entities": [],
+        "facts": [],
+        "parse_success": false,
+        "latency_ms": 4
+      }
+    },
+    {
+      "test_case_id": "multi-turn-context",
+      "category": "multi_turn",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 2,
+      "total_facts": 1,
+      "latency_ms": 7497,
+      "extracted": {
+        "entities": [
+          {
+            "name": "Name",
+            "labels": []
+          },
+          {
+            "name": "John",
+            "labels": []
+          }
+        ],
+        "facts": [
+          {
+            "source": "Name",
+            "target": "John",
+            "fact": "Name is John"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 4
+      }
+    },
+    {
+      "test_case_id": "concept-extraction",
+      "category": "entity_extraction",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": false,
+      "total_entities": 0,
+      "total_facts": 0,
+      "latency_ms": 6920,
+      "extracted": {
+        "entities": [],
+        "facts": [],
+        "parse_success": false,
+        "latency_ms": 3
+      }
+    },
+    {
+      "test_case_id": "relationship-between-tools",
+      "category": "fact_extraction",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 2,
+      "total_facts": 1,
+      "latency_ms": 6969,
+      "extracted": {
+        "entities": [
+          {
+            "name": "Name",
+            "labels": []
+          },
+          {
+            "name": "John",
+            "labels": []
+          }
+        ],
+        "facts": [
+          {
+            "source": "Name",
+            "target": "John",
+            "fact": "Name is John"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 4
+      }
+    },
+    {
+      "test_case_id": "temporal-recency",
+      "category": "temporal",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 2,
+      "total_facts": 1,
+      "latency_ms": 6756,
+      "extracted": {
+        "entities": [
+          {
+            "name": "Name",
+            "labels": []
+          },
+          {
+            "name": "John",
+            "labels": []
+          }
+        ],
+        "facts": [
+          {
+            "source": "Name",
+            "target": "John",
+            "fact": "Name is John"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 4
+      }
+    },
+    {
+      "test_case_id": "edge-case-question",
+      "category": "edge_case",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 1,
+      "fact_recall": 1,
+      "fact_f1": 1,
+      "parse_success": false,
+      "total_entities": 0,
+      "total_facts": 0,
+      "latency_ms": 6279,
+      "extracted": {
+        "entities": [],
+        "facts": [],
+        "parse_success": false,
+        "latency_ms": 2
+      }
+    },
+    {
+      "test_case_id": "long-context-multiple-facts",
+      "category": "fact_extraction",
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "total_entities": 2,
+      "total_facts": 1,
+      "latency_ms": 10736,
+      "extracted": {
+        "entities": [
+          {
+            "name": "Name",
+            "labels": []
+          },
+          {
+            "name": "John",
+            "labels": []
+          }
+        ],
+        "facts": [
+          {
+            "source": "Name",
+            "target": "John",
+            "fact": "Name is John"
+          }
+        ],
+        "parse_success": true,
+        "latency_ms": 3
+      }
+    }
+  ],
+  "aggregate": {
+    "parse_success_rate": 0.4090909090909091,
+    "avg_entity_f1": 0.06363636363636363,
+    "avg_fact_f1": 0.09090909090909091
+  }
+}

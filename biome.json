@@ -43,7 +43,9 @@
       "!**/.tanstack",
       "!**/server/db/migrations",
       "!**/app/routeTree.gen.ts",
-      "!**/.claude"
+      "!**/.claude",
+      "!**/docs/archive",
+      "!**/graphiti"
     ]
   }
 }

@@ -1,0 +1,347 @@
+{
+  "model": "gpt-oss:latest",
+  "system": "mem0",
+  "scoring_method": "atomic",
+  "dataset_version": "v2",
+  "results": [
+    {
+      "test_case_id": "preference-simple",
+      "category": "entity_extraction",
+      "memories_count": 1,
+      "entity_precision": 0.6666666666666666,
+      "entity_recall": 0.5,
+      "entity_f1": 0.5714285714285715,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "entities_found": [
+        "dark mode"
+      ]
+    },
+    {
+      "test_case_id": "tech-stack-complex",
+      "category": "fact_extraction",
+      "memories_count": 2,
+      "entity_precision": 0.6666666666666666,
+      "entity_recall": 0.6666666666666666,
+      "entity_f1": 0.6666666666666666,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "entities_found": [
+        "PostgreSQL",
+        "Redis"
+      ]
+    },
+    {
+      "test_case_id": "dedup-same-entity",
+      "category": "deduplication",
+      "memories_count": 1,
+      "entity_precision": 0.6666666666666666,
+      "entity_recall": 0.5,
+      "entity_f1": 0.5714285714285715,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "entities_found": [
+        "Docker"
+      ]
+    },
+    {
+      "test_case_id": "policy-extraction",
+      "category": "fact_extraction",
+      "memories_count": 1,
+      "entity_precision": 0.6666666666666666,
+      "entity_recall": 0.5,
+      "entity_f1": 0.5714285714285715,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "entities_found": [
+        "TypeScript"
+      ]
+    },
+    {
+      "test_case_id": "edge-case-empty",
+      "category": "edge_case",
+      "memories_count": 0,
+      "entity_precision": 1,
+      "entity_recall": 1,
+      "entity_f1": 1,
+      "fact_precision": 1,
+      "fact_recall": 1,
+      "fact_f1": 1,
+      "parse_success": false,
+      "entities_found": []
+    },
+    {
+      "test_case_id": "person-extraction",
+      "category": "entity_extraction",
+      "memories_count": 2,
+      "entity_precision": 0.6666666666666666,
+      "entity_recall": 0.6666666666666666,
+      "entity_f1": 0.6666666666666666,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "entities_found": [
+        "Sarah",
+        "backend team"
+      ]
+    },
+    {
+      "test_case_id": "temporal-started-using",
+      "category": "temporal",
+      "memories_count": 1,
+      "entity_precision": 0.6666666666666666,
+      "entity_recall": 0.5,
+      "entity_f1": 0.5714285714285715,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "entities_found": [
+        "React"
+      ]
+    },
+    {
+      "test_case_id": "multi-entity-list",
+      "category": "entity_extraction",
+      "memories_count": 1,
+      "entity_precision": 0.6666666666666666,
+      "entity_recall": 0.25,
+      "entity_f1": 0.36363636363636365,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "entities_found": [
+        "Rust"
+      ]
+    },
+    {
+      "test_case_id": "edge-case-negation",
+      "category": "edge_case",
+      "memories_count": 1,
+      "entity_precision": 0.6666666666666666,
+      "entity_recall": 0.5,
+      "entity_f1": 0.5714285714285715,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "entities_found": [
+        "Windows"
+      ]
+    },
+    {
+      "test_case_id": "multi-turn-preference",
+      "category": "multi_turn",
+      "memories_count": 3,
+      "entity_precision": 0.4444444444444444,
+      "entity_recall": 1,
+      "entity_f1": 0.6153846153846153,
+      "fact_precision": 0.3333333333333333,
+      "fact_recall": 0.6666666666666666,
+      "fact_f1": 0.4444444444444444,
+      "parse_success": true,
+      "entities_found": [
+        "Go",
+        "user"
+      ]
+    },
+    {
+      "test_case_id": "tool-comparison",
+      "category": "fact_extraction",
+      "memories_count": 2,
+      "entity_precision": 0.6666666666666666,
+      "entity_recall": 0.6666666666666666,
+      "entity_f1": 0.6666666666666666,
+      "fact_precision": 0.5,
+      "fact_recall": 0.5,
+      "fact_f1": 0.5,
+      "parse_success": true,
+      "entities_found": [
+        "Jenkins",
+        "GitHub Actions"
+      ]
+    },
+    {
+      "test_case_id": "preference-with-reason",
+      "category": "fact_extraction",
+      "memories_count": 1,
+      "entity_precision": 0.6666666666666666,
+      "entity_recall": 0.5,
+      "entity_f1": 0.5714285714285715,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "entities_found": [
+        "VS Code"
+      ]
+    },
+    {
+      "test_case_id": "dedup-variant-names",
+      "category": "deduplication",
+      "memories_count": 1,
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "entities_found": []
+    },
+    {
+      "test_case_id": "temporal-duration",
+      "category": "temporal",
+      "memories_count": 1,
+      "entity_precision": 0.6666666666666666,
+      "entity_recall": 0.5,
+      "entity_f1": 0.5714285714285715,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "entities_found": [
+        "Linux"
+      ]
+    },
+    {
+      "test_case_id": "edge-case-conditional",
+      "category": "edge_case",
+      "memories_count": 1,
+      "entity_precision": 0.6666666666666666,
+      "entity_recall": 0.5,
+      "entity_f1": 0.5714285714285715,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "entities_found": [
+        "Kubernetes"
+      ]
+    },
+    {
+      "test_case_id": "complex-tech-stack",
+      "category": "fact_extraction",
+      "memories_count": 3,
+      "entity_precision": 0.6666666666666666,
+      "entity_recall": 0.75,
+      "entity_f1": 0.7058823529411765,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "entities_found": [
+        "Next.js",
+        "Express",
+        "MongoDB"
+      ]
+    },
+    {
+      "test_case_id": "multi-turn-context",
+      "category": "multi_turn",
+      "memories_count": 1,
+      "entity_precision": 0.6666666666666666,
+      "entity_recall": 0.5,
+      "entity_f1": 0.5714285714285715,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "entities_found": [
+        "GraphQL"
+      ]
+    },
+    {
+      "test_case_id": "concept-extraction",
+      "category": "entity_extraction",
+      "memories_count": 2,
+      "entity_precision": 0.6666666666666666,
+      "entity_recall": 0.6666666666666666,
+      "entity_f1": 0.6666666666666666,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "entities_found": [
+        "functional programming",
+        "immutability"
+      ]
+    },
+    {
+      "test_case_id": "relationship-between-tools",
+      "category": "fact_extraction",
+      "memories_count": 0,
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": false,
+      "entities_found": []
+    },
+    {
+      "test_case_id": "temporal-recency",
+      "category": "temporal",
+      "memories_count": 1,
+      "entity_precision": 0.6666666666666666,
+      "entity_recall": 0.5,
+      "entity_f1": 0.5714285714285715,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "entities_found": [
+        "Rust"
+      ]
+    },
+    {
+      "test_case_id": "edge-case-question",
+      "category": "edge_case",
+      "memories_count": 0,
+      "entity_precision": 0,
+      "entity_recall": 0,
+      "entity_f1": 0,
+      "fact_precision": 1,
+      "fact_recall": 1,
+      "fact_f1": 1,
+      "parse_success": false,
+      "entities_found": []
+    },
+    {
+      "test_case_id": "long-context-multiple-facts",
+      "category": "fact_extraction",
+      "memories_count": 5,
+      "entity_precision": 0.5333333333333333,
+      "entity_recall": 1,
+      "entity_f1": 0.6956521739130436,
+      "fact_precision": 0,
+      "fact_recall": 0,
+      "fact_f1": 0,
+      "parse_success": true,
+      "entities_found": [
+        "React Native",
+        "Firebase",
+        "GitHub",
+        "team"
+      ]
+    }
+  ],
+  "aggregate": {
+    "parse_success_rate": 0.8636363636363636,
+    "avg_entity_recall": 0.5614035087719298,
+    "avg_entity_f1": 0.5663951519382936,
+    "avg_fact_recall": 0.061403508771929814,
+    "avg_fact_f1": 0.049707602339181284
+  }
+}

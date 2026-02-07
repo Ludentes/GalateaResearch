@@ -18,8 +18,7 @@ import type {
   SearchResponse,
 } from "./types"
 
-const GRAPHITI_URL =
-  process.env.GRAPHITI_URL || "http://localhost:18000"
+const GRAPHITI_URL = process.env.GRAPHITI_URL || "http://localhost:18000"
 
 const REQUEST_TIMEOUT_MS = 30_000
 
@@ -28,10 +27,7 @@ async function graphitiFetch<T>(
   init?: RequestInit,
 ): Promise<T | null> {
   const controller = new AbortController()
-  const timer = setTimeout(
-    () => controller.abort(),
-    REQUEST_TIMEOUT_MS,
-  )
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
 
   try {
     const res = await fetch(`${GRAPHITI_URL}${path}`, {
@@ -138,8 +134,12 @@ export async function searchFacts(
 
   if (isShortQuery && facts.length > 0) {
     // Separate exact matches from fuzzy matches
-    const exactMatches = facts.filter((f) => hasExactKeywordMatch(f.fact, query))
-    const fuzzyMatches = facts.filter((f) => !hasExactKeywordMatch(f.fact, query))
+    const exactMatches = facts.filter((f) =>
+      hasExactKeywordMatch(f.fact, query),
+    )
+    const fuzzyMatches = facts.filter(
+      (f) => !hasExactKeywordMatch(f.fact, query),
+    )
 
     // Return exact matches first, then fuzzy matches, limited to maxFacts
     return [...exactMatches, ...fuzzyMatches].slice(0, maxFacts)

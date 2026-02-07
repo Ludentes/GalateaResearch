@@ -1,5 +1,5 @@
-import { defineEventHandler } from "h3"
 import { desc } from "drizzle-orm"
+import { defineEventHandler } from "h3"
 import { db } from "../../../db"
 import { sessions } from "../../../db/schema"
 

@@ -110,11 +110,7 @@ export async function assembleContext(
 
   // Step 2: Search Graphiti for relevant facts
   // Search both session-specific and global knowledge
-  const facts = await searchFacts(
-    userMessage,
-    [sessionId, "global"],
-    20,
-  )
+  const facts = await searchFacts(userMessage, [sessionId, "global"], 20)
 
   // Step 3: Score and rank
   const scored = scoreFacts(facts)
@@ -149,10 +145,7 @@ export async function assembleContext(
     .map((s) => `## ${s.name}\n${s.content}`)
     .join("\n\n")
 
-  const totalTokens = sections.reduce(
-    (sum, s) => sum + s.tokenEstimate,
-    0,
-  )
+  const totalTokens = sections.reduce((sum, s) => sum + s.tokenEstimate, 0)
 
   return {
     sections,

@@ -163,10 +163,7 @@ describe("gatekeeper", () => {
     it("correction takes precedence over greeting-like start", () => {
       // "No, that's wrong" starts with a pattern that could be seen as
       // short, but it has a correction signal
-      const result = evaluateGatekeeper(
-        "No, that's wrong",
-        "Let me fix that.",
-      )
+      const result = evaluateGatekeeper("No, that's wrong", "Let me fix that.")
       expect(result.shouldIngest).toBe(true)
       expect(result.category).toBe("correction")
     })

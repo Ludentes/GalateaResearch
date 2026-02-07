@@ -14,19 +14,21 @@ vi.mock("../graphiti-client", () => ({
 }))
 
 import { db } from "../../db"
-import { searchFacts } from "../graphiti-client"
 import { assembleContext } from "../context-assembler"
+import { searchFacts } from "../graphiti-client"
 import type { ContextBudget, FactResult } from "../types"
 
 // Helper to set up the chained DB query mock
-function mockPreprompts(rows: Array<{
-  id: string
-  name: string
-  type: string
-  content: string
-  priority: number | null
-  active: boolean | null
-}>) {
+function mockPreprompts(
+  rows: Array<{
+    id: string
+    name: string
+    type: string
+    content: string
+    priority: number | null
+    active: boolean | null
+  }>,
+) {
   const chain = {
     from: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
@@ -35,7 +37,9 @@ function mockPreprompts(rows: Array<{
   vi.mocked(db.select).mockReturnValue(chain as never)
 }
 
-function makeFact(overrides: Partial<FactResult> & { fact: string }): FactResult {
+function makeFact(
+  overrides: Partial<FactResult> & { fact: string },
+): FactResult {
   return {
     uuid: `fact-${Math.random().toString(36).slice(2, 8)}`,
     name: "RELATES_TO",
@@ -202,7 +206,9 @@ describe("context-assembler", () => {
       // Each fact is ~6 tokens ("- <fact>\n" ≈ 24 chars / 4)
       // Create facts that exceed a tiny budget
       const manyFacts = Array.from({ length: 50 }, (_, i) =>
-        makeFact({ fact: `Fact number ${i} with some extra padding text here` }),
+        makeFact({
+          fact: `Fact number ${i} with some extra padding text here`,
+        }),
       )
       vi.mocked(searchFacts).mockResolvedValue(manyFacts)
 
@@ -313,9 +319,7 @@ describe("context-assembler", () => {
           active: true,
         },
       ])
-      vi.mocked(searchFacts).mockResolvedValue([
-        makeFact({ fact: "A fact" }),
-      ])
+      vi.mocked(searchFacts).mockResolvedValue([makeFact({ fact: "A fact" })])
 
       const ctx = await assembleContext("session-1", "query")
 

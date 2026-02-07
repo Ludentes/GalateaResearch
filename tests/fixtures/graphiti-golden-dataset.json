@@ -15,10 +15,7 @@
         "group_id": "test-preference-simple"
       },
       "expectedOutput": {
-        "entities": [
-          { "name": "dark mode" },
-          { "name": "user" }
-        ],
+        "entities": [{ "name": "dark mode" }, { "name": "user" }],
         "facts": [
           {
             "fact": "user prefers dark mode",
@@ -79,10 +76,7 @@
         "group_id": "test-dedup"
       },
       "expectedOutput": {
-        "entities": [
-          { "name": "Docker" },
-          { "name": "user" }
-        ],
+        "entities": [{ "name": "Docker" }, { "name": "user" }],
         "facts": [
           {
             "fact": "user uses Docker for containers",
@@ -106,10 +100,7 @@
         "group_id": "test-policy"
       },
       "expectedOutput": {
-        "entities": [
-          { "name": "TypeScript" },
-          { "name": "team" }
-        ],
+        "entities": [{ "name": "TypeScript" }, { "name": "team" }],
         "facts": [
           {
             "fact": "team always uses TypeScript for new projects",
@@ -184,10 +175,7 @@
         "group_id": "test-temporal-1"
       },
       "expectedOutput": {
-        "entities": [
-          { "name": "React" },
-          { "name": "user" }
-        ],
+        "entities": [{ "name": "React" }, { "name": "user" }],
         "facts": [
           {
             "fact": "user started using React in 2020",
@@ -250,10 +238,7 @@
         "group_id": "test-negation"
       },
       "expectedOutput": {
-        "entities": [
-          { "name": "Windows" },
-          { "name": "user" }
-        ],
+        "entities": [{ "name": "Windows" }, { "name": "user" }],
         "facts": [
           {
             "fact": "user does not use Windows anymore",
@@ -285,10 +270,7 @@
         "group_id": "test-multi-turn-1"
       },
       "expectedOutput": {
-        "entities": [
-          { "name": "Go" },
-          { "name": "user" }
-        ],
+        "entities": [{ "name": "Go" }, { "name": "user" }],
         "facts": [
           {
             "fact": "user is learning Go",
@@ -355,10 +337,7 @@
         "group_id": "test-preference-reason"
       },
       "expectedOutput": {
-        "entities": [
-          { "name": "VS Code" },
-          { "name": "user" }
-        ],
+        "entities": [{ "name": "VS Code" }, { "name": "user" }],
         "facts": [
           {
             "fact": "user prefers VS Code because of extensions ecosystem",
@@ -386,10 +365,7 @@
         "group_id": "test-dedup-variants"
       },
       "expectedOutput": {
-        "entities": [
-          { "name": "PostgreSQL" },
-          { "name": "team" }
-        ],
+        "entities": [{ "name": "PostgreSQL" }, { "name": "team" }],
         "facts": [
           {
             "fact": "team uses PostgreSQL for main database",
@@ -413,10 +389,7 @@
         "group_id": "test-temporal-2"
       },
       "expectedOutput": {
-        "entities": [
-          { "name": "Linux" },
-          { "name": "user" }
-        ],
+        "entities": [{ "name": "Linux" }, { "name": "user" }],
         "facts": [
           {
             "fact": "user has been using Linux for 5 years",
@@ -440,10 +413,7 @@
         "group_id": "test-conditional"
       },
       "expectedOutput": {
-        "entities": [
-          { "name": "Kubernetes" },
-          { "name": "user" }
-        ],
+        "entities": [{ "name": "Kubernetes" }, { "name": "user" }],
         "facts": [
           {
             "fact": "user would use Kubernetes if had more resources",
@@ -514,10 +484,7 @@
         "group_id": "test-multi-turn-2"
       },
       "expectedOutput": {
-        "entities": [
-          { "name": "GraphQL" },
-          { "name": "team" }
-        ],
+        "entities": [{ "name": "GraphQL" }, { "name": "team" }],
         "facts": [
           {
             "fact": "team has been using GraphQL for 2 years",
@@ -574,10 +541,7 @@
         "group_id": "test-tool-relationship"
       },
       "expectedOutput": {
-        "entities": [
-          { "name": "Tailwind" },
-          { "name": "React" }
-        ],
+        "entities": [{ "name": "Tailwind" }, { "name": "React" }],
         "facts": [
           {
             "fact": "Tailwind works well with React",
@@ -601,10 +565,7 @@
         "group_id": "test-temporal-3"
       },
       "expectedOutput": {
-        "entities": [
-          { "name": "Rust" },
-          { "name": "user" }
-        ],
+        "entities": [{ "name": "Rust" }, { "name": "user" }],
         "facts": [
           {
             "fact": "user started learning Rust last month",
@@ -628,9 +589,7 @@
         "group_id": "test-question"
       },
       "expectedOutput": {
-        "entities": [
-          { "name": "Deno" }
-        ],
+        "entities": [{ "name": "Deno" }],
         "facts": []
       },
       "notes": "Question without factual claim - entity mentioned but no fact about it"

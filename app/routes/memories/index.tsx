@@ -69,7 +69,10 @@ function MemoriesPage() {
     if (!searchQuery.trim()) return
     setSearchLoading(true)
     try {
-      const params = new URLSearchParams({ query: searchQuery, max_facts: "30" })
+      const params = new URLSearchParams({
+        query: searchQuery,
+        max_facts: "30",
+      })
       if (selectedSession) {
         params.set("group_ids", selectedSession)
       }
@@ -120,7 +123,10 @@ function MemoriesPage() {
       {/* Header */}
       <header className="flex items-center justify-between p-4 border-b border-border">
         <div className="flex items-center gap-3">
-          <Link to="/" className="text-muted-foreground hover:text-foreground text-sm">
+          <Link
+            to="/"
+            className="text-muted-foreground hover:text-foreground text-sm"
+          >
             &larr; Home
           </Link>
           <h1 className="text-xl font-semibold">Memory Browser</h1>
@@ -332,7 +338,9 @@ function EpisodeCard({ episode }: { episode: EpisodeResult }) {
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-medium">{episode.name || "Episode"}</p>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-xs bg-muted px-1.5 py-0.5 rounded">{episode.source}</span>
+          <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
+            {episode.source}
+          </span>
           <span className="text-xs text-muted-foreground">
             {formatDate(episode.created_at)}
           </span>
@@ -354,11 +362,14 @@ function EpisodeCard({ episode }: { episode: EpisodeResult }) {
       )}
       {episode.entity_edges.length > 0 && (
         <p className="text-xs text-muted-foreground">
-          {episode.entity_edges.length} linked edge{episode.entity_edges.length !== 1 ? "s" : ""}
+          {episode.entity_edges.length} linked edge
+          {episode.entity_edges.length !== 1 ? "s" : ""}
         </p>
       )}
       {episode.source_description && (
-        <p className="text-xs text-muted-foreground">{episode.source_description}</p>
+        <p className="text-xs text-muted-foreground">
+          {episode.source_description}
+        </p>
       )}
     </div>
   )

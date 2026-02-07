@@ -1,4 +1,11 @@
+# Galatea Infrastructure
+#
+# Core:     postgres (facts, procedures, sessions, messages)
+# Memory:   graphiti + falkordb (episodic memory, graph queries)
+# Future:   mosquitto (observation pipeline, Phase 4)
+
 services:
+  # --- Core Database ---
   postgres:
     image: postgres:17
     ports:
@@ -15,6 +22,9 @@ services:
       timeout: 5s
       retries: 5
 
+  # --- Graphiti Memory Sidecar (episodic memory + graph queries) ---
+  # Note: Galatea uses its own extraction pipeline (patterns + Ollama).
+  # Graphiti is kept for episodic memory storage and graph relationships.
   falkordb:
     image: falkordb/falkordb:latest
     ports:
@@ -37,19 +47,15 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
-      # FalkorDB
       FALKORDB_URI: "redis://falkordb:6379"
       FALKORDB_DATABASE: "galatea_memory"
-      # LLM (Ollama via OpenAI-compatible endpoint)
       OPENAI_API_KEY: "ollama"
       OPENAI_BASE_URL: "http://host.docker.internal:11434/v1"
       MODEL_NAME: "llama3.2"
       SMALL_MODEL_NAME: "llama3.2"
-      # Embeddings (Ollama — local, no API cost)
       EMBEDDING_MODEL_NAME: "nomic-embed-text"
       EMBEDDER_BASE_URL: "http://host.docker.internal:11434/v1"
       EMBEDDER_API_KEY: "ollama"
-      # Concurrency
       SEMAPHORE_LIMIT: "5"
     depends_on:
       falkordb:
@@ -61,6 +67,7 @@ services:
       timeout: 5s
       retries: 5
 
+  # --- Observation Pipeline (Phase 4 — not yet implemented) ---
   mosquitto:
     image: eclipse-mosquitto:2
     ports:
