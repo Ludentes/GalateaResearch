@@ -1,21 +1,28 @@
 /**
- * Context assembly pipeline — combines preprompts with Graphiti knowledge.
+ * Context assembly pipeline — combines preprompts, Graphiti knowledge, and cognitive models.
  *
- * 6-step pipeline:
+ * Pipeline steps:
  *   1. Retrieve active preprompts (hard rules + procedures)
  *   2. Search Graphiti for relevant facts
  *   3. Score and rank facts
- *   4. Allocate token budget
- *   5. Assemble prompt sections by priority
- *   6. Return assembled system prompt
+ *   4. Retrieve cognitive models (self-model + user-model) if personaId/userName provided
+ *   5. Allocate token budget across sections
+ *   6. Assemble prompt sections by priority:
+ *      - Priority 1: CONSTRAINTS (hard rules)
+ *      - Priority 2: RELEVANT PROCEDURES (procedural knowledge)
+ *      - Priority 3: RELEVANT KNOWLEDGE (Graphiti facts)
+ *      - Priority 4: SELF-AWARENESS (self-model)
+ *      - Priority 5: USER CONTEXT (user-model)
+ *   7. Return assembled system prompt
  *
- * Graceful degradation: if Graphiti is unreachable, falls back to
- * preprompts-only (same behavior as Phase 1).
+ * Graceful degradation: if Graphiti is unreachable or cognitive models are empty,
+ * falls back to preprompts-only (same behavior as Phase 1).
  */
 
 import { asc, eq } from "drizzle-orm"
 import { db } from "../db"
 import { preprompts } from "../db/schema"
+import { getSelfModel, getUserModel } from "./cognitive-models"
 import { searchFacts } from "./graphiti-client"
 import type {
   AssembledContext,
@@ -60,17 +67,94 @@ function scoreFacts(facts: FactResult[]): ScoredFact[] {
     .sort((a, b) => b.finalScore - a.finalScore)
 }
 
+/** Format self-model for prompt injection */
+function formatSelfModel(model: {
+  strengths: string[]
+  weaknesses: string[]
+  recentMisses: string[]
+}): string {
+  const parts: string[] = []
+
+  if (model.strengths.length > 0) {
+    parts.push("**Strengths:**")
+    parts.push(...model.strengths.map((s) => `- ${s}`))
+    parts.push("")
+  }
+
+  if (model.weaknesses.length > 0) {
+    parts.push("**Areas for Improvement:**")
+    parts.push(...model.weaknesses.map((w) => `- ${w}`))
+    parts.push("")
+  }
+
+  if (model.recentMisses.length > 0) {
+    parts.push("**Recent Lessons:**")
+    parts.push(...model.recentMisses.map((m) => `- ${m}`))
+  }
+
+  return parts.join("\n").trim()
+}
+
+/** Format user-model for prompt injection */
+function formatUserModel(model: {
+  preferences: string[]
+  expectations: string[]
+  communicationStyle: string | null
+}): string {
+  const parts: string[] = []
+
+  if (model.preferences.length > 0) {
+    parts.push("**User Preferences:**")
+    parts.push(...model.preferences.map((p) => `- ${p}`))
+    parts.push("")
+  }
+
+  if (model.expectations.length > 0) {
+    parts.push("**User Expectations:**")
+    parts.push(...model.expectations.map((e) => `- ${e}`))
+    parts.push("")
+  }
+
+  if (model.communicationStyle) {
+    parts.push("**Communication Style:**")
+    parts.push(model.communicationStyle)
+  }
+
+  return parts.join("\n").trim()
+}
+
+/** Truncate text to fit token budget, preserving complete lines */
+function truncateToTokenBudget(text: string, budget: number): string {
+  const lines = text.split("\n")
+  const result: string[] = []
+  let currentTokens = 0
+
+  for (const line of lines) {
+    const lineTokens = estimateTokens(line + "\n")
+    if (currentTokens + lineTokens > budget) break
+    result.push(line)
+    currentTokens += lineTokens
+  }
+
+  return result.join("\n").trim()
+}
+
 /**
  * Assemble the system prompt with knowledge from Graphiti.
  *
  * @param sessionId - Current session ID (used as group_id for search)
  * @param userMessage - Latest user message (used as search query)
  * @param budget - Token budget allocation (optional)
+ * @param options - Optional configuration (personaId, userName)
  */
 export async function assembleContext(
   sessionId: string,
   userMessage: string,
   budget: ContextBudget = DEFAULT_CONTEXT_BUDGET,
+  options?: {
+    personaId?: string
+    userName?: string
+  },
 ): Promise<AssembledContext> {
   const start = Date.now()
   const sections: PromptSection[] = []
@@ -138,6 +222,54 @@ export async function assembleContext(
     })
   }
 
+  // Step 4: Retrieve and format cognitive models (if personaId or userName provided)
+  let selfModelTokens = 0
+  let userModelTokens = 0
+
+  if (options?.personaId) {
+    const selfModel = await getSelfModel(options.personaId)
+    const selfModelContent = formatSelfModel(selfModel)
+
+    if (selfModelContent) {
+      const tokenBudget = budget.models / 2 // Split budget between self and user models
+      const truncatedContent = truncateToTokenBudget(
+        selfModelContent,
+        tokenBudget,
+      )
+      selfModelTokens = estimateTokens(truncatedContent)
+
+      sections.push({
+        name: "SELF-AWARENESS",
+        priority: 4,
+        content: truncatedContent,
+        truncatable: true,
+        tokenEstimate: selfModelTokens,
+      })
+    }
+  }
+
+  if (options?.userName) {
+    const userModel = await getUserModel(options.userName)
+    const userModelContent = formatUserModel(userModel)
+
+    if (userModelContent) {
+      const tokenBudget = budget.models / 2 // Split budget between self and user models
+      const truncatedContent = truncateToTokenBudget(
+        userModelContent,
+        tokenBudget,
+      )
+      userModelTokens = estimateTokens(truncatedContent)
+
+      sections.push({
+        name: "USER CONTEXT",
+        priority: 5,
+        content: truncatedContent,
+        truncatable: true,
+        tokenEstimate: userModelTokens,
+      })
+    }
+  }
+
   // Step 5: Assemble by priority
   sections.sort((a, b) => a.priority - b.priority)
 
@@ -159,6 +291,8 @@ export async function assembleContext(
         episodesIncluded: 0,
       },
       assemblyTimeMs: Date.now() - start,
+      selfModelTokens: selfModelTokens > 0 ? selfModelTokens : undefined,
+      userModelTokens: userModelTokens > 0 ? userModelTokens : undefined,
     },
   }
 }

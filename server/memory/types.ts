@@ -138,6 +138,8 @@ export interface AssembledContext {
       episodesIncluded: number
     }
     assemblyTimeMs: number
+    selfModelTokens?: number
+    userModelTokens?: number
   }
 }
 
