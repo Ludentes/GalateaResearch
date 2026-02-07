@@ -1,7 +1,7 @@
 # Data Model & Access Patterns
 
 **Last Updated:** 2026-02-07
-**Phase:** Phase 3 Stage B Complete (Homeostasis Engine + Activity Router)
+**Phase:** Phase 3 Stage C Complete (Homeostasis Engine + Activity Router + Reflexion Loop)
 
 ---
 
@@ -1049,6 +1049,301 @@ export interface Procedure {
 5. Edge case tests (empty message, unicode, long messages)
 
 **Estimated effort:** 2-3 hours total (low priority, defer to Phase 4+)
+
+---
+
+## Phase 3: Reflexion Loop (In-Memory)
+
+**Status:** Stage C Complete (2026-02-07)
+**Implementation:** `server/engine/reflexion-loop.ts`
+
+### Overview
+
+The Reflexion Loop implements **iterative self-improvement** for Level 3 (high-risk) tasks. Based on research by Shinn et al. (2023), it executes a Draft → Evidence → Critique → Revise cycle until the draft passes quality checks or max iterations are reached.
+
+### Architecture
+
+```
+Level 3 Task
+     │
+     ▼
+ReflexionLoop.execute(task, context, maxIterations=3)
+     │
+     ▼
+┌─────────────────────────────────────────────┐
+│ Iteration 1                                 │
+│  ├─> _generateInitialDraft()                │
+│  ├─> _gatherEvidence()                      │
+│  ├─> _generateCritique()                    │
+│  └─> if (critique.passes) → EXIT SUCCESS   │
+└─────────────────────────────────────────────┘
+     │ (if critique fails)
+     ▼
+┌─────────────────────────────────────────────┐
+│ Iteration 2                                 │
+│  ├─> _reviseDraft(previousCritique)        │
+│  ├─> _gatherEvidence()                      │
+│  ├─> _generateCritique()                    │
+│  └─> if (critique.passes) → EXIT SUCCESS   │
+└─────────────────────────────────────────────┘
+     │ (if critique fails)
+     ▼
+┌─────────────────────────────────────────────┐
+│ Iteration 3 (final)                        │
+│  ├─> _reviseDraft(previousCritique)        │
+│  ├─> _gatherEvidence()                      │
+│  ├─> _generateCritique()                    │
+│  └─> EXIT (success if passes, failure if not)│
+└─────────────────────────────────────────────┘
+     │
+     ▼
+ReflexionResult {
+  final_draft: string
+  iterations: ReflexionIteration[]
+  total_llm_calls: number
+  success: boolean
+}
+```
+
+### Loop Flow
+
+**Sequence** (lines 68-134 in `reflexion-loop.ts`):
+
+1. **Iteration 1**: Generate initial draft
+2. **All Iterations**: Gather evidence → Generate critique → Check exit conditions
+3. **Iterations 2-3**: Revise draft based on previous critique
+4. **Exit Conditions**:
+   - Critique passes (`critique.passes === true`) → SUCCESS
+   - Max iterations reached (`i === maxIterations - 1`) → FAILURE
+
+### Exit Conditions
+
+**Early Exit** (Success):
+```typescript
+if (critique.passes) {
+  return {
+    final_draft: currentDraft,
+    iterations,
+    total_llm_calls: totalLlmCalls,
+    success: true
+  }
+}
+```
+
+**Max Iterations** (Failure):
+```typescript
+if (i === maxIterations - 1) {
+  return {
+    final_draft: currentDraft,  // Best effort, even if failed critique
+    iterations,
+    total_llm_calls: totalLlmCalls,
+    success: false
+  }
+}
+```
+
+### Type Definitions
+
+**Core Types** (`server/engine/types.ts`, lines 159-209):
+
+```typescript
+// Result of reflexion loop execution
+export interface ReflexionResult {
+  final_draft: string           // Best draft (passed critique or last iteration)
+  iterations: ReflexionIteration[]  // Full trace of all iterations
+  total_llm_calls: number       // Cost tracking
+  success: boolean              // Did critique pass, or hit max iterations?
+}
+
+// Single iteration trace
+export interface ReflexionIteration {
+  iteration_number: number      // 1-indexed
+  draft: string                 // Draft text for this iteration
+  evidence: Evidence[]          // Evidence gathered to support/refute draft
+  critique: Critique            // Quality assessment
+  revised: boolean              // Was this draft revised (false for iteration 1)
+}
+
+// Evidence supporting or refuting draft
+export interface Evidence {
+  source: "memory" | "codebase" | "documentation"
+  content: string
+  relevance: number             // 0-1 relevance score
+  supports_claim?: string       // Which claim in draft this supports
+}
+
+// Quality critique of draft
+export interface Critique {
+  issues: Issue[]               // Identified problems
+  confidence: number            // 0-1 confidence in critique
+  passes: boolean               // Does draft meet quality bar?
+}
+
+// Issue identified in draft
+export interface Issue {
+  type: "missing" | "unsupported" | "incorrect"
+  description: string           // Human-readable explanation
+  severity: "minor" | "major" | "critical"
+  suggested_fix?: string        // Actionable suggestion
+}
+```
+
+### Stage C Implementation Status
+
+**Completed Infrastructure** ✅:
+- [x] Loop structure (for loop with max iterations)
+- [x] Iteration tracking (ReflexionIteration[] with all metadata)
+- [x] Exit conditions (critique passes OR max iterations)
+- [x] LLM call tracking (total_llm_calls counter)
+- [x] Type-safe interfaces
+- [x] 24 comprehensive tests
+
+**Placeholders** (Deferred to Stage E) ⚠️:
+- [ ] `_generateInitialDraft()` - Returns placeholder text
+- [ ] `_gatherEvidence()` - Returns memory placeholder
+- [ ] `_generateCritique()` - Returns always-passing placeholder
+- [ ] `_reviseDraft()` - Returns placeholder revision
+
+**Status**: Infrastructure complete, LLM integration deferred to Stage E. See `docs/PLACEHOLDERS_AND_DEFERRALS.md` for upgrade paths.
+
+### Performance Characteristics (Target)
+
+**Placeholder Performance** (Current):
+- Single iteration: <1ms (synchronous placeholders)
+- Full loop (3 iterations): <3ms
+- Memory allocation: Minimal (string concatenation only)
+
+**Production Performance** (After Stage E):
+- Draft generation: ~2-3s (LLM call)
+- Evidence gathering: ~500ms (memory search + optional external tools)
+- Critique generation: ~1-2s (LLM call)
+- Revision generation: ~2-3s (LLM call)
+- **Single iteration**: ~6-8s
+- **Full loop (3 iterations)**: ~18-24s
+
+**Cost Model** (After Stage E):
+- Draft: ~1000 tokens × $0.015/1k = $0.015
+- Critique: ~800 tokens × $0.015/1k = $0.012
+- Revision: ~1200 tokens × $0.015/1k = $0.018
+- **Per iteration**: ~$0.045
+- **Max cost (3 iterations)**: ~$0.135
+
+### Integration Points
+
+**Called By**:
+- `ActivityRouter` when task classified as Level 3
+- Level 3 triggers:
+  - High-stakes + irreversible
+  - Knowledge gaps (hasKnowledgeGap flag)
+  - LOW knowledge_sufficiency + high stakes
+  - LOW certainty_alignment + irreversible
+
+**Uses**:
+- `AgentContext` - Session state, message history, retrieved knowledge
+- `Task` - User message and computed flags (isHighStakes, isIrreversible, etc.)
+
+**Returns**:
+- `ReflexionResult` - Final draft + full iteration trace for debugging
+
+### Evidence Sources (Planned for Stage E)
+
+**Memory Evidence** (Stage E):
+- Retrieved facts from `AgentContext.retrievedFacts`
+- Retrieved procedures from `AgentContext.retrievedProcedures`
+- Recent conversation history from `AgentContext.messageHistory`
+
+**External Evidence** (Phase 4+):
+- Web search results (via MCP tools)
+- Documentation searches (Graphiti, APIs)
+- Codebase searches (grep, semantic search)
+
+**Current**: Placeholder returns single memory evidence object (lines 193-199)
+
+### Critique Structure (Planned for Stage E)
+
+**Issue Taxonomy**:
+- **missing**: Key information absent from draft
+- **unsupported**: Claims lack evidence or citations
+- **incorrect**: Statements contradict evidence
+
+**Severity Levels**:
+- **minor**: Draft acceptable, but could be improved
+- **major**: Draft needs revision before use
+- **critical**: Draft is incorrect or dangerous
+
+**Pass Criteria**:
+- Zero critical issues
+- Zero major issues
+- Minor issues OK (quality threshold)
+
+**Current**: Placeholder returns empty issues array, always passes (lines 220-224)
+
+### Comparison to Research
+
+**Alignment with Shinn et al. (2023)**: 8/10
+
+**Preserved**:
+- ✅ Core loop concept (Draft → Critique → Revise)
+- ✅ Iterative improvement
+- ✅ Max iterations limit (3)
+- ✅ Quality gate (critique.passes)
+- ✅ Trace storage (iterations[])
+- ✅ LLM call tracking
+
+**Architectural Differences**:
+- **Class-based** (ours) vs **Graph-based** LangGraph (research)
+- **Issue[]** critique (ours) vs **Superfluous/Missing/Unsupported** taxonomy (research)
+- **Memory-only** evidence (Stage E plan) vs **External tools** (research, Phase 4+)
+
+See `docs/REFLEXION_COMPARISON.md` for detailed analysis.
+
+### Future Enhancements
+
+**Stage E** (LLM Integration):
+- Replace all 4 placeholder methods with actual LLM calls
+- Implement evidence gathering from memory
+- Implement structured critique with taxonomy
+- Implement evidence-based revision
+
+**Phase 4+** (External Evidence):
+- Web search integration
+- MCP tool support for evidence
+- Citation extraction and tracking
+- Superfluous content detection
+- Convergence detection (draft unchanged)
+
+### Testing
+
+- **Unit Tests**: 24 tests in `server/engine/__tests__/reflexion-loop.unit.test.ts`
+- **Coverage**: All loop mechanics + edge cases
+  - Constructor/factory (2 tests)
+  - Happy path (3 tests)
+  - Max iterations (2 tests)
+  - Iteration tracking (3 tests)
+  - LLM call tracking (2 tests)
+  - Result structure (3 tests)
+  - Edge cases (3 tests)
+  - Placeholder behavior (3 tests)
+  - Integration readiness (3 tests)
+- **Code Review**: Completed, aligned with research
+
+### Known Gaps
+
+**Documented in** `docs/PLACEHOLDERS_AND_DEFERRALS.md`:
+
+1. **Convergence Detection** (missing):
+   - Check if `currentDraft === previousDraft` → stuck, exit
+   - Effort: ~1 hour
+
+2. **Citation Tracking** (missing):
+   - Extract citations from evidence
+   - Track which claims are supported
+   - Effort: ~3 hours
+
+3. **Superfluous Detection** (missing):
+   - Add `"superfluous"` to Issue type
+   - Detect irrelevant/redundant content
+   - Effort: ~1 hour
 
 ---
 

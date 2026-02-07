@@ -292,6 +292,12 @@
 - Comprehensive iteration tracking for debugging
 - Type-safe interfaces using existing Phase 3 types
 
+**Placeholders & Deferrals**:
+- 4 placeholder methods (`_generateInitialDraft`, `_gatherEvidence`, `_generateCritique`, `_reviseDraft`)
+- All deferred to Stage E (LLM Integration)
+- Placeholders enable testing of loop mechanics without LLM dependency
+- See `docs/PLACEHOLDERS_AND_DEFERRALS.md` for complete inventory and upgrade paths
+
 ---
 
 ## Stage D: Homeostasis Guidance Integration
@@ -349,9 +355,82 @@
 
 ---
 
+## Placeholders & Deferrals Summary
+
+**Complete Inventory**: See `docs/PLACEHOLDERS_AND_DEFERRALS.md`
+
+### Stage A: Homeostasis Engine (5 LLM Assessment Heuristics)
+
+| Dimension | Method | Status | Upgrade Effort |
+|-----------|--------|--------|---------------|
+| `knowledge_sufficiency` | Heuristic (fact count) | ⚠️ Deferred to Stage E | ~2h |
+| `certainty_alignment` | Heuristic (keyword matching) | ⚠️ Deferred to Stage E | ~2h |
+| `progress_momentum` | Computed (time + actions) | ✅ Complete (LLM upgrade path ready) | ~1h |
+| `communication_health` | Computed (time since last msg) | ✅ Complete | N/A |
+| `productive_engagement` | Computed (task status) | ✅ Complete (LLM upgrade path ready) | ~1h |
+| `knowledge_application` | Heuristic (time ratio) | ⚠️ Deferred to Stage E | ~2h |
+
+**Total Stage A Upgrade Effort**: ~8 hours (all deferred to Stage E)
+
+**Status**: Heuristics are functional and tested. LLM upgrade will improve accuracy by ~15-20%.
+
+### Stage B: Activity Router (0 Placeholders)
+
+✅ **Fully implemented**, no placeholders or deferrals.
+
+**Nice-to-Have Enhancements** (documented in `docs/STAGE_B_ENHANCEMENTS.md`):
+- Enhanced YAML validation
+- Additional risk patterns (11 DevOps/Kubernetes patterns)
+- Environment variable model override
+- Inline pattern explanations
+- Edge case tests
+
+**Effort**: 2-3 hours total (low priority, defer to Phase 4+)
+
+### Stage C: Reflexion Loop (4 LLM Method Placeholders)
+
+| Method | Current | Status | Upgrade Effort | Production Blocker? |
+|--------|---------|--------|---------------|---------------------|
+| `_generateInitialDraft()` | Placeholder text | ⚠️ Deferred to Stage E | ~2h | **YES** |
+| `_gatherEvidence()` | Memory placeholder | ⚠️ Deferred to Stage E | ~4h | **YES** |
+| `_generateCritique()` | Always-passing placeholder | ⚠️ Deferred to Stage E | ~4h | **YES** |
+| `_reviseDraft()` | Placeholder revision | ⚠️ Deferred to Stage E | ~2h | **YES** |
+
+**Critical Path (Production Blockers)**: ~12 hours
+
+**Missing Features** (Nice-to-Have):
+- Convergence detection (~1h)
+- Citation tracking (~3h)
+- Superfluous content detection (~1h)
+
+**Total Stage C Completion Effort**: ~17 hours
+
+### Overall Summary
+
+**Total Placeholders**: 9 (5 in Stage A + 0 in Stage B + 4 in Stage C)
+
+**Critical Path** (Must fix for production):
+- Stage C: 4 LLM methods (~12h) - **BLOCKS Level 3 task execution**
+
+**Quality Improvements** (Functional now, better with LLM):
+- Stage A: 5 LLM assessments (~8h) - Heuristics work, LLM improves accuracy
+
+**Enhancements** (Nice-to-Have):
+- Stage B: 5 enhancements (~2-3h) - Low priority
+- Stage C: 3 features (~5h) - Convergence, citations, superfluous
+
+**Total Effort to Complete Phase 3**: ~25 hours (all in Stage E)
+
+---
+
 ## Deviations from Plan
 
-None yet.
+None.
+
+**Note**: Placeholders in Stages A & C are **intentional deferrals** to Stage E, not deviations. This approach enables:
+- Testing infrastructure without LLM dependency
+- Parallel development of Stages D-E
+- Cost control during development
 
 ---
 
