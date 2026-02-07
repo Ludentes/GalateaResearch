@@ -1,11 +1,19 @@
 # Galatea: Final Minimal Architecture
 
-**Date**: 2026-02-06 (Updated)
-**Status**: Phase 2 COMPLETE, Phase 3 Ready to Start
+**Date**: 2026-02-07 (Updated)
+**Status**: Phase 2 COMPLETE (extraction quality under review), Phase 3 Ready to Start
 **Timeline**: 11 weeks to working core (Phases 1-2 done in 3 weeks)
 
-**Latest Update (2026-02-06)**:
-- ✅ **Phase 2 COMPLETE** — Memory system fully operational with Graphiti + FalkorDB
+**Latest Update (2026-02-07)**:
+- ⚠️ **Extraction Quality Discovery** — Benchmarking revealed Graphiti and Mem0 both achieve only 18-21% fact recall on our golden dataset. This does NOT block Phase 3, but changes the memory extraction strategy:
+  - Extraction is now separated from storage (extraction ≠ memory system)
+  - Adopting unified extraction: pattern-based heuristics (fast path) + pluggable LLM fallback
+  - Raw data preservation principle: save originals, improve extraction iteratively
+  - See [memory-lifecycle.md](./plans/2026-02-07-memory-lifecycle.md) for complete lifecycle design
+  - See [unified-memory-extraction-design.md](./plans/2026-02-06-unified-memory-extraction-design.md) for extraction approach
+
+**Previous Update (2026-02-06)**:
+- ✅ **Phase 2 COMPLETE** — Memory system operational with Graphiti + FalkorDB
   - Single-graph architecture enables cross-session search
   - Context assembly enriches every LLM call (<100ms latency)
   - Memory Browser UI for visualization
@@ -25,6 +33,7 @@
 1. **Pragmatical** - Practice is the criterion of truth
 2. **Iterative** - Useful at every step
 3. **Reuse** - Team of one leverages thousands
+4. **Raw Data First** - Save original data; improve extraction later. Basic heuristics that preserve source data beat sophisticated extraction that can't be reprocessed
 
 ### End Goal
 **Prove: Psychological Architecture + LLM > Plain LLM**
@@ -105,23 +114,30 @@ After evaluating multiple approaches, we selected **homeostasis-based architectu
 
 **Psychological grounding**: Each dimension maps to established psychological needs (Self-Determination Theory, Goal Theory, Metacognition research).
 
-### Memory System: Graphiti + FalkorDB
+### Memory System: Extraction + Storage (Separated)
 
-**Decision**: Graphiti with FalkorDB backend (not Mem0, not basic RAG)
+**Key Insight (2026-02-07):** Benchmarking revealed that both Graphiti and Mem0 achieve only 18-21% fact recall on our golden dataset. The memory system is now understood as two distinct layers:
 
-**Why Graphiti is essential**:
-| Requirement | RAG | Mem0 | Graphiti |
-|-------------|-----|------|----------|
-| Hard rules guarantee | ❌ | ❌ | ✅ |
-| Temporal validity | ❌ | ⚠️ | ✅ |
-| Usage tracking | ❌ | ❌ | ✅ |
-| Promotion/learning | ❌ | ❌ | ✅ |
-| Cross-agent patterns | ❌ | ⚠️ | ✅ |
+1. **Extraction Layer** — How we turn conversations/observations into structured memories
+2. **Storage Layer** — How we persist, query, and manage those memories over time
 
-**Memory types**:
-- **Episodic**: Events with timestamps ("Debugging auth took 45min")
-- **Semantic**: Facts with confidence ("Prefer Clerk over JWT")
-- **Procedural**: Trigger → steps ("When animation flickers → use inline styles")
+**Extraction approach** (replacing monolithic Graphiti extraction):
+
+| Method | When | Latency | Cost |
+|--------|------|---------|------|
+| Pattern-based heuristics | ~70% of messages (preferences, rules, tech mentions) | <1ms | $0 |
+| Pluggable LLM fallback | ~30% of messages (complex, ambiguous) | 200-500ms | $0 (Ollama) |
+
+The LLM fallback uses a pluggable `MemoryExtractor` interface — implementations include Ollama (default), Mem0, Graphiti, and Claude. This allows swapping extraction backends without changing the pipeline. See [pluggable-extraction-interface.md](./plans/2026-02-06-pluggable-extraction-interface.md).
+
+**Storage** remains PostgreSQL (facts table) + FalkorDB (graph relationships). Graphiti continues to provide graph storage and querying — the change is that extraction is no longer delegated to Graphiti alone.
+
+**Raw data preservation**: Every extracted memory links back to its source data (`source_id`, `extraction_version`, `raw_user_message`). When extraction improves, we can batch-reprocess from raw data. See the Raw Data First principle above.
+
+**Memory types** (from [PSYCHOLOGICAL_ARCHITECTURE.md](./PSYCHOLOGICAL_ARCHITECTURE.md)):
+- **Episodic**: Events with timestamps, outcomes, emotional valence ("Debugging auth took 45min, frustrated→relieved")
+- **Semantic**: Facts with confidence + temporal validity ("Prefer Clerk over JWT", valid_from, valid_until)
+- **Procedural**: Trigger → steps with success tracking ("When animation flickers → use inline styles", success_rate: 0.85)
 
 **Cognitive models**:
 - **Self Model**: Strengths, weaknesses, recent misses
@@ -129,7 +145,9 @@ After evaluating multiple approaches, we selected **homeostasis-based architectu
 - **Domain Model**: Rules, risk levels, precision requirements
 - **Relationship Model**: Trust level, interaction history
 
-See [2026-02-02-memory-system-design.md](./plans/2026-02-02-memory-system-design.md) for full design.
+**Memory lifecycle**: Creation → Storage → Retrieval → Editing/Supersession → Promotion. Memories are never deleted, only superseded. See [memory-lifecycle.md](./plans/2026-02-07-memory-lifecycle.md) for complete lifecycle design including promotion pipeline, priority budget retrieval, and quality metrics.
+
+See [2026-02-02-memory-system-design.md](./plans/2026-02-02-memory-system-design.md) for original design.
 
 ### The Observation Pipeline (OTEL-First)
 
@@ -137,8 +155,8 @@ See [2026-02-02-memory-system-design.md](./plans/2026-02-02-memory-system-design
 
 ```
 ACTIVITY SOURCES → OTEL COLLECTOR → GALATEA API → ENRICHMENT → DIALOGUE → MEMORY
-(Claude Code,      (Filter,         (Ingest)      (Guess      (Validate) (Graphiti)
- VSCode,            Transform,                      intent)
+(Claude Code,      (Filter,         (Ingest)      (Guess      (Validate) (Extraction
+ VSCode,            Transform,                      intent)               + Storage)
  Browser,           Batch)
  Home Assistant)
 ```
@@ -205,7 +223,11 @@ See [OBSERVATION_PIPELINE.md](OBSERVATION_PIPELINE.md) and [observation-pipeline
 │                                   │                                          │
 │                                   ▼                                          │
 │  ┌────────────────────────────────────────────────────────────────────────┐ │
-│  │                      MEMORY LAYER (GRAPHITI)                            │ │
+│  │                MEMORY LAYER (Extraction + Storage)                     │ │
+│  │  ┌─────────────────────────────────────────────────────────────────┐  │ │
+│  │  │  EXTRACTION: Pattern heuristics (70%) + Pluggable LLM (30%)   │  │ │
+│  │  │  Gatekeeper → Pattern Match → LLM Fallback → Dedup/Merge      │  │ │
+│  │  └─────────────────────────────────────────────────────────────────┘  │ │
 │  │  ┌──────────────┐ ┌──────────────┐ ┌────────────────────────────────┐  │ │
 │  │  │   Episodic   │ │   Semantic   │ │         Procedural             │  │ │
 │  │  │   (events)   │ │   (facts)    │ │     (trigger → steps)          │  │ │
@@ -242,9 +264,10 @@ See [OBSERVATION_PIPELINE.md](OBSERVATION_PIPELINE.md) and [observation-pipeline
 │  └────────────────┘  └────────────────┘  │  • Haiku (Level 0-1)           │ │
 │                                          │  • Sonnet (Level 2-3)          │ │
 │  ┌────────────────┐  ┌────────────────┐  └────────────────────────────────┘ │
-│  │   Mosquitto    │  │  Auth (TBD)    │                                     │
-│  │  (MQTT broker) │  │  (deferred)    │                                     │
-│  └────────────────┘  └────────────────┘                                     │
+│  │   Mosquitto    │  │    Ollama      │                                     │
+│  │  (MQTT broker) │  │  (extraction   │  ┌────────────────────────────────┐ │
+│  └────────────────┘  │   LLM fallback)│  │  Auth (TBD, deferred)         │ │
+│                      └────────────────┘  └────────────────────────────────┘ │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -320,29 +343,41 @@ See [OBSERVATION_PIPELINE.md](OBSERVATION_PIPELINE.md) and [observation-pipeline
 
 ---
 
-### Phase 2: Memory System (Weeks 3-4) — COMPLETE
+### Phase 2: Memory System (Weeks 3-4) — COMPLETE (Extraction Under Review)
 
 **Objective:** Implement full memory layer with all types
 
-**Tasks:**
-- [x] ~~Implement all node types~~ — Graphiti handles entity extraction (episodic, semantic)
-- [x] ~~Implement edge types~~ — Graphiti handles relationship extraction (`:RELATES_TO`, `:MENTIONS`)
-- [x] ~~Build Memory Router~~ — Deferred to Phase 3+ (Graphiti's generic extraction sufficient for Phase 2)
+**Phase 2a (COMPLETE):** Infrastructure + Graphiti integration
 - [x] Build Memory Gatekeeper (filter general knowledge) — Pattern-based, no LLM calls
 - [x] Implement ingestion pipeline — Fire-and-forget with graceful degradation
 - [x] Implement context assembly (query → prompt) — 6-step pipeline, <100ms
 - [x] Add memory panel to UI — Memory Browser with Facts + Episodes tabs
+- [x] Single-graph architecture with `group_id` properties
+- [x] 102/104 tests passing (98%)
 
-**Deliverable:** ✅ Agent stores and retrieves typed memories
+**Phase 2b (PLANNED):** Extraction quality overhaul
+- ⚠️ **Discovery**: Benchmarking showed Graphiti and Mem0 achieve only 18-21% fact recall
+- [ ] Implement unified extraction (pattern heuristics + pluggable LLM fallback)
+- [ ] Add gatekeeper decision logging (`gatekeeper_log` table)
+- [ ] Add `extraction_version` and `source_id` to all memories (raw data preservation)
+- [ ] Implement `MemoryExtractor` interface with Ollama backend
+- [ ] Add temporal validity (`valid_from`, `valid_until`, `superseded_by`) to facts
+- [ ] Add non-lossy supersession (never delete, always supersede)
+- [ ] Validate against golden dataset (target: >60% fact recall)
+- See [memory-lifecycle.md](./plans/2026-02-07-memory-lifecycle.md) for full Phase 2b design
 
-**Success Metric:** ✅ Context includes relevant hard rules (100%), facts (>80% relevance), procedures
+**Deliverable:** ✅ Agent stores and retrieves typed memories (2a); Agent extracts memories with measurable quality (2b)
+
+**Success Metric:** Context includes relevant hard rules (100%), facts (>80% relevance), extraction recall >60% on golden dataset
 
 **Progress:** See [2026-02-06-phase2-progress.md](./plans/2026-02-06-phase2-progress.md)
 
 **Key Architectural Decisions:**
+- **Extraction ≠ Storage**: Extraction layer (how we turn text into memories) is separated from storage layer (how we persist and query them)
 - **Single-graph architecture**: Migrated from multi-graph (one per session) to single `galatea_memory` graph with `group_id` properties
-- **Client-side search filtering**: Exact-match prioritization for short keyword queries (fixes precision issues on small datasets)
-- **Pattern-based gatekeeper**: No LLM calls, zero cost, <1ms latency
+- **Pattern-based gatekeeper**: No LLM calls, zero cost, <1ms latency — handles ~70% of messages
+- **Pluggable LLM fallback**: `MemoryExtractor` interface with Ollama/Mem0/Graphiti/Claude implementations
+- **Raw data preservation**: Every memory links to source data; reprocessable when extraction improves
 - **Cognitive models infrastructure**: Ready but not yet integrated (Phase 3)
 
 **Key Schema:**
@@ -616,7 +651,8 @@ hard_blocks:
 | | • claude-code (Agent SDK, default: sonnet) | |
 | **Streaming** | Nitro API route + client ReadableStream | Phase 1 DONE |
 | **Graph DB** | FalkorDB (port 16379, Browser on 13001) | Phase 1 DONE |
-| **Memory** | Graphiti | Phase 2 |
+| **Memory Extraction** | Pattern heuristics + Pluggable LLM (Ollama default) | Phase 2b |
+| **Memory Storage** | PostgreSQL (facts) + FalkorDB (graph relationships) | Phase 2a DONE |
 | **Observation** | OpenTelemetry Collector (ports 4317/4318) | Phase 4 |
 | **Events** | MQTT (Mosquitto, port 11883/19001) → OTEL bridge | Phase 4 (optional) |
 | **Tools** | MCP (1000+ servers) | Phase 5 |
@@ -817,21 +853,23 @@ Note: `@ai-sdk/anthropic` removed in favor of multi-provider system. `better-aut
 ## What We're NOT Building
 
 ❌ 12+ discrete subsystems (homeostasis replaces them)
-❌ Custom vector DB (use Graphiti/FalkorDB)
+❌ Custom vector DB (use FalkorDB for graph, PostgreSQL for structured)
 ❌ Custom embedding model (use Voyage AI)
 ❌ Custom LLM (use Claude models via API)
 ❌ Complex UI from scratch (reuse ContextForge patterns)
-❌ Mem0 (replaced by Graphiti)
+❌ Monolithic memory extraction (use pluggable extractors behind common interface)
 ❌ Convex (replaced by TanStack Start + Drizzle)
 ❌ Real-time sync framework (not needed for request/response + streaming)
 ❌ Multi-agent coordination initially (single agent first)
+❌ Perfect extraction from day 1 (raw data preservation allows iterative improvement)
 
 ---
 
 ## Risk Mitigation
 
-### Risk 1: Graphiti TypeScript integration
-**Mitigation:** Use REST API wrapper, contribute TypeScript bindings if needed
+### Risk 1: Memory extraction quality
+**Status:** REALIZED — Graphiti and Mem0 benchmarked at 18-21% fact recall
+**Mitigation:** Separated extraction from storage. Pattern-based heuristics for common cases ($0, <1ms), pluggable LLM fallback for complex cases. Raw data preservation enables reprocessing when extraction improves. See [unified-memory-extraction-design.md](./plans/2026-02-06-unified-memory-extraction-design.md).
 
 ### Risk 2: FalkorDB learning curve
 **Mitigation:** Start with basic Cypher queries, add complexity iteratively
@@ -888,9 +926,17 @@ Note: `@ai-sdk/anthropic` removed in favor of multi-provider system. `better-aut
 - **[plans/2026-02-03-contextforge-migration.md](./plans/2026-02-03-contextforge-migration.md)** - ContextForge migration analysis
 - **[plans/2026-02-03-tanstack-ecosystem.md](./plans/2026-02-03-tanstack-ecosystem.md)** - TanStack capabilities
 
+### Memory System (2026-02-07)
+- **[plans/2026-02-07-memory-lifecycle.md](./plans/2026-02-07-memory-lifecycle.md)** - Complete memory lifecycle (creation → storage → retrieval → editing → promotion)
+- **[plans/2026-02-06-unified-memory-extraction-design.md](./plans/2026-02-06-unified-memory-extraction-design.md)** - Unified extraction approach (pattern + LLM)
+- **[plans/2026-02-06-unified-memory-extraction-implementation.md](./plans/2026-02-06-unified-memory-extraction-implementation.md)** - 4-phase extraction implementation plan
+- **[plans/2026-02-06-pluggable-extraction-interface.md](./plans/2026-02-06-pluggable-extraction-interface.md)** - MemoryExtractor interface & orchestrator
+- **[MEMORY_SYSTEM_COMPARISON.md](./MEMORY_SYSTEM_COMPARISON.md)** - Mem0 vs Graphiti benchmark results
+
 ### Testing & Planning
 - **[OBSERVATION_PIPELINE.md](./OBSERVATION_PIPELINE.md)** - Observation pipeline design
-- **[REFERENCE_SCENARIOS.md](./REFERENCE_SCENARIOS.md)** - Test scenarios
+- **[REFERENCE_SCENARIOS.md](./REFERENCE_SCENARIOS.md)** - Test scenarios (including memory lifecycle traces, golden dataset edge cases)
+- **[USER_STORIES.md](./USER_STORIES.md)** - User stories (including Epic 9: Memory Lifecycle)
 - **[plans/BRAINSTORM_QUEUE.md](./plans/BRAINSTORM_QUEUE.md)** - Open questions
 
 ---
@@ -922,20 +968,24 @@ We have:
 **This aligns perfectly with our guiding principles:**
 1. **Pragmatical** ✅ - Solves real problem (better than ChatGPT)
 2. **Iterative** ✅ - Useful at every phase
-3. **Reuse** ✅ - Leverages ContextForge + Graphiti + MCP ecosystem
-
-**Ready to start building?**
+3. **Reuse** ✅ - Leverages ContextForge + pluggable extractors + MCP ecosystem
+4. **Raw Data First** ✅ - Save originals, improve extraction iteratively
 
 ---
 
-*Architecture updated: 2026-02-04*
-*Key changes:*
-- *Database: PostgreSQL everywhere, drop SQLite (see plans/2026-02-04-postgresql-everywhere.md)*
+*Architecture updated: 2026-02-07*
+*Key changes (2026-02-07):*
+- *Memory extraction separated from storage — Graphiti/Mem0 benchmarked at 18-21% recall*
+- *Adopted unified extraction: pattern heuristics + pluggable LLM fallback (MemoryExtractor interface)*
+- *Added Raw Data First principle — save originals, reprocess when extraction improves*
+- *Phase 2 split into 2a (complete) and 2b (extraction quality overhaul)*
+- *Complete memory lifecycle documented (creation → storage → retrieval → editing → promotion)*
+- *Reference scenarios expanded: memory lifecycle traces, golden dataset edge cases*
+- *Added Ollama to infrastructure (extraction LLM fallback, $0 cost)*
+
+*Previous changes (2026-02-04):*
+- *Database: PostgreSQL everywhere, drop SQLite*
 - *Stack: TanStack Start v1.158 + Drizzle ORM (replaces Convex)*
 - *LLM: Multi-provider system — ollama (local), openrouter, claude-code (Agent SDK)*
-- *Streaming: Nitro API routes (not TanStack Start server functions)*
-- *Observability: Langfuse via OTel + AI SDK experimental_telemetry*
-- *Events: MQTT for Home Assistant/Frigate integration*
-- *Content: MD files as input layer (Obsidian-friendly)*
 - *Phase 1: COMPLETE — 27/27 tests, 3 providers verified streaming*
-*Next: Phase 2 — Memory System (Graphiti + FalkorDB)*
+*Next: Phase 2b — Memory extraction quality overhaul*
