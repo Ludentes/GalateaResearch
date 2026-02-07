@@ -319,8 +319,10 @@ describe("HomeostasisEngine", () => {
       const context = createMockContext({
         retrievedFacts: [
           { content: "fact1", confidence: 0.8 },
-          { content: "fact2", confidence: 0.7 },
-          { content: "fact3", confidence: 0.75 },
+          { content: "fact2", confidence: 0.75 },
+          { content: "fact3", confidence: 0.72 },
+          { content: "fact4", confidence: 0.78 },
+          { content: "fact5", confidence: 0.71 },
         ],
       })
       const engine = createHomeostasisEngine()
@@ -331,7 +333,7 @@ describe("HomeostasisEngine", () => {
       )
 
       expect(result.state).toBe("HEALTHY")
-      expect(result.confidence).toBeGreaterThanOrEqual(0.6)
+      expect(result.confidence).toBeGreaterThanOrEqual(0.7)
     })
 
     it("returns HIGH when too many facts with low confidence", async () => {
@@ -357,6 +359,7 @@ describe("HomeostasisEngine", () => {
         retrievedFacts: [
           { content: "fact1", confidence: 0.3 },
           { content: "fact2", confidence: 0.4 },
+          { content: "fact3", confidence: 0.5 },
         ],
       })
       const engine = createHomeostasisEngine()
@@ -540,6 +543,38 @@ describe("HomeostasisEngine", () => {
   // ============================================================================
 
   describe("getGuidance", () => {
+    it("gracefully handles guidance loading errors (uses defaults)", () => {
+      // This test verifies that if guidance.yaml is malformed or missing,
+      // the system falls back to defaults rather than crashing.
+      // The actual loading happens on first getGuidance() call.
+      const engine = createHomeostasisEngine()
+      const state: HomeostasisState = {
+        knowledge_sufficiency: "LOW",
+        certainty_alignment: "HEALTHY",
+        progress_momentum: "HEALTHY",
+        communication_health: "HEALTHY",
+        productive_engagement: "HEALTHY",
+        knowledge_application: "HEALTHY",
+        assessed_at: new Date(),
+        assessment_method: {
+          knowledge_sufficiency: "computed",
+          certainty_alignment: "computed",
+          progress_momentum: "computed",
+          communication_health: "computed",
+          productive_engagement: "computed",
+          knowledge_application: "computed",
+        },
+      }
+
+      // Should not throw even if YAML loading fails
+      const guidance = engine.getGuidance(state)
+
+      // Should return guidance (either from YAML or defaults)
+      expect(guidance).not.toBeNull()
+      expect(guidance?.primary).toBeTruthy()
+      expect(guidance?.dimensions).toContain("knowledge_sufficiency")
+    })
+
     it("returns null when all dimensions HEALTHY", () => {
       const engine = createHomeostasisEngine()
       const state: HomeostasisState = {

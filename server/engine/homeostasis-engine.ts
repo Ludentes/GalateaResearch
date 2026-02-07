@@ -55,20 +55,62 @@ type GuidanceConfig = Record<Dimension, DimensionGuidance>
 let guidanceConfigCache: GuidanceConfig | null = null
 
 /**
+ * Get default guidance configuration (fallback when YAML fails to load).
+ * Provides minimal but functional guidance for all dimensions.
+ */
+function getDefaultGuidanceConfig(): GuidanceConfig {
+  const defaultEntry = (dimension: string): DimensionGuidance => ({
+    LOW: {
+      priority: 3,
+      primary: `${dimension} is LOW. Consider addressing this imbalance.`,
+      secondary: "Guidance system using defaults due to configuration error.",
+    },
+    HIGH: {
+      priority: 5,
+      primary: `${dimension} is HIGH. Consider rebalancing.`,
+      secondary: "Guidance system using defaults due to configuration error.",
+    },
+  })
+
+  return {
+    knowledge_sufficiency: defaultEntry("Knowledge sufficiency"),
+    certainty_alignment: defaultEntry("Certainty alignment"),
+    progress_momentum: defaultEntry("Progress momentum"),
+    communication_health: defaultEntry("Communication health"),
+    productive_engagement: defaultEntry("Productive engagement"),
+    knowledge_application: defaultEntry("Knowledge application"),
+  }
+}
+
+/**
  * Load guidance configuration from YAML file.
- * Cached after first load.
+ * Cached after first load. Falls back to defaults if loading fails.
  */
 function loadGuidanceConfig(): GuidanceConfig {
   if (guidanceConfigCache) {
     return guidanceConfigCache
   }
 
-  const guidancePath = join(__dirname, "guidance.yaml")
-  const yamlContent = readFileSync(guidancePath, "utf-8")
-  const parsed = YAML.parse(yamlContent)
+  try {
+    const guidancePath = join(__dirname, "guidance.yaml")
+    const yamlContent = readFileSync(guidancePath, "utf-8")
+    const parsed = YAML.parse(yamlContent)
 
-  guidanceConfigCache = parsed as GuidanceConfig
-  return guidanceConfigCache
+    // Basic validation
+    if (!parsed || typeof parsed !== "object") {
+      throw new Error("Invalid YAML structure")
+    }
+
+    guidanceConfigCache = parsed as GuidanceConfig
+    return guidanceConfigCache
+  } catch (error) {
+    console.error(
+      "[HomeostasisEngine] Failed to load guidance.yaml, using defaults:",
+      error instanceof Error ? error.message : String(error),
+    )
+    guidanceConfigCache = getDefaultGuidanceConfig()
+    return guidanceConfigCache
+  }
 }
 
 /**
@@ -444,17 +486,19 @@ export class HomeostasisEngine {
     }
 
     // Has some facts with decent confidence
+    // NOTE: Thresholds tuned for heuristic approach - may need adjustment with real usage
+    // Increased from 3 to 5 facts based on code review feedback
     const avgConfidence =
       facts.length > 0
         ? facts.reduce((sum, f) => sum + f.confidence, 0) / facts.length
         : 0
 
-    if (avgConfidence > 0.6 && facts.length >= 3) {
+    if (avgConfidence > 0.7 && facts.length >= 5) {
       return {
         dimension: "knowledge_sufficiency",
         state: "HEALTHY",
         method: "computed",
-        confidence: 0.7,
+        confidence: 0.75,
         reason: `Retrieved ${facts.length} relevant facts with confidence ${avgConfidence.toFixed(2)}`,
       }
     }
@@ -464,7 +508,7 @@ export class HomeostasisEngine {
       dimension: "knowledge_sufficiency",
       state: "LOW",
       method: "computed",
-      confidence: 0.6,
+      confidence: 0.65,
       reason: `Limited knowledge: ${facts.length} facts, avg confidence ${avgConfidence.toFixed(2)}`,
     }
   }
