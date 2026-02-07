@@ -70,3 +70,6 @@ coverage/
 *.bak
 *.backup
 .claude
+
+# Git worktrees
+.worktrees/
