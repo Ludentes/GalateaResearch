@@ -14,7 +14,7 @@
 | A: Homeostasis Engine | 🟢 Complete | 5/5 tasks | 18h est, ~2h actual |
 | B: Activity Router | 🟢 Complete | 5/5 tasks | 16h est, ~2h actual |
 | C: Reflexion Loop | 🟢 Complete | 4/4 tasks | 14h est, ~1h actual |
-| D: Cognitive Models Integration | ⚪ Pending | 0/4 tasks | 10h est |
+| D: Cognitive Models Integration | 🟢 Complete | 4/4 tasks | 10h est, ~2h actual |
 | E: End-to-End Integration | ⚪ Pending | 0/5 tasks | 16h est |
 | F: UI Visualization | ⚪ Pending | 0/4 tasks | 11h est |
 | G: Reference Scenarios | ⚪ Pending | 0/5 tasks | 10h est |
@@ -300,11 +300,79 @@
 
 ---
 
-## Stage D: Homeostasis Guidance Integration
+## Stage D: Cognitive Models Integration
 
-**Status**: ⚪ Pending
+**Status**: 🟢 Complete
 **Estimated**: 10 hours
-**Actual**: TBD
+**Actual**: ~2 hours
+
+### Tasks
+
+#### D1: Enhance context-assembler.ts with cognitive models (~3h) ✅
+- ✅ Added personaId and userName optional parameters to assembleContext()
+- ✅ Imported getSelfModel() and getUserModel() from cognitive-models.ts
+- ✅ Added SELF-AWARENESS section (priority 4) to assembled prompt
+- ✅ Added USER CONTEXT section (priority 5) to assembled prompt
+- ✅ Updated metadata with selfModelTokens and userModelTokens
+- ✅ TypeScript compiles cleanly (0 errors)
+
+**Deliverable**: ✅ Context assembler integrates cognitive models
+
+#### D2: Implement self-model prompt formatting (~2h) ✅
+- ✅ Implemented formatSelfModel() helper function
+- ✅ Formats strengths, weaknesses, recent lessons
+- ✅ Markdown-formatted with clear section headers
+- ✅ Token budget allocation (split models budget in half)
+- ✅ Graceful degradation if self-model empty
+
+**Deliverable**: ✅ Self-model appears in assembled context when personaId provided
+
+#### D3: Implement user-model prompt formatting (~2h) ✅
+- ✅ Implemented formatUserModel() helper function
+- ✅ Formats preferences, expectations, communication style
+- ✅ Markdown-formatted with clear section headers
+- ✅ Token budget allocation (split models budget in half)
+- ✅ Graceful degradation if user-model empty
+
+**Deliverable**: ✅ User-model appears in assembled context when userName provided
+
+#### D4: Add integration tests for cognitive models (~3h) ✅
+- ✅ Test context assembly with self-model (personaId provided)
+- ✅ Test context assembly with user-model (userName provided)
+- ✅ Test context assembly with both models
+- ✅ Test context assembly with neither (backward compatibility)
+- ✅ Test graceful degradation when getSelfModel() returns empty
+- ✅ Test graceful degradation when getUserModel() returns empty
+- ✅ Test token budget truncation with cognitive models
+- ✅ Test all 5 sections in priority order
+- ✅ All 21 tests passing (13 original + 8 new)
+
+**Deliverable**: ✅ Stage D complete with comprehensive tests
+
+### Summary
+
+**Files Modified** (3):
+- `server/memory/context-assembler.ts` (added cognitive models integration)
+- `server/memory/types.ts` (extended AssembledContext.metadata)
+- `server/memory/__tests__/context-assembler.unit.test.ts` (added 8 tests)
+
+**Total New Code**: ~380 lines
+
+**Tests Added**: 8 tests (cognitive models integration)
+**Tests Passing**: 245/245 total Phase 3 tests (21 context-assembler tests)
+
+**Context Assembly Priority Order** (5 sections):
+1. CONSTRAINTS (hard rules)
+2. RELEVANT PROCEDURES (procedural knowledge)
+3. RELEVANT KNOWLEDGE (Graphiti facts)
+4. SELF-AWARENESS (self-model) ← NEW
+5. USER CONTEXT (user-model) ← NEW
+
+**Key Features**:
+- Token budget allocation with truncation
+- Graceful degradation for empty models
+- Backward compatible (no models when personaId/userName not provided)
+- Markdown-formatted sections for readability
 
 ---
 
@@ -528,4 +596,4 @@ None.
 
 ---
 
-**Last Updated**: 2026-02-07 14:02 UTC
+**Last Updated**: 2026-02-07 21:01 UTC
