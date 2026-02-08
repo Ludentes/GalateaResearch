@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react"
 import { cn } from "@/lib/utils"
+import { ActivityLevelBadge } from "./ActivityLevelBadge"
 
 export interface ChatMessage {
   id: string
@@ -7,6 +8,7 @@ export interface ChatMessage {
   content: string
   createdAt: string
   model?: string
+  activityLevel?: 0 | 1 | 2 | 3
   inputTokens?: number
   outputTokens?: number
   tokenCount?: number
@@ -52,8 +54,11 @@ export function MessageList({ messages, streaming }: MessageListProps) {
               </p>
               {msg.role === "assistant" &&
                 msg.id !== "streaming" &&
-                (msg.inputTokens || msg.outputTokens) && (
-                  <div className="mt-1 flex gap-2 text-xs text-muted-foreground">
+                (msg.inputTokens || msg.outputTokens || msg.activityLevel !== undefined) && (
+                  <div className="mt-1 flex gap-2 text-xs text-muted-foreground items-center">
+                    {msg.activityLevel !== undefined && (
+                      <ActivityLevelBadge level={msg.activityLevel} model={msg.model} />
+                    )}
                     {msg.model && <span>{msg.model}</span>}
                     {msg.inputTokens && <span>↑{msg.inputTokens}</span>}
                     {msg.outputTokens && <span>↓{msg.outputTokens}</span>}
