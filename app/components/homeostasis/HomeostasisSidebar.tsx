@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query"
+import { useEffect } from "react"
 import { getHomeostasisStateLogic } from "../../../server/functions/homeostasis"
 import { DimensionBar } from "./DimensionBar"
 
 interface HomeostasisSidebarProps {
   sessionId: string
+  messageCount: number
 }
 
 const DIMENSION_LABELS: Record<string, string> = {
@@ -27,13 +29,21 @@ function SkeletonBar() {
   )
 }
 
-export function HomeostasisSidebar({ sessionId }: HomeostasisSidebarProps) {
+export function HomeostasisSidebar({ sessionId, messageCount }: HomeostasisSidebarProps) {
   const { data, error, isLoading, refetch } = useQuery({
     queryKey: ["homeostasis", sessionId],
     queryFn: () => getHomeostasisStateLogic(sessionId),
     refetchOnWindowFocus: false,
     retry: false,
   })
+
+  // Refetch when message count changes (new response arrived)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refetch is stable from useQuery
+  useEffect(() => {
+    if (messageCount > 0) {
+      refetch()
+    }
+  }, [messageCount])
 
   return (
     <div className="w-[280px] border-l border-border bg-muted/50 p-4 space-y-4">

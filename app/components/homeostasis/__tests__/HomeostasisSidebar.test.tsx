@@ -25,7 +25,7 @@ describe("HomeostasisSidebar", () => {
     vi.mocked(getHomeostasisStateLogic).mockReturnValue(
       new Promise(() => {}) // Never resolves
     )
-    renderWithQuery(<HomeostasisSidebar sessionId="test-session" />)
+    renderWithQuery(<HomeostasisSidebar sessionId="test-session" messageCount={0} />)
     expect(screen.getByText("Homeostasis State")).toBeInTheDocument()
     expect(screen.getAllByTestId("skeleton-bar")).toHaveLength(6)
   })
@@ -52,7 +52,7 @@ describe("HomeostasisSidebar", () => {
 
     vi.mocked(getHomeostasisStateLogic).mockResolvedValue(mockState)
 
-    renderWithQuery(<HomeostasisSidebar sessionId="test-session" />)
+    renderWithQuery(<HomeostasisSidebar sessionId="test-session" messageCount={0} />)
 
     await waitFor(() => {
       expect(screen.getByText("Knowledge Sufficiency")).toBeInTheDocument()
@@ -68,7 +68,7 @@ describe("HomeostasisSidebar", () => {
   it("shows empty state when no assessment exists", async () => {
     vi.mocked(getHomeostasisStateLogic).mockResolvedValue(null)
 
-    renderWithQuery(<HomeostasisSidebar sessionId="test-session" />)
+    renderWithQuery(<HomeostasisSidebar sessionId="test-session" messageCount={0} />)
 
     await waitFor(() => {
       expect(
@@ -82,7 +82,7 @@ describe("HomeostasisSidebar", () => {
       new Error("Network error")
     )
 
-    renderWithQuery(<HomeostasisSidebar sessionId="test-session" />)
+    renderWithQuery(<HomeostasisSidebar sessionId="test-session" messageCount={0} />)
 
     await waitFor(() => {
       expect(
@@ -112,7 +112,7 @@ describe("HomeostasisSidebar", () => {
 
     vi.mocked(getHomeostasisStateLogic).mockResolvedValue(mockState)
 
-    renderWithQuery(<HomeostasisSidebar sessionId="test-session" />)
+    renderWithQuery(<HomeostasisSidebar sessionId="test-session" messageCount={0} />)
 
     // Compute expected time string the same way the component does
     const expectedTime = new Date(assessedAt).toLocaleTimeString([], {

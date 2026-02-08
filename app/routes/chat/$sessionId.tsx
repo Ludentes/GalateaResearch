@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 import { ChatInput } from "@/components/chat/ChatInput"
 import type { ChatMessage } from "@/components/chat/MessageList"
 import { MessageList } from "@/components/chat/MessageList"
+import { HomeostasisSidebar } from "@/components/homeostasis/HomeostasisSidebar"
 import { getSessionMessages } from "../../../server/functions/chat"
 
 export const Route = createFileRoute("/chat/$sessionId")({
@@ -37,6 +38,7 @@ function mapRows(
     inputTokens: r.inputTokens ?? undefined,
     outputTokens: r.outputTokens ?? undefined,
     tokenCount: r.tokenCount ?? undefined,
+    activityLevel: (r.activityLevel ?? undefined) as ChatMessage["activityLevel"],
   }))
 }
 
@@ -120,38 +122,41 @@ function ChatPage() {
     : messages
 
   return (
-    <div className="flex flex-col h-screen">
-      <header className="flex items-center justify-between p-4 border-b border-border">
-        <h1 className="text-xl font-semibold">Galatea Chat</h1>
-        <div className="flex items-center gap-2">
-          <select
-            value={provider}
-            onChange={(e) => handleProviderChange(e.target.value)}
-            disabled={loading}
-            className="rounded-md border border-border bg-background px-2 py-1 text-sm"
-          >
-            {PROVIDERS.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-          <select
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            disabled={loading}
-            className="rounded-md border border-border bg-background px-2 py-1 text-sm"
-          >
-            {(PROVIDER_MODELS[provider] ?? []).map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </select>
-        </div>
-      </header>
-      <MessageList messages={displayMessages} streaming={!!streamingText} />
-      <ChatInput onSend={handleSend} disabled={loading} />
+    <div className="flex h-screen">
+      <div className="flex flex-col flex-1">
+        <header className="flex items-center justify-between p-4 border-b border-border">
+          <h1 className="text-xl font-semibold">Galatea Chat</h1>
+          <div className="flex items-center gap-2">
+            <select
+              value={provider}
+              onChange={(e) => handleProviderChange(e.target.value)}
+              disabled={loading}
+              className="rounded-md border border-border bg-background px-2 py-1 text-sm"
+            >
+              {PROVIDERS.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+            <select
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              disabled={loading}
+              className="rounded-md border border-border bg-background px-2 py-1 text-sm"
+            >
+              {(PROVIDER_MODELS[provider] ?? []).map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </div>
+        </header>
+        <MessageList messages={displayMessages} streaming={!!streamingText} />
+        <ChatInput onSend={handleSend} disabled={loading} />
+      </div>
+      <HomeostasisSidebar sessionId={sessionId} messageCount={messages.length} />
     </div>
   )
 }
