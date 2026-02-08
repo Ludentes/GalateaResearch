@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/postgres-js"
 import postgres from "postgres"
 import { afterAll, describe, expect, it } from "vitest"
-import { messages, sessions } from "../../db/schema"
+import { homeostasisStates, messages, sessions } from "../../db/schema"
 import {
   createSessionLogic,
   getSessionMessagesLogic,
@@ -22,7 +22,13 @@ describe("Chat Logic (integration with Ollama)", () => {
   let testSessionId: string
 
   afterAll(async () => {
+    // Wait for fire-and-forget homeostasis storage to complete
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    // Clean up test data (order matters: homeostasis_states FK -> messages FK -> sessions)
     if (testSessionId) {
+      await testDb
+        .delete(homeostasisStates)
+        .where(eq(homeostasisStates.sessionId, testSessionId))
       await testDb.delete(messages).where(eq(messages.sessionId, testSessionId))
       await testDb.delete(sessions).where(eq(sessions.id, testSessionId))
     }
@@ -50,5 +56,9 @@ describe("Chat Logic (integration with Ollama)", () => {
     expect(msgs[0].role).toBe("user")
     expect(msgs[1].role).toBe("assistant")
     expect(msgs[1].model).toBe("llama3.2")
+
+    // Verify activityLevel is returned from message queries (Task 6: Stage F)
+    expect(msgs[0].activityLevel).toBeNull() // user messages have no activityLevel
+    expect(msgs[1].activityLevel).toBe(2) // defaults to Level 2 (standard reasoning)
   }, 30000)
 })
