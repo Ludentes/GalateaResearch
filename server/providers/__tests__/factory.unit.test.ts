@@ -30,7 +30,7 @@ describe("Provider Factory (getModel)", () => {
     delete process.env.LLM_MODEL
     const { getModel } = await import("../index")
     const result = getModel()
-    expect(result.modelName).toBe("llama3.2")
+    expect(result.modelName).toBe("glm-4.7-flash")
     expect(result.model).toEqual({ provider: "mock-ollama" })
   })
 

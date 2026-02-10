@@ -42,8 +42,8 @@ describe("Chat Logic (integration with Ollama)", () => {
     const result = await sendMessageLogic(
       testSessionId,
       "What is 2 + 2? Reply with just the number.",
-      ollama("llama3.2"),
-      "llama3.2",
+      ollama("glm-4.7-flash"),
+      "glm-4.7-flash",
     )
 
     // The LLM should respond with something
@@ -55,7 +55,7 @@ describe("Chat Logic (integration with Ollama)", () => {
     expect(msgs).toHaveLength(2)
     expect(msgs[0].role).toBe("user")
     expect(msgs[1].role).toBe("assistant")
-    expect(msgs[1].model).toBe("llama3.2")
+    expect(msgs[1].model).toBe("glm-4.7-flash")
 
     // Verify activityLevel is returned from message queries (Task 6: Stage F)
     expect(msgs[0].activityLevel).toBeNull() // user messages have no activityLevel

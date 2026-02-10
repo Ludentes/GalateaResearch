@@ -11,7 +11,7 @@ export const Route = createFileRoute("/chat/$sessionId")({
 })
 
 const PROVIDER_MODELS: Record<string, string[]> = {
-  ollama: ["llama3.2", "llama3.1", "mistral", "codellama"],
+  ollama: ["glm-4.7-flash", "llama3.2", "llama3.1", "mistral", "codellama"],
   openrouter: [
     "z-ai/glm-4.5-air:free",
     "anthropic/claude-sonnet-4",
@@ -48,7 +48,7 @@ function ChatPage() {
   const [loading, setLoading] = useState(false)
   const [streamingText, setStreamingText] = useState("")
   const [provider, setProvider] = useState("ollama")
-  const [model, setModel] = useState("llama3.2")
+  const [model, setModel] = useState("glm-4.7-flash")
 
   useEffect(() => {
     getSessionMessages({ data: { sessionId } }).then((rows) =>
