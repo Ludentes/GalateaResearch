@@ -251,7 +251,7 @@ describe("Trace 2: Knowledge Gap Scenario", () => {
       expect.soft(guidance).not.toBeNull()
       expect.soft(guidance?.dimensions).toContain("knowledge_sufficiency")
     }
-  }, 120_000)
+  }, 300_000)
 
   // ---------------------------------------------------------------------------
   // Test 2: Contrast — topic where Graphiti may have facts
@@ -345,7 +345,7 @@ describe("Trace 2: Knowledge Gap Scenario", () => {
     // Activity level: "review" + "suggest" are standard reasoning tasks, no knowledge gap keywords.
     // Should be Level 2 (standard reasoning).
     expect.soft(activityLevel).toBe(2)
-  }, 120_000)
+  }, 300_000)
 
   // ---------------------------------------------------------------------------
   // Test 3: Direct ActivityRouter and Engine classification

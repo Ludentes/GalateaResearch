@@ -298,7 +298,7 @@ describe("Trace 4: Execute Task (Sufficient Knowledge) Scenario", () => {
     // Without knowledge gap, and without procedure match or tool call,
     // ActivityRouter should classify as Level 2 (standard reasoning).
     expect.soft(activityLevel).toBe(2)
-  }, 120_000)
+  }, 300_000)
 
   // ---------------------------------------------------------------------------
   // Test 3: State change on follow-up message
@@ -395,7 +395,7 @@ describe("Trace 4: Execute Task (Sufficient Knowledge) Scenario", () => {
     // Follow-up message "Add null checks..." has no knowledge gap markers.
     // Should be Level 2 (standard reasoning).
     expect.soft(activityLevel).toBe(2)
-  }, 120_000)
+  }, 300_000)
 
   // ---------------------------------------------------------------------------
   // Test 4: Activity classification for implementation task

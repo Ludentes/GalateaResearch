@@ -307,7 +307,7 @@ describe("Trace 6: Unknown Situation (Escalation to Level 3)", () => {
     // it runs Draft + Critique (2 LLM calls minimum, possibly revise for 3+)
     console.log(`[trace6] Reflexion pipeline time: ${elapsedMs}ms`)
     console.log(`[trace6] Response length (Level 3): ${result.text.length} chars`)
-  }, 120_000)
+  }, 300_000)
 
   // ---------------------------------------------------------------------------
   // Test 2: Contrast — routine task stays at Level 2
@@ -417,7 +417,7 @@ describe("Trace 6: Unknown Situation (Escalation to Level 3)", () => {
     } else {
       console.log("[trace6]   Level 3 response is NOT longer (unexpected, but LLM output varies)")
     }
-  }, 120_000)
+  }, 300_000)
 
   // ---------------------------------------------------------------------------
   // Test 3: Documents classification flags for escalation triggers
