@@ -175,7 +175,7 @@ describe("context-assembler", () => {
       expect(ctx.systemPrompt).toContain("## RELEVANT KNOWLEDGE")
     })
 
-    it("passes sessionId and 'global' as group_ids to searchFacts", async () => {
+    it("searches all facts without group_ids filter", async () => {
       mockPreprompts([])
       vi.mocked(searchFacts).mockResolvedValue([])
 
@@ -183,7 +183,7 @@ describe("context-assembler", () => {
 
       expect(searchFacts).toHaveBeenCalledWith(
         "query",
-        ["my-session-42", "global"],
+        [],
         20,
       )
     })

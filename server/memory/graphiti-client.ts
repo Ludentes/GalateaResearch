@@ -20,7 +20,7 @@ import type {
 
 const GRAPHITI_URL = process.env.GRAPHITI_URL || "http://localhost:18000"
 
-const REQUEST_TIMEOUT_MS = 30_000
+const REQUEST_TIMEOUT_MS = 5_000
 
 async function graphitiFetch<T>(
   path: string,

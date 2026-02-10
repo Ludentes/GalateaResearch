@@ -142,13 +142,13 @@ function truncateToTokenBudget(text: string, budget: number): string {
 /**
  * Assemble the system prompt with knowledge from Graphiti.
  *
- * @param sessionId - Current session ID (used as group_id for search)
+ * @param _sessionId - Current session ID (reserved for future session-scoped search)
  * @param userMessage - Latest user message (used as search query)
  * @param budget - Token budget allocation (optional)
  * @param options - Optional configuration (personaId, userName)
  */
 export async function assembleContext(
-  sessionId: string,
+  _sessionId: string,
   userMessage: string,
   budget: ContextBudget = DEFAULT_CONTEXT_BUDGET,
   options?: {
@@ -193,8 +193,10 @@ export async function assembleContext(
   }
 
   // Step 2: Search Graphiti for relevant facts
-  // Search both session-specific and global knowledge
-  const facts = await searchFacts(userMessage, [sessionId, "global"], 20)
+  // Search without group_ids filter so facts from all sessions are accessible.
+  // Facts are ingested with session-specific group_ids, but for a single-user app
+  // all knowledge should be retrievable across sessions.
+  const facts = await searchFacts(userMessage, [], 20)
 
   // Step 3: Score and rank
   const scored = scoreFacts(facts)
@@ -282,6 +284,7 @@ export async function assembleContext(
   return {
     sections,
     systemPrompt,
+    scoredFacts: scored.slice(0, factsIncluded),
     metadata: {
       totalTokens,
       retrievalStats: {

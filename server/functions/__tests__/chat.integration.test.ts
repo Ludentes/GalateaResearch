@@ -60,5 +60,5 @@ describe("Chat Logic (integration with Ollama)", () => {
     // Verify activityLevel is returned from message queries (Task 6: Stage F)
     expect(msgs[0].activityLevel).toBeNull() // user messages have no activityLevel
     expect([0, 1, 2, 3]).toContain(msgs[1].activityLevel) // classification varies by LLM output
-  }, 30000)
+  }, 60000)
 })

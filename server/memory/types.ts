@@ -129,6 +129,7 @@ export interface ScoredFact {
 export interface AssembledContext {
   sections: PromptSection[]
   systemPrompt: string
+  scoredFacts: ScoredFact[]
   metadata: {
     totalTokens: number
     retrievalStats: {
