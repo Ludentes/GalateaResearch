@@ -1,7 +1,7 @@
 # Galatea: Final Minimal Architecture
 
 **Date**: 2026-02-07 (Updated)
-**Status**: Phase 2 COMPLETE (extraction quality under review), Phase 3 Ready to Start
+**Status**: Phase 2 COMPLETE (extraction quality under review), Phase 3 COMPLETE
 **Timeline**: 11 weeks to working core (Phases 1-2 done in 3 weeks)
 
 **Latest Update (2026-02-07)**:
@@ -396,34 +396,42 @@ type EdgeType =
 
 ---
 
-### Phase 3: Homeostasis Engine + Activity Router (Weeks 5-6) — PLANNED
+### Phase 3: Homeostasis Engine + Activity Router (Weeks 5-6) — COMPLETE
 
 **Objective:** Implement 6-dimension homeostasis with guidance AND activity-level routing
 
-**Status:** ✅ Implementation plan complete ([2026-02-06-phase3-implementation-plan.md](./plans/2026-02-06-phase3-implementation-plan.md))
+**Status:** ✅ All stages (A through H) complete. See [PHASE3_COMPLETE.md](./PHASE3_COMPLETE.md) for full details.
 
 **Tasks:**
-- [ ] Create HomeostasisEngine class (6-dimension assessment + guidance)
-- [ ] Implement assessment logic (hybrid: computed + LLM)
-- [ ] Define guidance text for all dimension states
-- [ ] Create ActivityRouter class (Level 0-3 classification)
-- [ ] Implement activity classification (no-LLM pattern-based)
-- [ ] Implement model selection logic (none/haiku/sonnet)
-- [ ] Implement Level 3 Reflexion loop (Draft → Critique → Revise)
-- [ ] Integrate cognitive models into context assembly
-- [ ] Add homeostasis state to prompt construction
-- [ ] Add homeostasis/routing visualization to UI
-- [ ] Test with reference scenarios (Traces 2, 4, 6, 7, 8)
+- [x] Create HomeostasisEngine class (6-dimension assessment + guidance)
+- [x] Implement assessment logic (heuristic computed, no LLM yet)
+- [x] Define guidance text for all dimension states (YAML + priority system)
+- [x] Create ActivityRouter class (Level 0-3 classification)
+- [x] Implement activity classification (no-LLM pattern-based)
+- [x] Implement model selection logic (none/haiku/sonnet)
+- [x] Implement Level 3 Reflexion loop (Draft → Critique → Revise)
+- [x] Integrate cognitive models into context assembly
+- [x] Add homeostasis state to prompt construction
+- [x] Add homeostasis/routing visualization to UI (Stage F)
+- [x] Test with reference scenarios (Traces 2, 4, 6, 7, 8) (Stage G)
+- [x] Documentation (Stage H)
+
+**Key Findings (Stage G):**
+- Knowledge sufficiency inflated by Graphiti tangential fact retrieval
+- Activity router pattern-based classification works correctly
+- Reflexion loop functions but has JSON parse issue (code fence wrapping)
+- All assessments are heuristic (computed), no LLM assessments yet
+- 326 tests passing (305 existing + 21 scenario), 0 regressions
 
 **Implementation Stages:**
-- **Stage A**: Homeostasis Engine (Days 1-3, 18 hours)
-- **Stage B**: Activity Router (Days 3-5, 16 hours)
-- **Stage C**: Reflexion Loop (Days 5-6, 14 hours)
-- **Stage D**: Cognitive Models Integration (Days 6-7, 10 hours)
-- **Stage E**: End-to-End Integration (Days 7-9, 16 hours)
-- **Stage F**: UI Visualization (Days 9-10, 11 hours)
-- **Stage G**: Reference Scenario Testing (Days 10-11, 10 hours)
-- **Stage H**: Documentation (Days 11-12, 7 hours)
+- Stage A: Types & Interfaces ✅
+- Stage B: Activity Router ✅
+- Stage C: Reflexion Loop ✅
+- Stage D: Cognitive Models Integration ✅
+- Stage E: End-to-End Integration ✅
+- Stage F: UI Visualization ✅
+- Stage G: Reference Scenario Testing ✅ (6 findings, 5 recommendations)
+- Stage H: Documentation ✅
 
 **Deliverable:** Agent behavior driven by dimension balance AND appropriate processing depth
 
@@ -601,11 +609,11 @@ hard_blocks:
 - **Metric:** Context assembly includes correct memories
 
 ### Phase 3 (Homeostasis)
-- ✅ Agent asks when knowledge_sufficiency LOW
-- ✅ Agent proceeds when certainty_alignment HEALTHY
-- ✅ Agent escalates when progress_momentum STALLING
-- ✅ Agent updates team when communication_health LOW
-- **Metric:** Dimension-appropriate behavior in > 85% of cases
+- ✅ Agent asks when knowledge_sufficiency LOW (tested at engine level; pipeline affected by Graphiti inflation)
+- ✅ Agent proceeds when certainty_alignment HEALTHY (>85% accuracy)
+- ⚠️ Agent escalates when progress_momentum STALLING (works at engine level; pipeline lacks time data)
+- ⚠️ Agent updates team when communication_health LOW (works at engine level; pipeline runs only on messages)
+- **Metric:** Dimension-appropriate behavior in > 85% of cases at engine level; pipeline accuracy depends on upstream data
 
 ### Phase 4 (Observation Pipeline)
 - ✅ Claude Code prompts captured via OTEL hooks
@@ -876,6 +884,7 @@ Note: `@ai-sdk/anthropic` removed in favor of multi-provider system. `better-aut
 
 ### Risk 3: Homeostasis assessment reliability
 **Mitigation:** Hybrid approach (computed metrics + LLM assessment), test with scenarios
+**Status:** PARTIALLY MITIGATED — Heuristic assessments implemented. Stage G testing showed knowledge_sufficiency accuracy impacted by Graphiti tangential fact retrieval. All 6 dimensions assess correctly at engine level. Pipeline accuracy depends on data quality from upstream systems.
 
 ### Risk 4: Memory promotion edge cases
 **Mitigation:** Simple rules first, handle circular/conflicts with basic strategies

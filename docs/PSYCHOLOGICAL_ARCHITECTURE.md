@@ -1,7 +1,7 @@
 # Galatea Psychological Architecture
 
 **Date**: 2026-02-06 (Updated)
-**Status**: Accepted
+**Status**: Accepted — Phase 3 IMPLEMENTED (Stages A-H complete)
 **Thesis**: Psychological architecture (homeostasis + memory + models) + LLM > Plain LLM
 
 **Latest Update (2026-02-06)**: Observation pipeline now uses OpenTelemetry (OTEL) as unified backbone. See [OBSERVATION_PIPELINE.md](./OBSERVATION_PIPELINE.md) and [observation-pipeline/](./observation-pipeline/) for details.
@@ -373,6 +373,36 @@ self_knowledge:
 ```
 
 See [plans/2026-02-03-activity-routing-design.md](./plans/2026-02-03-activity-routing-design.md) for full design.
+
+### Phase 3 Implementation Notes (2026-02-10)
+
+**What was implemented exactly as designed:**
+- 6 homeostasis dimensions with LOW/HEALTHY/HIGH states
+- Activity Router with 4 levels (0-3) and model selection
+- Reflexion loop (Draft → Critique → Revise, max 3 iterations)
+- Guidance system with YAML-based priority ranking
+- Fire-and-forget homeostasis assessment (zero chat latency)
+- UI visualization (sidebar + activity badges)
+
+**What deviated from design:**
+- All assessments are heuristic ("computed"), not hybrid (computed + LLM). The `AssessmentMethod = "computed" | "llm"` type exists but `"llm"` is never produced.
+- `classifyActivity` function is `classify()` method on `ActivityRouter` class, not a standalone function.
+- Level 3 triggers differ slightly from design: `hasKnowledgeGap` is the primary trigger (not `knowledge_sufficiency LOW`), because homeostasis assessment runs after routing.
+- `isIrreversibleAction` uses exact substring matching, not the fuzzy/NLP matching implied by the design doc.
+- Evidence gathering in Reflexion loop uses context only (no external codebase or documentation search).
+
+**What was discovered (Stage G findings):**
+- Graphiti returns 20 tangential facts for any query, inflating knowledge_sufficiency (critical gap)
+- Reflexion loop critique JSON gets wrapped in markdown code fences by LLM, bypassing critique step
+- Pipeline timing: Level 2 = 15-65s, Level 3 = 110-145s (3-4x overhead)
+- `timeSpentResearching`/`timeSpentBuilding` not tracked (Phase 4 dependency)
+- `hasAssignedTask` always true during conversations
+
+**See also:**
+- `docs/PHASE3_COMPLETE.md` — Full completion report
+- `docs/STAGE_G_FINDINGS.md` — Reference scenario testing findings
+- `docs/api/` — API documentation for engine components
+- `docs/guides/using-homeostasis.md` — Operator usage guide
 
 ---
 
@@ -808,7 +838,7 @@ Agent: "I'll review open MRs while waiting."
 
 ## Open Questions
 
-1. **Assessment reliability** - How consistent is LLM self-assessment of dimensions?
+1. **Assessment reliability** - ~~How consistent is LLM self-assessment of dimensions?~~ PARTIALLY RESOLVED: All assessments are heuristic (no LLM self-assessment implemented). Stage G showed engine-level accuracy is high, but pipeline accuracy depends on upstream data quality (especially Graphiti fact relevance).
 2. **Threshold calibration** - How do we tune thresholds from observation?
 3. **Cross-agent learning** - How do agents learn from each other's mistakes?
 4. **Dimension completeness** - Are 6 dimensions enough for all situations?
