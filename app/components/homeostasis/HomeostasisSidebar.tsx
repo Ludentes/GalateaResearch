@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { useEffect } from "react"
-import { getHomeostasisStateLogic } from "../../../server/functions/homeostasis"
+import { getHomeostasisState } from "../../../server/functions/homeostasis"
 import { DimensionBar } from "./DimensionBar"
 
 interface HomeostasisSidebarProps {
@@ -32,7 +32,7 @@ function SkeletonBar() {
 export function HomeostasisSidebar({ sessionId, messageCount }: HomeostasisSidebarProps) {
   const { data, error, isLoading, refetch } = useQuery({
     queryKey: ["homeostasis", sessionId],
-    queryFn: () => getHomeostasisStateLogic(sessionId),
+    queryFn: () => getHomeostasisState({ data: { sessionId } }),
     refetchOnWindowFocus: false,
     retry: false,
   })

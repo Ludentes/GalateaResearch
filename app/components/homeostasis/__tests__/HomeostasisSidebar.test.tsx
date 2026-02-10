@@ -5,11 +5,11 @@ import { HomeostasisSidebar } from "../HomeostasisSidebar"
 
 // Mock the server function module
 vi.mock("../../../../server/functions/homeostasis", () => ({
-  getHomeostasisStateLogic: vi.fn(),
+  getHomeostasisState: vi.fn(),
 }))
 
 // Import after mock
-import { getHomeostasisStateLogic } from "../../../../server/functions/homeostasis"
+import { getHomeostasisState } from "../../../../server/functions/homeostasis"
 
 function renderWithQuery(ui: React.ReactElement) {
   const queryClient = new QueryClient({
@@ -22,7 +22,7 @@ function renderWithQuery(ui: React.ReactElement) {
 
 describe("HomeostasisSidebar", () => {
   it("shows loading state initially", () => {
-    vi.mocked(getHomeostasisStateLogic).mockReturnValue(
+    vi.mocked(getHomeostasisState).mockReturnValue(
       new Promise(() => {}) // Never resolves
     )
     renderWithQuery(<HomeostasisSidebar sessionId="test-session" messageCount={0} />)
@@ -50,7 +50,7 @@ describe("HomeostasisSidebar", () => {
       assessedAt: "2026-02-07T12:00:00.000Z",
     }
 
-    vi.mocked(getHomeostasisStateLogic).mockResolvedValue(mockState)
+    vi.mocked(getHomeostasisState).mockResolvedValue(mockState)
 
     renderWithQuery(<HomeostasisSidebar sessionId="test-session" messageCount={0} />)
 
@@ -66,7 +66,7 @@ describe("HomeostasisSidebar", () => {
   })
 
   it("shows empty state when no assessment exists", async () => {
-    vi.mocked(getHomeostasisStateLogic).mockResolvedValue(null)
+    vi.mocked(getHomeostasisState).mockResolvedValue(null)
 
     renderWithQuery(<HomeostasisSidebar sessionId="test-session" messageCount={0} />)
 
@@ -78,7 +78,7 @@ describe("HomeostasisSidebar", () => {
   })
 
   it("shows error state with retry button", async () => {
-    vi.mocked(getHomeostasisStateLogic).mockRejectedValue(
+    vi.mocked(getHomeostasisState).mockRejectedValue(
       new Error("Network error")
     )
 
@@ -110,7 +110,7 @@ describe("HomeostasisSidebar", () => {
       assessedAt,
     }
 
-    vi.mocked(getHomeostasisStateLogic).mockResolvedValue(mockState)
+    vi.mocked(getHomeostasisState).mockResolvedValue(mockState)
 
     renderWithQuery(<HomeostasisSidebar sessionId="test-session" messageCount={0} />)
 
