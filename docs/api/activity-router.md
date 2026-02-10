@@ -57,7 +57,7 @@ const classification = await router.classify(
 
 Get the model configuration for a given activity level. Loads from `config/models.yaml` (cached after first load), falls back to hardcoded defaults if the file does not exist or fails to parse.
 
-**Note:** As of this writing, `config/models.yaml` does not exist in the repository. The hardcoded defaults are always used.
+**Note:** `config/models.yaml` exists in the repository with additional fields (`max_tokens`, `temperature`) beyond the `ModelSpec` interface, plus an `opus` model with `suitable_for: []` (unassigned). Extra fields are silently ignored when cast to `ModelsConfig`. The YAML `sonnet` entry includes 5 characteristics vs 3 in the hardcoded default.
 
 ```typescript
 const model = router.selectModel(2)
@@ -243,4 +243,4 @@ These were identified during Stage G reference scenario testing:
 
 2. **`isHighStakes` alone does not trigger Level 3.** A message like "deploy to staging" will set `isHighStakes = true` (matches "deploy") but will only reach Level 3 if one of the other conditions is also met: `hasKnowledgeGap`, `isIrreversible`, or a LOW homeostasis dimension. Without these, it routes to Level 2 (Stage G Finding 2).
 
-3. **`config/models.yaml` does not exist.** The router always uses the hardcoded default model configuration. The YAML loading path exists but is untested in production.
+3. **`config/models.yaml` exists but has additional fields beyond `ModelSpec`.** The YAML includes `max_tokens`, `temperature`, and an `opus` model entry (`suitable_for: []`, unassigned to any level). Extra fields are silently cast away. The YAML `sonnet` has 5 characteristics vs 3 in the hardcoded default.
