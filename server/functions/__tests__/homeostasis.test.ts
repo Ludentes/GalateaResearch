@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
-import { getHomeostasisStateLogic } from "../homeostasis"
+import { getHomeostasisStateLogic } from "../homeostasis.logic"
 import { db } from "../../db"
 
 // Mock database

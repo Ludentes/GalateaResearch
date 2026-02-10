@@ -15,7 +15,7 @@ import postgres from "postgres"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { homeostasisStates, messages, sessions } from "../../server/db/schema"
 import { getSessionMessagesLogic } from "../../server/functions/chat.logic"
-import { getHomeostasisStateLogic } from "../../server/functions/homeostasis"
+import { getHomeostasisStateLogic } from "../../server/functions/homeostasis.logic"
 
 const TEST_DB_URL =
   process.env.DATABASE_URL ||
