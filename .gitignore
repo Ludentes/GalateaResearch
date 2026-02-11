@@ -73,3 +73,6 @@ coverage/
 
 # Git worktrees
 .worktrees/
+
+# Shadow learning knowledge store (local agent memory)
+data/memory/

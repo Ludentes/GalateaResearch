@@ -1,18 +1,85 @@
-// =============================================================================
-// v1 Memory Types — REMOVED in v2 cleanup (2026-02-11)
-// =============================================================================
-//
-// What lived here:
-//   - Graphiti REST API types (AddMessagesRequest, SearchRequest, etc.)
-//   - Context assembly types (ContextBudget, PromptSection, AssembledContext)
-//   - Cognitive model types (SelfModel, UserModel)
-//   - Gatekeeper types (GatekeeperDecision)
-//   - Scored fact types (ScoredFact, FactResult)
-//
-// v2 plan:
-//   Memory types will be defined as needed for the file-based system
-//   (CLAUDE.md entries, SKILL.md metadata, event log entries).
-//   See: docs/plans/2026-02-11-galatea-v2-architecture-design.md
-// =============================================================================
+/**
+ * v2 Memory Types — Shadow Learning Pipeline
+ *
+ * Replaces v1 Graphiti/cognitive model types.
+ * See: docs/plans/2026-02-11-galatea-v2-architecture-design.md
+ */
 
-export {}
+// ============ Knowledge Store ============
+
+export type KnowledgeType =
+  | "preference"
+  | "fact"
+  | "rule"
+  | "procedure"
+  | "correction"
+  | "decision"
+
+export interface KnowledgeEntry {
+  id: string
+  type: KnowledgeType
+  content: string
+  confidence: number
+  entities: string[]
+  evidence?: string
+  source: string // e.g. "session:8be0af56" or "manual"
+  extractedAt: string // ISO 8601
+  supersededBy?: string // ID of newer entry that replaces this one
+}
+
+// ============ Transcript Reader ============
+
+export interface TranscriptTurn {
+  role: "user" | "assistant"
+  content: string
+  toolUse?: Array<{ name: string; input: string }>
+  toolResults?: Array<{ content: string; isError: boolean }>
+}
+
+// ============ Signal Classifier ============
+
+export type SignalType =
+  | "preference"
+  | "correction"
+  | "policy"
+  | "decision"
+  | "factual"
+  | "noise"
+
+export interface SignalClassification {
+  type: SignalType
+  pattern?: string
+  confidence: number
+}
+
+// ============ Extraction Pipeline ============
+
+export interface ExtractionResult {
+  entries: KnowledgeEntry[]
+  stats: {
+    turnsProcessed: number
+    signalTurns: number
+    noiseTurns: number
+    entriesExtracted: number
+    duplicatesSkipped: number
+  }
+}
+
+// ============ Context Assembly ============
+
+export interface ContextSection {
+  name: string
+  content: string
+  priority: number
+  truncatable: boolean
+}
+
+export interface AssembledContext {
+  systemPrompt: string
+  sections: ContextSection[]
+  metadata: {
+    prepromptsLoaded: number
+    knowledgeEntries: number
+    rulesCount: number
+  }
+}
