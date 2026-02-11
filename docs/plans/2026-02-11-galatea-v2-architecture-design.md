@@ -269,25 +269,78 @@ Skills lack built-in temporal validity. **Gap: need `valid_until` convention in 
 
 ---
 
-## Next Steps
+## Observation Pipeline Mapping
 
-1. **Explore shadow learning** — Can the observation → extraction → skill generation pipeline be expressed as a skill? Or does it need dedicated code? Prototype and find out.
-2. **Design memory lifecycle** — How does consolidation (episode → fact → skill) work with file-based memory? What triggers promotion?
-3. **Prototype homeostasis-as-skill** — Write the guidance skill. Test if sensors can be lightweight code that feeds into skill-based judgment.
-4. **Plan implementation** — Once gaps are resolved, create implementation plan for v2.
+The existing observation pipeline design (see `docs/OBSERVATION_PIPELINE.md`) maps cleanly to v2. OTEL-first architecture is kept. Output format changes.
+
+| Pipeline Layer | Original Design | v2 Change |
+|---|---|---|
+| Layer 0: Sources (OTEL) | Claude Code hooks, VSCode, browser, Linux, HomeAssistant, Frigate | **No change**. Universal event capture is the right design. |
+| Layer 1: Ingestion | API endpoint, PostgreSQL storage | **Simplify**. May not need PostgreSQL for raw events — file-based logs may suffice. |
+| Layer 2: Enrichment | LLM intent guessing, session boundary detection | **Keep logic, repackage prompts as skill**. A "shadow-learning" skill guides extraction. |
+| Layer 3: Dialogue | Validation, learning questions, daily rituals | **Keep as code** (UI/delivery concern). Question templates could be skills. |
+| Layer 4: Memory Formation | Graphiti + FalkorDB entities/facts | **Change output format**: Procedures → SKILL.md, Facts → CLAUDE.md, Episodes → log files |
+
+**The heartbeat emerges naturally**: the enrichment batch cycle (every 30s) IS the heartbeat. Homeostasis dimensions can be re-evaluated on each batch cycle.
 
 ---
 
-## Open Questions
+## Learning Lifecycle (from scenarios)
 
-1. Can shadow learning be a skill, or does it need a dedicated observation daemon?
-2. What's the minimum viable heartbeat? Cron job? Long-running process? Agent Teams teammate?
-3. How do we handle skill auto-generation quality? LLM-formatted skills may need human review.
-4. Should we use SKILL.md metadata extensions (custom frontmatter fields) for temporal validity, or a separate metadata file?
-5. How does persona export work in this model? Export = zip of CLAUDE.md + skill directory?
-6. How do we test this? What replaces the golden dataset benchmarks?
+See `docs/plans/2026-02-11-learning-scenarios.md` for 9 detailed scenarios tracing OBSERVE → EXTRACT → WRITE → USE.
+
+Summary of the promotion pipeline:
+
+```
+Single occurrence        → Episode log only (no memory formed)
+2+ occurrences           → CLAUDE.md entry (confidence 0.6-0.8)
+3+ occurrences + valid.  → SKILL.md generated (confidence 0.8+)
+Explicit user statement  → CLAUDE.md immediately (confidence 1.0)
+```
+
+Memory consolidation over time:
+```
+Used successfully   → confidence increases
+Used, failed        → skill updated, episode logged
+Not used 60+ days   → confidence decays
+Superseded          → archived to _archived/ directory
+Memory grows large  → tier upgrade (CLAUDE.md → structured files → RAG/Mem0)
+```
+
+---
+
+## Answers to Open Questions (from brainstorm)
+
+1. **Can shadow learning be a skill or needs a daemon?**
+   Answer: **Hybrid**. The observation pipeline (OTEL ingestion, session detection, batch processing) needs code. The extraction/enrichment prompts can be packaged as a skill. The output (SKILL.md, CLAUDE.md) is standard format.
+
+2. **Minimum viable heartbeat?**
+   Answer: **The observation pipeline's batch cycle IS the heartbeat**. Every 30s it processes new events. Homeostasis dimensions evaluated on each cycle. No separate heartbeat needed.
+
+3. **Skill auto-generation quality?**
+   Answer: Skills are generated from 3+ validated occurrences. LLM formats the skill. User validates via dialogue. Low-confidence skills (<0.8) get a `metadata.confidence` field. User can review/edit generated skills like any file.
+
+4. **Temporal validity in SKILL.md?**
+   Answer: Use `metadata` frontmatter field (part of the spec). Example: `metadata: { valid_until: "NativeWind 4.1", confidence: 0.95 }`. Pipeline checks metadata on dep updates.
+
+5. **Persona export?**
+   Answer: **Export = zip of `.claude/skills/` + `CLAUDE.md` + `memory/` directory**. Standard files. Import = unzip into new project. Cross-platform compatible.
+
+6. **Testing approach?**
+   Answer: Learning scenarios (L1-L9) become integration tests. Input: sequence of OTEL events. Expected output: specific SKILL.md and CLAUDE.md content. Replace golden dataset with scenario-based testing.
+
+---
+
+## Next Steps
+
+1. ~~Explore shadow learning~~ → See learning scenarios doc (completed)
+2. **Prototype the observation → SKILL.md pipeline** — Build the minimum code that takes OTEL events and generates a skill file
+3. **Write the homeostasis guidance skill** — Define dimensions and "healthy" as a SKILL.md
+4. **Design memory tier upgrade path** — CLAUDE.md → structured files → RAG/Mem0 transition points
+5. **Plan v2 implementation** — Once prototypes validate, create phased implementation plan
 
 ---
 
 *Design document from brainstorm session, 2026-02-11*
+*Updated with observation pipeline mapping and learning scenarios*
 *Key insight: Galatea builds TWO things (homeostasis + memory-with-lifecycle). Everything else is the ecosystem.*
