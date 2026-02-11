@@ -1,6 +1,30 @@
-# Phase 3: Key Decisions and Rationale
+> **HISTORICAL**: These decisions were made during Phase 3 implementation, which is now superseded by the [v2 Architecture Redesign](plans/2026-02-11-galatea-v2-architecture-design.md). The Activity Router, Reflexion Loop, and custom context assembler are deprecated. The homeostasis concept survives but is repackaged as sensors + guidance skill. Some patterns (fire-and-forget, error handling) may carry forward.
 
-This document records all major technical decisions made during Phase 3 implementation, with rationale and trade-offs.
+# Key Decisions and Rationale
+
+## v2 Architecture Decisions (2026-02-11)
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Architecture scope | 2 components (Homeostasis + Memory-with-lifecycle) | Drastically simplify from 62 systems; everything else leverages ecosystem |
+| Memory format | SKILL.md (procedural) + CLAUDE.md (semantic) + event logs (episodic) | Align with ecosystem standards; portable across 35+ agents |
+| Memory tiers | Tier 1: CLAUDE.md → Tier 2: structured files → Tier 3: RAG/Mem0 | YAGNI — start simple, upgrade when memory pressure felt |
+| Activity routing | Skill availability as routing signal | Replaces custom Activity Router; progressive disclosure handles System 1/2 naturally |
+| Reflexion | Draft-critique-revise as a skill | Replaces custom ReflexionLoop class; skill is portable and composable |
+| Homeostasis implementation | Sensors (code) + guidance (SKILL.md) | Declarative "what is healthy" not imperative "when X do Y" |
+| Observation pipeline | OTEL-first, output to SKILL.md/CLAUDE.md | Keep existing OTEL architecture, change output format from PostgreSQL/Graphiti |
+| Shadow learning | Hybrid: observation pipeline (code) + extraction prompts (skill) | Pipeline needs code; extraction/enrichment can be skill-guided |
+| Heartbeat | Emerges from observation pipeline batch cycle (30s) | Not a separate mechanism; homeostasis evaluated on each batch |
+| Database | Keep PostgreSQL for sessions/messages; remove facts/procedures tables | File-based memory (SKILL.md/CLAUDE.md) replaces custom DB tables |
+| Graphiti/FalkorDB | Downgraded to Tier 3 (optional, only if RAG needed at scale) | 18-21% fact extraction quality insufficient; file-based approach simpler |
+
+See [v2 Architecture Design](plans/2026-02-11-galatea-v2-architecture-design.md) for full rationale.
+
+---
+
+## Phase 3 Decisions (Historical)
+
+Decisions made during Phase 3 implementation. Kept for reference — some patterns may carry forward.
 
 ---
 

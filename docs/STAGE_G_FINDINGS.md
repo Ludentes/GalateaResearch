@@ -1,3 +1,5 @@
+> **NOTE**: These findings are from Phase 3 testing against the old infrastructure (Ollama + Graphiti + custom engines). The findings about Graphiti inflation, knowledge sufficiency, and prompt quality remain relevant for v2 design. See [v2 Architecture Redesign](plans/2026-02-11-galatea-v2-architecture-design.md).
+
 # Stage G: Reference Scenario Testing — Findings
 
 ## Summary

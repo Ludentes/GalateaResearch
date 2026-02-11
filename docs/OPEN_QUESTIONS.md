@@ -1,6 +1,6 @@
 # Galatea Open Questions
 
-**Date**: 2026-02-06 (Updated)
+**Date**: 2026-02-11 (Updated for v2)
 **Status**: Active research topics requiring dedicated sessions
 
 ---
@@ -101,105 +101,73 @@ DELIVERABLE: docs/LOGGING_ARCHITECTURE.md
 ## 2. Claude Code Relationship (Long-term)
 
 **Priority**: Medium
-**Status**: Deferred (using direct LLM+MCP for now)
+**Status**: Partially resolved by v2 + Agent Teams
 
-### Current Decision
+### v2 Update (2026-02-11)
 
-For v1, Galatea will:
-- **Observe** user using Claude Code (via logging layer)
-- **Learn** patterns, preferences, conventions
-- **Execute** using Claude API + MCP directly (not via Claude Code)
+The ecosystem has evolved significantly. Claude Code now supports:
+- **Agent Skills** (SKILL.md) — Galatea's output format for procedural knowledge
+- **CLAUDE.md** — Galatea's output format for semantic knowledge
+- **Agent Teams** — Multi-agent coordination with shared tasks and mailbox messaging
+- **MCP** — Tool access for any domain
 
-This is like a junior developer learning by watching, then working independently.
+This changes the question from "wrap vs replace Claude Code" to "how does Galatea enhance Claude Code agents?"
 
-### Future Exploration
+### Current Direction
 
-The user intuited there might be a more elegant solution than "wrap Claude Code" or "replace Claude Code". Ideas to explore:
+Galatea provides the **learning pipeline** that Claude Code agents lack:
+1. **Shadow** user working (via OTEL observation pipeline)
+2. **Extract** patterns, preferences, procedures
+3. **Write** SKILL.md + CLAUDE.md files
+4. **Agent uses** these files natively (no wrapper needed)
 
-1. **Galatea as Claude Code's memory**
-   - Claude Code queries Galatea for context
-   - "What do I know about this codebase?"
-   - Claude Code remains the executor, Galatea provides intelligence
+Galatea is to Claude Code what training is to a new hire — it produces the knowledge artifacts that make the agent effective in a specific context.
 
-2. **Unified agent with Claude Code interface**
-   - Galatea presents same interface as Claude Code
-   - User doesn't notice the difference
-   - But has persistent memory, autonomy, learning
+### Remaining Questions
 
-3. **Galatea observes AND controls Claude Code**
-   - For cases where Claude Code has capabilities Galatea doesn't
-   - Galatea acts as intelligent operator
-
-4. **Meta-learning from Claude Code interactions**
-   - Not just learn coding patterns
-   - Learn how to prompt effectively
-   - Learn iteration strategies
-   - Learn when to ask for clarification
-
-### Questions for Future
-
-- What capabilities does Claude Code have that raw LLM+MCP doesn't?
-- Is there value in the Claude Code "personality" vs raw API?
-- Could Galatea improve Claude Code's effectiveness with context?
-- What would "better than wrapping" look like?
+- How does Galatea interact with Agent Teams? (Observer? Coordinator? Training agent?)
+- Should Galatea BE a Claude Code agent (with skills) or a separate service?
+- How to handle the handoff from "shadowing" to "working" mode?
 
 ---
 
 ## 3. Emergence vs Explicit Mechanisms
 
 **Priority**: High (Architectural principle)
-**Status**: Ongoing consideration
+**Status**: Partially validated by v2 design
 
-### The Principle
+### v2 Update (2026-02-11)
 
-If we need to define a special loop or mechanism (e.g., "iteration loop", "quality check"), we should ask:
+The v2 architecture addresses this directly: homeostasis defines "healthy" declaratively, and behavior emerges from the agent striving toward balance. This replaces the imperative "when X do Y" pattern.
 
-**"Why doesn't this emerge naturally from the psychological architecture?"**
+Examples of emergent behavior from homeostasis tension:
+- productive_engagement LOW + communication_health HIGH → "Can't ask again, review MRs instead"
+- knowledge_sufficiency LOW + progress_momentum LOW → "Research, but don't spiral"
+- knowledge_application HIGH + progress_momentum LOW → "Stop researching, start building"
 
-A human developer doesn't have an "iteration loop" - they have:
-- Motivation to complete tasks
-- Ability to recognize errors
-- Knowledge of how to fix errors
-- Judgment about when to ask for help
+### Remaining Questions
 
-These create natural iteration without explicit loops.
-
-### Current Concerns
-
-| Mechanism | Should it be explicit or emergent? |
-|-----------|-----------------------------------|
-| Task polling | Emergent from Attention Manager? |
-| Iteration on errors | Emergent from Homeostasis + competence drive? |
-| Quality assessment | Emergent from learned standards + metacognition? |
-| Approval seeking | Emergent from Initiative Engine + risk assessment? |
-| Progress reporting | Emergent from relatedness drive? |
-
-### Questions
-
-1. Are our 12 subsystems sufficient for natural behavior to emerge?
-2. What skills/preprompts are needed to guide emergence?
-3. When is explicit mechanism OK vs sign of incomplete model?
-4. How do we test for emergence vs hardcoded behavior?
+1. Can homeostasis dimensions fully replace explicit mechanisms, or do some behaviors need explicit rules?
+2. How to test for emergence vs hardcoded behavior in practice?
+3. What's the right granularity for homeostasis dimensions — too few miss nuance, too many recreate the 62-system problem?
 
 ---
 
 ## 4. Multi-Agent Coordination
 
-**Priority**: Low (Phase 3)
-**Status**: Deferred
+**Priority**: Medium
+**Status**: Partially resolved by Agent Teams
 
-### Current Decision
+### v2 Update (2026-02-11)
 
-Agents communicate like people - via Discord, GitLab comments, etc.
-No special A2A protocol needed.
+Claude Code Agent Teams (experimental) provides multi-agent coordination with shared tasks and mailbox messaging. This removes the need for custom A2A protocols.
 
-### Future Questions
+### Remaining Questions
 
-1. **Identity**: How does PM know they're talking to Agent-Dev-1 vs Agent-Dev-2?
-2. **Consistency**: How do multiple agents maintain consistent project understanding?
-3. **Conflict**: What if two agents try to edit the same file?
-4. **Efficiency**: Is human-channel communication efficient enough?
-5. **Coordination**: Does PM need special tools to manage agent team?
+1. **Galatea's role**: Is Galatea a team member, coordinator, or training system for Agent Teams?
+2. **Shared memory**: How do multiple agents share learned knowledge? (Same CLAUDE.md? Separate? Merged?)
+3. **Persona transfer**: Can a persona trained by shadowing one developer be used by an agent in a team?
+4. **Consistency**: How do multiple agents maintain consistent project understanding via shared CLAUDE.md?
 
 ---
 
@@ -226,21 +194,20 @@ Build marketplace only if demand validated.
 ## 6. Company Context Scaling
 
 **Priority**: Medium
-**Status**: Solved via skills, but needs validation
+**Status**: Addressed by v2 memory tiers
 
-### Current Decision
+### v2 Update (2026-02-11)
 
-Company context = skills/preprompts that can be imported.
+The memory tier system addresses scaling:
+- Tier 1: CLAUDE.md + Skills (<50 facts)
+- Tier 2: Structured files on disk (50-500 facts)
+- Tier 3: RAG/Mem0 (>500 facts, cross-project)
 
-### Questions
+### Remaining Questions
 
-1. **Scale**: What if company has 1000 pages of docs? Can't fit in preprompt.
-2. **Updates**: How to keep company context current?
-3. **Segmentation**: Different context for different projects?
-4. **Onboarding**: How does new agent learn company context?
-   - Shadow mode?
-   - Import from existing agent?
-   - Ingest documentation?
+1. **Tier transitions**: When exactly to upgrade? Automated or manual?
+2. **Onboarding**: Shadow mode produces SKILL.md/CLAUDE.md — how long until agent is "ready"?
+3. **Segmentation**: Different CLAUDE.md per project? Shared skill library?
 
 ---
 
@@ -258,16 +225,9 @@ Company context = skills/preprompts that can be imported.
 5. **Rollback**: How to undo agent's changes?
 6. **Credentials**: How does agent authenticate to services?
 
-### The 62 Subsystems Had
+### v2 Note
 
-Looking back at original 62 subsystems:
-- #5 Safety Monitor
-- #6 Dependency Prevention
-- #7 Reality Boundary Enforcer
-- #8 Crisis Detector
-- #9 Intervention Orchestrator
-
-We dropped these in minimal architecture. May need to reconsider for production.
+In v2, safety could be a homeostasis dimension (e.g., "safety_compliance" always HIGH) and/or a dedicated skill that guides boundary-checking. The declarative approach ("this is safe behavior") may be more robust than imperative safety rules.
 
 ---
 
@@ -275,14 +235,14 @@ We dropped these in minimal architecture. May need to reconsider for production.
 
 | Question | Priority | Status | Next Step |
 |----------|----------|--------|-----------|
-| ~~Logging infrastructure~~ | ~~High~~ | **✅ RESOLVED** | **OTEL adopted (see observation-pipeline/)** |
-| Claude Code relationship | Medium | Deferred | Using LLM+MCP for v1 |
-| Emergence vs explicit | High | Ongoing | Validate with implementation |
-| Multi-agent | Low | Deferred | Phase 3 |
+| ~~Logging infrastructure~~ | ~~High~~ | **RESOLVED** | OTEL adopted (see observation-pipeline/) |
+| Claude Code relationship | Medium | Partially resolved | Galatea produces SKILL.md/CLAUDE.md that agents use natively |
+| Emergence vs explicit | High | Partially validated | v2 homeostasis is declarative; validate with implementation |
+| Multi-agent | Medium | Partially resolved | Agent Teams provides coordination; Galatea's role TBD |
 | Marketplace | Low | Deferred | Validate demand first |
-| Company context scaling | Medium | Needs validation | Test with real company |
-| Safety & boundaries | High | Not addressed | Before production |
+| Company context scaling | Medium | Addressed | v2 memory tiers; transition points TBD |
+| Safety & boundaries | High | Not addressed | Before production; may be homeostasis dimension |
 
 ---
 
-*Last updated: 2026-02-06*
+*Last updated: 2026-02-11*

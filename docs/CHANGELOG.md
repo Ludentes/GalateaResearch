@@ -1,5 +1,64 @@
 # Galatea Documentation Changelog
 
+## 2026-02-11: v2 Architecture Redesign
+
+### Major Pivot: 2 Components + Ecosystem
+
+After evaluating Phase 2-3 implementation against the evolving agent ecosystem (Skills, MCP, Agent Teams), redesigned Galatea's architecture around **two core components** (Homeostasis + Memory-with-lifecycle) that leverage ecosystem standards instead of custom infrastructure.
+
+### New Documentation
+
+- **[v2 Architecture Design](plans/2026-02-11-galatea-v2-architecture-design.md)** — Core architecture document
+- **[Learning Scenarios](plans/2026-02-11-learning-scenarios.md)** — 9 scenarios tracing OBSERVE → EXTRACT → WRITE → USE
+
+### Archived Documentation
+
+Moved 22 deprecated documents to `archive/pre-v2/`:
+- Phase 2-3 status docs (PHASE2_STATUS, PHASE3_COMPLETE, DEDUP_REDUNDANCY_ANALYSIS)
+- Deprecated designs (DATA_MODEL, FINAL_MINIMAL_ARCHITECTURE, REFLEXION_COMPARISON)
+- Deprecated API docs (activity-router, reflexion-loop)
+- Deprecated plans (10 plan documents from Phase 2-3)
+
+### Updated Documentation
+
+- **README.md** — Rewritten for v2 architecture
+- **DECISIONS.md** — Added v2 decisions, marked Phase 3 decisions as historical
+- **KNOWN_GAPS.md** — Rewritten for v2 gaps
+- **OPEN_QUESTIONS.md** — Updated all questions with v2 context
+- **PSYCHOLOGICAL_ARCHITECTURE.md** — Added superseded header
+- **TEST_CONTRACTS.md** — Added review-needed header
+- **STAGE_G_FINDINGS.md** — Added context header
+- **api/homeostasis-engine.md** — Added superseded header
+
+### Key Changes
+
+**Before (Phase 2-3)**:
+- Custom Activity Router (4 levels, pattern-based classification)
+- Custom Reflexion Loop (draft-critique-revise in TypeScript)
+- Custom Context Assembler (6 sections, token budget)
+- PostgreSQL tables for facts, procedures, gatekeeper_log
+- Graphiti/FalkorDB as primary memory store
+- Cognitive models as TypeScript classes
+
+**After (v2)**:
+- Skill availability as routing signal (replaces Activity Router)
+- Draft-critique-revise as a SKILL.md (replaces Reflexion Loop)
+- Skills progressive disclosure + CLAUDE.md (replaces context assembler)
+- SKILL.md files for procedural knowledge (replaces procedures table)
+- CLAUDE.md entries for semantic knowledge (replaces facts table)
+- Homeostasis as sensors + guidance skill (replaces engine class)
+
+### Code Cleanup (Pending)
+
+The following server modules are deprecated and pending removal:
+- `server/engine/activity-router.ts`, `server/engine/reflexion-loop.ts`
+- `server/memory/context-assembler.ts`, `server/memory/cognitive-models.ts`, `server/memory/graphiti-client.ts`
+- `server/db/queries/facts.ts`, `server/db/queries/procedures.ts`, `server/db/queries/gatekeeper-log.ts`
+- `server/routes/api/memories/` (local-facts, search, episodes)
+- `scripts/clear-*.ts`
+
+---
+
 ## 2026-02-06: OpenTelemetry Observation Pipeline
 
 ### Major Decision: OTEL as Unified Backbone

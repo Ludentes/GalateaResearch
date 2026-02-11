@@ -1,7 +1,9 @@
+> **SUPERSEDED**: This document is partially superseded by the [v2 Architecture Redesign](plans/2026-02-11-galatea-v2-architecture-design.md). The homeostasis concept and psychological foundations survive. The infrastructure (Activity Router, Reflexion Loop, PostgreSQL/Graphiti memory, custom context assembler) is deprecated in favor of ecosystem standards (Skills, CLAUDE.md, MCP, Agent Teams). Kept as reference for psychological grounding.
+
 # Galatea Psychological Architecture
 
 **Date**: 2026-02-06 (Updated)
-**Status**: Accepted — Phase 3 IMPLEMENTED (Stages A-H complete)
+**Status**: Partially Superseded — See v2 architecture design
 **Thesis**: Psychological architecture (homeostasis + memory + models) + LLM > Plain LLM
 
 **Latest Update (2026-02-06)**: Observation pipeline now uses OpenTelemetry (OTEL) as unified backbone. See [OBSERVATION_PIPELINE.md](./OBSERVATION_PIPELINE.md) and [observation-pipeline/](./observation-pipeline/) for details.

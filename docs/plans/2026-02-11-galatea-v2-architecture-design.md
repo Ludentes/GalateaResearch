@@ -331,16 +331,67 @@ Memory grows large  → tier upgrade (CLAUDE.md → structured files → RAG/Mem
 
 ---
 
+## Code Cleanup (from Phase 2-3)
+
+The v2 pivot deprecates significant code from the Phase 2-3 implementation. Cleanup tasks for the v2 implementation plan:
+
+### Remove (deprecated infrastructure)
+
+| Module | Files | Reason |
+|--------|-------|--------|
+| Activity Router | `server/engine/activity-router.ts` + tests | Replaced by skill availability routing |
+| Reflexion Loop | `server/engine/reflexion-loop.ts` + tests | Replaced by draft-critique-revise skill |
+| Context Assembler | `server/memory/context-assembler.ts` + tests | Replaced by Skills progressive disclosure + CLAUDE.md |
+| Cognitive Models | `server/memory/cognitive-models.ts` + tests | Replaced by CLAUDE.md entries |
+| Graphiti Client | `server/memory/graphiti-client.ts` + tests | Downgraded to Tier 3 (optional) |
+| Memory Types | `server/memory/types.ts` | Replaced by SKILL.md/CLAUDE.md formats |
+| Deprecated DB queries | `server/db/queries/facts.ts`, `procedures.ts`, `gatekeeper-log.ts` | File-based memory replaces DB |
+| Deprecated DB tables | `facts`, `procedures`, `gatekeeper_log`, `homeostasis_states` in schema | File-based memory replaces DB |
+| Deprecated routes | `server/routes/api/memories/local-facts.get.ts`, `search.get.ts`, `episodes.get.ts` | No longer needed |
+| Scripts | `scripts/clear-all-memory.ts`, `clear-graphiti-memory.ts` | No Graphiti/PostgreSQL memory |
+| Deprecated tests | `tests/memory/`, `tests/fixtures/graphiti-*`, `tests/configs/graphiti-*` | Test deprecated infrastructure |
+
+### Evaluate for reuse (shadow learning pipeline)
+
+| Module | Files | Potential Reuse |
+|--------|-------|----------------|
+| Gatekeeper | `server/memory/gatekeeper.ts` | Pattern matching logic for observation filtering |
+| Fact Extractor | `server/memory/fact-extractor.ts` | Extraction patterns for shadow learning |
+| Patterns | `server/memory/patterns.ts` | Pattern categories and entity normalization |
+| Extraction Orchestrator | `server/memory/extraction-orchestrator.ts` | Cheap-first extractor strategy |
+| Ollama Extractor | `server/memory/extractors/ollama.ts` | LLM extraction fallback |
+
+### Keep (still valid)
+
+| Module | Files | Why |
+|--------|-------|-----|
+| LLM Providers | `server/providers/` | Multi-provider support unchanged |
+| Langfuse Plugin | `server/plugins/langfuse.ts` | Telemetry unchanged |
+| Chat Logic | `server/functions/chat.ts` (simplified) | Core chat still needed |
+| DB Core | `server/db/schema.ts` (sessions, messages, personas) | Session/message storage still needed |
+| Scenario Tests | `tests/scenarios/` | Behavioral scenarios still valid |
+
+### Dependencies to evaluate
+
+| Dependency | Status |
+|------------|--------|
+| `drizzle-orm` / `drizzle-kit` | Keep if sessions/messages stay in PostgreSQL |
+| `postgres` | Keep if sessions/messages stay in PostgreSQL |
+| Other deps | No changes needed |
+
+---
+
 ## Next Steps
 
 1. ~~Explore shadow learning~~ → See learning scenarios doc (completed)
-2. **Prototype the observation → SKILL.md pipeline** — Build the minimum code that takes OTEL events and generates a skill file
-3. **Write the homeostasis guidance skill** — Define dimensions and "healthy" as a SKILL.md
-4. **Design memory tier upgrade path** — CLAUDE.md → structured files → RAG/Mem0 transition points
-5. **Plan v2 implementation** — Once prototypes validate, create phased implementation plan
+2. ~~Clean up docs~~ → Archived 22 docs, updated README and supporting docs (completed)
+3. **Plan v2 implementation** — Design the system, prototype shadow learning pipeline
+4. **Write the homeostasis guidance skill** — Define dimensions and "healthy" as a SKILL.md
+5. **Design memory tier upgrade path** — CLAUDE.md → structured files → RAG/Mem0 transition points
+6. **Execute code cleanup** — Remove deprecated modules, evaluate reuse candidates
 
 ---
 
 *Design document from brainstorm session, 2026-02-11*
-*Updated with observation pipeline mapping and learning scenarios*
+*Updated with observation pipeline mapping, learning scenarios, and code cleanup inventory*
 *Key insight: Galatea builds TWO things (homeostasis + memory-with-lifecycle). Everything else is the ecosystem.*

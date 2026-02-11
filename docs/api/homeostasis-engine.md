@@ -1,3 +1,5 @@
+> **SUPERSEDED**: This API documents the Phase 3 implementation which is being repackaged in v2. The homeostasis concept survives as sensor code + guidance skill (SKILL.md), not a TypeScript engine class. See [v2 Architecture Redesign](../plans/2026-02-11-galatea-v2-architecture-design.md). Kept as reference for the dimension model and guidance logic.
+
 # HomeostasisEngine API Reference
 
 > Source: `server/engine/homeostasis-engine.ts`

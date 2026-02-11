@@ -1,3 +1,5 @@
+> **NEEDS REVIEW**: These contracts were written for the Phase 2-3 architecture. Many contracts reference deprecated components (Activity Router, Reflexion Loop, Graphiti, PostgreSQL facts/procedures). The behavioral intent behind them may still be useful for v2 scenario-based testing. See [v2 Learning Scenarios](plans/2026-02-11-learning-scenarios.md) for the new test approach.
+
 # Galatea Test Contracts
 
 **Date**: 2026-02-03
