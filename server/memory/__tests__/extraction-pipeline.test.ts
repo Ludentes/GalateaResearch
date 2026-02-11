@@ -57,7 +57,7 @@ describe("Extraction Pipeline", () => {
     expect(entries.length).toBeGreaterThan(0)
   })
 
-  it("deduplicates on second run", async () => {
+  it("skips already-extracted session", async () => {
     const storePath = path.join(TEST_DIR, "entries.jsonl")
 
     await runExtraction({
@@ -71,6 +71,26 @@ describe("Extraction Pipeline", () => {
       storePath,
     })
 
+    expect(result2.stats.skippedAlreadyExtracted).toBe(true)
+    expect(result2.entries).toHaveLength(0)
+  })
+
+  it("re-extracts with force flag", async () => {
+    const storePath = path.join(TEST_DIR, "entries.jsonl")
+
+    await runExtraction({
+      transcriptPath: FIXTURE,
+      model: MOCK_MODEL,
+      storePath,
+    })
+    const result2 = await runExtraction({
+      transcriptPath: FIXTURE,
+      model: MOCK_MODEL,
+      storePath,
+      force: true,
+    })
+
+    expect(result2.stats.skippedAlreadyExtracted).toBeUndefined()
     expect(result2.stats.duplicatesSkipped).toBeGreaterThan(0)
     expect(result2.entries).toHaveLength(0) // all dupes
   })

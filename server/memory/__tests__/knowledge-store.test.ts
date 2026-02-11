@@ -5,7 +5,10 @@ import { afterEach, describe, expect, it } from "vitest"
 import {
   appendEntries,
   appendEntry,
+  cosineSimilarity,
+  deduplicateEntries,
   isDuplicate,
+  normalizedJaccard,
   readEntries,
   renderMarkdown,
 } from "../knowledge-store"
@@ -56,7 +59,7 @@ describe("Knowledge Store", () => {
     expect(entries).toHaveLength(2)
   })
 
-  it("isDuplicate detects similar content with overlapping entities", () => {
+  it("isDuplicate detects similar content", () => {
     const candidate: KnowledgeEntry = {
       ...sampleEntry,
       id: "test-new",
@@ -73,6 +76,57 @@ describe("Knowledge Store", () => {
       entities: ["PostgreSQL"],
     }
     expect(isDuplicate(candidate, [sampleEntry])).toBe(false)
+  })
+
+  it("isDuplicate catches LLM-rephrased content via evidence overlap", () => {
+    const run1: KnowledgeEntry = {
+      id: "run1-tech",
+      type: "fact",
+      content: "The tech stack is Payload CMS 3.0, Electron, with i18n support",
+      confidence: 0.9,
+      entities: ["Payload CMS", "Electron"],
+      evidence: "User said: we use Payload CMS 3.0 with Electron and i18n",
+      source: "session:abc",
+      extractedAt: "2026-02-11T10:00:00Z",
+    }
+    const run2: KnowledgeEntry = {
+      id: "run2-tech",
+      type: "preference", // LLM classified differently
+      content:
+        "The technology stack includes Payload CMS 3.0, Electron, i18n support and more features",
+      confidence: 0.85,
+      entities: [], // LLM missed entities on re-run
+      evidence: "User said: we use Payload CMS 3.0 with Electron and i18n",
+      source: "session:abc",
+      extractedAt: "2026-02-11T11:00:00Z",
+    }
+    // Path 1: evidence overlap high + content overlap moderate
+    expect(isDuplicate(run2, [run1])).toBe(true)
+  })
+
+  it("isDuplicate does not merge different facts from same user message", () => {
+    const fact1: KnowledgeEntry = {
+      id: "fact-1",
+      type: "fact",
+      content: "PostgreSQL is the primary database for the project",
+      confidence: 0.9,
+      entities: ["PostgreSQL"],
+      evidence: "User said: we use PostgreSQL and Redis for different things",
+      source: "session:abc",
+      extractedAt: "2026-02-11T10:00:00Z",
+    }
+    const fact2: KnowledgeEntry = {
+      id: "fact-2",
+      type: "fact",
+      content: "Redis is used for caching and session storage",
+      confidence: 0.9,
+      entities: ["Redis"],
+      evidence: "User said: we use PostgreSQL and Redis for different things",
+      source: "session:abc",
+      extractedAt: "2026-02-11T10:00:00Z",
+    }
+    // Same evidence but different content — should NOT be a duplicate
+    expect(isDuplicate(fact2, [fact1])).toBe(false)
   })
 
   it("renderMarkdown produces structured sections", async () => {
@@ -116,5 +170,71 @@ describe("Knowledge Store", () => {
     const md = await renderMarkdown(entries, TEST_MD)
     expect(md).not.toContain("User prefers pnpm over npm")
     expect(md).toContain("User strongly prefers pnpm")
+  })
+})
+
+describe("normalizedJaccard", () => {
+  it("ignores stop words", () => {
+    const a = "the user has been using pnpm"
+    const b = "a user is also using pnpm"
+    const sim = normalizedJaccard(a, b)
+    // Without stop words: {user, pnpm} vs {user, pnpm} = 1.0
+    expect(sim).toBe(1.0)
+  })
+
+  it("returns 0 for completely different texts", () => {
+    expect(
+      normalizedJaccard("apples oranges bananas", "cars trucks trains"),
+    ).toBe(0)
+  })
+
+  it("returns 0 for empty strings", () => {
+    expect(normalizedJaccard("", "")).toBe(0)
+  })
+})
+
+describe("cosineSimilarity", () => {
+  it("computes correctly for known vectors", () => {
+    // Identical vectors → 1.0
+    expect(cosineSimilarity([1, 0, 0], [1, 0, 0])).toBeCloseTo(1.0)
+    // Orthogonal vectors → 0.0
+    expect(cosineSimilarity([1, 0, 0], [0, 1, 0])).toBeCloseTo(0.0)
+    // Opposite vectors → -1.0
+    expect(cosineSimilarity([1, 0], [-1, 0])).toBeCloseTo(-1.0)
+    // 45 degrees → ~0.707
+    expect(cosineSimilarity([1, 0], [1, 1])).toBeCloseTo(Math.SQRT1_2)
+  })
+
+  it("returns 0 for zero vectors", () => {
+    expect(cosineSimilarity([0, 0], [1, 1])).toBe(0)
+  })
+})
+
+describe("deduplicateEntries", () => {
+  it("falls back to Jaccard when Ollama is unavailable", async () => {
+    const existing: KnowledgeEntry[] = [sampleEntry]
+    const candidates: KnowledgeEntry[] = [
+      {
+        ...sampleEntry,
+        id: "dup",
+        content: "User prefers pnpm instead of npm",
+      },
+      {
+        ...sampleEntry,
+        id: "new-fact",
+        content: "PostgreSQL runs on port 5432",
+        entities: ["PostgreSQL"],
+      },
+    ]
+
+    const result = await deduplicateEntries(
+      candidates,
+      existing,
+      "http://localhost:99999", // unreachable
+    )
+
+    expect(result.duplicatesSkipped).toBe(1)
+    expect(result.unique).toHaveLength(1)
+    expect(result.unique[0].id).toBe("new-fact")
   })
 })

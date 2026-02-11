@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { eq } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/postgres-js"
 import postgres from "postgres"

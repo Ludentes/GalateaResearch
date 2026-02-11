@@ -1,9 +1,10 @@
 import path from "node:path"
 import type { LanguageModel } from "ai"
+import { getLLMConfig } from "../providers/config"
 import { extractKnowledge } from "./knowledge-extractor"
 import {
   appendEntries,
-  isDuplicate,
+  deduplicateEntries,
   readEntries,
   renderMarkdown,
 } from "./knowledge-store"
@@ -17,6 +18,7 @@ export interface ExtractionOptions {
   storePath: string
   mdPath?: string
   chunkSize?: number
+  force?: boolean
 }
 
 export async function runExtraction(
@@ -28,13 +30,31 @@ export async function runExtraction(
     storePath,
     mdPath = path.join(path.dirname(storePath), "knowledge.md"),
     chunkSize = 20,
+    force = false,
   } = options
+
+  const source = `session:${path.basename(transcriptPath, ".jsonl")}`
+  const existing = await readEntries(storePath)
+
+  if (!force && existing.some((e) => e.source === source)) {
+    await renderMarkdown(existing, mdPath)
+    return {
+      entries: [],
+      stats: {
+        turnsProcessed: 0,
+        signalTurns: 0,
+        noiseTurns: 0,
+        entriesExtracted: 0,
+        duplicatesSkipped: 0,
+        skippedAlreadyExtracted: true,
+      },
+    }
+  }
 
   const allTurns = await readTranscript(transcriptPath)
   const signalTurns = filterSignalTurns(allTurns)
   const noiseTurns = allTurns.length - signalTurns.length
 
-  const source = `session:${path.basename(transcriptPath, ".jsonl")}`
   const allExtracted: KnowledgeEntry[] = []
 
   for (let i = 0; i < signalTurns.length; i += chunkSize) {
@@ -44,17 +64,11 @@ export async function runExtraction(
     allExtracted.push(...extracted)
   }
 
-  const existing = await readEntries(storePath)
-  const newEntries: KnowledgeEntry[] = []
-  let duplicatesSkipped = 0
-
-  for (const entry of allExtracted) {
-    if (isDuplicate(entry, [...existing, ...newEntries])) {
-      duplicatesSkipped++
-    } else {
-      newEntries.push(entry)
-    }
-  }
+  const { unique: newEntries, duplicatesSkipped } = await deduplicateEntries(
+    allExtracted,
+    existing,
+    getLLMConfig().ollamaBaseUrl,
+  )
 
   if (newEntries.length > 0) {
     await appendEntries(newEntries, storePath)

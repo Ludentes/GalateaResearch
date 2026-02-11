@@ -1,5 +1,40 @@
 # Galatea Documentation Changelog
 
+## 2026-02-11: Phase B — Shadow Learning Pipeline
+
+### Dedup Fix: Three-Path Detection + Source-Level Guard
+
+Root cause: dedup used triple-AND gate (type match AND entity overlap AND Jaccard > 0.6) — all three signals unreliable across LLM runs. Re-extraction on the same 53MB session produced 177 entries with 0 duplicates caught.
+
+**Changes:**
+- Replaced triple-AND gate with three independent detection paths:
+  - Path 1: Evidence Jaccard >= 0.5 + content Jaccard >= 0.2 (catches rephrased content)
+  - Path 2: Content Jaccard >= 0.5 (catches entries without evidence)
+  - Path 3: Embedding cosine similarity > 0.85 via Ollama nomic-embed-text (semantic dedup, graceful fallback)
+- Added stop word removal to Jaccard tokenizer
+- Added source-level dedup: re-extracting same session is instant no-op (`--force` to override)
+- Fixed `schema.test.ts` missing `// @vitest-environment node` (was breaking all DB tests)
+
+**Verification (Steps 1-10 of Phase B guide):**
+- 76/76 tests pass (was 66 passing + 9 DB failures before fix)
+- Extraction: 140 entries from 53MB Umka session (270 signal turns)
+- Dedup: 58/177 caught on re-run (33% via Paths 1+2). Path 3 max cosine was 0.847 (just under 0.85 threshold)
+- Source-level dedup: instant skip on re-extraction
+- Context assembly: 12 rules in CONSTRAINTS, 17 preferences, 259 total entries
+- Token budget: 7509/4000 (bloated from 2 runs — clean extraction is ~4000)
+- Agent usefulness: 4.5/5 questions answered correctly with knowledge vs generic without
+
+**Tech debt identified:**
+- LLM consolidation (periodic cron to merge/distill entries) — needed for token budget
+- Embedding threshold tuning (0.85 too high, 0.80 catches false positives on related facts)
+- Confidence calibration (LLM outputs near-uniform 1.0)
+
+### Phase B Verification Guide
+
+Added **[Phase B Verification Guide](guides/2026-02-11-phase-b-verification-guide.md)** — 10-step guide for validating shadow learning pipeline with real data.
+
+---
+
 ## 2026-02-11: v2 Architecture Redesign
 
 ### Major Pivot: 2 Components + Ecosystem

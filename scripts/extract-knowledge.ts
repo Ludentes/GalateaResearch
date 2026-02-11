@@ -15,6 +15,7 @@ const { values } = parseArgs({
       type: "string",
       default: "http://localhost:11434",
     },
+    force: { type: "boolean", short: "f", default: false },
   },
 })
 
@@ -28,6 +29,7 @@ if (!values.input) {
     "  -s  Knowledge store path (default: data/memory/entries.jsonl)",
   )
   console.error("  -m  Ollama model (default: glm-4.7-flash:latest)")
+  console.error("  -f  Force re-extraction even if session already processed")
   process.exit(1)
 }
 
@@ -43,7 +45,13 @@ async function main() {
     transcriptPath: values.input!,
     model,
     storePath: values.store!,
+    force: values.force,
   })
+
+  if (result.stats.skippedAlreadyExtracted) {
+    console.log("Session already extracted. Use -f to force re-extraction.")
+    return
+  }
 
   console.log(
     `Processed ${result.stats.turnsProcessed} turns (${result.stats.signalTurns} signal, ${result.stats.noiseTurns} noise)`,
