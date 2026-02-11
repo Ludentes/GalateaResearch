@@ -1,11 +1,11 @@
 # Galatea Infrastructure
 #
-# Core:     postgres (facts, procedures, sessions, messages)
-# Memory:   graphiti + falkordb (episodic memory, graph queries)
-# Future:   mosquitto (observation pipeline, Phase 4)
+# Core: postgres (sessions, messages, personas, preprompts)
+#
+# v2 will add observation pipeline (OTEL) — not yet implemented.
+# Graphiti/FalkorDB removed in v2 cleanup (2026-02-11).
 
 services:
-  # --- Core Database ---
   postgres:
     image: postgres:17
     ports:
@@ -22,60 +22,5 @@ services:
       timeout: 5s
       retries: 5
 
-  # --- Graphiti Memory Sidecar (episodic memory + graph queries) ---
-  # Note: Galatea uses its own extraction pipeline (patterns + Ollama).
-  # Graphiti is kept for episodic memory storage and graph relationships.
-  falkordb:
-    image: falkordb/falkordb:latest
-    ports:
-      - "16379:6379"
-      - "13001:3000"
-    volumes:
-      - falkordb_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  graphiti:
-    build:
-      context: ./graphiti
-      dockerfile: Dockerfile.falkordb
-    ports:
-      - "18000:8000"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    environment:
-      FALKORDB_URI: "redis://falkordb:6379"
-      FALKORDB_DATABASE: "galatea_memory"
-      OPENAI_API_KEY: "ollama"
-      OPENAI_BASE_URL: "http://host.docker.internal:11434/v1"
-      MODEL_NAME: "glm-4.7-flash"
-      SMALL_MODEL_NAME: "glm-4.7-flash"
-      EMBEDDING_MODEL_NAME: "nomic-embed-text"
-      EMBEDDER_BASE_URL: "http://host.docker.internal:11434/v1"
-      EMBEDDER_API_KEY: "ollama"
-      SEMAPHORE_LIMIT: "5"
-    depends_on:
-      falkordb:
-        condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/healthcheck"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # --- Observation Pipeline (Phase 4 — not yet implemented) ---
-  mosquitto:
-    image: eclipse-mosquitto:2
-    ports:
-      - "11883:1883"
-      - "19001:9001"
-    volumes:
-      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
-
 volumes:
   postgres_data:
-  falkordb_data:

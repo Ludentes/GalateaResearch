@@ -65,35 +65,5 @@ export const preprompts = pgTable("preprompts", {
   active: boolean("active").default(true),
 })
 
-// ============ Homeostasis States ============
-
-export const homeostasisStates = pgTable("homeostasis_states", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  sessionId: uuid("session_id")
-    .references(() => sessions.id)
-    .notNull(),
-  messageId: uuid("message_id").references(() => messages.id),
-  knowledgeSufficiency: text("knowledge_sufficiency", {
-    enum: ["LOW", "HEALTHY", "HIGH"],
-  }).notNull(),
-  certaintyAlignment: text("certainty_alignment", {
-    enum: ["LOW", "HEALTHY", "HIGH"],
-  }).notNull(),
-  progressMomentum: text("progress_momentum", {
-    enum: ["LOW", "HEALTHY", "HIGH"],
-  }).notNull(),
-  communicationHealth: text("communication_health", {
-    enum: ["LOW", "HEALTHY", "HIGH"],
-  }).notNull(),
-  productiveEngagement: text("productive_engagement", {
-    enum: ["LOW", "HEALTHY", "HIGH"],
-  }).notNull(),
-  knowledgeApplication: text("knowledge_application", {
-    enum: ["LOW", "HEALTHY", "HIGH"],
-  }).notNull(),
-  assessmentMethod: jsonb("assessment_method").$type<
-    Record<string, "computed" | "llm">
-  >(),
-  assessedAt: timestamp("assessed_at").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-})
+// v1 homeostasis_states table removed in v2 cleanup (2026-02-11).
+// v2 homeostasis will be a Claude Code skill, not DB-backed.

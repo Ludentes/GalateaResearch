@@ -1,4 +1,6 @@
 /// <reference types="vite/client" />
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import {
   createRootRoute,
   HeadContent,
@@ -6,7 +8,6 @@ import {
   Scripts,
 } from "@tanstack/react-router"
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import type * as React from "react"
 import appCss from "@/styles/app.css?url"
 

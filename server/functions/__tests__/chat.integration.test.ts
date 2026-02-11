@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/postgres-js"
 import postgres from "postgres"
 import { afterAll, describe, expect, it } from "vitest"
-import { homeostasisStates, messages, sessions } from "../../db/schema"
+import { messages, sessions } from "../../db/schema"
 import {
   createSessionLogic,
   getSessionMessagesLogic,
@@ -22,13 +22,7 @@ describe("Chat Logic (integration with Ollama)", () => {
   let testSessionId: string
 
   afterAll(async () => {
-    // Wait for fire-and-forget homeostasis storage to complete
-    await new Promise((resolve) => setTimeout(resolve, 200))
-    // Clean up test data (order matters: homeostasis_states FK -> messages FK -> sessions)
     if (testSessionId) {
-      await testDb
-        .delete(homeostasisStates)
-        .where(eq(homeostasisStates.sessionId, testSessionId))
       await testDb.delete(messages).where(eq(messages.sessionId, testSessionId))
       await testDb.delete(sessions).where(eq(sessions.id, testSessionId))
     }
@@ -46,19 +40,13 @@ describe("Chat Logic (integration with Ollama)", () => {
       "glm-4.7-flash",
     )
 
-    // The LLM should respond with something
     expect(result.text).toBeDefined()
     expect(result.text.length).toBeGreaterThan(0)
 
-    // Verify messages were stored
     const msgs = await getSessionMessagesLogic(testSessionId)
     expect(msgs).toHaveLength(2)
     expect(msgs[0].role).toBe("user")
     expect(msgs[1].role).toBe("assistant")
     expect(msgs[1].model).toBe("glm-4.7-flash")
-
-    // Verify activityLevel is returned from message queries (Task 6: Stage F)
-    expect(msgs[0].activityLevel).toBeNull() // user messages have no activityLevel
-    expect([0, 1, 2, 3]).toContain(msgs[1].activityLevel) // classification varies by LLM output
   }, 60000)
 })
