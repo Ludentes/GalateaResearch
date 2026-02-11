@@ -3,6 +3,7 @@ import { generateText, streamText } from "ai"
 import { asc, eq } from "drizzle-orm"
 import { db } from "../db"
 import { messages, sessions } from "../db/schema"
+import { assembleContext } from "../memory/context-assembler"
 
 /**
  * Create a new chat session.
@@ -48,8 +49,12 @@ export async function sendMessageLogic(
     .where(eq(messages.sessionId, sessionId))
     .orderBy(asc(messages.createdAt))
 
+  // Assemble system prompt from preprompts + learned knowledge
+  const context = await assembleContext()
+
   // Generate response
   const result = await generateText({
+    system: context.systemPrompt || undefined,
     model,
     messages: history.map((m) => ({
       role: m.role as "user" | "assistant",
@@ -101,8 +106,12 @@ export async function streamMessageLogic(
     .where(eq(messages.sessionId, sessionId))
     .orderBy(asc(messages.createdAt))
 
+  // Assemble system prompt from preprompts + learned knowledge
+  const context = await assembleContext()
+
   // Stream response
   const result = streamText({
+    system: context.systemPrompt || undefined,
     model,
     messages: history.map((m) => ({
       role: m.role as "user" | "assistant",
