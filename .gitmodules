@@ -1,4 +1,0 @@
-[submodule "graphiti"]
-	path = graphiti
-	url = git@github.com:Ludentes/graphiti.git
-	branch = galatea
