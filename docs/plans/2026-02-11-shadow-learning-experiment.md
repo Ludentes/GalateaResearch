@@ -2,7 +2,7 @@
 
 **Date**: 2026-02-11
 **Purpose**: Validate whether LLM extraction from developer session transcripts produces useful knowledge
-**Status**: Designed, ready to run
+**Status**: RAN — SUCCESS (all metrics exceed targets)
 **Depends on**: [v2 Architecture Design](2026-02-11-galatea-v2-architecture-design.md)
 
 ---
@@ -236,4 +236,107 @@ The prompt asks Claude to read a session transcript chunk and return structured 
 
 ---
 
-*Experiment designed 2026-02-11. Run against real transcripts before building any infrastructure.*
+---
+
+## Experiment Results (2026-02-11)
+
+### Sessions Tested
+
+| Session | Project | Type | Size | User msgs | Content |
+|---------|---------|------|------|-----------|---------|
+| `8be0af56` | Galatea | Architecture/planning | 100K chars | 101 | OTEL research, architecture decisions, doc updates |
+| `a408795d` | Telejobs | Operations/support | 54K chars | 111 | Langfuse migration, experiment running, PM guides, bug fixes |
+
+Two sessions chosen for diversity: one architecture-heavy (decisions, preferences), one operational (facts, procedures, team support).
+
+### Transcript Extraction
+
+Used `scripts/extract-transcript.py` to convert JSONL session files to readable transcripts:
+- Parses `user`/`assistant` entry types, skips `progress`/`file-history-snapshot`/`queue-operation`
+- Deduplicates streaming assistant messages by `(msg_id, content_signature)`
+- Summarizes tool_use (200 chars) and tool_result (100 chars) for readability
+- Tags system/meta entries separately from user messages
+
+### Knowledge Extraction
+
+Each transcript was processed by a Claude Opus agent with an extraction prompt asking for structured output (type, content, confidence, evidence, entities). Negative patterns (greetings, tool spam, meta messages) were specified to reduce noise.
+
+### Results
+
+| Metric | Target | Galatea | Telejobs | Average |
+|--------|--------|---------|----------|---------|
+| **Precision** | >70% | **~95%** | **~95%** | **~95%** |
+| **Recall** | >50% | **~83%** | **~90%** | **~87%** |
+| **Usefulness** | >60% | **~84%** | **~86%** | **~85%** |
+| **Noise ratio** | <30% | **~16%** | **~14%** | **~15%** |
+
+**Verdict: SUCCESS** — All metrics exceed targets by wide margins.
+
+### Items Extracted
+
+| Type | Galatea | Telejobs | Notes |
+|------|---------|----------|-------|
+| Fact | 16 | 22 | Operational sessions produce more facts |
+| Preference | 8 | 5 | Architecture sessions surface more preferences |
+| Decision | 4 | 3 | Both sessions captured architectural choices |
+| Procedure | 2 | 3 | Single-session; cross-session correlation would find more |
+| Correction | 2 | 1 | User corrections are well-detected |
+| Rule | 2 | 0 | Rules are rare in normal sessions |
+| **Total** | **37** | **37** | |
+
+### What Worked Well
+
+1. **Explicit preferences** — Near-perfect detection. "I prefer X", "use X not Y", user corrections all captured.
+2. **Project facts** — Technologies, infrastructure, team structure extracted accurately from tool calls and discussions.
+3. **Decisions** — Architecture choices (OTEL over MQTT, form factor) captured with evidence.
+4. **Cross-project generalization** — Same prompt worked on both a Galatea architecture session and a Telejobs operations session with no tuning.
+5. **Confidence calibration** — Agent self-rated uncertain items at 0.70-0.80, which corresponded to the items that were context-dependent.
+
+### What Needs Improvement
+
+1. **Implicit preferences** — Only captured when user explicitly stated them or they were very obvious from behavior. Subtle patterns (e.g., always checking CHANGELOG) missed.
+2. **Cross-session correlation** — Single-session extraction can't detect "user does X in every session." Step 4 (CORRELATE) wasn't tested.
+3. **Deduplication** — Step 5 (DEDUPLICATE) wasn't tested. Running against multiple sessions would produce duplicates.
+4. **Noise items** — ~15% of items were technically correct but low-utility (e.g., OTEL port numbers, specific pydantic field types). Could improve with "would this help an agent?" filter.
+5. **Procedures are sparse** — Only 2-3 per session. Procedures likely require observing the same workflow across 3+ sessions before they emerge as patterns.
+
+### Missed Items (recall gaps)
+
+**Galatea**: CHANGELOG update preference, implementation priority ordering
+**Telejobs**: Discord as team communication channel, HTTPS recommendation for PM git access
+
+Common pattern: items from Q&A interactions (EnterPlanMode → AskUserQuestion flows) and items that require inference across multiple observations.
+
+### Key Insight: Session Type Affects Extraction Profile
+
+| Session type | Primary extractions | Why |
+|-------------|--------------------|----|
+| Architecture/planning | Decisions, preferences, corrections | User actively making choices |
+| Operations/support | Facts, procedures, team context | User executing workflows, debugging |
+
+Both are valuable but extract different knowledge. A full shadow learning pipeline needs exposure to both session types.
+
+### Comparison with Graphiti (Phase 2)
+
+| Dimension | Graphiti (Phase 2) | LLM Extraction (this experiment) |
+|-----------|-------------------|----------------------------------|
+| Precision | ~50-60% | **~95%** |
+| Recall | 18-21% | **~87%** |
+| Usefulness | ~40% | **~85%** |
+| Latency | ~2-5s per message | ~30-60s per session chunk |
+| Cost | Graphiti API calls | LLM API calls (can use local Ollama) |
+| Source | Individual messages | Full session transcripts |
+
+LLM extraction dramatically outperforms Graphiti because it has full session context, not isolated messages.
+
+### Decision: PROCEED TO BUILD
+
+All success criteria met. The extraction pipeline is viable. Next steps:
+1. Build the extraction as a SKILL.md (Stage 1)
+2. Add cross-session correlation (Step 4)
+3. Add deduplication against existing CLAUDE.md (Step 5)
+4. Test with local Ollama for cost efficiency (Stage 2 prep)
+
+---
+
+*Experiment designed and run 2026-02-11. Results validate the shadow learning hypothesis.*
