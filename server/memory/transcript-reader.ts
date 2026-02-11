@@ -52,12 +52,31 @@ export async function readTranscript(
     }
 
     const turn = parseTurn(role, entry.message.content)
-    if (turn.content || (turn.toolUse && turn.toolUse.length > 0)) {
-      turns.push(turn)
-    }
+    if (!turn.content && !(turn.toolUse && turn.toolUse.length > 0)) continue
+    if (isInternalNoise(turn.content)) continue
+
+    turns.push(turn)
   }
 
   return turns
+}
+
+/**
+ * Filter out internal Claude Code artifacts that aren't real conversation:
+ * - "[Request interrupted by user]" / "[Request interrupted by user for tool use]"
+ * - <command-name>...</command-name> slash command XML
+ * - <local-command-stdout>...</local-command-stdout> command output XML
+ * - Session continuation summaries (start with "This session is being continued")
+ */
+function isInternalNoise(text: string): boolean {
+  if (!text) return true
+  const trimmed = text.trim()
+  if (trimmed.startsWith("[Request interrupted")) return true
+  if (trimmed.startsWith("<command-name>")) return true
+  if (trimmed.startsWith("<local-command-stdout>")) return true
+  if (trimmed.startsWith("<task-notification>")) return true
+  if (trimmed.startsWith("This session is being continued")) return true
+  return false
 }
 
 function contentSignature(content: string | ContentBlock[]): string {
