@@ -1,0 +1,12 @@
+{"type":"system","message":{"role":"system","content":"System prompt loaded"}}
+{"type":"user","message":{"id":"msg1","role":"user","content":"I prefer using pnpm for package management"}}
+{"type":"assistant","message":{"id":"msg2","role":"assistant","content":[{"type":"text","text":"I'll use pnpm going forward."}]}}
+{"type":"user","message":{"id":"msg3","role":"user","content":"Let's set up the TypeScript project with strict checks enabled"}}
+{"type":"assistant","message":{"id":"msg4","role":"assistant","content":[{"type":"text","text":"Setting up TypeScript strict mode."},{"type":"tool_use","name":"Edit","input":{"file_path":"tsconfig.json","old_string":"\"strict\": false","new_string":"\"strict\": true"}}]}}
+{"type":"assistant","message":{"id":"msg4","role":"assistant","content":[{"type":"text","text":"Setting up TypeScript strict mode."},{"type":"tool_use","name":"Edit","input":{"file_path":"tsconfig.json","old_string":"\"strict\": false","new_string":"\"strict\": true"}}]}}
+{"type":"progress","message":{"content":"Processing..."}}
+{"type":"user","isMeta":true,"message":{"id":"msg-meta","role":"user","content":"[System prompt updated]"}}
+{"type":"user","message":{"id":"msg5","role":"user","content":"hi"}}
+{"type":"assistant","message":{"id":"msg6","role":"assistant","content":[{"type":"text","text":"Hello! How can I help?"}]}}
+{"type":"user","message":{"id":"msg7","role":"user","content":"No, that's wrong — use the other tsconfig"}}
+{"type":"assistant","message":{"id":"msg8","role":"assistant","content":"Got it, I'll use the root tsconfig instead."}}
