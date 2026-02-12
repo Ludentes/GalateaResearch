@@ -41,9 +41,10 @@ describe("Homeostasis Engine", () => {
     it("detects HEALTHY knowledge_sufficiency with relevant facts", () => {
       const ctx: AgentContext = {
         ...baseContext,
+        currentMessage: "How should I set up authentication for mobile?",
         retrievedFacts: [
-          { content: "Use Clerk for mobile auth", confidence: 0.95 },
-          { content: "JWT has refresh issues on mobile", confidence: 0.85 },
+          { content: "Use Clerk for mobile authentication setup", confidence: 0.95 },
+          { content: "Authentication with JWT has refresh issues on mobile", confidence: 0.85 },
         ],
       }
       const state = assessDimensions(ctx)

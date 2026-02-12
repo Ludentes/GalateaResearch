@@ -252,6 +252,129 @@ pnpm tsx /tmp/test-homeostasis.ts
 | `certainty_alignment` | Always defaults to | HEALTHY |
 | `knowledge_application` | Always defaults to | HEALTHY |
 
+### L0-L2 Multi-Level Thinking Architecture
+
+Phase C implements a **three-level thinking architecture** for homeostasis assessment, providing different speeds and accuracies for different dimensions:
+
+#### **L0: Cached/Reflexive (0ms)**
+Returns last assessment if it's still fresh based on dimension-specific TTLs:
+
+| Dimension | Cache TTL | Rationale |
+|-----------|-----------|-----------|
+| `knowledge_sufficiency` | 0ms | Changes every message |
+| `progress_momentum` | 2 minutes | Patterns emerge over conversation |
+| `communication_health` | 30 minutes | Time-based, slow changing |
+| `productive_engagement` | 0ms | Changes every message |
+| `certainty_alignment` | 1 minute | Will use expensive LLM (Phase D) |
+| `knowledge_application` | 5 minutes | Will use expensive LLM (Phase D) |
+
+**Test L0 caching:**
+```bash
+cat > /tmp/test-l0-cache.ts << 'EOF'
+import { assessDimensions } from './server/engine/homeostasis-engine'
+
+const ctx = {
+  sessionId: 'cache-test',
+  currentMessage: 'test',
+  messageHistory: [],
+  lastMessageTime: new Date()
+}
+
+// First assessment (computes)
+const t1 = Date.now()
+const state1 = assessDimensions(ctx)
+const d1 = Date.now() - t1
+
+// Second assessment within TTL (should use cache for some dimensions)
+const t2 = Date.now()
+const state2 = assessDimensions(ctx)
+const d2 = Date.now() - t2
+
+console.log('First assessment time:', d1, 'ms')
+console.log('Second assessment time:', d2, 'ms')
+console.log('Cache hit expected for communication_health (30min TTL)')
+EOF
+
+pnpm tsx /tmp/test-l0-cache.ts
+```
+
+#### **L1: Computed with Relevance Scoring (1-5ms)**
+
+L1 improves over the baseline "just count facts" approach by:
+
+1. **Relevance filtering** — Checks keyword overlap between user message and facts
+2. **Confidence weighting** — Uses fact confidence scores
+3. **Combined metric** — `score = relevant_facts_count × avg_confidence`
+
+**Example improvement:**
+```typescript
+// User asks: "How do I implement OAuth2 authentication?"
+// Agent has 3 facts:
+//   - "Use NativeWind for styling" (UI design - irrelevant!)
+//   - "Liquid Glass for iOS" (UI design - irrelevant!)
+//   - "expo-blur on Android" (UI design - irrelevant!)
+
+// Baseline (old): 3 facts → HEALTHY ❌ FALSE POSITIVE
+// L1 (new): 0 relevant facts → LOW ✅ CORRECT
+```
+
+**Test relevance filtering:**
+```bash
+cat > /tmp/test-l1-relevance.ts << 'EOF'
+import { assessDimensions } from './server/engine/homeostasis-engine'
+
+// Scenario: OAuth question with irrelevant UI facts
+const ctx = {
+  sessionId: 'test',
+  currentMessage: 'How do I implement OAuth2 authentication?',
+  messageHistory: [],
+  retrievedFacts: [
+    { content: 'Use NativeWind for styling', confidence: 0.95 },
+    { content: 'Liquid Glass for iOS UI', confidence: 0.90 },
+    { content: 'expo-blur on Android', confidence: 0.85 }
+  ]
+}
+
+const state = assessDimensions(ctx)
+console.log('knowledge_sufficiency:', state.knowledge_sufficiency)
+console.log('Expected: LOW (facts are irrelevant to auth question)')
+EOF
+
+pnpm tsx /tmp/test-l1-relevance.ts
+```
+
+#### **L2: LLM Semantic Understanding (2-5s) — Phase D**
+
+L2 uses LLM for dimensions that require semantic understanding:
+- `certainty_alignment` — Agent confidence matches situation needs?
+- `knowledge_application` — Agent using available knowledge effectively?
+
+Currently defaults to HEALTHY. Will be implemented in Phase D.
+
+#### **Evaluation Results**
+
+The L0-L2 implementation was tested against 17 automated scenarios from `docs/plans/2026-02-11-learning-scenarios.md`:
+
+| Metric | Baseline (Simple Counting) | L0-L2 (Relevance + Caching) | Improvement |
+|--------|----------------------------|------------------------------|-------------|
+| **Failed Tests** | 6 | 4 | ✅ **-33%** (2 fewer failures) |
+| **Passing Tests** | 9 | 11 | ✅ **+22%** (2 more passing) |
+| **Todo (L2 LLM)** | 2 | 2 | ⏸️ Pending Phase D |
+
+**Run evaluation suite:**
+```bash
+pnpm vitest run server/engine/__tests__/homeostasis-evaluation.test.ts
+
+# Expected: 11 passing, 4 failing, 2 todo
+# Key win: S1 "ignores irrelevant facts" test passes (was failing in baseline)
+```
+
+**Full evaluation details:** See `docs/plans/2026-02-12-homeostasis-l0-l2-evaluation-report.md` for:
+- Test-by-test breakdown of all 17 scenarios
+- Root cause analysis of 4 remaining failures
+- L3/L4 future architecture design
+- Recommendations for Phase D
+
 ---
 
 ## Test 4: Homeostasis → Context Assembler Integration
