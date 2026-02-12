@@ -50,7 +50,17 @@ export async function sendMessageLogic(
     .orderBy(asc(messages.createdAt))
 
   // Assemble system prompt from preprompts + learned knowledge
-  const context = await assembleContext()
+  const context = await assembleContext({
+    agentContext: {
+      sessionId,
+      currentMessage: message,
+      messageHistory: history.map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      })),
+      retrievedFacts: [], // TODO: implement fact retrieval in Phase D
+    },
+  })
 
   // Generate response
   const result = await generateText({
@@ -107,7 +117,17 @@ export async function streamMessageLogic(
     .orderBy(asc(messages.createdAt))
 
   // Assemble system prompt from preprompts + learned knowledge
-  const context = await assembleContext()
+  const context = await assembleContext({
+    agentContext: {
+      sessionId,
+      currentMessage: message,
+      messageHistory: history.map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      })),
+      retrievedFacts: [], // TODO: implement fact retrieval in Phase D
+    },
+  })
 
   // Stream response
   const result = streamText({

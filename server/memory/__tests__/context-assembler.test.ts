@@ -106,4 +106,35 @@ describe("Context Assembler", () => {
     expect(constraints?.truncatable).toBe(false)
     expect(constraints?.content).toContain("Never push to main")
   })
+
+  it("includes homeostasis guidance when dimensions imbalanced", async () => {
+    const result = await assembleContext({
+      storePath: "/nonexistent.jsonl",
+      agentContext: {
+        sessionId: "test",
+        currentMessage: "Help me with authentication",
+        messageHistory: [],
+        retrievedFacts: [], // LOW knowledge_sufficiency
+      },
+    })
+    expect(result.systemPrompt).toContain("Knowledge gap")
+    expect(result.metadata.homeostasisGuidanceIncluded).toBe(true)
+  })
+
+  it("excludes homeostasis guidance when all dimensions healthy", async () => {
+    const result = await assembleContext({
+      storePath: "/nonexistent.jsonl",
+      agentContext: {
+        sessionId: "test",
+        currentMessage: "Help me with authentication",
+        messageHistory: [],
+        retrievedFacts: [
+          { content: "Use Clerk for auth", confidence: 0.95 },
+          { content: "JWT tokens expire in 1h", confidence: 0.9 },
+        ],
+      },
+    })
+    expect(result.systemPrompt).not.toContain("Knowledge gap")
+    expect(result.metadata.homeostasisGuidanceIncluded).toBe(false)
+  })
 })

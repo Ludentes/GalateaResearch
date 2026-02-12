@@ -1,19 +1,25 @@
 import { eq } from "drizzle-orm"
 import { db } from "../db"
 import { preprompts } from "../db/schema"
+import type { AgentContext } from "../engine/types"
+import { assessDimensions, getGuidance } from "../engine/homeostasis-engine"
 import { readEntries } from "./knowledge-store"
 import type { AssembledContext, ContextSection } from "./types"
 
 interface AssembleOptions {
   storePath?: string
   tokenBudget?: number
+  agentContext?: AgentContext
 }
 
 export async function assembleContext(
   options: AssembleOptions = {},
 ): Promise<AssembledContext> {
-  const { storePath = "data/memory/entries.jsonl", tokenBudget = 4000 } =
-    options
+  const {
+    storePath = "data/memory/entries.jsonl",
+    tokenBudget = 4000,
+    agentContext,
+  } = options
 
   const sections: ContextSection[] = []
 
@@ -81,7 +87,23 @@ export async function assembleContext(
     })
   }
 
-  // 7. Assemble final prompt (respect token budget)
+  // 7. HOMEOSTASIS GUIDANCE — assess dimensions and inject guidance if needed
+  let homeostasisGuidanceIncluded = false
+  if (agentContext) {
+    const dimensions = assessDimensions(agentContext)
+    const guidance = getGuidance(dimensions)
+    if (guidance) {
+      sections.push({
+        name: "SELF-REGULATION",
+        content: guidance,
+        priority: -1, // Insert before constraints
+        truncatable: false,
+      })
+      homeostasisGuidanceIncluded = true
+    }
+  }
+
+  // 8. Assemble final prompt (respect token budget)
   const systemPrompt = buildPrompt(sections, tokenBudget)
 
   return {
@@ -91,6 +113,7 @@ export async function assembleContext(
       prepromptsLoaded: activePrompts.length,
       knowledgeEntries: active.length,
       rulesCount: rules.length,
+      homeostasisGuidanceIncluded,
     },
   }
 }

@@ -82,5 +82,6 @@ export interface AssembledContext {
     prepromptsLoaded: number
     knowledgeEntries: number
     rulesCount: number
+    homeostasisGuidanceIncluded: boolean
   }
 }
