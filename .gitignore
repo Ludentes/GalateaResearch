@@ -76,3 +76,6 @@ coverage/
 
 # Shadow learning knowledge store (local agent memory)
 data/memory/
+
+# Observation event store (OTEL logs)
+data/observation/
