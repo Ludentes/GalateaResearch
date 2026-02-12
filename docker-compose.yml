@@ -1,8 +1,8 @@
 # Galatea Infrastructure
 #
 # Core: postgres (sessions, messages, personas, preprompts)
+# Observation: OTEL Collector (Phase C)
 #
-# v2 will add observation pipeline (OTEL) — not yet implemented.
 # Graphiti/FalkorDB removed in v2 cleanup (2026-02-11).
 
 services:
@@ -22,5 +22,20 @@ services:
       timeout: 5s
       retries: 5
 
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.118.0
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    ports:
+      - "4318:4318"  # OTLP HTTP
+      - "4317:4317"  # OTLP gRPC
+    volumes:
+      - ./config/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+      - otel_logs:/tmp/otel
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - postgres
+
 volumes:
   postgres_data:
+  otel_logs:
