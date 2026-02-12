@@ -272,7 +272,7 @@ describe("Homeostasis Goal Achievement", () => {
     }
 
     const state = assessDimensions(noKnowledgeCtx)
-    const guidance = require("../homeostasis-engine").getGuidance(state)
+    const guidance = getGuidance(state)
 
     expect(state.knowledge_sufficiency).toBe("LOW")
     expect(guidance.length).toBeGreaterThan(0) // Should provide guidance
@@ -293,7 +293,7 @@ describe("Homeostasis Goal Achievement", () => {
     }
 
     const state = assessDimensions(stuckCtx)
-    const guidance = require("../homeostasis-engine").getGuidance(state)
+    const guidance = getGuidance(state)
 
     expect(state.progress_momentum).toBe("LOW")
     expect(guidance).toContain("Stuck detected")

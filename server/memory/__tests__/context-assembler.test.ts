@@ -126,11 +126,11 @@ describe("Context Assembler", () => {
       storePath: "/nonexistent.jsonl",
       agentContext: {
         sessionId: "test",
-        currentMessage: "Help me with authentication",
+        currentMessage: "Help me with authentication setup",
         messageHistory: [],
         retrievedFacts: [
-          { content: "Use Clerk for auth", confidence: 0.95 },
-          { content: "JWT tokens expire in 1h", confidence: 0.9 },
+          { content: "Use Clerk for authentication setup on mobile", confidence: 0.95 },
+          { content: "Authentication tokens require proper refresh handling", confidence: 0.9 },
         ],
       },
     })
