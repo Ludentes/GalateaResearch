@@ -296,8 +296,8 @@ Each source doc includes privacy considerations:
 ## Related Documentation
 
 - [../research/2026-02-06-otel-vs-mqtt-comparison.md](../research/2026-02-06-otel-vs-mqtt-comparison.md) - Full OTEL vs MQTT analysis
-- [../OBSERVATION_PIPELINE.md](../OBSERVATION_PIPELINE.md) - Original high-level pipeline design
-- [../FINAL_MINIMAL_ARCHITECTURE.md](../FINAL_MINIMAL_ARCHITECTURE.md) - Overall system architecture
+- [../archive/pre-v2/OBSERVATION_PIPELINE.md](../archive/pre-v2/OBSERVATION_PIPELINE.md) - Original high-level pipeline design (archived)
+- [../archive/pre-v2/FINAL_MINIMAL_ARCHITECTURE.md](../archive/pre-v2/FINAL_MINIMAL_ARCHITECTURE.md) - Overall system architecture (archived)
 
 ---
 

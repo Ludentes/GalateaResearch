@@ -4,8 +4,8 @@
 **Status:** Draft
 **Source of Truth:** [PSYCHOLOGICAL_ARCHITECTURE.md](../PSYCHOLOGICAL_ARCHITECTURE.md)
 **Related:**
-- [OBSERVATION_PIPELINE.md](../OBSERVATION_PIPELINE.md) (Layer 4: Memory Formation)
-- [GATEKEEPER.md](../memory/GATEKEEPER.md) (Conversation filtering)
+- [OBSERVATION_PIPELINE.md](../archive/pre-v2/OBSERVATION_PIPELINE.md) (Layer 4: Memory Formation, archived)
+- [GATEKEEPER.md](../archive/pre-v2/memory/GATEKEEPER.md) (Conversation filtering, archived)
 - [REFERENCE_SCENARIOS.md](../REFERENCE_SCENARIOS.md) (Expected behavior)
 - [memory-system-design.md](./2026-02-02-memory-system-design.md) (Original design)
 - [unified-memory-extraction-design.md](./2026-02-06-unified-memory-extraction-design.md) (Extraction approach)

@@ -358,7 +358,7 @@ The L0-L4 pattern appears in multiple domains across the architecture:
 
 L0 cache with configurable TTL per dimension. L3/L4 planned for Phase D/E.
 
-See: `server/engine/homeostasis-engine.ts`, [Evaluation Report](plans/2026-02-12-homeostasis-l0-l2-evaluation-report.md)
+See: `server/engine/homeostasis-engine.ts`, [Evaluation Report](archive/completed/phase-c/2026-02-12-homeostasis-l0-l2-evaluation-report.md)
 
 <details>
 <summary>Original Activity Router (Phase 3, deprecated)</summary>
@@ -857,7 +857,7 @@ Agent: "I'll review open MRs while waiting."
 
 ## Open Questions
 
-1. **Assessment reliability** — ~~How consistent is LLM self-assessment?~~ RESOLVED (Phase C): L1 heuristics achieve 33% fewer failures than baseline. L2 LLM assessment planned for Phase D. See [evaluation report](plans/2026-02-12-homeostasis-l0-l2-evaluation-report.md).
+1. **Assessment reliability** — ~~How consistent is LLM self-assessment?~~ RESOLVED (Phase C): L1 heuristics achieve 33% fewer failures than baseline. L2 LLM assessment planned for Phase E. See [evaluation report](archive/completed/phase-c/2026-02-12-homeostasis-l0-l2-evaluation-report.md).
 2. **Threshold calibration** — How do we tune thresholds from observation? (Phase E)
 3. **Cross-agent learning** — How do agents learn from each other's mistakes? (deferred)
 4. **Dimension completeness** — Are 6 dimensions enough? (validated against 9 learning scenarios — adequate for current scope)
@@ -872,8 +872,8 @@ Agent: "I'll review open MRs while waiting."
 ### Current (v2)
 - **[plans/2026-02-11-galatea-v2-architecture-design.md](./plans/2026-02-11-galatea-v2-architecture-design.md)** — v2 architecture (homeostasis + memory)
 - **[plans/2026-02-12-cognitive-models-design.md](./plans/2026-02-12-cognitive-models-design.md)** — Cognitive models as views over knowledge store
-- **[plans/2026-02-12-homeostasis-l0-l2-evaluation-report.md](./plans/2026-02-12-homeostasis-l0-l2-evaluation-report.md)** — L0-L2 evaluation results
-- **[plans/2026-02-12-phase-d-homeostasis-refinement.md](./plans/2026-02-12-phase-d-homeostasis-refinement.md)** — Phase D plan (L2/L3, memory lifecycle)
+- **[L0-L2 Evaluation Report](./archive/completed/phase-c/2026-02-12-homeostasis-l0-l2-evaluation-report.md)** — L0-L2 evaluation results (Phase C)
+- **[Phase D Plan](./plans/2026-02-13-phase-d-revised.md)** — Formalize + Close the Loop
 - **[ROADMAP.md](./ROADMAP.md)** — Full development roadmap (Phases A-F)
 - **[KNOWN_GAPS.md](./KNOWN_GAPS.md)** — Gap analysis with resolution status
 

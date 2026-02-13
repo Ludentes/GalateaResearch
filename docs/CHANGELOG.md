@@ -31,7 +31,7 @@ Root cause: dedup used triple-AND gate (type match AND entity overlap AND Jaccar
 
 ### Phase B Verification Guide
 
-Added **[Phase B Verification Guide](guides/2026-02-11-phase-b-verification-guide.md)** — 10-step guide for validating shadow learning pipeline with real data.
+Added **Phase B Verification Guide** (`archive/completed/phase-b/2026-02-11-phase-b-verification-guide.md`) — 10-step guide for validating shadow learning pipeline with real data.
 
 ---
 
@@ -57,9 +57,9 @@ Moved 22 deprecated documents to `archive/pre-v2/`:
 ### Updated Documentation
 
 - **README.md** — Rewritten for v2 architecture
-- **DECISIONS.md** — Added v2 decisions, marked Phase 3 decisions as historical
+- **DECISIONS.md** — Added v2 decisions, marked Phase 3 decisions as historical (now archived)
 - **KNOWN_GAPS.md** — Rewritten for v2 gaps
-- **OPEN_QUESTIONS.md** — Updated all questions with v2 context
+- **OPEN_QUESTIONS.md** — Updated all questions with v2 context (now archived)
 - **PSYCHOLOGICAL_ARCHITECTURE.md** — Added superseded header
 - **TEST_CONTRACTS.md** — Added review-needed header
 - **STAGE_G_FINDINGS.md** — Added context header

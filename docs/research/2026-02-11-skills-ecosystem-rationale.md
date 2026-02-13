@@ -213,7 +213,7 @@ Each cycle makes the agent more useful. The ecosystem provides the format; you p
 ## References
 
 - [Galatea v2 Architecture Design](../plans/2026-02-11-galatea-v2-architecture-design.md) — Full architectural rationale
-- [Shadow Learning Experiment](../plans/2026-02-11-shadow-learning-experiment.md) — Extraction validation (95% precision)
+- [Shadow Learning Experiment](../archive/completed/phase-b/2026-02-11-shadow-learning-experiment.md) — Extraction validation (95% precision)
 - [Learning Scenarios L1-L9](../plans/2026-02-11-learning-scenarios.md) — Detailed lifecycle examples
 - [SKILL.md specification](https://www.skills.md/) — Open standard
 - [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) — Tool access standard

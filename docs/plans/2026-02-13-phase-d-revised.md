@@ -6,7 +6,7 @@
 
 **Motivation:** The end-to-end trace (`docs/plans/2026-02-13-end-to-end-trace.md`) revealed that the critical problem isn't homeostasis quality — it's that **the feedback loop is broken**. Knowledge gets extracted (Layer 2 works) but `retrievedFacts` is always `[]` in chat (Layer 1). Making homeostasis smarter (L2/L3) won't help when it operates on empty inputs. Close the loop first.
 
-**Previous Phase D plan:** `docs/plans/2026-02-12-phase-d-homeostasis-refinement.md` focused on L2/L3 homeostasis refinement, memory consolidation, and decay. Those items are pushed to Phase E — still valuable, just not the bottleneck.
+**Previous Phase D plan:** `docs/archive/completed/superseded/2026-02-12-phase-d-homeostasis-refinement.md` focused on L2/L3 homeostasis refinement, memory consolidation, and decay. Those items are pushed to Phase E — still valuable, just not the bottleneck.
 
 **Key reference docs:**
 - `docs/plans/2026-02-13-end-to-end-trace.md` — golden reference trace (Layers 1-3, cross-cutting X1-X6)

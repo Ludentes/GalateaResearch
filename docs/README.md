@@ -35,34 +35,29 @@ Galatea builds **two things**. Everything else leverages the ecosystem.
 | Document | Description |
 |----------|-------------|
 | **[v2 Architecture Design](plans/2026-02-11-galatea-v2-architecture-design.md)** | Core architecture — homeostasis + memory-with-lifecycle, ecosystem integration |
-| **[Learning Scenarios](plans/2026-02-11-learning-scenarios.md)** | 9 scenarios tracing OBSERVE → EXTRACT → WRITE → USE |
+| **[ROADMAP.md](ROADMAP.md)** | Development roadmap (Phases A-F) |
+| **[KNOWN_GAPS.md](KNOWN_GAPS.md)** | Known gaps and deferred items with resolution status |
+| **[REFERENCE_SCENARIOS.md](REFERENCE_SCENARIOS.md)** | Narrative scenarios for context |
 | **[GUIDING_PRINCIPLES.md](GUIDING_PRINCIPLES.md)** | Core principles — pragmatic, iterative, reuse |
-| **[USER_STORIES.md](USER_STORIES.md)** | Feature requirements from user perspective (8 epics, 40+ stories) |
-| **[REFERENCE_SCENARIOS.md](REFERENCE_SCENARIOS.md)** | Narrative scenarios for context (source for stories/contracts) |
 
 ## Supporting Documents
 
 | Document | Description |
 |----------|-------------|
-| **[OBSERVATION_PIPELINE.md](OBSERVATION_PIPELINE.md)** | OTEL-first observation pipeline (7 event sources, 4 layers) |
-| **[ECOSYSTEM_REUSE.md](ECOSYSTEM_REUSE.md)** | MCP ecosystem, Skills, Agent Teams landscape |
-| **[PSYCHOLOGICAL_ARCHITECTURE.md](PSYCHOLOGICAL_ARCHITECTURE.md)** | Original architecture (partially superseded — psychological foundations survive) |
-| **[STAGE_G_FINDINGS.md](STAGE_G_FINDINGS.md)** | Phase 3 testing findings (Graphiti quality issues, prompt insights) |
-| **[DECISIONS.md](DECISIONS.md)** | Key technical decisions with rationale |
-| **[KNOWN_GAPS.md](KNOWN_GAPS.md)** | Known gaps and deferred items |
+| **[PSYCHOLOGICAL_ARCHITECTURE.md](PSYCHOLOGICAL_ARCHITECTURE.md)** | Psychological foundations — homeostasis dimensions, ThinkingDepth |
+| **[Learning Scenarios](plans/2026-02-11-learning-scenarios.md)** | 9 scenarios tracing OBSERVE → EXTRACT → WRITE → USE |
+| **[End-to-End Trace](plans/2026-02-13-end-to-end-trace.md)** | Full system trace (Layers 1-3, cross-cutting X1-X6) |
+| **[Phase D Plan](plans/2026-02-13-phase-d-revised.md)** | Current: Formalize + Close the Loop |
+| **[Domain Model](plans/2026-02-13-domain-model.md)** | Projects, people, technologies on this machine |
 
 ## Design Documents (`/plans`)
 
 | Document | Description |
 |----------|-------------|
 | **[Homeostasis Design](plans/2026-02-02-homeostasis-architecture-design.md)** | Homeostasis decision record (concept survives in v2) |
-| **[Logging Architecture](plans/2026-02-02-logging-architecture-design.md)** | OTEL logging decision |
 | **[Memory Research](plans/2026-02-02-memory-findings.md)** | Memory system research findings |
-| **[MD Files Input Layer](plans/2026-02-03-md-files-input-layer.md)** | MD files for static content (aligns with CLAUDE.md/SKILL.md) |
-| **[TanStack Architecture](plans/2026-02-03-system-architecture-tanstack.md)** | UI/full-stack architecture |
-| **[Multi-Provider Streaming](plans/2026-02-04-multi-provider-streaming.md)** | Multi-provider LLM streaming |
 | **[Memory Lifecycle](plans/2026-02-07-memory-lifecycle.md)** | Memory consolidation/decay design |
-| **[Stage G Test Plan](plans/2026-02-10-stage-g-reference-scenario-testing.md)** | Reference scenario testing approach |
+| **[Cognitive Models](plans/2026-02-12-cognitive-models-design.md)** | Cognitive models as views over knowledge store |
 
 ## Observation Pipeline (`/observation-pipeline`)
 
@@ -94,9 +89,10 @@ Agent deconstructions and psychology research:
 
 Outdated documents from earlier architecture iterations:
 
-- **`archive/pre-v2/`** — Phase 2-3 implementation docs (PostgreSQL, Graphiti, Activity Router, Reflexion Loop, custom context assembler)
+- **`archive/pre-v2/`** — Phase 2-3 docs, pre-v2 plans, deprecated APIs
 - **`archive/phase2a-exploration/`** — Graphiti/Mem0 benchmarking results
+- **`archive/completed/`** — Completed Phase A/B/C plans and superseded Phase D
 
 ---
 
-*Last Updated: 2026-02-11*
+*Last Updated: 2026-02-13*

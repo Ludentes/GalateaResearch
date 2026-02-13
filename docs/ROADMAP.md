@@ -210,7 +210,7 @@ After D.2: Feedback loop works (extract → store → retrieve → use → asses
 
 ### Reference
 - Revised Plan: `docs/plans/2026-02-13-phase-d-revised.md`
-- Previous Plan: `docs/plans/2026-02-12-phase-d-homeostasis-refinement.md`
+- Previous Plan: `docs/archive/completed/superseded/2026-02-12-phase-d-homeostasis-refinement.md`
 - End-to-End Trace: `docs/plans/2026-02-13-end-to-end-trace.md`
 
 ---
@@ -237,7 +237,7 @@ After D.2: Feedback loop works (extract → store → retrieve → use → asses
 - Self-model produces template responses in powered-down mode
 
 ### Reference
-- Previous Phase D plan (now Phase E content): `docs/plans/2026-02-12-phase-d-homeostasis-refinement.md`
+- Previous Phase D plan (now Phase E content): `docs/archive/completed/superseded/2026-02-12-phase-d-homeostasis-refinement.md`
 - End-to-End Trace X6 (Self-Model): `docs/plans/2026-02-13-end-to-end-trace.md`
 
 ---
