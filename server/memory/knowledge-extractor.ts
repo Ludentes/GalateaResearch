@@ -3,7 +3,7 @@ import { generateObject } from "ai"
 import { z } from "zod"
 import type { KnowledgeEntry, TranscriptTurn } from "./types"
 
-const ExtractionSchema = z.object({
+export const ExtractionSchema = z.object({
   items: z.array(
     z.object({
       type: z.enum([
@@ -75,6 +75,7 @@ export async function extractKnowledge(
   turns: TranscriptTurn[],
   model: LanguageModel,
   source: string,
+  temperature = 0,
 ): Promise<KnowledgeEntry[]> {
   const transcript = turns
     .map((t) => {
@@ -92,6 +93,8 @@ export async function extractKnowledge(
     model,
     schema: ExtractionSchema,
     prompt: `${EXTRACTION_PROMPT}\n\n---\n\nTRANSCRIPT:\n${transcript}`,
+    temperature,
+    maxRetries: 0,
   })
 
   return object.items.map((item) => ({
@@ -100,4 +103,36 @@ export async function extractKnowledge(
     source,
     extractedAt: new Date().toISOString(),
   }))
+}
+
+/**
+ * Retry extraction with escalating temperature.
+ * First attempt at temperature 0 (deterministic). On failure, retry with
+ * increasing temperature to get different token distributions.
+ * Returns empty array if all attempts fail (graceful degradation).
+ */
+export async function extractWithRetry(
+  turns: TranscriptTurn[],
+  model: LanguageModel,
+  source: string,
+  temperatures = [0, 0.3, 0.7],
+): Promise<KnowledgeEntry[]> {
+  for (let i = 0; i < temperatures.length; i++) {
+    try {
+      return await extractKnowledge(turns, model, source, temperatures[i])
+    } catch (error) {
+      const isLast = i === temperatures.length - 1
+      if (isLast) {
+        console.warn(
+          `[extraction] All ${temperatures.length} attempts failed for ${source}, chunk skipped`,
+          error instanceof Error ? error.message : error,
+        )
+        return []
+      }
+      console.warn(
+        `[extraction] Attempt ${i + 1} failed (temp=${temperatures[i]}), retrying with temp=${temperatures[i + 1]}`,
+      )
+    }
+  }
+  return []
 }

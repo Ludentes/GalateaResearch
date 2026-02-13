@@ -102,6 +102,7 @@ export interface ExtractionResult {
     noiseTurns: number
     entriesExtracted: number
     duplicatesSkipped: number
+    chunksFailed?: number
     skippedAlreadyExtracted?: boolean
   }
 }

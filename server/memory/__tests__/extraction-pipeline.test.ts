@@ -5,7 +5,7 @@ import type { LanguageModel } from "ai"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 vi.mock("../knowledge-extractor", () => ({
-  extractKnowledge: vi.fn().mockResolvedValue([
+  extractWithRetry: vi.fn().mockResolvedValue([
     {
       id: "extracted-1",
       type: "preference",

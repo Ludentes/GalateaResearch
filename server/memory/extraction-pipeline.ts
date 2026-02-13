@@ -1,7 +1,7 @@
 import path from "node:path"
 import type { LanguageModel } from "ai"
 import { getLLMConfig } from "../providers/config"
-import { extractKnowledge } from "./knowledge-extractor"
+import { extractWithRetry } from "./knowledge-extractor"
 import {
   appendEntries,
   deduplicateEntries,
@@ -56,11 +56,15 @@ export async function runExtraction(
   const noiseTurns = allTurns.length - signalTurns.length
 
   const allExtracted: KnowledgeEntry[] = []
+  let chunksFailed = 0
 
   for (let i = 0; i < signalTurns.length; i += chunkSize) {
     const chunk = signalTurns.slice(i, i + chunkSize)
     const withContext = addSurroundingContext(chunk, allTurns)
-    const extracted = await extractKnowledge(withContext, model, source)
+    const extracted = await extractWithRetry(withContext, model, source)
+    if (extracted.length === 0 && withContext.length > 0) {
+      chunksFailed++
+    }
     allExtracted.push(...extracted)
   }
 
@@ -84,6 +88,7 @@ export async function runExtraction(
       noiseTurns,
       entriesExtracted: allExtracted.length,
       duplicatesSkipped,
+      chunksFailed: chunksFailed > 0 ? chunksFailed : undefined,
     },
   }
 }
