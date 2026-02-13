@@ -1,7 +1,7 @@
 # End-to-End Message Trace: Golden Reference
 
 **Date:** 2026-02-13
-**Status:** In Progress (Layer 1 complete, Layers 2-3 pending)
+**Status:** In Progress (Layers 1-2 complete, Layer 3 pending)
 **Purpose:** Trace every byte through the Galatea system for three scenarios, exposing all gaps and creating a testable golden reference for future subsystem validation.
 
 ---
@@ -16,7 +16,7 @@ Three layers of increasing ambition, building from what works:
 
 **Context:** Real project data from this machine:
 - **Umka** (32 sessions) — content-heavy, documents, Payload CMS, some game dev
-- **ContextForge** (92 sessions) — dev-heavy, TypeScript, MQTT, real-time sync
+- **ContextForge** (92 sessions) — dev-heavy, context window management, Claude Code provider, zone-based caching
 - **Galatea** (37 sessions) — meta (agent developing itself)
 - **Expo** (planned) — will add as test data later
 
@@ -242,19 +242,375 @@ After response stored:
 
 ## Layer 2: Session-End Extraction
 
-*(Pending — next session)*
-
 ### Scenario
 
-The chat session from Layer 1 ends. The user closes the web UI (or the Claude Code session ends via SessionEnd hook). The extraction pipeline should fire.
+The ContextForge session from Layer 1 ends. You close Claude Code (Ctrl+C or `/exit`). The extraction pipeline should fire and learn from the conversation.
 
-### Steps to trace:
-- How does session end get detected?
-- What triggers extraction?
-- Transcript reading -> signal classification -> extraction -> dedup -> store
-- Knowledge store state before and after
-- CLAUDE.md regeneration
-- Homeostasis implications for next session
+### E0: Session end detected
+
+```
+Claude Code CLI detects session end
+  -> Fires SessionEnd hook (from ~/.claude/settings.json)
+  -> Passes JSON on stdin: {session_id, transcript_path, cwd}
+```
+
+Hook registration (`~/.claude/settings.json`):
+```json
+"SessionEnd": [{
+  "hooks": [{
+    "type": "command",
+    "command": "pnpm tsx /home/newub/w/galatea/scripts/hooks/auto-extract.ts",
+    "timeout": 120,
+    "async": true
+  }]
+}]
+```
+
+**Status:** WORKING
+
+**Gap:** `async: true` means Claude Code doesn't wait for extraction to finish. Good for UX, but we never know if extraction failed unless we check logs.
+
+### E1: Hook script starts
+
+`scripts/hooks/auto-extract.ts`
+
+```
+Read stdin → parse JSON {session_id, transcript_path, cwd}
+  -> Resolve paths:
+     storePath:  <cwd>/data/memory/entries.jsonl
+     statePath:  <cwd>/data/memory/extraction-state.json
+  -> Dynamic import: extraction-state, extraction-pipeline, ollama provider
+  -> Create model: glm-4.7-flash:latest @ localhost:11434
+```
+
+**Status:** WORKING
+
+**Gap:** Dynamic imports from `cwd` — if cwd is wrong (e.g., hook fires from a non-Galatea project), imports fail silently and `process.exit(0)` swallows the error.
+
+**Gap:** Hardcoded to Ollama. Per provider strategy (see domain model), extraction should stay on Ollama (small task), but there's no fallback if Ollama is down.
+
+### E2: Extraction state check
+
+`server/memory/extraction-state.ts`
+
+```
+isSessionExtracted(session_id, statePath)
+  -> Read data/memory/extraction-state.json
+  -> Check if session_id key exists
+  -> If yes: log "Skip", exit(0)
+  -> If no: continue
+```
+
+**Status:** WORKING
+
+**Gap:** Double-checking — the extraction pipeline (E6) also checks `source` field in existing entries. Redundant but harmless.
+
+### E3: Transcript reading
+
+`server/memory/transcript-reader.ts`
+
+```
+readTranscript("~/.claude/projects/-home-newub-w-galatea/<session>.jsonl")
+
+JSONL format (actual Claude Code transcript):
+  {"type":"user","message":{"role":"user","content":"The MQTT client needs to persist..."}}
+  {"type":"assistant","message":{"role":"assistant","content":[
+    {"type":"text","text":"..."},
+    {"type":"tool_use","name":"Edit","input":{...}}
+  ]}}
+  {"type":"file-history-snapshot","messageId":"...","snapshot":{...}}
+
+Processing:
+  1. Parse each line as JSON, skip malformed
+  2. Filter: keep type=user|assistant, skip isMeta
+  3. Deduplicate streaming assistant messages by id+contentSignature
+  4. Filter internal noise: "[Request interrupted", "<command-name>", etc.
+  5. Parse content blocks: text → content, tool_use → toolUse[], tool_result → toolResults[]
+
+Output: TranscriptTurn[] with {role, content, toolUse?, toolResults?}
+```
+
+**Status:** WORKING — handles real Claude Code transcripts including tool use.
+
+**Gap:** Tool results truncated to 200 chars (may lose important context like file contents the user discussed).
+
+### E4: Signal classification
+
+`server/memory/signal-classifier.ts`
+
+```
+filterSignalTurns(allTurns)
+
+Rules (all regex-based, user turns only):
+  NOISE:
+    - All assistant turns (always noise)
+    - Empty content
+    - Greetings (< 30 chars): /^(hi|hello|hey|...)/i
+    - Confirmations: /^(ok|okay|got it|...)\s*[.!?]?$/i
+
+  SIGNAL (in order):
+    - Preference: /\b(i (prefer|like|want|...))\b/i → 0.8
+    - Correction: /\b(no,?\s+(that's|it's|...))\b/i → 0.8
+    - Policy: /\b(we (always|never|...))\b/i → 0.8
+    - Decision: /\b(let's (go with|use|...))\b/i → 0.8
+    - Long message (> 50 chars): "factual" → 0.5
+
+Typical: 205 turns → ~100 signal (~49% pass rate)
+```
+
+**Status:** WORKING — but coarse.
+
+**Gap:** English-only patterns. Some sessions have Russian content (Alina's Umka feedback).
+
+**Gap:** Assistant turns always classified as noise — but assistant responses contain decisions, explanations, procedures that should be extracted.
+
+**Gap:** No tool-use awareness. A user saying "yes" after a tool result is confirmation (noise), but "no, use the other file" is a correction (signal). Current classifier can't distinguish.
+
+### E5: Chunking + context windowing
+
+`server/memory/extraction-pipeline.ts`
+
+```
+For the ~100 signal turns:
+
+1. Chunk into groups of 20 signal turns
+2. For each chunk, addSurroundingContext():
+   - For each signal turn, include:
+     - Previous assistant turn (if assistant role)
+     - The signal turn itself
+     - Next assistant turn (if assistant role)
+   - Deduplicate (turns may overlap between chunks)
+
+Result: ~5 chunks of ~40-60 turns each (signal + context)
+```
+
+**Status:** WORKING
+
+**Gap:** No overlap between chunks. If user says "as I mentioned earlier..." in chunk 3, the LLM has no context from chunks 1-2.
+
+**Gap:** Fixed chunk size. A chunk of 20 short turns and 20 long tool-use turns have very different token counts.
+
+### E6: LLM extraction (per chunk)
+
+`server/memory/knowledge-extractor.ts`
+
+```
+For each chunk:
+
+extractWithRetry(turns, model, source, temperatures=[0, 0.3, 0.7])
+
+  Attempt 1 (temp=0):
+    formatTranscript(turns):
+      [USER]: The MQTT client in ContextForge needs to persist...
+        [TOOL: Edit — {"file_path":"src/mqtt.ts"...}]
+      [ASSISTANT]: I've updated the MQTT client to persist...
+
+    generateObject({
+      model: ollama/glm-4.7-flash,
+      schema: ExtractionSchema,   // Zod → JSON schema
+      prompt: EXTRACTION_PROMPT + transcript,
+      temperature: 0,
+      maxRetries: 0,              // No AI SDK retries
+    })
+
+    -> Ollama converts schema to EBNF grammar internally
+    -> POST http://localhost:11434/api/chat {model, messages, format: "json"}
+
+  On failure → Attempt 2 (temp=0.3) → Attempt 3 (temp=0.7)
+  All fail → return [] (chunk skipped, logged as chunksFailed)
+
+Output per chunk: KnowledgeEntry[]
+  {id, type, content, confidence, evidence, entities, about?, source, extractedAt}
+```
+
+**Status:** WORKING — temperature escalation handles flaky Ollama responses.
+
+**Failure modes at E6:**
+
+| Failure | Current Handling | Should Be |
+|---------|-----------------|-----------|
+| Ollama not running | 3 retries fail, chunk skipped | Log + alert, queue for later |
+| Schema validation fails | Temperature escalation may fix | Good enough |
+| Model context exceeded | Ollama silently truncates | Track token count per chunk |
+| OOM on large chunk | Process killed | Catch, reduce chunk size, retry |
+| All chunks fail | `chunksFailed` counter in stats | Alert, don't mark session as extracted |
+
+**Actual performance:** ~18s per chunk × 5 chunks = ~90s for extraction LLM calls.
+
+### E7: Deduplication
+
+`server/memory/knowledge-store.ts`
+
+```
+deduplicateEntries(allExtracted, existingEntries, ollamaBaseUrl)
+
+Three-path strategy:
+
+Path 1: Jaccard text similarity
+  tokenize: lowercase, split on \W+, filter words < 3 chars, remove 62 stop words
+  isDuplicate if:
+    - contentSim >= 0.5, OR
+    - evidenceSim >= 0.5 AND contentSim >= 0.2
+
+Path 2: Evidence match (part of Path 1)
+  Same evidence quote → likely same knowledge
+
+Path 3: Embedding cosine similarity
+  batchEmbed(allTexts, ollamaBaseUrl)
+    -> POST http://localhost:11434/api/embed
+       {model: "nomic-embed-text:latest", input: [...]}
+    -> Returns number[][] embeddings
+  cosineSimilarity > 0.85 → duplicate
+
+Graceful degradation: If Ollama unavailable for embeddings → skip Path 3, use only Jaccard.
+
+Result: {unique: KnowledgeEntry[], duplicatesSkipped: number}
+```
+
+**Status:** WORKING
+
+**Gap:** Recomputes ALL embeddings on every extraction. With 279 entries, this is 279+N embedding calls per extraction. Will degrade as store grows.
+
+**Gap:** Threshold 0.85 not empirically tuned. May be too aggressive (merging distinct knowledge) or too lax (keeping near-duplicates).
+
+### E8: Storage
+
+`server/memory/knowledge-store.ts`
+
+```
+appendEntries(newEntries, "data/memory/entries.jsonl")
+  -> mkdir -p data/memory/
+  -> appendFile: one JSON line per entry
+
+Example entry stored:
+{
+  "id": "27fe2ea4-...",
+  "type": "fact",
+  "content": "MQTT client in ContextForge uses persistent connections",
+  "confidence": 0.95,
+  "evidence": "User said: The MQTT client needs to persist across hot reloads",
+  "entities": ["MQTT", "ContextForge", "HMR"],
+  "about": {"entity": "contextforge", "type": "project"},
+  "source": "session:17b9e56e-...",
+  "extractedAt": "2026-02-13T09:00:00.000Z"
+}
+```
+
+**Status:** WORKING
+
+**Current state:** 279 entries, 129 KB
+
+**Gap:** No file locking. If two sessions end simultaneously, concurrent `appendFile` calls may interleave JSON lines.
+
+### E9: Markdown rendering
+
+`server/memory/knowledge-store.ts`
+
+```
+renderMarkdown([...existing, ...newEntries], "data/memory/knowledge.md")
+
+Groups by type → sections:
+  preference → "Preferences"
+  fact → "Facts"
+  rule → "Rules"
+  procedure → "Procedures"
+  correction → "Corrections"
+  decision → "Decisions"
+
+Sorts by confidence (descending) within each section.
+Filters out superseded entries.
+
+Output:
+  # Galatea Agent Memory
+  ## Facts
+  - MQTT client in ContextForge uses persistent connections
+  - Stakeholder (Alina) lacks understanding of IoT concepts
+  ...
+  ## Preferences
+  - User prefers pnpm over npm
+  ...
+```
+
+**Status:** WORKING but lossy.
+
+**Gap:** Only renders `content` — drops `confidence`, `evidence`, `entities`, `about`, `source`. Human-readable but loses all metadata needed for smart retrieval.
+
+### E10: Extraction state update
+
+`server/memory/extraction-state.ts`
+
+```
+markSessionExtracted(session_id, {
+  entriesCount: result.entries.length,
+  transcriptPath,
+  statePath,
+})
+
+Writes to data/memory/extraction-state.json:
+{
+  "sessions": {
+    "17b9e56e-...": {
+      "extractedAt": "2026-02-13T08:56:29.220Z",
+      "entriesCount": 20,
+      "transcriptPath": "~/.claude/projects/.../<session>.jsonl"
+    }
+  }
+}
+```
+
+**Status:** WORKING
+
+### E11: Post-extraction effects (should happen, doesn't)
+
+After extraction completes, the knowledge store has grown. What should happen:
+
+```
+1. CLAUDE.md regeneration:
+   Knowledge.md updated (E9), but it's not referenced from CLAUDE.md.
+   The agent's project-level CLAUDE.md should include learned knowledge.
+   Status: NOT IMPLEMENTED
+
+2. Context assembler cache invalidation:
+   Next chat session should see new entries.
+   assembleContext() reads entries.jsonl fresh each call → no caching issue.
+   Status: WORKS BY ACCIDENT (no caching = always fresh, but also always slow)
+
+3. Homeostasis state update:
+   knowledge_sufficiency should improve (more facts available).
+   Next assessDimensions() call will see new entries if retrievedFacts is populated.
+   Status: PARTIALLY WORKS (depends on chat.logic.ts passing retrievedFacts,
+   which it doesn't yet)
+
+4. OTEL event:
+   Should emit: {type: "extraction.complete", entriesCount: 20, sessionId}
+   Status: NOT IMPLEMENTED (extraction is pre-OTEL)
+
+5. Cross-project knowledge propagation:
+   If ContextForge session extracted MQTT knowledge with about.entity="contextforge",
+   next Umka session should be able to retrieve it via domain-tagged queries.
+   Status: NOT IMPLEMENTED (no cross-project retrieval)
+```
+
+### Layer 2 Summary
+
+| Step | Component | Status | Gap |
+|------|-----------|--------|-----|
+| E0 | Session end detection | WORKING | async — no failure feedback |
+| E1 | Hook script | WORKING | Hardcoded Ollama, no fallback |
+| E2 | State check | WORKING | Redundant double-check |
+| E3 | Transcript reading | WORKING | Tool results truncated to 200 chars |
+| E4 | Signal classification | WORKING | English-only, ignores assistant turns |
+| E5 | Chunking | WORKING | No overlap, fixed size |
+| E6 | LLM extraction | WORKING | No token budget, chunk failure silenced |
+| E7 | Deduplication | WORKING | Embedding recompute every time, untuned threshold |
+| E8 | Storage | WORKING | No file locking |
+| E9 | Markdown rendering | WORKING | Lossy — drops metadata |
+| E10 | State tracking | WORKING | -- |
+| E11 | Post-extraction effects | MISSING | No CLAUDE.md regen, no OTEL, no cross-project |
+
+**Big gap from Layer 2:** The pipeline works end-to-end mechanically (session ends → knowledge stored), but the **feedback loop is broken**. Extracted knowledge goes into `entries.jsonl` and `knowledge.md` but doesn't flow back into the agent's behavior. The context assembler reads entries but `chat.logic.ts` doesn't pass `retrievedFacts` to homeostasis, so `knowledge_sufficiency` can never improve. CLAUDE.md doesn't reference the knowledge store. The learning happens but nothing changes.
+
+**Timing:** Full extraction takes ~102 seconds (1m 42s) for a 205-turn session. Bottleneck is LLM calls (~90s). Signal classification and storage are negligible.
 
 ---
 
