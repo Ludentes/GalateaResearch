@@ -160,6 +160,7 @@ Six-module pipeline: Transcript Reader → Signal Classifier → Knowledge Extra
 5. 🎯 **Memory Consolidation** — Extract high-confidence patterns to CLAUDE.md
 6. 🎯 **Memory Decay** — Reduce confidence of stale knowledge over time
 7. 🎯 **Performance Monitoring** — Track L0/L1/L2/L3 metrics
+8. 🎯 **Temporal Validity** — Add `valid_until` and `superseded_by` metadata to knowledge entries (v2 gap #4)
 
 ### Architecture: L2 LLM Assessment
 
@@ -232,8 +233,10 @@ if (l1Result !== l2Result) {
 2. 💭 **SKILL.md Auto-Generation** — Convert patterns to executable skills
 3. 💭 **L4 Strategic Analysis** — Cross-session pattern analysis (30s latency)
 4. 💭 **Heartbeat Mechanism** — Periodic homeostasis re-evaluation for idle agent
-5. 💭 **Skill Lifecycle** — Validation, versioning, deprecation
-6. 💭 **Cross-Agent Memory** — Share CLAUDE.md/SKILL.md across agent instances
+5. 💭 **Skill Lifecycle** — Validation, versioning, deprecation with `valid_until` metadata
+6. 💭 **Contradiction Resolution** — Handle conflicting knowledge (fact supersession, skill updating)
+7. 💭 **Threshold Calibration** — Learn homeostasis thresholds from observation (when does user ask for help?)
+8. 💭 **Cross-Agent Memory** — Share CLAUDE.md/SKILL.md across agent instances
 
 ### Architecture: L4 Strategic Analysis
 
@@ -318,9 +321,10 @@ setInterval(() => {
 2. 💭 **Memory Browser** — Explore CLAUDE.md, SKILL.md, knowledge store
 3. 💭 **Session Timeline** — Visualize OTEL events and dimension changes
 4. 💭 **Knowledge Graph** — Visualize semantic relationships (if Tier 3 RAG added)
-5. 💭 **Production Deployment** — Docker production build, environment config
-6. 💭 **Documentation** — User guide, API docs, deployment guide
-7. 💭 **End-to-End Testing** — All 9 learning scenarios pass
+5. 💭 **Safety & Boundaries** — Permissions, escalation rules, audit trail (v2 gap: "before production")
+6. 💭 **Production Deployment** — Docker production build, environment config
+7. 💭 **Documentation** — User guide, API docs, deployment guide
+8. 💭 **End-to-End Testing** — All 9 learning scenarios pass
 
 ### UI Components
 

@@ -30,6 +30,15 @@ const ExtractionSchema = z.object({
       entities: z
         .array(z.string())
         .describe("Technologies, tools, libraries, patterns mentioned"),
+      about: z
+        .object({
+          entity: z.string().describe("Who/what this is about: a person's name, project name, or domain. Use lowercase."),
+          type: z.enum(["user", "project", "agent", "domain", "team"]).describe(
+            "user=about a person, project=about the codebase, agent=about the AI agent, domain=about the problem space, team=about team dynamics",
+          ),
+        })
+        .optional()
+        .describe("Who/what this knowledge is about. Omit if about the current project in general."),
     }),
   ),
 })
@@ -51,7 +60,16 @@ Rules for extraction:
 - For corrections, extract the RIGHT answer (not the wrong one)
 - Merge related items (don't extract "uses TypeScript" and "prefers TypeScript" separately)
 - Be conservative: when in doubt, don't extract
-- Set confidence to 1.0 for explicit "I always/never/prefer" statements`
+- Set confidence to 1.0 for explicit "I always/never/prefer" statements
+
+Subject tagging (about field):
+- Tag WHO or WHAT the knowledge is about
+- "Mary prefers Discord" → about: {entity: "mary", type: "user"}
+- "Never push to main" → about: {entity: "galatea", type: "project"} or omit (project is default)
+- "Mobile apps need offline support" → about: {entity: "mobile-dev", type: "domain"}
+- If the subject is the current project in general, omit the about field
+- Use the person's first name (lowercase) as entity for user-specific knowledge
+- When a user states a personal preference, tag it as about that user`
 
 export async function extractKnowledge(
   turns: TranscriptTurn[],

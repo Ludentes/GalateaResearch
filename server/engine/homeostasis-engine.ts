@@ -15,6 +15,30 @@
  * - productive_engagement: L1 simple rules
  * - certainty_alignment: L2 LLM (defaults HEALTHY without LLM)
  * - knowledge_application: L2 LLM (defaults HEALTHY without LLM)
+ *
+ * ## ThinkingDepth — A Recurring Pattern
+ *
+ * L0-L4 here is an instance of a general "cognitive effort scaling" pattern
+ * that appears in multiple places across the architecture:
+ *
+ *   | Domain            | L0 (reflexive)  | L1 (cheap)       | L2 (LLM)         | L3 (meta)          |
+ *   |-------------------|-----------------|------------------|-------------------|---------------------|
+ *   | Self-assessment   | Cache hit       | Heuristic        | LLM semantic      | Arbitrate L1 vs L2  |
+ *   | Task routing*     | Direct action   | Pattern/skill    | LLM reasoning     | Reflexion loop      |
+ *   | Memory retrieval  | Exact match     | Keyword search   | Semantic search   | Cross-reference     |
+ *   | Extraction        | Regex classify  | —                | LLM extraction    | —                   |
+ *
+ *   * Task routing is handled by the ecosystem (Claude skill progressive
+ *     disclosure). It was our original Activity Router (deprecated in v2).
+ *     Same pattern, different owner.
+ *
+ * We are NOT abstracting this into a shared ThinkingDepth<T> type yet (YAGNI).
+ * But when implementing L0-L4 for a SECOND internal domain (e.g. memory
+ * retrieval), strongly consider extracting the shared abstraction at that point.
+ *
+ * History: Activity Router (Psych Arch) → deprecated (v2, ecosystem owns it)
+ *          → revived as homeostasis L0-L4 (Phase C, different domain).
+ * See: docs/PSYCHOLOGICAL_ARCHITECTURE.md, docs/ROADMAP.md
  */
 
 import { readFileSync } from "node:fs"

@@ -8,13 +8,15 @@
 
 ## Identified Gaps
 
-| # | Gap | Severity | Resolution Direction |
-|---|-----|----------|---------------------|
-| 1 | **Shadow learning pipeline** | Critical | Prototype the shadow-learning skill. Determine if extraction can be a skill or needs code. |
-| 2 | **Heartbeat mechanism** | High | Emerges from homeostasis — needs a long-running process or scheduled trigger for periodic dimension re-evaluation. |
-| 3 | **Memory overflow** | Medium | Start with CLAUDE.md (Tier 1). Design clean upgrade path to RAG/Mem0 (Tier 3) when needed. |
-| 4 | **Temporal validity** | Medium | Convention: custom metadata in SKILL.md frontmatter (`valid_until`, `confidence`) + lifecycle management code. |
-| 5 | **Skill auto-generation** | High | Pipeline from extracted procedures to SKILL.md files. Needs code (template + LLM formatting). |
+| # | Gap | Severity | Status | Resolution |
+|---|-----|----------|--------|------------|
+| 1 | **Shadow learning pipeline** | Critical | ✅ Phase B | Six-module pipeline: Transcript Reader → Signal Classifier → Knowledge Extractor → Store → Context Assembler. |
+| 2 | **Heartbeat mechanism** | High | 📋 Phase E | Emerges from homeostasis — needs a long-running process or scheduled trigger for periodic dimension re-evaluation. |
+| 3 | **Memory overflow** | Medium | 📋 Deferred | Start with CLAUDE.md (Tier 1). Design clean upgrade path to RAG/Mem0 (Tier 3) when needed. |
+| 4 | **Temporal validity** | Medium | 📋 Phase D | Convention: custom metadata in SKILL.md frontmatter (`valid_until`, `confidence`) + lifecycle management code. |
+| 5 | **Skill auto-generation** | High | 📋 Phase E | Pipeline from extracted procedures → SKILL.md files. Needs code (template + LLM formatting). |
+| 6 | **Cognitive models** | Medium | ✅ Phase C | Not separate structures. `KnowledgeEntry.about` field enables predicate-style tagging. Models are views: `entries.filter(e => e.about?.type === "user")`. |
+| 7 | **ThinkingDepth pattern** | Low | 📝 Documented | L0-L4 cognitive effort scaling appears in multiple domains (self-assessment, task routing, extraction). Currently NOT abstracted (YAGNI). Abstract when implementing second internal instance. See `server/engine/homeostasis-engine.ts`. |
 
 ---
 
@@ -28,9 +30,9 @@ These were gaps in Phase 2-3 that the v2 pivot eliminates:
 |---------|----------------|
 | Graphiti 18-21% extraction quality | File-based memory (CLAUDE.md/SKILL.md) replaces Graphiti for primary storage |
 | Custom context assembler complexity | Replaced by Skills progressive disclosure + CLAUDE.md |
-| Activity Router misclassification | Replaced by skill availability as routing signal |
+| Activity Router misclassification | Replaced by skill availability as routing signal. Note: the L0-L4 "thinking depth" pattern was revived for homeostasis self-assessment (Phase C). See ThinkingDepth note in `server/engine/homeostasis-engine.ts`. |
 | PostgreSQL fact/procedure tables | Replaced by standard file formats |
-| Cognitive model integration | Becomes CLAUDE.md entries, not custom code |
+| Cognitive model integration | Not separate data structures. KnowledgeEntry has `about` field (Phase C) enabling predicate-style tagging: `about:{entity:"mary", type:"user"}`. Models are views over knowledge store filtered by `about.type`. See `server/memory/types.ts`. |
 | Episode storage dependency on Graphiti | Event logs as files; Graphiti only if Tier 3 needed |
 
 ### Deferred (not needed yet)
