@@ -1131,6 +1131,122 @@ What DOES happen:
 
 **Gap:** The `about` field and query functions exist but aren't used in the hot path (context assembly). Wiring them in is Phase D work — the infrastructure is ready.
 
+### X6: Self-Model & Powered-Down Mode
+
+The agent must know its own capabilities and constraints **without needing an LLM**. This is L-1 / L0 level — proprioception, not cognition.
+
+**What the agent needs to know about itself:**
+
+```
+Resources (what do I have?):
+  - Which MCP tools are registered (Discord: yes, Figma: no, GitLab: yes)
+  - Which LLM providers are configured and healthy
+  - Available token/cost budget (OpenRouter: $2.30 remaining)
+  - Disk space, memory, CPU (for local Ollama)
+
+Capacity (what am I doing?):
+  - Active tasks: [{project: "contextforge", topic: "MQTT", channel: "web"}]
+  - Parallel job count: 1/10 slots used
+  - Pending messages: [{from: "alina", channel: "discord", waitingFor: "5m"}]
+  - Last extraction: "2 hours ago, 20 entries"
+
+Constraints (what can't I do?):
+  - OpenRouter rate limit: "429 until 14:30"
+  - Ollama: "running / not running / OOM killed"
+  - Token budget: "spent $4.70 of $5.00 daily budget"
+  - Missing capabilities: "no Figma MCP, no Jira MCP"
+```
+
+**Why this must work without LLM (powered-down mode):**
+
+When Alina asks "How are you doing?" and OpenRouter is rate-limited and Ollama is OOM-killed, the agent still needs to respond:
+
+```
+Powered-down response (no LLM, template-based):
+  "I'm currently rate-limited on OpenRouter (available again at 14:30)
+   and Ollama is not running. I have 1 active task (ContextForge MQTT).
+   I can't generate detailed responses right now but I can report status."
+```
+
+This is NOT an LLM response. It's the agent reading its own state and formatting a template. Like a thermostat reporting temperature when the HVAC is broken — it doesn't need the HVAC to know the temperature.
+
+**Implementation: SelfModel as pure computation**
+
+```typescript
+// No LLM needed — pure state reads
+interface SelfModel {
+  // Resources
+  registeredTools: string[]           // From MCP registry
+  availableProviders: ProviderHealth[] // Ping each provider
+  tokenBudget: { spent: number, limit: number, resetsAt: Date }
+
+  // Capacity
+  activeTasks: TaskState[]            // From agent state store
+  parallelSlots: { used: number, max: number }
+  pendingMessages: PendingMessage[]   // From channel scan
+
+  // Constraints
+  rateLimits: RateLimit[]             // Tracked from 429 responses
+  missingCapabilities: string[]       // Tools requested but not registered
+  lastError?: { message: string, at: Date }
+}
+
+// L-1: Can always answer these without LLM
+function getStatusReport(self: SelfModel): string {
+  // Pure template — no LLM call
+  const lines: string[] = []
+  if (self.activeTasks.length > 0)
+    lines.push(`Working on: ${self.activeTasks.map(t => t.topic).join(", ")}`)
+  if (self.rateLimits.length > 0)
+    lines.push(`Rate limited: ${self.rateLimits.map(r => r.provider).join(", ")}`)
+  if (self.missingCapabilities.length > 0)
+    lines.push(`Missing tools: ${self.missingCapabilities.join(", ")}`)
+  if (self.tokenBudget.spent / self.tokenBudget.limit > 0.9)
+    lines.push(`Token budget: ${Math.round(self.tokenBudget.spent / self.tokenBudget.limit * 100)}% used`)
+  return lines.join("\n")
+}
+```
+
+**How this integrates with homeostasis:**
+
+| Self-model observation | Homeostasis dimension | Effect |
+|------------------------|----------------------|--------|
+| 10 parallel tasks | productive_engagement: HIGH | Guidance: "You're overloaded. Decline new tasks or delegate." |
+| No Figma MCP | knowledge_sufficiency: LOW (for design tasks) | Guidance: "You lack design tools. Ask user to install Figma MCP." |
+| OpenRouter rate limited | (new?) resource_health: LOW | Guidance: "Switch to Ollama for non-critical tasks." |
+| Token budget at 99% | resource_health: LOW | Guidance: "Conserve tokens. Use shorter prompts. Warn user." |
+| Ollama not running | resource_health: LOW | Powered-down mode: template responses only |
+
+**New dimension candidate: `resource_health`**
+
+The existing 6 homeostasis dimensions are about cognitive/behavioral state. None cover infrastructure health. A 7th dimension `resource_health` would:
+- Sensor: Check provider health, token budget, MCP availability, parallel load
+- LOW: Provider down, budget exhausted, overloaded
+- HEALTHY: Providers up, budget available, reasonable load
+- HIGH: N/A (having too many resources is not a problem)
+
+**Or:** Keep 6 dimensions, make self-model a pre-check that runs before homeostasis. If self-model says "powered down" (no working LLM), skip homeostasis entirely and go to template-based response.
+
+**Layering:**
+
+```
+L-1: Self-model (pure computation, always works)
+     "Do I have an LLM? What tools do I have? How busy am I?"
+
+L0:  Homeostasis sensors (pure computation, needs self-model)
+     "Are my dimensions balanced given my current state?"
+
+L1:  Keyword/heuristic assessment (pure computation)
+     "What entities are in this message? What knowledge do I have?"
+
+L2:  LLM-assisted assessment (requires working LLM)
+     "What is the user really asking? What's the best approach?"
+```
+
+L-1 always runs. L0 always runs. L1 always runs. L2 only runs if self-model says an LLM is available.
+
+**Status:** NOT IMPLEMENTED. No self-model, no powered-down mode, no resource tracking.
+
 ### Cross-Cutting Summary
 
 | Concern | Status | Key Gap |
@@ -1140,5 +1256,8 @@ What DOES happen:
 | X3: Observability | PARTIAL | Infrastructure ready, no app-level events |
 | X4: Error handling | MINIMAL | No try/catch in chat path, silent failures |
 | X5: Multi-project | PARTIAL | about field + queries exist, not wired into context assembly |
+| X6: Self-model | MISSING | No resource/capacity/constraint awareness, no powered-down mode |
 
-**Overarching pattern:** Infrastructure is consistently ahead of wiring. The pieces exist (OTEL collector, about field, provider config, knowledge store) but aren't connected to each other. The heartbeat/tick model provides a natural integration point — each tick wires together state lookup, homeostasis assessment, knowledge retrieval, and action.
+**Overarching pattern:** Infrastructure is consistently ahead of wiring. The pieces exist (OTEL collector, about field, provider config, knowledge store) but aren't connected to each other. The heartbeat/tick model provides a natural integration point — each tick wires together self-model check, homeostasis assessment, knowledge retrieval, and action.
+
+**Layering insight:** The system needs an L-1 layer (self-model) that works without LLM. This is the foundation everything else builds on. If L-1 says "no LLM available," the agent can still report status, track state, and respond with templates. The agent is never fully "off" — it always has proprioception.
