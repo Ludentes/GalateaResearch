@@ -1,7 +1,12 @@
 import { existsSync } from "node:fs"
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
-import type { KnowledgeEntry, KnowledgeType } from "./types"
+import type {
+  KnowledgeAbout,
+  KnowledgeEntry,
+  KnowledgeSubjectType,
+  KnowledgeType,
+} from "./types"
 
 export async function readEntries(
   storePath: string,
@@ -243,4 +248,51 @@ export async function renderMarkdown(
   await mkdir(path.dirname(mdPath), { recursive: true })
   await writeFile(mdPath, md)
   return md
+}
+
+// ============ Cognitive Model Queries ============
+// These are views over the knowledge store, not separate data structures.
+// See: server/memory/types.ts for design rationale.
+
+/**
+ * Filter entries by subject type (e.g., "user" → all user-related knowledge).
+ * Entries without `about` are treated as project-scoped.
+ */
+export function entriesBySubjectType(
+  entries: KnowledgeEntry[],
+  type: KnowledgeSubjectType,
+): KnowledgeEntry[] {
+  if (type === "project") {
+    return entries.filter((e) => !e.about || e.about.type === "project")
+  }
+  return entries.filter((e) => e.about?.type === type)
+}
+
+/**
+ * Filter entries about a specific entity (e.g., "mary" → all knowledge about Mary).
+ */
+export function entriesByEntity(
+  entries: KnowledgeEntry[],
+  entity: string,
+): KnowledgeEntry[] {
+  return entries.filter(
+    (e) => e.about?.entity.toLowerCase() === entity.toLowerCase(),
+  )
+}
+
+/**
+ * Get all distinct entities of a given type.
+ * Useful for: "list all known users" or "list all known domains".
+ */
+export function distinctEntities(
+  entries: KnowledgeEntry[],
+  type?: KnowledgeSubjectType,
+): string[] {
+  const entities = new Set<string>()
+  for (const e of entries) {
+    if (!e.about) continue
+    if (type && e.about.type !== type) continue
+    entities.add(e.about.entity)
+  }
+  return [...entities].sort()
 }
