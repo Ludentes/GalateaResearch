@@ -1,7 +1,7 @@
 # End-to-End Message Trace: Golden Reference
 
 **Date:** 2026-02-13
-**Status:** In Progress (Layers 1-2 complete, Layer 3 pending)
+**Status:** In Progress (Layers 1-3 complete, cross-cutting concerns pending)
 **Purpose:** Trace every byte through the Galatea system for three scenarios, exposing all gaps and creating a testable golden reference for future subsystem validation.
 
 ---
@@ -616,20 +616,280 @@ After extraction completes, the knowledge store has grown. What should happen:
 
 ## Layer 3: PM Asks Status on Discord
 
-*(Pending — future session)*
-
 ### Scenario
 
-While the agent is in the middle of a ContextForge task (from Layer 1), PM posts in Discord: "How are you doing?"
+You're mid-session on ContextForge (Layer 1 is active — the agent is chatting about MQTT persistence). Alina posts in the team's Discord channel:
 
-### Steps to trace:
-- Discord message ingestion (webhook? bot? MCP?)
-- Interruption model (agent is already "doing something" — what does that mean?)
-- Thread/concurrency model
-- Context assembly for a status response (different from dev chat)
-- Memory state lookup (what is agent working on?)
-- Response generation + delivery back to Discord
-- What "agent is busy" means architecturally
+> "Как дела? Что с проектом?" ("How are you doing? What's the project status?")
+
+### D0: Discord message arrives
+
+```
+Discord server → Bot detects message mentioning/addressing agent
+  -> discord.js messageCreate event
+  -> Filter: is this directed at the agent? (mention, DM, or monitored channel)
+```
+
+**Status:** NOT IMPLEMENTED — no Discord bot exists.
+
+**What exists:** `docs/observation-pipeline/04-discord-otel.md` describes a Discord **observer** bot that emits OTEL events about user's Discord activity. But that's observation-only (one-way). Layer 3 needs **bidirectional** Discord: receive messages → process → respond.
+
+**Gap:** Existing Discord design only captures metadata ("user sent message in #channel"), explicitly avoids message content (privacy). Layer 3 requires reading message content directed at the agent.
+
+**Architectural insight:** Discord interaction should be emergent, not hardcoded. LLMs already know how to use Discord — the challenge isn't the API but making the agent understand WHEN and WHY to communicate. See "Emergent Behavior" section below.
+
+### D1: Message routing — who is this for?
+
+```
+Bot receives: "Как дела? Что с проектом?"
+  -> Is this for the agent? Check:
+     1. Direct @mention of bot
+     2. DM to bot
+     3. Message in a monitored "agent" channel
+     4. Reply to an agent message thread
+  -> If yes: route to Galatea ingestion
+  -> If no: ignore (or observe-only via OTEL)
+```
+
+**Status:** NOT IMPLEMENTED
+
+**Implementation approach:** MCP server providing Discord tools (read_messages, send_message, get_mentions). The agent uses these tools when homeostasis drives it to communicate — not as a hardcoded event handler.
+
+### D2: What is the agent doing right now?
+
+Before responding, the agent needs to know its own state. This is the **heartbeat model**.
+
+```
+Agent heartbeat (fires every tick):
+  -> Read agent state from persistent store
+  -> Assess homeostasis dimensions
+  -> Check for pending messages across channels
+  -> Decide: act on something, or sleep until next tick
+
+Agent state (persistent, cross-channel):
+  activeSession?: {
+    id, project, startedAt, messageCount, currentTopic, channel
+  }
+  assignedTasks?: [{ id, description, status, assignedBy }]
+  lastActivity: Date
+  homeostasis: HomeostasisState
+  pendingMessages: [{ channel, from, receivedAt }]
+```
+
+**Status:** NOT IMPLEMENTED
+
+**Key insight:** The heartbeat solves the "agent is not a persistent entity" problem. Instead of request-response, the agent has a tick loop:
+1. Wake up
+2. Check state (what am I doing? what's changed?)
+3. Assess homeostasis (any dimension under pressure?)
+4. Act if needed (respond to message, ask for work, research a gap)
+5. Sleep until next tick
+
+The Discord response becomes emergent: the heartbeat notices `communication_health: LOW` (pending message from PM) and decides to respond — not because of a Discord event handler, but because homeostasis pressure drives it.
+
+### D3: Concurrency — can the agent do two things?
+
+```
+Concurrent state:
+  Channel 1 (Web UI): Active chat session about MQTT (Layer 1)
+  Channel 2 (Discord): PM asking for status (Layer 3)
+```
+
+**With heartbeat model:** Not a concurrency problem. The heartbeat is the single decision point. Each tick, the agent looks at all channels and decides what to act on. The web chat session is state in memory, not a running process.
+
+**Status:** NOT IMPLEMENTED — but heartbeat model makes the design simpler than concurrent event handlers.
+
+### D4: Language and persona
+
+```
+Incoming: "Как дела? Что с проектом?"
+From: Alina (PM, Umka project)
+```
+
+**Approach:** Do NOT hardcode language detection. The agent's user model (knowledge store, `about: {entity: "alina", type: "user"}`) should contain language preferences if they've been learned. If not, leave it to the LLM's judgment — it can detect Russian and respond appropriately. If the response language is wrong, Alina will correct it, which triggers extraction → memory update → future responses correct.
+
+**Bootstrapping protocol:** On first instantiation, PM names the bot and states preferences:
+```
+PM: "Your name is Galatea. I prefer communication in Russian.
+     I'm the PM for the Umka project. I'm not deeply technical —
+     keep explanations simple."
+```
+
+This creates initial user model entries with high confidence (explicit user statements).
+
+**Status:** PARTIAL — knowledge store and `about` field exist. User model queries exist (`queryByEntity("alina")`). No bootstrapping protocol or onboarding flow.
+
+### D5: Context assembly for status response
+
+```
+Heartbeat tick detects: pending Discord message from Alina
+  -> Reads agent state (active session: ContextForge MQTT)
+  -> Retrieves Alina's user model from knowledge store
+  -> Assembles context with status-oriented framing
+
+assembleContext({
+  agentContext: {
+    currentMessage: "Как дела? Что с проектом?",
+    messageHistory: [],
+    retrievedFacts: [
+      // From queryByEntity("alina"):
+      {content: "Alina is PM, prefers step-by-step explanations"},
+      {content: "Alina lacks understanding of IoT concepts"},
+      // From agent state:
+      {content: "Currently working on ContextForge MQTT persistence"},
+      {content: "3 exchanges in, no blockers"},
+    ],
+    hasAssignedTask: true,
+    lastMessageTime: new Date(),  // Active session
+  },
+})
+```
+
+**How this differs from Layer 1 (dev chat):**
+
+| Aspect | Layer 1 (Dev Chat) | Layer 3 (Discord Status) |
+|--------|-------------------|--------------------------|
+| History | Full conversation | None (first message) |
+| Knowledge scope | ContextForge MQTT facts | Cross-project status + user model |
+| Homeostasis focus | knowledge_sufficiency | communication_health |
+| Agent state | Not needed | Critical (what am I working on?) |
+| Expected output | Technical detail | High-level summary |
+| Language | English (dev context) | Determined by user model / LLM judgment |
+
+**Status:** PARTIAL — assembler exists but no agent-state-aware sections.
+
+### D6: LLM call for response
+
+```
+streamText({
+  model: getModel("openrouter", "anthropic/claude-sonnet"),  // Thinking LLM
+  system: assembledPrompt,
+  messages: [{role: "user", content: "Как дела? Что с проектом?"}],
+})
+
+Expected response (emergent, not templated):
+  "Привет! Работаю над ContextForge — решаю проблему с MQTT
+   клиентом при горячей перезагрузке. Продвигаюсь, блокеров
+   нет. Нужна какая-то информация по Umka?"
+```
+
+**Status:** WORKING — same infrastructure as Layer 1 T5.
+
+**Provider:** Thinking LLM (Claude/OpenRouter), not Ollama. Per provider strategy.
+
+### D7: Response delivery to Discord
+
+```
+LLM response -> MCP Discord tool: send_message(channel, response)
+```
+
+**Status:** NOT IMPLEMENTED — no MCP Discord server.
+
+**Approach:** Standard MCP tool. The agent calls it like any other tool during its heartbeat-driven action. No custom Discord sending code needed in Galatea core.
+
+### D8: Post-response side effects
+
+```
+1. Store the exchange:
+   -> Same message store (PostgreSQL), different channel tag
+   -> INSERT INTO messages (session_id, channel, role, content)
+
+2. OTEL event: {type: "discord.response_sent", to: "alina"}
+
+3. Homeostasis update:
+   communication_health: HEALTHY (responded to PM)
+
+4. Learning:
+   Agent learns from this exchange via normal extraction pipeline.
+   "Alina asks for status updates" → maybe a pattern after 3+ occurrences.
+   Single ask = noise. Repeated pattern = extractable preference.
+
+5. Cross-channel memory:
+   Exchange stored, retrievable if Alina later asks "what did you tell me?"
+```
+
+**Status:** NOT IMPLEMENTED
+
+### D9: Back to Layer 1 — context continuity
+
+```
+Next heartbeat tick:
+  -> No pending Discord messages
+  -> Web chat session still active
+  -> User sends next message about MQTT
+  -> Agent continues with full conversation history
+
+Should the agent mention the interruption?
+  -> Only if homeostasis suggests it (e.g., PM feedback affects current work)
+  -> Or if user model says user wants to be informed of PM interactions
+  -> Otherwise, continue seamlessly
+```
+
+**Status:** NOT IMPLEMENTED
+
+### Layer 3 Summary
+
+| Step | Component | Status | Gap |
+|------|-----------|--------|-----|
+| D0 | Discord message ingestion | MISSING | No Discord bot/MCP |
+| D1 | Message routing | MISSING | No "messages for agent" concept |
+| D2 | Agent state / heartbeat | MISSING | No persistent state, no tick loop |
+| D3 | Concurrency | MISSING | Heartbeat model simplifies this |
+| D4 | Language / persona | PARTIAL | User model exists, no bootstrapping protocol |
+| D5 | Context assembly (status) | PARTIAL | Assembler exists, no agent-state sections |
+| D6 | LLM call | WORKING | Same infrastructure as Layer 1 |
+| D7 | Discord response | MISSING | No MCP Discord tools |
+| D8 | Post-response effects | MISSING | No cross-channel storage |
+| D9 | Resume work | MISSING | No cross-channel awareness |
+
+**Big gap from Layer 3:** The agent is a request-response function, not a persistent entity. The **heartbeat model** solves this — a tick loop that checks state, assesses homeostasis, and acts when dimensions are under pressure. Discord interaction becomes emergent: the agent doesn't have a "Discord handler" — it has homeostasis pressure (communication_health LOW) and MCP tools (send_message) that combine to produce the behavior of "responding to Alina."
+
+**Key architectural shift:** Move from "channels push to agent" to "agent pulls from all channels on each heartbeat tick." The agent decides when to act, driven by homeostasis, not by event handlers.
+
+---
+
+### Emergent Behavior Model
+
+The Layer 3 trace reveals that many "gaps" aren't missing features — they're missing **motivation**. The agent needs to WANT to check Discord, WANT to respond to Alina, WANT to report status. This comes from homeostasis pressure, not hardcoded event handlers.
+
+**How it works:**
+
+```
+Heartbeat tick:
+  1. Check all channels for pending messages → find Alina's message
+  2. Assess homeostasis:
+     communication_health: LOW (pending message, 5 min old)
+     productive_engagement: HEALTHY (active task)
+  3. Guidance says: "Respond to communication. Don't leave people waiting."
+  4. Agent decides: pause current work context, respond to Alina
+  5. Uses MCP tools: discord.send_message(...)
+  6. communication_health → HEALTHY
+  7. Resume heartbeat → next tick acts on web chat or finds new work
+```
+
+**What we need to build for this:**
+- Heartbeat loop (simplest version: cron/setInterval calling an endpoint)
+- Agent state store (what am I doing, across all channels)
+- MCP Discord server (standard tool: read/send messages)
+- Homeostasis `communication_health` sensor that checks pending messages
+- Knowledge store already handles user model, language, preferences
+
+**What we DON'T need to build:**
+- Discord event handler (agent pulls, not pushed)
+- Language detection (LLM + user model memory)
+- Response templates (LLM generates based on context)
+- Channel-specific routing logic (heartbeat decides)
+- Persona switching (context assembler + user model)
+
+**Bootstrapping protocol:** On first use, PM runs an onboarding conversation:
+```
+PM: "Hi, I'm Alina. Call me Alina. I'm PM for the Umka project.
+     I prefer Russian. Keep technical explanations simple."
+
+→ Extraction creates high-confidence user model entries
+→ Future interactions shaped by these entries
+→ If wrong, PM corrects → memory updates → behavior adapts
+```
 
 ---
 
