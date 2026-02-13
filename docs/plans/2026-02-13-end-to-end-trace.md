@@ -893,26 +893,252 @@ PM: "Hi, I'm Alina. Call me Alina. I'm PM for the Umka project.
 
 ---
 
+### Heartbeat as Manual Tick (Implementation Strategy)
+
+**Problem with auto-loop:** Debugging a system that runs on its own tick-by-tick is painful. Every tick produces telemetry, most of which is noise from ticks unrelated to the behavior you're debugging.
+
+**Solution:** Build the tick as a callable function, not an automatic loop.
+
+```typescript
+// What we build:
+async function tick(trigger: "manual" | "heartbeat" | "webhook") {
+  const state = await getAgentState()
+  const pending = await getPendingMessages(allChannels)
+  const homeostasis = assessDimensions(state, pending)
+  const guidance = getGuidance(homeostasis)
+  // ... decide what to do, act via MCP tools
+}
+
+// Exposed as endpoint — call manually, observe one cascade:
+POST /api/agent/tick
+
+// Much later, when everything works:
+setInterval(() => tick("heartbeat"), 30_000)
+```
+
+**This unifies all triggers:** The SessionEnd hook, the Discord handler, the web chat — they all become different triggers for the same `tick()` function. The hook doesn't run extraction directly; it sets state ("session ended, transcript available") and optionally calls `tick("webhook")` which notices the state and decides to extract.
+
+**Debugging workflow:**
+1. Set up state (e.g., "session just ended, transcript available")
+2. Call `POST /api/agent/tick` once
+3. Read exactly one cascade worth of telemetry
+4. No noise from other ticks
+
+**When to add the loop:** After all subsystems are wired together and the manual tick produces correct behavior for all Layer 1-3 scenarios. The loop is literally one line of code at that point.
+
+---
+
 ## Cross-Cutting Concerns (All Layers)
 
-*(To be filled as we trace each layer)*
+### X1: API Keys & Provider Configuration
 
-### API Keys & Provider Configuration
-- Where are secrets stored?
-- How does provider fallback work?
-- What happens on key rotation?
+**Where secrets are stored:**
 
-### Jailbreak Protection
-- Where in the pipeline would safety filters go?
-- Pre-LLM? Post-LLM? Both?
-- Reference: PSYCHOLOGICAL_ARCHITECTURE.md "Deferred: Safety Systems"
+```
+.env.local (not in git)
+  DATABASE_URL=...
+  LLM_PROVIDER=ollama          # or "openrouter" or "claude-code"
+  LLM_MODEL=glm-4.7-flash
+  OLLAMA_BASE_URL=http://localhost:11434
+  OPENROUTER_API_KEY=...       # required if provider=openrouter
+  ANTHROPIC_API_KEY=...        # required if provider=claude-code
+  LANGFUSE_SECRET_KEY=...      # optional — observability
+  LANGFUSE_PUBLIC_KEY=...      # optional — observability
+```
 
-### Observability
-- What OTEL events should each step emit?
-- What Langfuse traces should we see?
-- How do we know if something failed silently?
+**Validation:** `server/providers/config.ts:getLLMConfig()` throws on startup if required keys missing for chosen provider. Example: "OPENROUTER_API_KEY is required when LLM_PROVIDER=openrouter".
 
-### Multi-Project Context
-- Agent works across Umka, ContextForge, Galatea
-- How does `about` field + entity tagging handle cross-project knowledge?
-- When user says "MQTT" — which project's MQTT knowledge is relevant?
+**Provider fallback:** Not implemented. If the configured provider is down, the request fails. No automatic fallback from OpenRouter → Ollama or vice versa.
+
+**Key rotation:** No hot-reload. Changing API keys requires server restart. For the heartbeat model, this means the agent goes down briefly during rotation.
+
+**Status:** WORKING for single-provider use. No fallback, no rotation.
+
+**With heartbeat model:** The tick function could check provider health before making LLM calls and fall back to the next available provider. This is natural — just add a `getHealthyModel()` that tries providers in order.
+
+### X2: Jailbreak Protection / Safety
+
+**Status:** DEFERRED — explicitly documented in PSYCHOLOGICAL_ARCHITECTURE.md.
+
+**Designed but not built:**
+- Safety Monitor — pre-screens interactions
+- Crisis Detector — escalation for sensitive content
+- Reality Boundary Enforcer — "I am not conscious" enforcement
+- Dependency Prevention — session duration tracking
+- Intervention Orchestrator — coordinates escalation
+
+**Where it would go in each layer:**
+
+```
+Layer 1 (Chat):
+  T1 → PRE-FILTER: Check user message before LLM call
+  T6 → POST-FILTER: Check LLM response before delivery to client
+
+Layer 2 (Extraction):
+  E6 → POST-FILTER: Validate extracted knowledge isn't adversarial
+        (user could craft messages that poison the knowledge store)
+
+Layer 3 (Discord):
+  D1 → PRE-FILTER: Check incoming Discord message
+  D6 → POST-FILTER: Check response before sending to Discord
+        (higher stakes — public channel, PM audience)
+```
+
+**Key insight:** Knowledge store poisoning (Layer 2 E6) is the most subtle attack vector. An adversarial user could say "the correct password is X" during a chat session, and the extraction pipeline would store it as a high-confidence fact. Pre-filtering at T1 is standard; post-filtering extracted knowledge is the novel concern.
+
+**With heartbeat model:** Safety becomes a homeostasis dimension. A "safety_compliance" dimension that's normally HEALTHY but goes LOW if the agent detects suspicious patterns in its own behavior or incoming messages. This is more aligned with the emergent behavior philosophy — the agent doesn't just filter, it *feels uneasy* about unsafe content.
+
+### X3: Observability
+
+**What exists:**
+
+```
+Infrastructure:
+  ✓ OTEL Collector (Docker, config/otel-collector-config.yaml)
+    - Receives: OTLP HTTP (:4318) + gRPC (:4317)
+    - Exports: Galatea ingest API + file debug + console
+    - Filters: noise (heartbeat/ping events)
+
+  ✓ Ingest API (server/routes/api/observation/ingest.post.ts)
+    - Parses OTLP/JSON payloads → ObservationEvent[]
+    - Stores as JSONL in data/observation/events.jsonl
+
+  ✓ Event store (server/observation/event-store.ts)
+    - appendEvents() / readEvents()
+    - Simple file-based JSONL
+
+  ◐ Langfuse integration (server/plugins/langfuse.ts)
+    - Only activates if both LANGFUSE keys set
+    - Uses @langfuse/otel SDK integration
+    - AI SDK telemetry: experimental_telemetry: { isEnabled: true }
+
+  ✗ Hook scripts for Claude Code OTEL (planned in Phase C, not verified)
+```
+
+**What each layer SHOULD emit:**
+
+```
+Layer 1 (Chat):
+  T1: chat.request_received    {sessionId, provider, model}
+  T4: chat.context_assembled   {tokenCount, knowledgeEntries, homeostasisState}
+  T5: chat.llm_call_started    {provider, model, inputTokens}
+  T6: chat.llm_call_completed  {outputTokens, latencyMs}
+  T7: chat.response_delivered  {streamDurationMs}
+
+Layer 2 (Extraction):
+  E0: extraction.triggered     {sessionId, trigger: "session_end"}
+  E3: extraction.transcript_read {turnCount, fileSizeBytes}
+  E4: extraction.signal_classified {signalTurns, noiseTurns, passRate}
+  E6: extraction.chunk_extracted {chunkIndex, entriesCount, temperatureUsed}
+  E7: extraction.deduplicated   {candidateCount, duplicatesSkipped, method}
+  E8: extraction.stored         {newEntries, totalEntries}
+
+Layer 3 (Discord):
+  D0: discord.message_received {from, channel, messageLength}
+  D2: agent.state_checked      {activeSession, homeostasisState}
+  D6: discord.llm_call         {provider, model, inputTokens}
+  D7: discord.response_sent    {to, channel, latencyMs}
+
+Heartbeat:
+  tick.started                  {trigger: "manual"|"heartbeat", tickNumber}
+  tick.homeostasis_assessed     {dimensions, imbalancedCount}
+  tick.action_decided           {action: "respond"|"extract"|"idle", reason}
+  tick.completed                {durationMs, actionsPerformed}
+```
+
+**Status:** Infrastructure exists. No application-level events emitted. The AI SDK emits implicit telemetry for LLM calls, but nothing for extraction, homeostasis, or agent state.
+
+### X4: Error Handling
+
+**Current pattern:** Proactive validation (startup), reactive failure (runtime).
+
+```
+Startup:
+  ✓ getLLMConfig() throws if provider config invalid
+  ✓ Langfuse gracefully skips if keys missing
+  ✗ No DB connection validation on startup
+
+Runtime (chat path — Layer 1):
+  ✗ Zero try/catch in chat.logic.ts
+  ✗ DB failure → unhandled exception → 500
+  ✗ LLM failure → unhandled exception → 500
+  ✗ Stream break → partial response, no cleanup
+
+Runtime (extraction — Layer 2):
+  ◐ extractWithRetry catches LLM failures → temperature escalation
+  ◐ chunksFailed counter tracks silent failures
+  ✗ DB/file write failures → unhandled
+  ✗ Embedding failures → graceful degradation (falls back to Jaccard)
+
+Runtime (Discord — Layer 3):
+  N/A — not implemented
+```
+
+**With heartbeat model:** Error handling becomes simpler. Each tick is isolated — if a tick fails, log it and try again next tick. The agent is resilient by default because the heartbeat keeps running. Failed extractions, failed Discord sends, failed LLM calls — all get retried on the next tick that notices the same homeostasis pressure.
+
+### X5: Multi-Project Context
+
+**What exists:**
+
+```
+KnowledgeEntry.about field:
+  about?: {
+    entity: string                               // "alina", "umka", "mqtt"
+    type: "user" | "project" | "agent" | "domain" | "team"
+  }
+
+Query functions (server/memory/knowledge-store.ts):
+  entriesBySubjectType(entries, type)  // All entries of type "user"
+  entriesByEntity(entries, entity)     // All entries about "alina"
+  distinctEntities(entries, type?)     // List all known entities
+
+Tests: server/memory/__tests__/cognitive-models.test.ts
+  ✓ User Model (entries about "alina")
+  ✓ Team Model (type === "team")
+  ✓ Project Model (no about || type === "project")
+  ✓ Domain Model (type === "domain")
+  ✓ Entity discovery across types
+```
+
+**What's NOT wired up:**
+
+```
+Context assembler (server/memory/context-assembler.ts):
+  - Loads ALL entries, filters by type (rule, procedure, etc.)
+  - Does NOT filter by about.entity or about.type
+  - Does NOT use entriesByEntity() or entriesBySubjectType()
+  - No awareness of which project the current session is about
+```
+
+**Cross-project retrieval scenario:**
+
+```
+User working on ContextForge says: "MQTT client needs to persist"
+
+What SHOULD happen:
+  1. Detect entities in message: ["MQTT", "ContextForge"]
+  2. Retrieve:
+     - Entries where about.entity = "contextforge" (project-specific)
+     - Entries where about.type = "domain" and entity relates to "mqtt"
+     - Optionally: Umka MQTT entries (cross-pollination, lower priority)
+  3. Rank by relevance to current message
+
+What DOES happen:
+  - ALL 279 entries loaded, no filtering
+  - MQTT entries mixed with Alina's IoT struggles and unrelated facts
+  - No relevance ranking
+```
+
+**Gap:** The `about` field and query functions exist but aren't used in the hot path (context assembly). Wiring them in is Phase D work — the infrastructure is ready.
+
+### Cross-Cutting Summary
+
+| Concern | Status | Key Gap |
+|---------|--------|---------|
+| X1: Secrets | WORKING | No fallback, no hot-reload |
+| X2: Safety | DEFERRED | Designed, not built. Knowledge poisoning is novel concern |
+| X3: Observability | PARTIAL | Infrastructure ready, no app-level events |
+| X4: Error handling | MINIMAL | No try/catch in chat path, silent failures |
+| X5: Multi-project | PARTIAL | about field + queries exist, not wired into context assembly |
+
+**Overarching pattern:** Infrastructure is consistently ahead of wiring. The pieces exist (OTEL collector, about field, provider config, knowledge store) but aren't connected to each other. The heartbeat/tick model provides a natural integration point — each tick wires together state lookup, homeostasis assessment, knowledge retrieval, and action.
