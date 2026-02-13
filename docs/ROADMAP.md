@@ -13,11 +13,13 @@
 | **Phase A** | ✅ Complete | Foundation | Chat UI, multi-provider streaming, PostgreSQL setup | 2 weeks |
 | **Phase B** | ✅ Complete | Shadow Learning | Transcript extraction, knowledge store, context assembly | 1 week |
 | **Phase C** | ✅ Complete | Observation + Homeostasis | OTEL pipeline, L0-L2 thinking, auto-extraction hooks | 1 week |
-| **Phase D** | 📋 Planned | Homeostasis Refinement | L2 LLM assessment, L3 meta-assessment, memory lifecycle | 1 week |
-| **Phase E** | 💭 Concept | Skills + Patterns | SKILL.md auto-generation, L4 strategic analysis, heartbeat | 2 weeks |
-| **Phase F** | 💭 Concept | Visualization + Polish | Homeostasis dashboard, memory browser, production readiness | 1 week |
+| **Phase D** | 📋 Planned | Formalize + Close the Loop | BDD integration tests from trace, entity retrieval, tick(), supersession | 1-2 weeks |
+| **Phase E** | 💭 Concept | Homeostasis Refinement | L2 LLM assessment, L3 meta-assessment, memory lifecycle, self-model | 1 week |
+| **Phase F** | 💭 Concept | Skills + Visualization | SKILL.md auto-generation, heartbeat loop, dashboard, safety | 2 weeks |
 
-**Total estimated time:** 8 weeks (2 months)
+**Total estimated time:** 8-9 weeks (~2 months)
+
+**Phase D restructure (2026-02-13):** End-to-end trace revealed the feedback loop is broken — knowledge extracted but never used (`retrievedFacts: []`). Phase D reprioritized from homeostasis refinement to closing the loop. Old Phase D content (L2/L3, decay, consolidation) moved to Phase E. See `docs/plans/2026-02-13-phase-d-revised.md`.
 
 ---
 
@@ -148,219 +150,120 @@ Six-module pipeline: Transcript Reader → Signal Classifier → Knowledge Extra
 
 ---
 
-## Phase D: Homeostasis Refinement + L2/L3 📋
+## Phase D: Formalize + Close the Loop 📋
 
-**Goal:** Address known L0-L2 edge cases, implement L2 LLM semantic assessment for hard dimensions, prototype L3 meta-assessment, and establish memory lifecycle foundations.
+**Goal:** Turn the end-to-end trace into executable BDD integration tests, then close the feedback loop so extracted knowledge flows into agent behavior.
 
-### Planned Deliverables
-1. 🎯 **Fix L1 Edge Cases** — Keyword stemming + stuck detection debugging
-2. 🎯 **L2: certainty_alignment** — LLM assessment for confidence mismatch
-3. 🎯 **L2: knowledge_application** — LLM assessment for knowledge usage
-4. 🎯 **L3 Meta-Assessment** — Arbitrate when L1 and L2 disagree
-5. 🎯 **Memory Consolidation** — Extract high-confidence patterns to CLAUDE.md
-6. 🎯 **Memory Decay** — Reduce confidence of stale knowledge over time
-7. 🎯 **Performance Monitoring** — Track L0/L1/L2/L3 metrics
-8. 🎯 **Temporal Validity** — Add `valid_until` and `superseded_by` metadata to knowledge entries (v2 gap #4)
+**Motivation:** End-to-end trace (2026-02-13) revealed the feedback loop is broken. Knowledge gets extracted but `retrievedFacts` is always `[]`. Closing the loop is higher priority than homeostasis refinement.
 
-### Architecture: L2 LLM Assessment
+### Key Deliverables
 
-L2 uses fast local LLM (Ollama `glm-4.7-flash`) for semantic understanding:
+**D.1: Formalize (Red)**
+1. 🎯 **Scenario Builder** — TestWorld helper with fixture seeding (real DB + real Ollama)
+2. 🎯 **Layer 1 Integration Tests** — Developer chat path (6 green, 4 todo)
+3. 🎯 **Layer 2 Integration Tests** — Extraction pipeline (5 green, 4 todo)
+4. 🎯 **Layer 3 Integration Tests** — tick() decisions, not Discord I/O (7 red, 2 todo)
+5. 🎯 **Mermaid Diagrams** — Sequence diagrams as visual sanity check
+
+**D.2: Close the Loop (Green)**
+6. 🎯 **Entity-Based Fact Retrieval** — Query `about` field to populate `retrievedFacts`
+7. 🎯 **Wire Retrieval into Chat** — Replace `retrievedFacts: []` in `chat.logic.ts`
+8. 🎯 **tick() Function + Agent State** — 4-stage pipeline: self-model → homeostasis → channels → action
+9. 🎯 **Supersession Logic** — Populate `supersededBy` field (exists but never written)
+10. 🎯 **Clean Up Dead Artifacts** — Remove knowledge.md rendering (dead in pipeline)
+
+### Architecture: Tests as Spec
+
+Integration tests ARE the formalized trace. BDD-style with scenario builders using real data:
 
 ```typescript
-// L2 assessment for certainty_alignment
-const result = await generateObject({
-  model: createOllamaModel("glm-4.7-flash:latest"),
-  schema: z.object({
-    state: z.enum(["LOW", "HEALTHY", "HIGH"]),
-    reasoning: z.string()
-  }),
-  prompt: CERTAINTY_ALIGNMENT_PROMPT // Analyzes agent confidence vs situation needs
+describe("Layer 1: Developer works on Umka MQTT persistence", () => {
+  beforeAll(async () => {
+    world = await scenario("umka-mqtt-dev")
+      .withSession("umka")
+      .withKnowledgeFrom("data/memory/entries.jsonl") // real Umka data (259 entries)
+      .seed()
+  })
+
+  it("retrieves MQTT facts when message mentions MQTT", ...)
+  it("does NOT retrieve Alina's user model for developer chat", ...)
+  it.todo("emits OTEL event after response delivered") // Phase E
 })
 ```
 
-**Caching:** 60s TTL to reduce repeated LLM calls (dimensions change slowly)
-
-### Architecture: L3 Meta-Assessment
-
-L3 triggers when L1 (heuristic) and L2 (LLM) disagree:
+### Architecture: tick() Function
 
 ```typescript
-if (l1Result !== l2Result) {
-  console.warn(`[L3] Disagreement on ${dimension}: L1=${l1Result}, L2=${l2Result}`)
-  // Trust L2 (semantic understanding) over L1 (heuristics)
-  return l2Result
+async function tick(trigger: "manual" | "heartbeat"): Promise<TickResult> {
+  // Stage 1: Self-model (pure state reads)
+  // Stage 2: Homeostasis assessment
+  // Stage 3: Channel scan (pending messages)
+  // Stage 4: LLM action (if provider available)
 }
+// Exposed as: POST /api/agent/tick
 ```
 
-**Metrics to track:**
-- L3 disagreement rate (target: < 10%)
-- Which level "wins" in arbitration
-
-### Architecture: Memory Lifecycle
-
-**Consolidation (CLAUDE.md extraction):**
-- Trigger: Fact observed 3+ times across sessions
-- Criteria: Avg confidence >= 0.85, at least 1 occurrence in last 7 days
-- Output: Append to `CLAUDE.md` as "Consolidated Knowledge"
-
-**Decay (confidence reduction):**
-- Formula: `confidence_new = confidence_old × (0.95 ^ days_since_last_seen)`
-- After 30 days: 0.9 → 0.19 (significant decay)
-- After 60 days: 0.9 → 0.04 (nearly forgotten)
-- Remove entries below 0.1 confidence
-
 ### Success Criteria
-- ✅ All 17 evaluation tests pass (4 todo tests fixed)
-- ✅ L2 works for `certainty_alignment` and `knowledge_application`
-- ✅ L3 triggers on disagreement with < 10% rate
-- ✅ Memory consolidation extracts to CLAUDE.md (manual verification)
-- ✅ Performance metrics: L0 cache > 50%, L1 < 5ms, L2 < 3s
 
-### Estimated Timeline
-**34 hours (~1 week)**
+After D.1: Integration test suite exists (green + todo). `pnpm test:integration` runs.
+After D.2: Feedback loop works (extract → store → retrieve → use → assess). 22 of 31 tests green.
 
 ### Reference
-- Plan: `docs/plans/2026-02-12-phase-d-homeostasis-refinement.md`
+- Revised Plan: `docs/plans/2026-02-13-phase-d-revised.md`
+- Previous Plan: `docs/plans/2026-02-12-phase-d-homeostasis-refinement.md`
+- End-to-End Trace: `docs/plans/2026-02-13-end-to-end-trace.md`
 
 ---
 
-## Phase E: Skills + Patterns 💭
+## Phase E: Homeostasis Refinement + Memory Lifecycle 💭
 
-**Goal:** Auto-generate SKILL.md files from repeated patterns, implement L4 strategic analysis for cross-session learning, and enable proactive homeostasis (heartbeat).
+**Goal:** Make homeostasis smarter (L2/L3), add memory lifecycle (decay, consolidation), implement self-model for powered-down mode, and add app-level OTEL events. Content moved from old Phase D + new items from end-to-end trace.
+
+### Planned Deliverables
+1. 💭 **Fix L1 Edge Cases** — Keyword stemming + stuck detection debugging
+2. 💭 **L2: certainty_alignment** — LLM assessment for confidence mismatch
+3. 💭 **L2: knowledge_application** — LLM assessment for knowledge usage
+4. 💭 **L3 Meta-Assessment** — Arbitrate when L1 and L2 disagree
+5. 💭 **Memory Consolidation** — Extract high-confidence patterns to CLAUDE.md
+6. 💭 **Memory Decay** — Confidence reduction over time, archival below threshold
+7. 💭 **Self-Model + Powered-Down Mode** — Resource/capacity/constraint awareness without LLM (X6)
+8. 💭 **App-Level OTEL Events** — Chat, extraction, tick events (X3)
+9. 💭 **Performance Monitoring** — L0 cache hit rate, L1/L2 latency tracking
+
+### Success Criteria
+- Remaining integration test todos from Phase D become green
+- L2 latency < 3s, L3 disagreement < 10%
+- Memory decay running, stale entries archived
+- Self-model produces template responses in powered-down mode
+
+### Reference
+- Previous Phase D plan (now Phase E content): `docs/plans/2026-02-12-phase-d-homeostasis-refinement.md`
+- End-to-End Trace X6 (Self-Model): `docs/plans/2026-02-13-end-to-end-trace.md`
+
+---
+
+## Phase F: Skills + Visualization 💭
+
+**Goal:** Auto-generate SKILL.md from patterns, enable heartbeat loop, build visualization dashboard, implement safety system.
 
 ### Planned Deliverables
 1. 💭 **Pattern Detection** — Identify 3+ occurrences of similar procedures
 2. 💭 **SKILL.md Auto-Generation** — Convert patterns to executable skills
-3. 💭 **L4 Strategic Analysis** — Cross-session pattern analysis (30s latency)
-4. 💭 **Heartbeat Mechanism** — Periodic homeostasis re-evaluation for idle agent
-5. 💭 **Skill Lifecycle** — Validation, versioning, deprecation with `valid_until` metadata
-6. 💭 **Contradiction Resolution** — Handle conflicting knowledge (fact supersession, skill updating)
-7. 💭 **Threshold Calibration** — Learn homeostasis thresholds from observation (when does user ask for help?)
-8. 💭 **Cross-Agent Memory** — Share CLAUDE.md/SKILL.md across agent instances
-
-### Architecture: L4 Strategic Analysis
-
-L4 provides cross-session insights for long-term learning:
-
-```
-User: "Why do I always struggle with auth?"
-
-L4 analyzes:
-- 5 sessions with auth issues in last 30 days
-- Common failure patterns: forgot .env, wrong redirect URL
-- Agent suggestions that worked vs didn't work
-→ Generates preventive guidance
-```
-
-**Latency:** ~30s (acceptable for strategic questions)
-
-### Architecture: SKILL.md Auto-Generation
-
-**Trigger:** Procedure observed 3+ times with similar steps
-
-**Example input (knowledge entries):**
-```
-- "Run pnpm db:push to apply schema changes" (confidence: 0.95, seen 3×)
-- "After schema changes, restart dev server" (confidence: 0.90, seen 3×)
-- "Check Drizzle Studio at localhost:4983" (confidence: 0.85, seen 2×)
-```
-
-**Output (generated SKILL.md):**
-```markdown
-# Database Schema Migration Skill
-
-## When to Use
-After modifying `server/db/schema.ts`
-
-## Steps
-1. Run `pnpm db:push` to apply changes
-2. Restart dev server with `pnpm dev`
-3. Verify in Drizzle Studio at localhost:4983
-
-## Success Criteria
-- No Drizzle errors in console
-- Schema matches database
-```
-
-### Architecture: Heartbeat
-
-Homeostasis re-evaluation without user input:
-
-```typescript
-// Every 5 minutes for idle agent
-setInterval(() => {
-  const dimensions = assessDimensions(currentContext)
-
-  // Detect emergent behaviors:
-  // - productive_engagement LOW + communication_health HIGH → "find alternative work"
-  // - progress_momentum LOW → "revisit approach, suggest pivot"
-}, 5 * 60 * 1000)
-```
+3. 💭 **Heartbeat Loop** — `setInterval(() => tick("heartbeat"), 30_000)` (tick exists from Phase D)
+4. 💭 **L4 Strategic Analysis** — Cross-session pattern analysis
+5. 💭 **Homeostasis Dashboard** — Real-time dimension visualization
+6. 💭 **Memory Browser** — Explore knowledge store, search, edit entries
+7. 💭 **Safety & Boundaries** — Knowledge store poisoning guard, pre/post filters (X2)
+8. 💭 **Contradiction Resolution** — Handle conflicting knowledge (advanced supersession)
 
 ### Success Criteria
-- ✅ 3+ skills auto-generated from real usage patterns
-- ✅ L4 provides valuable cross-session insights
-- ✅ Heartbeat enables idle agent behaviors (L7 scenario)
-- ✅ Skills persist across sessions and agent restarts
+- 3+ skills auto-generated from real usage patterns
+- Heartbeat loop enables idle agent behaviors
+- Dashboard shows real-time dimension state
+- All integration test todos from Phase D/E become green
 
 ### Estimated Timeline
 **2 weeks**
-
-### Reference
-- Learning Scenarios: L8 (pattern extraction), L7 (idle agent)
-- Architecture Design: `docs/plans/2026-02-11-galatea-v2-architecture-design.md`
-
----
-
-## Phase F: Visualization + Polish 💭
-
-**Goal:** Build UI visualizations for homeostasis state and memory contents, implement production readiness features, and complete end-to-end testing.
-
-### Planned Deliverables
-1. 💭 **Homeostasis Dashboard** — Real-time dimension visualization
-2. 💭 **Memory Browser** — Explore CLAUDE.md, SKILL.md, knowledge store
-3. 💭 **Session Timeline** — Visualize OTEL events and dimension changes
-4. 💭 **Knowledge Graph** — Visualize semantic relationships (if Tier 3 RAG added)
-5. 💭 **Safety & Boundaries** — Permissions, escalation rules, audit trail (v2 gap: "before production")
-6. 💭 **Production Deployment** — Docker production build, environment config
-7. 💭 **Documentation** — User guide, API docs, deployment guide
-8. 💭 **End-to-End Testing** — All 9 learning scenarios pass
-
-### UI Components
-
-**Homeostasis Dashboard:**
-```
-┌─────────────────────────────────────┐
-│ Homeostasis State                   │
-├─────────────────────────────────────┤
-│ knowledge_sufficiency:    ████████░░ HEALTHY │
-│ progress_momentum:        ██░░░░░░░░ LOW     │
-│ communication_health:     ██████████ HEALTHY │
-│ productive_engagement:    ██████░░░░ HEALTHY │
-│ certainty_alignment:      ████████░░ HEALTHY │
-│ knowledge_application:    ██████████ HIGH    │
-│                                     │
-│ [Active Guidance]                   │
-│ • Stuck detected: Try alternative   │
-│   approach or ask for clarification │
-└─────────────────────────────────────┘
-```
-
-**Memory Browser:**
-- **CLAUDE.md tab:** View consolidated knowledge
-- **SKILL.md tab:** Browse auto-generated skills
-- **Knowledge Store tab:** Search raw extractions
-- **Metrics tab:** L0/L1/L2/L3 performance stats
-
-### Success Criteria
-- ✅ Homeostasis dashboard shows real-time dimension state
-- ✅ Memory browser allows searching and editing
-- ✅ All 9 learning scenarios (L1-L9) pass end-to-end
-- ✅ Production deployment guide complete
-- ✅ User documentation covers setup, usage, troubleshooting
-
-### Estimated Timeline
-**1 week**
 
 ---
 
