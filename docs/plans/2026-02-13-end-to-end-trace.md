@@ -1227,23 +1227,25 @@ The existing 6 homeostasis dimensions are about cognitive/behavioral state. None
 
 **Or:** Keep 6 dimensions, make self-model a pre-check that runs before homeostasis. If self-model says "powered down" (no working LLM), skip homeostasis entirely and go to template-based response.
 
-**Layering:**
+**Tick pipeline stages (NOT ThinkingDepth — these are sequential stages, not effort levels):**
 
 ```
-L-1: Self-model (pure computation, always works)
-     "Do I have an LLM? What tools do I have? How busy am I?"
+Stage 1: Self-model     (pure state reads — always runs)
+         "Do I have an LLM? What tools do I have? How busy am I?"
 
-L0:  Homeostasis sensors (pure computation, needs self-model)
-     "Are my dimensions balanced given my current state?"
+Stage 2: Homeostasis    (pure computation — always runs, uses self-model as input)
+         "Are my dimensions balanced given my current state?"
 
-L1:  Keyword/heuristic assessment (pure computation)
-     "What entities are in this message? What knowledge do I have?"
+Stage 3: Channel scan   (check all channels — always runs)
+         "Any pending messages? Any state changes to act on?"
 
-L2:  LLM-assisted assessment (requires working LLM)
-     "What is the user really asking? What's the best approach?"
+Stage 4: LLM action     (only if self-model says LLM available)
+         "Generate response / extract knowledge / reason about task"
 ```
 
-L-1 always runs. L0 always runs. L1 always runs. L2 only runs if self-model says an LLM is available.
+Stages 1-3 always run (no LLM needed). Stage 4 only runs if self-model reports a working provider. If not, the agent uses template-based responses from stages 1-2 output.
+
+Note: This is distinct from ThinkingDepth (L0-L4), which is about cognitive effort scaling *within* an LLM call (see `server/engine/homeostasis-engine.ts`). The tick pipeline is about what runs *before* deciding whether to make an LLM call at all.
 
 **Status:** NOT IMPLEMENTED. No self-model, no powered-down mode, no resource tracking.
 
@@ -1260,4 +1262,4 @@ L-1 always runs. L0 always runs. L1 always runs. L2 only runs if self-model says
 
 **Overarching pattern:** Infrastructure is consistently ahead of wiring. The pieces exist (OTEL collector, about field, provider config, knowledge store) but aren't connected to each other. The heartbeat/tick model provides a natural integration point — each tick wires together self-model check, homeostasis assessment, knowledge retrieval, and action.
 
-**Layering insight:** The system needs an L-1 layer (self-model) that works without LLM. This is the foundation everything else builds on. If L-1 says "no LLM available," the agent can still report status, track state, and respond with templates. The agent is never fully "off" — it always has proprioception.
+**Tick pipeline insight:** The self-model (stage 1 of the tick pipeline) works without LLM — it's pure state reads. This is the foundation everything else builds on. If the self-model says "no LLM available," the agent skips LLM action (stage 4) but can still report status, track state, and respond with templates from stages 1-3. The agent is never fully "off" — it always has proprioception.
