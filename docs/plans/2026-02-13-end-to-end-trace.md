@@ -1,7 +1,7 @@
 # End-to-End Message Trace: Golden Reference
 
 **Date:** 2026-02-13
-**Status:** In Progress (Layers 1-3 complete, cross-cutting concerns pending)
+**Status:** Complete (Layers 1-3, cross-cutting X1-X6, verified)
 **Purpose:** Trace every byte through the Galatea system for three scenarios, exposing all gaps and creating a testable golden reference for future subsystem validation.
 
 ---
@@ -54,7 +54,7 @@ readBody(event) -> {sessionId, message, provider, model}
 
 ### T2: Store user message
 
-`chat.logic.ts:114-122`
+`chat.logic.ts:106-110` (streaming path) / `chat.logic.ts:39-43` (non-streaming)
 
 ```sql
 INSERT INTO messages (session_id, role, content, created_at)
@@ -65,7 +65,7 @@ VALUES ($sessionId, 'user', 'The MQTT client...', now())
 
 ### T3: Build conversation history
 
-`chat.logic.ts:124-126`
+`chat.logic.ts:113-117` (streaming) / `chat.logic.ts:46-50` (non-streaming)
 
 ```sql
 SELECT * FROM messages WHERE session_id = $sessionId ORDER BY created_at
@@ -79,7 +79,9 @@ Converts to `[{role: "user", content: "..."}, {role: "assistant", content: "..."
 
 ### T4: Assemble context
 
-`chat.logic.ts:128` -> `context-assembler.ts`
+`chat.logic.ts:120-130` (streaming) / `chat.logic.ts:53-63` (non-streaming) -> `context-assembler.ts`
+
+Note: Both paths (`sendMessageLogic` and `streamMessageLogic`) call `assembleContext()` identically. The trace follows the streaming path since that's what the chat API uses.
 
 ```typescript
 assembleContext({
@@ -95,12 +97,15 @@ assembleContext({
 ```
 
 **What should happen:**
-1. Load entries from `entries.jsonl`
-2. Filter relevant entries (by entities in message: "MQTT", "ContextForge", "HMR")
-3. Run homeostasis assessment on `agentContext`
-4. Build system prompt: identity + rules + guidance + knowledge
+1. Load preprompts from DB (`context-assembler.ts:27-31` — `SELECT * FROM preprompts WHERE active = true`)
+2. Load entries from `entries.jsonl`
+3. Filter relevant entries (by entities in message: "MQTT", "ContextForge", "HMR")
+4. Run homeostasis assessment on `agentContext`
+5. Build system prompt: constraints (rules + hard_rule preprompts) + identity (core + persona preprompts) + guidance + knowledge + procedures
 
-**What actually happens:** `assembleContext()` exists but `agentContext` is not populated. `chat.logic.ts` line 128 has `// TODO: implement fact retrieval in Phase D`. The homeostasis engine is never called.
+**What actually happens:** `assembleContext()` is called WITH `agentContext` — homeostasis engine IS called via `assessDimensions()` inside the assembler (`context-assembler.ts:92-103`). However, `retrievedFacts` is always `[]` (empty — see `chat.logic.ts:128`), which means `knowledge_sufficiency` assessment is always based on zero facts. The TODO at `chat.logic.ts:128` is specifically about populating `retrievedFacts`, not about calling homeostasis. Fact filtering by entity/relevance is the Phase D work.
+
+**Preprompt loading:** The assembler loads active preprompts from PostgreSQL (types: `core`, `persona`, `hard_rule`). These become the CONSTRAINTS and IDENTITY sections. Currently seeded via DB — no admin UI for managing them.
 
 **Expected system prompt (golden state):**
 
@@ -124,7 +129,7 @@ progress_momentum: HEALTHY (first message, no stuck pattern)
 
 ### T5: LLM Call
 
-`chat.logic.ts:130-140`
+`chat.logic.ts:133-140` (streaming) / `chat.logic.ts:66-74` (non-streaming uses `generateText` instead of `streamText`)
 
 ```typescript
 streamText({
@@ -179,7 +184,7 @@ Remaining:         ~4800 tokens for output
 
 ### T6: Stream arrives
 
-`chat.logic.ts:140-155`
+`chat.logic.ts:141-155` (streaming path `onFinish` callback)
 
 ```
 Response streams back chunk by chunk:
@@ -230,7 +235,7 @@ After response stored:
 | T1 | Route handler | WORKING | -- |
 | T2 | Message storage | WORKING | -- |
 | T3 | History retrieval | WORKING | No sliding window / token budget |
-| T4 | Context assembly | PARTIAL | Facts not retrieved, homeostasis not called |
+| T4 | Context assembly | PARTIAL | Homeostasis called but retrievedFacts always empty, no entity filtering |
 | T5 | LLM call | WORKING | No error handling, no token budget check |
 | T6 | Stream + store | WORKING | -- |
 | T7 | Client delivery | STUB | No streaming UI |
@@ -447,7 +452,7 @@ deduplicateEntries(allExtracted, existingEntries, ollamaBaseUrl)
 Three-path strategy:
 
 Path 1: Jaccard text similarity
-  tokenize: lowercase, split on \W+, filter words < 3 chars, remove 62 stop words
+  tokenize: lowercase, split on \W+, filter words < 3 chars, remove 50 stop words
   isDuplicate if:
     - contentSim >= 0.5, OR
     - evidenceSim >= 0.5 AND contentSim >= 0.2
@@ -502,6 +507,8 @@ Example entry stored:
 
 **Gap:** No file locking. If two sessions end simultaneously, concurrent `appendFile` calls may interleave JSON lines.
 
+**Gap:** `KnowledgeEntry.supersededBy` field exists in types (`types.ts:66`) and is filtered in both the context assembler and knowledge store (`entries.filter(e => !e.supersededBy)`). But **no code path ever populates `supersededBy`**. There's no supersession logic — no way for a new entry to mark an old one as replaced. This means Scenario 4.4 (technology change supersession) and Scenario 9 (confidence decay + archival) have no implementation path. Supersession is a Phase D concern.
+
 ### E9: Markdown rendering
 
 `server/memory/knowledge-store.ts`
@@ -534,6 +541,8 @@ Output:
 **Status:** WORKING but lossy.
 
 **Gap:** Only renders `content` — drops `confidence`, `evidence`, `entities`, `about`, `source`. Human-readable but loses all metadata needed for smart retrieval.
+
+**Gap:** `knowledge.md` is rendered but never referenced. CLAUDE.md doesn't include it, the context assembler doesn't read it (reads `entries.jsonl` directly). It's a debug artifact — useful for humans inspecting the store, but dead in the pipeline.
 
 ### E10: Extraction state update
 
@@ -1263,3 +1272,35 @@ Note: This is distinct from ThinkingDepth (L0-L4), which is about cognitive effo
 **Overarching pattern:** Infrastructure is consistently ahead of wiring. The pieces exist (OTEL collector, about field, provider config, knowledge store) but aren't connected to each other. The heartbeat/tick model provides a natural integration point — each tick wires together self-model check, homeostasis assessment, knowledge retrieval, and action.
 
 **Tick pipeline insight:** The self-model (stage 1 of the tick pipeline) works without LLM — it's pure state reads. This is the foundation everything else builds on. If the self-model says "no LLM available," the agent skips LLM action (stage 4) but can still report status, track state, and respond with templates from stages 1-3. The agent is never fully "off" — it always has proprioception.
+
+---
+
+## Coverage Notes (vs REFERENCE_SCENARIOS.md)
+
+### Scenarios Covered by This Trace
+
+| Scenario | Coverage | Where |
+|----------|----------|-------|
+| Scenario 1: Learning from mistake | COVERED | Layer 2 (E4-E8 extraction) |
+| Scenario 2: Manual knowledge entry | NOT TRACED | No manual entry path exists — extraction only |
+| Scenario 4: Procedural with expiration | PARTIAL | `supersededBy` exists but not populated (E8 gap) |
+| Scenario 5: Cross-agent pattern | NOT TRACED | Multi-agent not in scope yet |
+| Scenario 6: Conflicting information | NOT TRACED | No conflict resolution logic |
+| Scenario 9: Confidence decay & archival | NOT IMPLEMENTED | No decay, no archival, no `last_retrieved` tracking. Entry confidence is write-once. Phase D. |
+| Scenario 10: Token budget overflow | IDENTIFIED | T5 gap (no token budget), X6 (self-model tracks budget) |
+| Trace 6: Unknown situation | COVERED | Layer 3 D4-D5 (knowledge gap → homeostasis → ask) |
+| Trace 7: Idle agent seeks work | COVERED | Layer 3 heartbeat model |
+| Trace 8: Over-research guardrail | IDENTIFIED | X6 (self-model capacity tracking) |
+
+### Key Unimplemented Scenarios
+
+1. **Confidence decay (Scenario 9):** No `last_retrieved` field on entries. No decay scheduler. No archival tier. Entries live forever at their original confidence. This is the biggest memory lifecycle gap.
+
+2. **Supersession (Scenario 4.4):** The `supersededBy` field exists and is filtered everywhere, but nothing writes to it. When NativeWind 4.1 fixes a bug, there's no way to mark the workaround as superseded.
+
+3. **Manual knowledge entry (Scenario 2):** No API endpoint or UI for "add this fact." All knowledge comes from extraction. A user saying "Never use Realm" in chat would need to be extracted from the chat transcript — it can't be directly entered.
+
+### Trace Accuracy Notes
+
+- Line numbers reference `streamMessageLogic` (the path used by the chat API). `sendMessageLogic` (non-streaming) exists at different line numbers but follows the same logic.
+- The Layer 1 scenario mentions "MQTT client in ContextForge" — this is factually incorrect (ContextForge uses Convex WebSocket, not MQTT). The scenario predates the ContextForgeTS analysis. Retained as-is because it illustrates a valid pattern (user asks about cross-project topic), but note the MQTT facts in the "expected system prompt" would actually come from Umka, not ContextForge.
