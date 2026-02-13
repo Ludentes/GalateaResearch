@@ -1,12 +1,16 @@
-> **SUPERSEDED**: This document is partially superseded by the [v2 Architecture Redesign](plans/2026-02-11-galatea-v2-architecture-design.md). The homeostasis concept and psychological foundations survive. The infrastructure (Activity Router, Reflexion Loop, PostgreSQL/Graphiti memory, custom context assembler) is deprecated in favor of ecosystem standards (Skills, CLAUDE.md, MCP, Agent Teams). Kept as reference for psychological grounding.
-
 # Galatea Psychological Architecture
 
-**Date**: 2026-02-06 (Updated)
-**Status**: Partially Superseded — See v2 architecture design
+**Date**: 2026-02-06 (Created) | 2026-02-13 (Reconciled with v2)
+**Status**: Living document — reconciled with v2 architecture (Phase C)
 **Thesis**: Psychological architecture (homeostasis + memory + models) + LLM > Plain LLM
 
-**Latest Update (2026-02-06)**: Observation pipeline now uses OpenTelemetry (OTEL) as unified backbone. See [OBSERVATION_PIPELINE.md](./OBSERVATION_PIPELINE.md) and [observation-pipeline/](./observation-pipeline/) for details.
+**v2 reconciliation (2026-02-13):** Infrastructure changed (see below), but psychological foundations survive intact. Key changes:
+- **Activity Router** → deprecated; ecosystem (Claude Code skills) handles task routing; L0-L4 pattern revived for homeostasis self-assessment
+- **Graphiti/FalkorDB** → replaced by file-based JSONL knowledge store with Jaccard + embedding dedup
+- **Cognitive Models** → not separate data structures; views over knowledge store via `KnowledgeEntry.about` field
+- **Memory types** → unified into `KnowledgeEntry` with 6 types (fact, preference, rule, procedure, correction, decision)
+
+See: [v2 Architecture Design](plans/2026-02-11-galatea-v2-architecture-design.md), [Cognitive Models Design](plans/2026-02-12-cognitive-models-design.md), [ROADMAP](ROADMAP.md)
 
 ---
 
@@ -64,6 +68,77 @@ See [homeostasis-architecture-design.md](./plans/2026-02-02-homeostasis-architec
 
 ## Architecture Overview
 
+### v2 Architecture (Current)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              GALATEA AGENT (v2)                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │              OBSERVATION LAYER (OTEL + Claude Code Hooks)           │   │
+│  │  SessionEnd → auto-extract | UserPrompt/ToolUse → OTEL events      │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                        │
+│                                    ▼                                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │              SHADOW LEARNING PIPELINE (Phase B)                     │   │
+│  │  Transcript Reader → Signal Classifier → Knowledge Extractor       │   │
+│  │  → Dedup (Jaccard + Embedding) → Knowledge Store (JSONL)           │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                        │
+│                                    ▼                                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                  HOMEOSTASIS ENGINE (L0-L2)                         │   │
+│  │  6 dimensions — balance drives behavior — guidance into prompt      │   │
+│  │  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐       │   │
+│  │  │ Knowledge  │ │ Certainty  │ │ Progress   │ │ Communic.  │       │   │
+│  │  │Sufficiency │ │ Alignment  │ │ Momentum   │ │  Health    │       │   │
+│  │  │   (L1)     │ │   (L2)     │ │   (L1)     │ │   (L1)     │       │   │
+│  │  └────────────┘ └────────────┘ └────────────┘ └────────────┘       │   │
+│  │  ┌────────────┐ ┌────────────┐                                      │   │
+│  │  │Productive  │ │ Knowledge  │  L0=cache, L1=heuristic, L2=LLM     │   │
+│  │  │Engagement  │ │Application │  See: ThinkingDepth pattern          │   │
+│  │  │   (L1)     │ │   (L2)     │                                      │   │
+│  │  └────────────┘ └────────────┘                                      │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                        │
+│                                    ▼                                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                KNOWLEDGE STORE + COGNITIVE MODELS                    │   │
+│  │  ┌──────────────────────────────────────────────────────────────┐   │   │
+│  │  │  KnowledgeEntry (JSONL) — unified type for all knowledge     │   │   │
+│  │  │  Types: fact | preference | rule | procedure | correction |  │   │   │
+│  │  │         decision                                             │   │   │
+│  │  │  about?: {entity, type} — predicate-style subject tagging   │   │   │
+│  │  └──────────────────────────────────────────────────────────────┘   │   │
+│  │  Models are VIEWS over store:                                       │   │
+│  │  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌──────────────┐     │   │
+│  │  │ User   │ │ Team   │ │Project │ │Domain  │ │    Agent     │     │   │
+│  │  │ Model  │ │ Model  │ │ Model  │ │ Model  │ │    (Self)    │     │   │
+│  │  │filter  │ │filter  │ │default │ │filter  │ │   filter     │     │   │
+│  │  │by user │ │by team │ │no tag  │ │by dom  │ │  by agent    │     │   │
+│  │  └────────┘ └────────┘ └────────┘ └────────┘ └──────────────┘     │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                        │
+│                                    ▼                                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                   CONTEXT ASSEMBLER                                  │   │
+│  │  Preprompts + Knowledge + Homeostasis Guidance → System Prompt      │   │
+│  │  Priority-based section ordering with token budget                  │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  Task routing: handled by ecosystem (Claude Code skill progressive          │
+│  disclosure). NOT a Galatea component. See: ThinkingDepth pattern.          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Original Architecture (Phase 3, deprecated)
+
+<details>
+<summary>Click to expand original Phase 3 architecture diagram</summary>
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              GALATEA AGENT                                   │
@@ -78,61 +153,11 @@ See [homeostasis-architecture-design.md](./plans/2026-02-02-homeostasis-architec
 │  │  │  No LLM     │  │  Haiku      │  │  Sonnet     │ │ Reflexion  │  │   │
 │  │  └─────────────┘  └─────────────┘  └─────────────┘ └────────────┘  │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                        │
-│                                    ▼                                        │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                     LAYER 1: EXPLICIT GUIDANCE                       │   │
-│  │  "When X happens, do Y" - handles anticipated situations             │   │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────────┐  │   │
-│  │  │  Persona    │  │   Domain    │  │        Hard Blocks          │  │   │
-│  │  │  Preprompts │  │   Rules     │  │   (never push to main...)   │  │   │
-│  │  └─────────────┘  └─────────────┘  └─────────────────────────────┘  │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                        │
-│                                    ▼                                        │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                  LAYER 2: HOMEOSTASIS ENGINE                         │   │
-│  │  6 dimensions - balance drives behavior - handles novel situations   │   │
-│  │  (May be skipped for Level 0-1 activities)                           │   │
-│  │  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐       │   │
-│  │  │ Knowledge  │ │ Certainty  │ │ Progress   │ │ Communic.  │       │   │
-│  │  │Sufficiency │ │ Alignment  │ │ Momentum   │ │  Health    │       │   │
-│  │  └────────────┘ └────────────┘ └────────────┘ └────────────┘       │   │
-│  │  ┌────────────┐ ┌────────────┐                                      │   │
-│  │  │Productive  │ │ Knowledge  │                                      │   │
-│  │  │Engagement  │ │Application │                                      │   │
-│  │  └────────────┘ └────────────┘                                      │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                        │
-│                                    ▼                                        │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                     MEMORY LAYER                                     │   │
-│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────────────────┐    │   │
-│  │  │   Episodic   │ │   Semantic   │ │       Procedural         │    │   │
-│  │  │   (events)   │ │   (facts)    │ │   (trigger → steps)      │    │   │
-│  │  └──────────────┘ └──────────────┘ └──────────────────────────┘    │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                        │
-│                                    ▼                                        │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                    COGNITIVE MODELS                                  │   │
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────────────┐   │   │
-│  │  │  Self    │ │  User    │ │  Domain  │ │    Relationship      │   │   │
-│  │  │  Model   │ │  Model   │ │  Model   │ │       Model          │   │   │
-│  │  └──────────┘ └──────────┘ └──────────┘ └──────────────────────┘   │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                        │
-│                                    ▼                                        │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                   EXECUTION LAYER                                    │   │
-│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────────────────┐    │   │
-│  │  │   Context    │ │    Tool      │ │        LLM               │    │   │
-│  │  │   Builder    │ │   Executor   │ │     Generation           │    │   │
-│  │  └──────────────┘ └──────────────┘ └──────────────────────────┘    │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
+│  ... (Layers 1-3, Memory, Cognitive Models, Execution) ...                 │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+</details>
 
 ---
 
@@ -256,33 +281,87 @@ Instead of separate engines for curiosity, motivation, initiative, we define **d
 > You can course-correct as you go.
 > Doing will teach you more than reading.
 
-### Three-Layer Model
+### v2 Layer Model
 
 ```
-Layer 0: Activity Router (NEW)
-├── Classifies incoming activity
-├── Selects processing level (0-3) and model
-└── Routes to appropriate pipeline
+Observation Layer: OTEL + Claude Code Hooks
+├── Captures user prompts, tool use, session lifecycle
+├── Feeds into shadow learning pipeline
+└── Auto-extracts knowledge on session end
 
-Layer 1: Explicit Guidance
-├── Handles anticipated situations
-├── Persona preprompts, domain rules, hard blocks
-└── Precise but brittle
+Learning Layer: Shadow Learning Pipeline
+├── Transcript Reader → Signal Classifier → Knowledge Extractor
+├── Dedup (Jaccard text + embedding cosine similarity)
+└── Knowledge Store (entries.jsonl)
 
-Layer 2: Homeostasis Emergence
-├── Handles novel situations
-├── "Stay in balance" across 6 dimensions
-└── Behavior emerges from balance-seeking
+Self-Regulation Layer: Homeostasis Engine (L0-L2)
+├── L0: Cache layer (return fresh assessment)
+├── L1: Computed heuristics (keyword matching, time-based)
+├── L2: LLM semantic (certainty_alignment, knowledge_application)
+└── Guidance injected into system prompt as SELF-REGULATION section
 
-Layer 3: Guardrails
-├── Catches runaway behavior
-├── Prevents extremes (over-research, over-ask, going dark)
-└── Built-in to dimension spectrums
+Knowledge Layer: Unified Store + Cognitive Model Views
+├── KnowledgeEntry with about field (predicate-style tagging)
+├── Models = filtered views (not separate structures)
+└── Context Assembler builds priority-ordered system prompt
+
+Ecosystem Layer: Claude Code + Skills
+├── Task routing via skill progressive disclosure (NOT our code)
+├── Tool execution via MCP
+└── LLM generation via AI SDK
 ```
+
+<details>
+<summary>Original Three-Layer Model (Phase 3, deprecated)</summary>
+
+```
+Layer 0: Activity Router — DEPRECATED (ecosystem handles this)
+Layer 1: Explicit Guidance — survives as preprompts + knowledge store rules
+Layer 2: Homeostasis Emergence — survives as homeostasis engine L0-L2
+Layer 3: Guardrails — built into dimension spectrums (unchanged)
+```
+
+</details>
 
 ---
 
-## Activity Router (System 1/System 2)
+## ThinkingDepth: A Recurring Pattern (L0-L4)
+
+> **v2 note (2026-02-13):** The Activity Router from Phase 3 is deprecated. The ecosystem (Claude Code skill progressive disclosure) handles task routing. However, the L0-L4 "cognitive effort scaling" pattern was revived for homeostasis self-assessment. This section documents the pattern itself.
+
+The L0-L4 pattern appears in multiple domains across the architecture:
+
+| Domain | L0 (reflexive) | L1 (cheap) | L2 (LLM) | L3 (meta) |
+|--------|---------------|------------|-----------|-----------|
+| **Self-assessment** (homeostasis) | Cache hit | Heuristic | LLM semantic | Arbitrate L1 vs L2 |
+| **Task routing** (ecosystem) | Direct action | Pattern/skill | LLM reasoning | Reflexion loop |
+| **Memory retrieval** (future) | Exact match | Keyword search | Semantic search | Cross-reference |
+| **Extraction** (pipeline) | Regex classify | — | LLM extraction | — |
+
+**History:**
+- Phase 3: Built Activity Router with L0-L3 for task routing
+- v2: Deprecated Activity Router (ecosystem owns task routing via skill progressive disclosure)
+- Phase C: Revived L0-L4 for homeostasis self-assessment (different domain, same pattern)
+
+**Abstraction status:** NOT abstracted into shared `ThinkingDepth<T>` type (YAGNI). When implementing L0-L4 for a SECOND internal domain (e.g., memory retrieval), strongly consider extracting the shared abstraction. See `server/engine/homeostasis-engine.ts` for detailed documentation.
+
+### Current Implementation (Phase C)
+
+| Dimension | Level | Method |
+|-----------|-------|--------|
+| knowledge_sufficiency | L1 | Keyword relevance scoring + confidence weighting |
+| progress_momentum | L1 | Jaccard similarity on recent user messages |
+| communication_health | L1 | Time since last message |
+| productive_engagement | L1 | Has assigned task + message count |
+| certainty_alignment | L2 | LLM semantic (defaults HEALTHY without LLM) |
+| knowledge_application | L2 | LLM semantic (defaults HEALTHY without LLM) |
+
+L0 cache with configurable TTL per dimension. L3/L4 planned for Phase D/E.
+
+See: `server/engine/homeostasis-engine.ts`, [Evaluation Report](plans/2026-02-12-homeostasis-l0-l2-evaluation-report.md)
+
+<details>
+<summary>Original Activity Router (Phase 3, deprecated)</summary>
 
 ### The Problem
 
@@ -290,16 +369,6 @@ Agents perform activities with vastly different cognitive requirements:
 - "Acknowledged" → near-zero effort
 - "Implement feature" → requires reasoning
 - "Debug unknown issue" → requires reflection
-
-Using the same pipeline for all wastes resources and adds latency.
-
-### Key Insight: LLM Already Knows Most Things
-
-The agent's knowledge is primarily **in the LLM**, not memories:
-- LLM knows how to code, debug, write React Native
-- Memory stores the **delta**: team preferences, specific issues, hard rules
-
-This means we can't skip memory (might miss critical preferences), but we can optimize **processing depth**.
 
 ### Activity Levels
 
@@ -310,101 +379,17 @@ This means we can't skip memory (might miss critical preferences), but we can op
 | 2 | Reason | 1 call | Sonnet | Implement, review, answer |
 | 3 | Reflect | 3-15 calls | Sonnet | Unknown, high-stakes, architecture |
 
-### Classification (No LLM Required)
-
-Activities are classified using cheap signals:
-
-```typescript
-function classifyActivity(task, procedureMatch, homeostasis) {
-  // Level 0: Direct actions
-  if (isDirectToolCall(task) || isTemplateMessage(task)) {
-    return { level: 0, model: 'none' };
-  }
-
-  // Level 3: Knowledge gaps or high stakes
-  if (homeostasis?.knowledge_sufficiency === 'LOW' ||
-      homeostasis?.certainty_alignment === 'LOW' ||
-      isIrreversibleAction(task)) {
-    return { level: 3, model: 'sonnet' };
-  }
-
-  // Level 1: High-confidence procedure
-  if (procedureMatch && procedureMatch.success_rate > 0.85) {
-    return { level: 1, model: 'haiku' };
-  }
-
-  // Level 2: Default
-  return { level: 2, model: 'sonnet' };
-}
-```
-
-### Level 3: Reflexion Pattern
-
-When Level 3 is triggered, use Draft → Critique → Revise loop:
-
-```
-Draft initial response
-     ↓
-Gather evidence (tools, search, memory)
-     ↓
-Critique (gaps, errors, unsupported claims)
-     ↓
-Revise with evidence
-     ↓
-Repeat until good (max 3 iterations)
-```
-
-### Psychology Mapping
-
-This is our implementation of **Kahneman's dual-process theory**:
-- **System 1** (fast, automatic) → Levels 0-1
-- **System 2** (slow, deliberate) → Levels 2-3
-
-But grounded in practical activity classification, not abstract cognitive modes.
-
-### Self-Knowledge Falls Out Free
-
-The routing logic **is** the self-knowledge. During execution:
-
-```yaml
-self_knowledge:
-  current_activity: "implementing profile screen"
-  activity_level: 2
-  model_in_use: "sonnet"
-  why: "Implement verb, needs reasoning → Level 2"
-```
-
-See [plans/2026-02-03-activity-routing-design.md](./plans/2026-02-03-activity-routing-design.md) for full design.
-
 ### Phase 3 Implementation Notes (2026-02-10)
 
-**What was implemented exactly as designed:**
-- 6 homeostasis dimensions with LOW/HEALTHY/HIGH states
-- Activity Router with 4 levels (0-3) and model selection
-- Reflexion loop (Draft → Critique → Revise, max 3 iterations)
-- Guidance system with YAML-based priority ranking
-- Fire-and-forget homeostasis assessment (zero chat latency)
-- UI visualization (sidebar + activity badges)
+**What was implemented:** 6 homeostasis dimensions, Activity Router with 4 levels, Reflexion loop, YAML guidance, fire-and-forget assessment, UI visualization.
 
-**What deviated from design:**
-- All assessments are heuristic ("computed"), not hybrid (computed + LLM). The `AssessmentMethod = "computed" | "llm"` type exists but `"llm"` is never produced.
-- `classifyActivity` function is `classify()` method on `ActivityRouter` class, not a standalone function.
-- Level 3 triggers differ slightly from design: `hasKnowledgeGap` is the primary trigger (not `knowledge_sufficiency LOW`), because homeostasis assessment runs after routing.
-- `isIrreversibleAction` uses exact substring matching, not the fuzzy/NLP matching implied by the design doc.
-- Evidence gathering in Reflexion loop uses context only (no external codebase or documentation search).
+**Stage G findings:** Graphiti returned 20 tangential facts (inflating knowledge_sufficiency), Reflexion critique JSON wrapped in markdown fences, Level 2 = 15-65s / Level 3 = 110-145s.
 
-**What was discovered (Stage G findings):**
-- Graphiti returns 20 tangential facts for any query, inflating knowledge_sufficiency (critical gap)
-- Reflexion loop critique JSON gets wrapped in markdown code fences by LLM, bypassing critique step
-- Pipeline timing: Level 2 = 15-65s, Level 3 = 110-145s (3-4x overhead)
-- `timeSpentResearching`/`timeSpentBuilding` not tracked (Phase 4 dependency)
-- `hasAssignedTask` always true during conversations
+These findings led to the v2 architecture redesign, which replaced Graphiti with file-based memory and deprecated the Activity Router in favor of ecosystem-based task routing.
 
-**See also:**
-- `docs/PHASE3_COMPLETE.md` — Full completion report
-- `docs/STAGE_G_FINDINGS.md` — Reference scenario testing findings
-- `docs/api/` — API documentation for engine components
-- `docs/guides/using-homeostasis.md` — Operator usage guide
+See: `docs/PHASE3_COMPLETE.md`, `docs/STAGE_G_FINDINGS.md`
+
+</details>
 
 ---
 
@@ -412,189 +397,198 @@ See [plans/2026-02-03-activity-routing-design.md](./plans/2026-02-03-activity-ro
 
 Memory stores WHAT the agent knows. Homeostasis determines WHEN to use it.
 
-### Episodic Memory (Events)
+### v2: Unified Knowledge Store (Current)
+
+In v2, all memory types are unified into a single `KnowledgeEntry` type stored as JSONL:
 
 ```typescript
+interface KnowledgeEntry {
+  id: string
+  type: KnowledgeType           // "fact" | "preference" | "rule" | "procedure" | "correction" | "decision"
+  content: string               // "Prefer Clerk over JWT for mobile auth"
+  confidence: number            // 0-1
+  entities: string[]            // ["Clerk", "JWT", "mobile auth"]
+  evidence?: string             // Source quote from transcript
+  source: string                // "session:64d737f3"
+  extractedAt: string           // ISO 8601
+  supersededBy?: string         // ID of entry that replaces this
+  about?: KnowledgeAbout        // Who/what this is about (see Cognitive Models)
+}
+```
+
+**Storage:** `data/memory/entries.jsonl` (one JSON object per line)
+**Dedup:** Three-path deduplication (Jaccard text similarity + evidence overlap + embedding cosine similarity)
+**Rendering:** Auto-generated `CLAUDE.md` from entries, grouped by type, sorted by confidence
+
+### v2 Memory System Decision
+
+> **STATUS**: Decided — File-based JSONL (replaces Graphiti)
+>
+> | Option | v1 Verdict | v2 Verdict |
+> |--------|-----------|-----------|
+> | **Graphiti + FalkorDB** | ✅ Selected | ❌ 18-21% extraction quality, tangential fact retrieval |
+> | **File-based (JSONL + CLAUDE.md)** | Not considered | ✅ Simple, reliable, ecosystem-native |
+> | **RAG/Mem0 (Tier 3)** | ❌ | 📋 Deferred — upgrade path when 500+ entries |
+>
+> **Why file-based won:**
+> - Graphiti Stage G findings: 20 tangential facts per query, inflating knowledge_sufficiency
+> - CLAUDE.md is ecosystem-native (Claude Code reads it automatically)
+> - Simpler extraction pipeline with higher quality (LLM-based, not graph-based)
+> - Jaccard + embedding dedup is more reliable than graph dedup
+>
+> See: [v2 Architecture Design](plans/2026-02-11-galatea-v2-architecture-design.md), [memory lifecycle](plans/2026-02-07-memory-lifecycle.md)
+
+### Mapping: Original Memory Types → v2
+
+| Original Type | v2 Equivalent |
+|--------------|--------------|
+| Episodic Memory (`EpisodeRecord`) | Session metadata + transcript files (not extracted as entries) |
+| Semantic Memory (`Fact`) | `KnowledgeEntry` with type `"fact"` |
+| Procedural Memory (`Procedure`) | `KnowledgeEntry` with type `"procedure"` (future: SKILL.md files) |
+| Hard rules | `KnowledgeEntry` with type `"rule"` |
+| Preferences | `KnowledgeEntry` with type `"preference"` |
+| Corrections | `KnowledgeEntry` with type `"correction"` |
+
+<details>
+<summary>Original Memory Types (Phase 3, deprecated)</summary>
+
+```typescript
+// Episodic — replaced by session transcripts
 interface EpisodeRecord {
-  id: string;
-  timestamp: Date;
-  summary: string;              // What happened
-  participants: string[];       // user, agent, other agents
-  emotional_valence: number;    // -1 to 1
-  outcome: string;              // success, failure, partial
-  lessons?: string[];           // What was learned
-
-  // For retrieval
-  embedding: number[];
-  session_id: string;
+  id: string; timestamp: Date; summary: string;
+  participants: string[]; emotional_valence: number;
+  outcome: string; lessons?: string[];
+  embedding: number[]; session_id: string;
 }
-```
 
-### Semantic Memory (Facts)
-
-```typescript
+// Semantic — replaced by KnowledgeEntry type:"fact"
 interface Fact {
-  id: string;
-  content: string;              // "Prefer Clerk over JWT for mobile auth"
-  confidence: number;           // 0-1
-  source: string;               // episode_id or "manual"
-  domain?: string;              // "expo-auth"
-
-  // Temporal validity
-  valid_from: Date;
-  valid_until?: Date;           // "NativeWind 4.1"
-  superseded_by?: string;
+  id: string; content: string; confidence: number;
+  source: string; domain?: string;
+  valid_from: Date; valid_until?: Date; superseded_by?: string;
 }
-```
 
-### Procedural Memory (How-To)
-
-```typescript
+// Procedural — replaced by KnowledgeEntry type:"procedure"
 interface Procedure {
-  id: string;
-  name: string;                 // "Handle NativeWind animation flicker"
-
-  trigger: {
-    pattern: string;            // "Pressable animation flickering"
-    context?: string[];
-  };
-
-  steps: {
-    order: number;
-    instruction: string;
-    tool_call?: string;         // MCP tool
-  }[];
-
-  // Learning metadata
-  success_rate: number;
-  times_used: number;
-  learned_from: string[];       // Episode IDs
-
-  // Temporal validity
-  valid_until?: string;
-  superseded_by?: string;
+  id: string; name: string;
+  trigger: { pattern: string; context?: string[] };
+  steps: { order: number; instruction: string; tool_call?: string }[];
+  success_rate: number; times_used: number;
+  learned_from: string[];
+  valid_until?: string; superseded_by?: string;
 }
 ```
 
-### Memory System Decision
-
-> **STATUS**: Decided - Graphiti with FalkorDB
->
-> | Option | Verdict |
-> |--------|---------|
-> | **Basic RAG** | ❌ No temporal validity, no promotion, no hard rule guarantee |
-> | **Mem0** | ❌ Limited temporal reasoning, weak relationship modeling |
-> | **Graphiti + FalkorDB** | ✅ Bi-temporal model, graph relationships, Cypher queries |
->
-> **Why Graphiti is essential**:
-> - Hard rules must be guaranteed (not similarity-dependent)
-> - Temporal validity ("was true then, not now")
-> - Procedure success tracking
-> - Memory promotion (episode → fact → procedure)
-> - Cross-agent pattern detection
->
-> See [plans/2026-02-02-memory-system-design.md](./plans/2026-02-02-memory-system-design.md) for full design.
+</details>
 
 ---
 
 ## Cognitive Models
 
-Models provide context for LLM reasoning. They're data structures, not engines.
+> **v2 (Phase C):** Models are **views over the knowledge store**, not separate data structures. Each `KnowledgeEntry` has an optional `about` field that tags the subject. A model is constructed by filtering entries.
+>
+> **Full design:** [Cognitive Models Design](plans/2026-02-12-cognitive-models-design.md)
+> **Implementation:** `server/memory/types.ts`, `server/memory/knowledge-store.ts`
+> **Tests:** `server/memory/__tests__/cognitive-models.test.ts`
 
-### Self Model
+### Why Views, Not Structures?
+
+| Concern | Separate Structures (Phase 3) | Views Over Store (v2) |
+|---------|------------------------------|----------------------|
+| Storage | 5 files (user.json, domain.json...) | 1 file (entries.jsonl) |
+| Extraction | Separate extraction per model | Single extraction tags `about` |
+| Consistency | Models can drift from facts | Models ARE the facts |
+| Querying | Load specific model file | Filter by `about.type` |
+| Schema evolution | Add fields to each interface | Add fields once to KnowledgeEntry |
+
+**Key insight:** A "User Model for Alina" is just the set of all things we know about Alina. There's no value in duplicating that into a separate `UserModel` object — it would just be a cached query result.
+
+**Escape hatch:** If we later need materialized model objects (e.g., for caching, for LLM prompt construction), we can build them from the store. The `about` field preserves enough information. Zero information loss.
+
+### The `about` Field
+
+```typescript
+type KnowledgeSubjectType =
+  | "user"     // about a specific person (preferences, expertise, habits)
+  | "project"  // about the codebase or project (default when about is omitted)
+  | "agent"    // about the agent itself (capabilities, limitations)
+  | "domain"   // about the problem domain (rules, characteristics)
+  | "team"     // about team dynamics (communication norms, processes)
+
+interface KnowledgeAbout {
+  entity: string              // "alina", "paul", "umka", "mobile-dev"
+  type: KnowledgeSubjectType
+}
+
+interface KnowledgeEntry {
+  // ... existing fields ...
+  about?: KnowledgeAbout      // omit = project-scoped (default)
+}
+```
+
+Each entry is implicitly a predicate triple: `subject(about.entity) → predicate(type + content) → object(content details)`
+
+### The Five Models + Relationship (Derived)
+
+| # | Model | Query | What it Captures |
+|---|-------|-------|-----------------|
+| 1 | **User** | `entriesByEntity(entries, "alina")` | Preferences, expertise, working patterns |
+| 2 | **Team** | `entriesBySubjectType(entries, "team")` | Communication norms, decision patterns |
+| 3 | **Project** | `entriesBySubjectType(entries, "project")` | Architecture, constraints, conventions (~95% of entries) |
+| 4 | **Domain** | `entriesBySubjectType(entries, "domain")` | Technology constraints, best practices |
+| 5 | **Agent (Self)** | `entriesBySubjectType(entries, "agent")` | Capabilities, limitations (learned from corrections) |
+| 6 | **Relationship** | Derived from session metadata | First seen, entry count, interaction patterns |
+
+### Mapping: Original Psych Arch → v2
+
+| Original Field | v2 Equivalent |
+|---------------|--------------|
+| `SelfModel.identity` | Preprompts (`data/preprompts/`) |
+| `SelfModel.capabilities` | `entriesBySubjectType(entries, "agent")` |
+| `SelfModel.available_models` | Config (not learned) |
+| `SelfModel.current_state` | `AgentContext` (ephemeral) |
+| `UserModel.theories` | `entriesByEntity(entries, "alina")` where type is `fact` |
+| `UserModel.preferences` | `entriesByEntity(entries, "alina")` where type is `preference` |
+| `UserModel.expertise` | Derived from facts (future) |
+| `DomainModel.characteristics` | `entriesBySubjectType(entries, "domain")` |
+| `DomainModel.behavior_rules` | `entriesBySubjectType(entries, "domain")` where type is `rule` |
+| `RelationshipModel.history` | Derived from session metadata |
+| `RelationshipModel.trust_level` | Not tracked (future: derive from interaction patterns) |
+
+<details>
+<summary>Original Cognitive Model Interfaces (Phase 3, deprecated)</summary>
 
 ```typescript
 interface SelfModel {
-  identity: {
-    name: string;                    // "Galatea"
-    role: string;                    // "Mobile Developer"
-    domain: string;                  // "Expo/React Native"
-  };
-
-  capabilities: {
-    strong: string[];                // What I'm good at
-    weak: string[];                  // What I struggle with
-    tools_available: string[];       // MCP tools
-  };
-
-  limitations: string[];             // What I cannot do
-
-  // NEW: Available models (from config, not learned)
-  available_models: Array<{
-    id: string;                      // 'haiku', 'sonnet', 'opus'
-    characteristics: string[];       // ['fast', 'cheap'] or ['capable']
-    suitable_for: number[];          // Activity levels [0,1] or [2] or [3]
-  }>;
-
-  // NEW: Current operational state (ephemeral)
-  current_state?: {
-    activity_level: 0 | 1 | 2 | 3;
-    model_in_use: string;
-    reason: string;
-  };
+  identity: { name: string; role: string; domain: string };
+  capabilities: { strong: string[]; weak: string[]; tools_available: string[] };
+  limitations: string[];
+  available_models: Array<{ id: string; characteristics: string[]; suitable_for: number[] }>;
+  current_state?: { activity_level: 0|1|2|3; model_in_use: string; reason: string };
 }
-```
 
-**Note**: `available_models` comes from **config**, not learning. The agent knows what models exist because we tell it. `current_state` provides self-knowledge during execution.
-
-### User Model
-
-```typescript
 interface UserModel {
-  identity: {
-    user_id: string;
-    first_seen: Date;
-    interaction_count: number;
-  };
-
-  // WorldLLM-style theories
-  theories: {
-    statement: string;               // "User prefers concrete examples"
-    confidence: number;
-    evidence_for: string[];          // Episode IDs
-    evidence_against: string[];
-  }[];
-
-  // Learned preferences
-  preferences: Record<string, string>;  // "communication": "concise"
-  expertise: Record<string, number>;    // "expo": 0.8
+  identity: { user_id: string; first_seen: Date; interaction_count: number };
+  theories: { statement: string; confidence: number; evidence_for: string[]; evidence_against: string[] }[];
+  preferences: Record<string, string>;
+  expertise: Record<string, number>;
 }
-```
 
-### Domain Model
-
-```typescript
 interface DomainModel {
-  domain_id: string;                 // "mobile_development"
-
-  characteristics: {
-    precision_required: number;      // 0-1
-    risk_level: string;              // "low", "medium", "high"
-  };
-
-  behavior_rules: {
-    exploration_encouraged: boolean;
-    must_cite_sources: boolean;
-  };
+  domain_id: string;
+  characteristics: { precision_required: number; risk_level: string };
+  behavior_rules: { exploration_encouraged: boolean; must_cite_sources: boolean };
 }
-```
 
-### Relationship Model
-
-```typescript
 interface RelationshipModel {
   user_id: string;
-
-  history: {
-    first_interaction: Date;
-    total_interactions: number;
-    significant_events: string[];    // Episode IDs
-  };
-
-  trust_level: number;               // 0-1
-  relationship_phase: string;        // "initial", "productive", "mature"
+  history: { first_interaction: Date; total_interactions: number; significant_events: string[] };
+  trust_level: number;
+  relationship_phase: string;
 }
 ```
+
+</details>
 
 ---
 
@@ -671,35 +665,48 @@ Same 6 dimensions work across all personas:
 
 ## Learning Pipeline
 
-### Shadow Training Flow
+### v2: Shadow Learning Flow (Implemented)
 
 ```
 User works with Claude Code
          │
          ▼
-Observation Pipeline captures events
+Claude Code hooks capture events (OTEL + SessionEnd)
          │
-         ▼
-End of period: Summary generated
+         ├─── Real-time: OTEL events → Collector → Event Store
          │
-         ▼
-User verifies/corrects summary
-         │
-         ▼
-Memory updated (facts, procedures)
-         │
-         ▼
-Thresholds calibrated from observation
+         └─── On session end: auto-extract hook triggers
+                   │
+                   ▼
+         Transcript Reader (reads session JSONL)
+                   │
+                   ▼
+         Signal Classifier (filters noise, identifies learning signals)
+                   │
+                   ▼
+         Knowledge Extractor (LLM extracts KnowledgeEntry[] with about tags)
+                   │
+                   ▼
+         Deduplication (Jaccard text + evidence + embedding cosine)
+                   │
+                   ▼
+         Knowledge Store (data/memory/entries.jsonl)
+                   │
+                   ▼
+         Context Assembler (builds system prompt with knowledge + guidance)
 ```
 
 ### What Gets Learned
 
-| Type | Example | Storage |
-|------|---------|---------|
-| Fact | "Prefer Clerk over JWT" | Semantic memory |
-| Procedure | "How to fix NativeWind flicker" | Procedural memory |
-| Episode | "Spent 45min debugging auth" | Episodic memory |
-| Calibration | "User asks for help after ~30min stuck" | Threshold config |
+| Type | Example | v2 Storage |
+|------|---------|-----------|
+| Fact | "Prefer Clerk over JWT" | `KnowledgeEntry` type:`fact` |
+| Preference | "Use pnpm in all projects" | `KnowledgeEntry` type:`preference` |
+| Rule | "MQTT client must persist across hot reloads" | `KnowledgeEntry` type:`rule` |
+| Procedure | "How to fix NativeWind animation flicker" | `KnowledgeEntry` type:`procedure` |
+| Decision | "ContentPackage has 1:1 with Kiosks" | `KnowledgeEntry` type:`decision` |
+| Correction | "Seed script must load .env for secret key" | `KnowledgeEntry` type:`correction` |
+| User-specific | "Alina lacks IoT understanding" | `KnowledgeEntry` about:`{entity:"alina", type:"user"}` |
 
 ### What Doesn't Change
 
@@ -710,68 +717,78 @@ Only the thresholds and guidance context adapt.
 
 ## Implementation Components
 
-### Homeostasis Engine
+### v2 Implementation (TypeScript, Current)
+
+**Homeostasis Engine** (`server/engine/homeostasis-engine.ts`):
+
+```typescript
+// L0-L2 multi-level assessment
+function assessDimensions(ctx: AgentContext): HomeostasisState
+function getGuidance(state: HomeostasisState): string
+
+// L0: Cache layer (configurable TTL per dimension)
+// L1: Computed heuristics (keyword matching, Jaccard similarity, time-based)
+// L2: LLM semantic (Phase D — defaults HEALTHY without LLM)
+```
+
+**Context Assembler** (`server/memory/context-assembler.ts`):
+
+```typescript
+async function assembleContext(options: {
+  storePath?: string
+  tokenBudget?: number
+  agentContext?: AgentContext  // for homeostasis assessment
+}): Promise<AssembledContext>
+
+// Builds system prompt with priority-ordered sections:
+// 1. Identity (preprompts)
+// 2. Constraints (rules from knowledge store)
+// 3. Self-Regulation (homeostasis guidance — when dimensions imbalanced)
+// 4. Knowledge (facts, preferences, decisions, procedures)
+```
+
+**Knowledge Store** (`server/memory/knowledge-store.ts`):
+
+```typescript
+// CRUD
+async function readEntries(storePath: string): Promise<KnowledgeEntry[]>
+async function appendEntries(entries: KnowledgeEntry[], storePath: string): Promise<void>
+
+// Cognitive Model queries
+function entriesBySubjectType(entries: KnowledgeEntry[], type: KnowledgeSubjectType): KnowledgeEntry[]
+function entriesByEntity(entries: KnowledgeEntry[], entity: string): KnowledgeEntry[]
+function distinctEntities(entries: KnowledgeEntry[], type?: KnowledgeSubjectType): string[]
+
+// Dedup
+function isDuplicate(candidate: KnowledgeEntry, existing: KnowledgeEntry[]): boolean
+async function deduplicateEntries(candidates, existing, ollamaBaseUrl): Promise<{ unique, duplicatesSkipped }>
+```
+
+**Shadow Learning Pipeline** (`server/memory/`):
+
+```typescript
+// Transcript Reader → Signal Classifier → Knowledge Extractor → Store
+async function runExtraction(options: {
+  transcriptPath: string; model: LanguageModel; storePath: string
+}): Promise<ExtractionResult>
+```
+
+<details>
+<summary>Original Implementation (Python pseudocode, Phase 3)</summary>
 
 ```python
 class HomeostasisEngine:
-    dimensions = [
-        "knowledge_sufficiency",
-        "certainty_alignment",
-        "progress_momentum",
-        "communication_health",
-        "productive_engagement",
-        "knowledge_application"
-    ]
+    def assess(self, context) -> dict[str, str]: ...
+    def get_guidance(self, states) -> str: ...
 
-    def assess(self, context: AgentContext) -> dict[str, str]:
-        """Assess each dimension: LOW / HEALTHY / HIGH"""
-        # Hybrid: some computed, some LLM-assessed
-        pass
-
-    def get_guidance(self, states: dict) -> str:
-        """Get guidance for imbalanced dimensions"""
-        pass
-
-    def build_prompt(self, context: AgentContext) -> str:
-        """Assemble: state + guidance + memories + task"""
-        pass
-```
-
-### Context Builder
-
-```python
 class ContextBuilder:
-    def build(self, request: Request) -> Context:
-        # Retrieve relevant memories
-        episodes = episodic_memory.recall(request.query, k=5)
-        facts = semantic_memory.query(request.entities)
-        procedures = procedural_memory.match(request.situation)
+    def build(self, request) -> Context: ...
 
-        # Get homeostasis state
-        states = homeostasis.assess(current_context)
-        guidance = homeostasis.get_guidance(states)
-
-        # Assemble prompt
-        return Context(
-            persona=self.persona_preprompt,
-            user_model=format_theories(user_model.theories),
-            memories=format_memories(episodes, facts, procedures),
-            homeostasis_state=format_states(states),
-            guidance=guidance,
-            task=request.task
-        )
-```
-
-### Tool Executor
-
-```python
 class ToolExecutor:
-    def __init__(self, mcp_tools: list[MCPTool]):
-        self.tools = {t.name: t for t in mcp_tools}
-
-    def execute(self, tool: str, params: dict) -> ToolResult:
-        return self.tools[tool].invoke(params)
+    def execute(self, tool, params) -> ToolResult: ...
 ```
+
+</details>
 
 ---
 
@@ -840,25 +857,36 @@ Agent: "I'll review open MRs while waiting."
 
 ## Open Questions
 
-1. **Assessment reliability** - ~~How consistent is LLM self-assessment of dimensions?~~ PARTIALLY RESOLVED: All assessments are heuristic (no LLM self-assessment implemented). Stage G showed engine-level accuracy is high, but pipeline accuracy depends on upstream data quality (especially Graphiti fact relevance).
-2. **Threshold calibration** - How do we tune thresholds from observation?
-3. **Cross-agent learning** - How do agents learn from each other's mistakes?
-4. **Dimension completeness** - Are 6 dimensions enough for all situations?
-5. ~~**System 1/System 2**~~ - RESOLVED: Activity-Level Routing (see below)
+1. **Assessment reliability** — ~~How consistent is LLM self-assessment?~~ RESOLVED (Phase C): L1 heuristics achieve 33% fewer failures than baseline. L2 LLM assessment planned for Phase D. See [evaluation report](plans/2026-02-12-homeostasis-l0-l2-evaluation-report.md).
+2. **Threshold calibration** — How do we tune thresholds from observation? (Phase E)
+3. **Cross-agent learning** — How do agents learn from each other's mistakes? (deferred)
+4. **Dimension completeness** — Are 6 dimensions enough? (validated against 9 learning scenarios — adequate for current scope)
+5. ~~**System 1/System 2**~~ — RESOLVED: Activity Router → deprecated; ecosystem handles task routing. L0-L4 ThinkingDepth pattern revived for homeostasis. See ThinkingDepth section above.
+6. ~~**Cognitive model storage**~~ — RESOLVED (Phase C): Views over knowledge store via `about` field. See [cognitive models design](plans/2026-02-12-cognitive-models-design.md).
+7. ~~**Memory system choice**~~ — RESOLVED (v2): Graphiti replaced with file-based JSONL knowledge store. See [v2 architecture design](plans/2026-02-11-galatea-v2-architecture-design.md).
 
 ---
 
 ## Related Documents
 
-- **[plans/2026-02-03-activity-routing-design.md](./plans/2026-02-03-activity-routing-design.md)** - Activity routing & model selection (System 1/2)
-- **[plans/2026-02-02-homeostasis-architecture-design.md](./plans/2026-02-02-homeostasis-architecture-design.md)** - Full decision record
-- **[REFERENCE_SCENARIOS.md](./REFERENCE_SCENARIOS.md)** - Detailed scenarios for evaluation
-- **[plans/2026-02-02-memory-system-design.md](./plans/2026-02-02-memory-system-design.md)** - Memory system options
-- **[plans/BRAINSTORM_QUEUE.md](./plans/BRAINSTORM_QUEUE.md)** - Open questions
+### Current (v2)
+- **[plans/2026-02-11-galatea-v2-architecture-design.md](./plans/2026-02-11-galatea-v2-architecture-design.md)** — v2 architecture (homeostasis + memory)
+- **[plans/2026-02-12-cognitive-models-design.md](./plans/2026-02-12-cognitive-models-design.md)** — Cognitive models as views over knowledge store
+- **[plans/2026-02-12-homeostasis-l0-l2-evaluation-report.md](./plans/2026-02-12-homeostasis-l0-l2-evaluation-report.md)** — L0-L2 evaluation results
+- **[plans/2026-02-12-phase-d-homeostasis-refinement.md](./plans/2026-02-12-phase-d-homeostasis-refinement.md)** — Phase D plan (L2/L3, memory lifecycle)
+- **[ROADMAP.md](./ROADMAP.md)** — Full development roadmap (Phases A-F)
+- **[KNOWN_GAPS.md](./KNOWN_GAPS.md)** — Gap analysis with resolution status
+
+### Historical (Phase 3)
+- **[plans/2026-02-03-activity-routing-design.md](./plans/2026-02-03-activity-routing-design.md)** — Activity routing (deprecated, ecosystem owns this)
+- **[plans/2026-02-02-homeostasis-architecture-design.md](./plans/2026-02-02-homeostasis-architecture-design.md)** — Original homeostasis decision record
+- **[plans/2026-02-02-memory-system-design.md](./plans/2026-02-02-memory-system-design.md)** — Memory system options (Graphiti decision, since reversed)
+- **[REFERENCE_SCENARIOS.md](./REFERENCE_SCENARIOS.md)** — Evaluation scenarios
 
 ---
 
-*Architecture document updated: 2026-02-03*
-*Key additions: Activity Router (Layer 0), Self Model with model awareness*
-*Decision: Homeostasis-based architecture with 6 universal dimensions*
-*Based on research: OpenClaw, Cline, GPT-Engineer, MAGELLAN, WorldLLM, Reflexion*
+*Architecture document created: 2026-02-06*
+*v2 reconciliation: 2026-02-13 (Phase C complete)*
+*Key changes: Graphiti → JSONL store, Activity Router → ecosystem, Cognitive Models → views via about field*
+*Foundation: Homeostasis-based architecture with 6 universal dimensions (unchanged)*
+*Research basis: OpenClaw, Cline, GPT-Engineer, MAGELLAN, WorldLLM, Reflexion*
