@@ -11,7 +11,7 @@
 | Project | Sessions | Character | Primary Work |
 |---------|----------|-----------|-------------|
 | **Umka** | 32 | Content-heavy | Museum kiosk, Payload CMS, MQTT IoT, some game dev |
-| **ContextForge** (ContextForgeTS) | 92 | Dev-heavy | TypeScript library, Claude Code as LLM provider, structured output |
+| **ContextForge** (ContextForgeTS) | 92 | Dev-heavy | Context window management, Claude Code provider, zone-based caching, compression, skill system |
 | **Galatea** | 37 | Meta | Agent developing itself, homeostasis, memory, extraction |
 | **telejobs** | ~5 | Backend | Telegram bot, Poetry/Python processing service |
 | **mygamebook** (games-with-llms) | ~3 | Experimental | LLM-powered game narratives |
@@ -43,12 +43,13 @@
 | Technology | Projects | Knowledge Density |
 |-----------|----------|------------------|
 | TypeScript | All | Very High |
-| MQTT | Umka, ContextForge | High |
+| MQTT | Umka | High |
 | Payload CMS | Umka | High |
 | Claude Code | ContextForge, Galatea | High |
 | Vercel AI SDK | Galatea, ContextForge | High |
-| Ollama | Galatea | High |
-| React / TanStack | Galatea | Medium |
+| Convex | ContextForge | High |
+| Ollama | Galatea, ContextForge | High |
+| React / TanStack | Galatea, ContextForge | Medium |
 | Drizzle ORM | Galatea | Medium |
 | PostgreSQL | Galatea, Umka | Medium |
 | Docker | Galatea, Umka | Medium |
@@ -74,13 +75,26 @@ Notable entries (samples):
 - `[procedure, 0.85]` MQTT message handling: parse JSON, validate schema, update state
 - `[decision, 0.9]` Chose Payload CMS over Strapi for content management
 
-### ContextForge (not yet extracted)
+### ContextForge (not yet extracted, see `docs/research/contextforgets-analysis.md`)
 
-92 sessions available. Expected high density of:
+92 sessions available. Project is a context window management app (Convex + React 19) with:
+- **Claude Code as LLM provider** via `@anthropic-ai/claude-agent-sdk` (subprocess, DB-backed streaming)
+- **Zone-based prompt caching** (PERMANENT → STABLE → WORKING, 50-90% cost savings)
+- **LLM-based compression** (semantic/structural/statistical, quality-gated)
+- **Skill system** (SKILL.md parser, import from local/URL/ZIP, export)
+- **Token budgets** (per-zone limits, visual warnings at 80%/95%)
+- **Multi-provider** (Ollama, Claude Code, OpenRouter — three different streaming patterns)
+
+Expected extraction density:
 - TypeScript patterns and decisions
 - Claude Code provider implementation details
-- Structured output / schema design decisions
-- Library architecture decisions
+- Convex real-time architecture decisions
+- Context assembly and caching strategies
+- Compression quality control approaches
+
+**Key divergence from Galatea:** ContextForge is a tool for humans to manage LLM context. Galatea is an agent that manages its own context. ContextForge optimizes human-LLM interaction; Galatea optimizes agent self-regulation.
+
+**Reusable for Galatea:** Zone-based caching (when switching to Claude/OpenRouter primary), compression for sliding window, SKILL.md parser for Phase D auto-generation, token budget approach for T5 gap.
 
 ### Galatea (not yet extracted)
 
@@ -89,25 +103,41 @@ Notable entries (samples):
 - Process preferences (research-first, YAGNI, conventional commits)
 - Tool preferences (pnpm, shadcn/ui, vitest)
 
+## LLM Provider Strategy
+
+**Intended design:** Ollama for small tasks (extraction, guard/jailbreak), configurable primary LLM (Claude/ChatGPT via OpenRouter) for main thinking.
+
+**Current state:**
+- Chat: Multi-provider via `getModel("ollama" | "openrouter" | "claude-code", modelId)` — per-request overrides already work
+- Extraction: Hardcoded to Ollama in `server/routes/api/extract.post.ts` — uses same `LanguageModel` interface, ~10 lines to make configurable
+- All three providers installed: `ai-sdk-ollama`, `@openrouter/ai-sdk-provider`, `ai-sdk-provider-claude-code`
+
+**Gap:** Small. Extraction route needs to use `getModel()` factory instead of hardcoding `createOllamaModel()`. Add `EXTRACTION_PROVIDER` env var. Everything downstream (extraction pipeline, knowledge extractor) is already provider-agnostic.
+
+**ContextForge validates this split:** Uses Claude Code for thinking/compression, could use Ollama for lightweight tasks. Patterns are compatible.
+
+---
+
 ## Cross-Project Knowledge Challenges
 
 ### Entity Ambiguity
-- "MQTT" appears in both Umka and ContextForge — different contexts
 - "TypeScript" appears everywhere — need project scoping
 - "the agent" could mean Galatea itself or a ContextForge agent
+- "context" could mean LLM context window (ContextForge) or agent context (Galatea)
+- "streaming" has different implementations per project (HTTP vs DB-backed vs SSE)
 
 ### Resolution via `about` field
 ```
 about: {entity: "umka", type: "project"}       # Umka-specific MQTT
-about: {entity: "contextforge", type: "project"} # ContextForge-specific MQTT
-about: {entity: "mqtt", type: "domain"}          # General MQTT knowledge
+about: {entity: "contextforge", type: "project"} # ContextForge-specific context assembly
+about: {entity: "typescript", type: "domain"}    # General TypeScript knowledge
 ```
 
 ### Open Question
-When user says "MQTT client needs to persist" in a ContextForge session:
-1. Should we retrieve Umka's MQTT knowledge too? (cross-pollination)
-2. Or only ContextForge-tagged entries? (strict scoping)
-3. Or domain-tagged "mqtt" entries + project-tagged entries? (hybrid)
+When user says "context assembly needs caching" in a Galatea session:
+1. Should we retrieve ContextForge's caching knowledge too? (cross-pollination)
+2. Or only Galatea-tagged entries? (strict scoping)
+3. Or domain-tagged entries + project-tagged entries? (hybrid)
 
 **Recommendation:** Hybrid. Retrieve:
 - All entries with `about.entity = "contextforge"`
