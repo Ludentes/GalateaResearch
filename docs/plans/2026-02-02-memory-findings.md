@@ -1,8 +1,27 @@
 # Memory System Findings
 
 **Date**: 2026-02-02
-**Status**: Preliminary analysis
-**Decision**: Leaning Mem0 for MVP, may add Graphiti for temporal features
+**Status**: Historical — Decision reversed
+**Original Decision**: Leaning Mem0 for MVP, may add Graphiti for temporal features
+**Actual Decision**: File-based JSONL with LLM extraction pipeline (Phase B)
+**Implementation**: `server/memory/knowledge-store.ts`, `server/memory/knowledge-extractor.ts`
+
+> **Reconciliation note (2026-02-13):** This document captures early research (Day 1 of the project).
+> The Mem0 vs Graphiti analysis is **historical only** — neither was adopted.
+>
+> **What actually happened:**
+> - Mem0 extraction quality was poor (18-21% recall in benchmarks)
+> - Graphiti had poor extraction quality too
+> - We built a custom LLM extraction pipeline using Ollama (glm-4.7-flash)
+> - Storage: simple JSONL file (`data/memory/entries.jsonl`), not PostgreSQL/FalkorDB
+> - Schema: unified `KnowledgeEntry` type (not separate Episode/Fact/Procedure interfaces)
+> - Retrieval: keyword + recency scoring, not embedding-based semantic search
+>
+> **What remains valuable from this doc:**
+> - Memory type taxonomy (episodic, semantic, procedural) — informed `KnowledgeEntry.type` values
+> - Problems identified (retrieval relevance, confidence calibration) — still open, tracked in KNOWN_GAPS.md
+> - Event-to-memory pipeline concept — implemented as extraction pipeline in Phase B
+> - The principle "use existing tools" held for extraction (Ollama), but storage was simpler than anticipated
 
 ---
 
@@ -332,15 +351,15 @@ class GraphitiMemoryLayer(MemoryLayer):
 
 ---
 
-## Next Steps
+## Next Steps — Status
 
-1. Set up Mem0 for MVP
-2. Implement MemoryLayer interface
-3. Test retrieval quality with reference scenarios
-4. Evaluate need for Graphiti temporal features
-5. Design cross-agent memory sharing
+1. ~~Set up Mem0 for MVP~~ — Not done. Built custom JSONL store instead (Phase B).
+2. ~~Implement MemoryLayer interface~~ — Not done. `KnowledgeStore` API is simpler: `loadEntries()`, `appendEntries()`, `entriesByEntity()`, `entriesBySubjectType()`.
+3. ~~Test retrieval quality with reference scenarios~~ — Partially done. End-to-end trace (Phase C) revealed `retrievedFacts` always empty. Entity-based retrieval is Phase D Task 5.
+4. ~~Evaluate need for Graphiti temporal features~~ — Not needed for current scope. Temporal validity (`supersededBy`, confidence decay) planned for Phase E.
+5. Cross-agent memory sharing — Phase F+ (multi-agent deployment).
 
 ---
 
 *Document created: 2026-02-02*
-*Status: Preliminary findings, decision pending full evaluation*
+*Status: Historical research — see v2 architecture design for current approach*

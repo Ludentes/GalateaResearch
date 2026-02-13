@@ -1,9 +1,9 @@
 # Galatea v2: Architecture Redesign
 
-**Date**: 2026-02-11
-**Status**: Draft — Awaiting validation of shadow learning approach
+**Date**: 2026-02-11 (updated 2026-02-13)
+**Status**: Validated — Shadow learning (Phase B), homeostasis (Phase C), observation (Phase C) implemented. Phase D: closing the feedback loop.
 **Authors**: Brainstorm session (human + Claude)
-**Supersedes**: `PSYCHOLOGICAL_ARCHITECTURE.md` (partially — homeostasis concept survives, infrastructure doesn't)
+**Relationship**: `PSYCHOLOGICAL_ARCHITECTURE.md` reconciled with v2 (psychological foundations survive, infrastructure replaced)
 
 ---
 
@@ -237,15 +237,17 @@ Skills lack built-in temporal validity. **Gap: need `valid_until` convention in 
 
 ---
 
-## Identified Gaps (to resolve)
+## Identified Gaps (status as of 2026-02-13)
 
-| # | Gap | Severity | Resolution Direction |
-|---|---|---|---|
-| 1 | **Shadow learning pipeline** | Critical | Prototype the shadow-learning skill. Determine if extraction can be a skill or needs code. |
-| 2 | **Heartbeat** | High | Emerges from homeostasis — needs a long-running process or scheduled trigger for periodic dimension re-evaluation. |
-| 3 | **Memory overflow** | Medium | Start with CLAUDE.md (Tier 1). Design clean upgrade path to RAG/Mem0 (Tier 3) when needed. |
-| 4 | **Temporal validity** | Medium | Convention: custom metadata in SKILL.md frontmatter (`valid_until`, `confidence`) + lifecycle management code. |
-| 5 | **Skill auto-generation** | High | Pipeline from extracted procedures → SKILL.md files. Needs code (template + LLM formatting). |
+| # | Gap | Severity | Status | Resolution |
+|---|---|---|---|---|
+| 1 | **Shadow learning pipeline** | Critical | ✅ Phase B | Six-module pipeline: Transcript Reader → Signal Classifier → Knowledge Extractor → Store → Context Assembler |
+| 2 | **Heartbeat / tick** | High | 📋 Phase D | tick() function: self-model → homeostasis → channel scan → LLM action |
+| 3 | **Memory overflow** | Medium | 📋 Deferred | Start with CLAUDE.md (Tier 1). Design clean upgrade path to RAG/Mem0 (Tier 3) when needed. |
+| 4 | **Temporal validity** | Medium | 📋 Phase E | Convention: custom metadata in SKILL.md frontmatter (`valid_until`, `confidence`) + lifecycle management code |
+| 5 | **Skill auto-generation** | High | 📋 Phase F | Pipeline from extracted procedures → SKILL.md files. Needs code (template + LLM formatting) |
+
+See `docs/KNOWN_GAPS.md` for full gap analysis (10 gaps tracked).
 
 ---
 
@@ -271,7 +273,7 @@ Skills lack built-in temporal validity. **Gap: need `valid_until` convention in 
 
 ## Observation Pipeline Mapping
 
-The existing observation pipeline design (see `docs/OBSERVATION_PIPELINE.md`) maps cleanly to v2. OTEL-first architecture is kept. Output format changes.
+The existing observation pipeline design (see `docs/observation-pipeline/`) maps cleanly to v2. OTEL-first architecture is kept. Output format changes.
 
 | Pipeline Layer | Original Design | v2 Change |
 |---|---|---|
@@ -331,64 +333,25 @@ Memory grows large  → tier upgrade (CLAUDE.md → structured files → RAG/Mem
 
 ---
 
-## Code Cleanup (from Phase 2-3)
+## Implementation Status (2026-02-13)
 
-The v2 pivot deprecates significant code from the Phase 2-3 implementation. Cleanup tasks for the v2 implementation plan:
+Code cleanup from Phase 2-3 is complete. Deprecated infrastructure (Activity Router, Reflexion Loop, Graphiti, PostgreSQL fact/procedure tables) was removed during the v2 pivot.
 
-### Remove (deprecated infrastructure)
+### What's Built
 
-| Module | Files | Reason |
-|--------|-------|--------|
-| Activity Router | `server/engine/activity-router.ts` + tests | Replaced by skill availability routing |
-| Reflexion Loop | `server/engine/reflexion-loop.ts` + tests | Replaced by draft-critique-revise skill |
-| Context Assembler | `server/memory/context-assembler.ts` + tests | Replaced by Skills progressive disclosure + CLAUDE.md |
-| Cognitive Models | `server/memory/cognitive-models.ts` + tests | Replaced by CLAUDE.md entries |
-| Graphiti Client | `server/memory/graphiti-client.ts` + tests | Downgraded to Tier 3 (optional) |
-| Memory Types | `server/memory/types.ts` | Replaced by SKILL.md/CLAUDE.md formats |
-| Deprecated DB queries | `server/db/queries/facts.ts`, `procedures.ts`, `gatekeeper-log.ts` | File-based memory replaces DB |
-| Deprecated DB tables | `facts`, `procedures`, `gatekeeper_log`, `homeostasis_states` in schema | File-based memory replaces DB |
-| Deprecated routes | `server/routes/api/memories/local-facts.get.ts`, `search.get.ts`, `episodes.get.ts` | No longer needed |
-| Scripts | `scripts/clear-all-memory.ts`, `clear-graphiti-memory.ts` | No Graphiti/PostgreSQL memory |
-| Deprecated tests | `tests/memory/`, `tests/fixtures/graphiti-*`, `tests/configs/graphiti-*` | Test deprecated infrastructure |
+| Component | Status | Files |
+|-----------|--------|-------|
+| Shadow learning pipeline | ✅ Phase B | `server/memory/` (6 modules) |
+| Homeostasis engine (L0-L2) | ✅ Phase C | `server/engine/homeostasis-engine.ts` |
+| OTEL observation hooks | ✅ Phase C | `scripts/hooks/` |
+| Context assembler | ✅ Phase C | `server/memory/context-assembler.ts` |
+| Cognitive models (about field) | ✅ Phase C | `server/memory/types.ts`, `knowledge-store.ts` |
+| Multi-provider LLM | ✅ Phase A | `server/providers/` |
+| Chat (streaming + non-streaming) | ✅ Phase A | `server/functions/chat.logic.ts` |
 
-### Evaluate for reuse (shadow learning pipeline)
+### What's Next
 
-| Module | Files | Potential Reuse |
-|--------|-------|----------------|
-| Gatekeeper | `server/memory/gatekeeper.ts` | Pattern matching logic for observation filtering |
-| Fact Extractor | `server/memory/fact-extractor.ts` | Extraction patterns for shadow learning |
-| Patterns | `server/memory/patterns.ts` | Pattern categories and entity normalization |
-| Extraction Orchestrator | `server/memory/extraction-orchestrator.ts` | Cheap-first extractor strategy |
-| Ollama Extractor | `server/memory/extractors/ollama.ts` | LLM extraction fallback |
-
-### Keep (still valid)
-
-| Module | Files | Why |
-|--------|-------|-----|
-| LLM Providers | `server/providers/` | Multi-provider support unchanged |
-| Langfuse Plugin | `server/plugins/langfuse.ts` | Telemetry unchanged |
-| Chat Logic | `server/functions/chat.ts` (simplified) | Core chat still needed |
-| DB Core | `server/db/schema.ts` (sessions, messages, personas) | Session/message storage still needed |
-| Scenario Tests | `tests/scenarios/` | Behavioral scenarios still valid |
-
-### Dependencies to evaluate
-
-| Dependency | Status |
-|------------|--------|
-| `drizzle-orm` / `drizzle-kit` | Keep if sessions/messages stay in PostgreSQL |
-| `postgres` | Keep if sessions/messages stay in PostgreSQL |
-| Other deps | No changes needed |
-
----
-
-## Next Steps
-
-1. ~~Explore shadow learning~~ → See learning scenarios doc (completed)
-2. ~~Clean up docs~~ → Archived 22 docs, updated README and supporting docs (completed)
-3. **Plan v2 implementation** — Design the system, prototype shadow learning pipeline
-4. **Write the homeostasis guidance skill** — Define dimensions and "healthy" as a SKILL.md
-5. **Design memory tier upgrade path** — CLAUDE.md → structured files → RAG/Mem0 transition points
-6. **Execute code cleanup** — Remove deprecated modules, evaluate reuse candidates
+See `docs/ROADMAP.md` for Phase D (Formalize + Close the Loop) and beyond.
 
 ---
 

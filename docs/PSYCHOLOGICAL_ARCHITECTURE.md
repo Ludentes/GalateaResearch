@@ -356,7 +356,7 @@ The L0-L4 pattern appears in multiple domains across the architecture:
 | certainty_alignment | L2 | LLM semantic (defaults HEALTHY without LLM) |
 | knowledge_application | L2 | LLM semantic (defaults HEALTHY without LLM) |
 
-L0 cache with configurable TTL per dimension. L3/L4 planned for Phase D/E.
+L0 cache with configurable TTL per dimension. L3 meta-assessment planned for Phase E.
 
 See: `server/engine/homeostasis-engine.ts`, [Evaluation Report](archive/completed/phase-c/2026-02-12-homeostasis-l0-l2-evaluation-report.md)
 
@@ -387,7 +387,7 @@ Agents perform activities with vastly different cognitive requirements:
 
 These findings led to the v2 architecture redesign, which replaced Graphiti with file-based memory and deprecated the Activity Router in favor of ecosystem-based task routing.
 
-See: `docs/PHASE3_COMPLETE.md`, `docs/STAGE_G_FINDINGS.md`
+See: `docs/archive/pre-v2/STAGE_G_FINDINGS.md`
 
 </details>
 
@@ -728,7 +728,7 @@ function getGuidance(state: HomeostasisState): string
 
 // L0: Cache layer (configurable TTL per dimension)
 // L1: Computed heuristics (keyword matching, Jaccard similarity, time-based)
-// L2: LLM semantic (Phase D — defaults HEALTHY without LLM)
+// L2: LLM semantic (Phase E — defaults HEALTHY without LLM)
 ```
 
 **Context Assembler** (`server/memory/context-assembler.ts`):

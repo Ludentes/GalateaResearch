@@ -1,8 +1,21 @@
 # Homeostasis-Based Agent Architecture
 
 **Date**: 2026-02-02
-**Status**: Accepted
+**Status**: Accepted — Implemented (Phase C)
 **Decision**: Use homeostasis as the core organizing principle for agent behavior
+**Implementation**: `server/engine/homeostasis-engine.ts` (TypeScript, not Python)
+**Tests**: `server/engine/__tests__/homeostasis-engine.test.ts`
+**Guidance**: `server/engine/guidance.yaml`
+**Types**: `server/engine/types.ts`
+
+> **Reconciliation note (2026-02-13):** This document established the design direction.
+> Implementation diverged in specifics:
+> - **Language**: Python pseudocode → TypeScript implementation
+> - **Memory system**: References to "Mem0/Graphiti" → file-based JSONL knowledge store (`server/memory/`)
+> - **Assessment**: Hybrid approach confirmed — 4/6 dimensions computed, 2 default HEALTHY (Phase E: LLM self-assessment)
+> - **Agent Spec Format**: YAML agent specs not implemented; identity via preprompts (`data/preprompts/`)
+> - **Three-Layer Architecture**: Layer 1 (guidance.yaml) + Layer 2 (sensor-based assessment) implemented. Layer 3 (guardrails) conceptual only.
+> - The core insight — 6 dimensions, balance-seeking, guidance from imbalance — is fully validated.
 
 ---
 
@@ -365,10 +378,10 @@ Memory retrieval: "Here's what you know about auth patterns..."
 LLM: "I'll use Clerk based on this prior experience"
 ```
 
-The memory system (Mem0/Graphiti) stores:
+The memory system (file-based JSONL knowledge store) stores:
 - Facts with confidence
 - Procedures with triggers
-- Episodes for context
+- Decisions, corrections, preferences, rules
 
 Homeostasis doesn't change from learning. Memories do.
 
@@ -376,10 +389,10 @@ Homeostasis doesn't change from learning. Memories do.
 
 ## Open Questions
 
-1. **Assessment reliability**: How consistent is LLM self-assessment?
-2. **Dimension completeness**: Are 6 dimensions enough for all situations?
-3. **Threshold calibration**: How do we tune thresholds from observation?
-4. **Cross-agent patterns**: How do agents learn from each other's mistakes?
+1. **Assessment reliability**: How consistent is LLM self-assessment? — *Deferred to Phase E (LLM-based certainty_alignment and knowledge_application sensors)*
+2. **Dimension completeness**: Are 6 dimensions enough for all situations? — *Validated: 6 dimensions sufficient for Phase C/D. Re-evaluate after multi-agent deployment.*
+3. **Threshold calibration**: How do we tune thresholds from observation? — *Phase E: will use OTEL event data to calibrate*
+4. **Cross-agent patterns**: How do agents learn from each other's mistakes? — *Phase F+: multi-agent deployment*
 
 ---
 
@@ -402,10 +415,10 @@ Homeostasis doesn't change from learning. Memories do.
 
 ---
 
-## Next Steps
+## Next Steps — Status
 
-1. Implement HomeostasisEngine prototype
-2. Test with reference scenarios
-3. Integrate with memory system (Mem0)
-4. Calibrate thresholds from shadow training
-5. Evaluate: Does psychology + homeostasis beat plain LLM?
+1. ~~Implement HomeostasisEngine prototype~~ — Done (Phase C): `server/engine/homeostasis-engine.ts`
+2. ~~Test with reference scenarios~~ — Done (Phase C): L0-L2 evaluation passed
+3. ~~Integrate with memory system~~ — Done (Phase C): wired into context assembler
+4. Calibrate thresholds from shadow training — Phase E (requires OTEL observation data)
+5. Evaluate: Does psychology + homeostasis beat plain LLM? — Phase E+ (requires tick() function from Phase D)

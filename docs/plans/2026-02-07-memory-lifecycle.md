@@ -1,15 +1,31 @@
 # Memory Lifecycle
 
 **Date:** 2026-02-07
-**Status:** Draft
+**Status:** Historical design — conceptually valid, implementation differs
 **Source of Truth:** [PSYCHOLOGICAL_ARCHITECTURE.md](../PSYCHOLOGICAL_ARCHITECTURE.md)
 **Related:**
 - [OBSERVATION_PIPELINE.md](../archive/pre-v2/OBSERVATION_PIPELINE.md) (Layer 4: Memory Formation, archived)
-- [GATEKEEPER.md](../archive/pre-v2/memory/GATEKEEPER.md) (Conversation filtering, archived)
 - [REFERENCE_SCENARIOS.md](../REFERENCE_SCENARIOS.md) (Expected behavior)
-- [memory-system-design.md](./2026-02-02-memory-system-design.md) (Original design)
-- [unified-memory-extraction-design.md](./2026-02-06-unified-memory-extraction-design.md) (Extraction approach)
-- [pluggable-extraction-interface.md](./2026-02-06-pluggable-extraction-interface.md) (Extractor abstraction)
+- [memory-findings.md](./2026-02-02-memory-findings.md) (Early Mem0/Graphiti analysis)
+- [cognitive-models-design.md](./2026-02-12-cognitive-models-design.md) (How models are implemented)
+- [learning-scenarios.md](./2026-02-11-learning-scenarios.md) (End-to-end learning scenarios)
+
+> **Reconciliation note (2026-02-13):** This document designed the ideal memory lifecycle.
+> The conceptual framework (create → store → retrieve → edit → promote) is valid, but
+> implementation details diverged significantly:
+>
+> **Storage:** PostgreSQL + pgvector / FalkorDB → **file-based JSONL** (`data/memory/entries.jsonl`)
+> **Schema:** Separate Episode/Fact/Procedure interfaces → **unified `KnowledgeEntry`** with `type` field
+> **Extraction:** Pattern-based + pluggable LLM → **unified LLM extraction pipeline** (Ollama)
+> **Cognitive models:** Separate interfaces → **views over knowledge store** (filter by `about` field)
+> **Retrieval:** Embedding-based semantic search → **keyword + recency scoring** (Phase D: entity-based)
+>
+> **What's implemented (Phase B/C):** Creation (extraction pipeline), storage (JSONL append),
+> basic retrieval (context assembler). **What's Phase D:** Entity-based retrieval, supersession
+> code path. **What's Phase E:** Confidence decay, promotion/consolidation, temporal validity.
+>
+> The lifecycle phases, scenario traces, and promotion concepts remain valuable as the
+> target architecture. The SQL queries and storage-specific code are illustrative only.
 
 ---
 
@@ -18,7 +34,7 @@
 This document traces the complete lifecycle of every memory type in Galatea:
 how each is **created**, **stored**, **retrieved**, **edited/superseded**, and **promoted**.
 
-The extraction design (pattern-based + pluggable LLM fallback) is the extraction
+The extraction pipeline (`server/memory/knowledge-extractor.ts`) is the extraction
 layer within this larger system. It is NOT the whole memory system.
 
 ---

@@ -268,8 +268,8 @@ Models inherit the lifecycle of their underlying entries:
 | Lifecycle Event | What Happens to Models |
 |----------------|----------------------|
 | **New extraction** | New entries may add to any model |
-| **Confidence decay** (Phase D) | Old entries decay → model "forgets" stale knowledge |
-| **Consolidation** (Phase D) | High-confidence entries promoted to CLAUDE.md |
+| **Confidence decay** (Phase E) | Old entries decay → model "forgets" stale knowledge |
+| **Consolidation** (Phase E) | High-confidence entries promoted to CLAUDE.md |
 | **Supersession** | Entry replaced → model view automatically uses newer entry |
 | **Entity merge** | If "Alina" and "alina_pm" are the same → rename entity |
 
