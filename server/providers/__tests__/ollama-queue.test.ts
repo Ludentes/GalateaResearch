@@ -206,7 +206,7 @@ describe("OllamaQueue", () => {
   // ── acquireSlot ────────────────────────────────────────────
 
   it("acquireSlot blocks until slot available", async () => {
-    const release1 = await queue.acquireSlot("interactive")
+    const slot1 = await queue.acquireSlot("interactive")
 
     // Try to acquire another — should not resolve quickly
     const second = queue.acquireSlot("interactive")
@@ -218,16 +218,16 @@ describe("OllamaQueue", () => {
 
     expect(raceResult).toBe("timeout")
 
-    release1()
+    slot1.release()
     // Now second should resolve
-    const release2 = await second
-    expect(typeof release2).toBe("function")
-    release2()
+    const slot2 = await second
+    expect(typeof slot2.release).toBe("function")
+    slot2.release()
   })
 
   it("acquireSlot release frees the slot", async () => {
-    const release = await queue.acquireSlot("interactive")
-    release()
+    const slot = await queue.acquireSlot("interactive")
+    slot.release()
 
     // Next enqueue should proceed immediately
     const start = Date.now()
@@ -235,5 +235,15 @@ describe("OllamaQueue", () => {
     const elapsed = Date.now() - start
 
     expect(elapsed).toBeLessThan(20)
+  })
+
+  it("acquireSlot release(false) records failure for circuit breaker", async () => {
+    // Fail via acquireSlot 3 times
+    for (let i = 0; i < 3; i++) {
+      const slot = await queue.acquireSlot("batch")
+      slot.release(false) // report failure
+    }
+
+    expect(queue.state.circuitState).toBe("open")
   })
 })

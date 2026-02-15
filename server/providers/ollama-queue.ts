@@ -75,17 +75,25 @@ export class OllamaQueue {
     }
   }
 
-  async acquireSlot(priority: Priority = "interactive"): Promise<() => void> {
+  async acquireSlot(
+    priority: Priority = "interactive",
+  ): Promise<{ release: (success?: boolean) => void }> {
     this.checkCircuit()
 
     await this.waitForSlot(priority)
 
     let released = false
-    return () => {
-      if (released) return
-      released = true
-      this.onSuccess()
-      this.release()
+    return {
+      release: (success = true) => {
+        if (released) return
+        released = true
+        if (success) {
+          this.onSuccess()
+        } else {
+          this.onFailure()
+        }
+        this.release()
+      },
     }
   }
 
