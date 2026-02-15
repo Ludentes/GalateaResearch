@@ -34,6 +34,6 @@ export interface TickResult {
   pendingMessages: PendingMessage[]
   action: "respond" | "extract" | "idle"
   action_target?: { channel: string; to?: string }
-  response?: { text: string }
+  response?: { text: string; template?: boolean }
   timestamp?: string
 }

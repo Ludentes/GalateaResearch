@@ -127,8 +127,48 @@ describe("Layer 3: No pending messages, agent stays idle", () => {
     expect(result.selfModel.availableProviders.length).toBeGreaterThan(0)
   })
 
-  it.todo("powered-down mode produces template response when no LLM available")
-  // Given: Ollama stopped, OpenRouter rate-limited
-  // When: tick runs, reaches stage 4
-  // Then: response is template-based, not LLM-generated
+})
+
+describe("Layer 3: Powered-down mode (no LLM available)", () => {
+  let world: TestWorld
+
+  beforeAll(async () => {
+    await ensureTestDb()
+
+    world = await scenario("powered-down")
+      .withSession("umka")
+      .withPendingMessage({
+        from: "alina",
+        channel: "discord",
+        content: "Are you there?",
+        receivedAt: new Date().toISOString(),
+      })
+      .seed()
+  }, 30_000)
+
+  afterAll(async () => {
+    if (world) await world.teardown()
+    await closeTestDb()
+  })
+
+  it("powered-down mode produces template response when no LLM available", async () => {
+    const origUrl = process.env.OLLAMA_BASE_URL
+    const origKey = process.env.OPENROUTER_API_KEY
+    const origPath = process.env.PATH
+    process.env.OLLAMA_BASE_URL = "http://localhost:19999" // unreachable
+    delete process.env.OPENROUTER_API_KEY
+    process.env.PATH = "" // prevent claude CLI detection
+
+    try {
+      const result = await world.tick("manual")
+      expect(result.action).toBe("respond")
+      expect(result.response?.template).toBe(true)
+      expect(result.response?.text).toContain("unable to generate")
+    } finally {
+      if (origUrl) process.env.OLLAMA_BASE_URL = origUrl
+      else delete process.env.OLLAMA_BASE_URL
+      if (origKey) process.env.OPENROUTER_API_KEY = origKey
+      if (origPath) process.env.PATH = origPath
+    }
+  }, 30_000)
 })

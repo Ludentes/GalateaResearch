@@ -93,9 +93,39 @@ export async function tick(
       await appendActivityLog(tickResult, statePath)
       return tickResult
     }
+
+    // Powered-down mode: pending message but no LLM available
+    const templateText =
+      "I received your message but I'm currently unable to generate a response — no language model is available. I'll respond properly once connectivity is restored."
+
+    try {
+      await dispatch(
+        { channel: msg.channel, to: msg.from },
+        templateText,
+        msg.metadata,
+      )
+    } catch {
+      // No handler registered
+    }
+
+    await removePendingMessage(msg, statePath)
+
+    const templateResult: TickResult = {
+      homeostasis,
+      retrievedFacts,
+      context,
+      selfModel,
+      pendingMessages: pending,
+      action: "respond",
+      action_target: { channel: msg.channel, to: msg.from },
+      response: { text: templateText, template: true },
+      timestamp: new Date().toISOString(),
+    }
+    await appendActivityLog(templateResult, statePath)
+    return templateResult
   }
 
-  // No pending messages or no LLM → idle
+  // No pending messages → idle
   const agentContext: AgentContext = {
     sessionId: `tick-${Date.now()}`,
     currentMessage: "",
