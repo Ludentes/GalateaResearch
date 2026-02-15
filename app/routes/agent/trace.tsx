@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router"
 import { useMutation } from "@tanstack/react-query"
+import { createFileRoute, Link } from "@tanstack/react-router"
 import { useState } from "react"
 
 export const Route = createFileRoute("/agent/trace")({
@@ -31,11 +31,33 @@ function TracePage() {
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Pipeline Trace</h1>
           <nav className="flex gap-4 text-sm">
-            <Link to="/agent" className="text-muted-foreground hover:text-foreground">Status</Link>
-            <Link to="/agent/knowledge" className="text-muted-foreground hover:text-foreground">Knowledge</Link>
-            <Link to="/agent/trace" className="font-medium underline">Trace</Link>
-            <Link to="/agent/config" className="text-muted-foreground hover:text-foreground">Config</Link>
-            <Link to="/agent/chat" className="text-muted-foreground hover:text-foreground">Chat</Link>
+            <Link
+              to="/agent"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Status
+            </Link>
+            <Link
+              to="/agent/knowledge"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Knowledge
+            </Link>
+            <Link to="/agent/trace" className="font-medium underline">
+              Trace
+            </Link>
+            <Link
+              to="/agent/config"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Config
+            </Link>
+            <Link
+              to="/agent/chat"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Chat
+            </Link>
           </nav>
         </div>
 
@@ -69,7 +91,8 @@ function TracePage() {
         {data && (
           <>
             <div className="text-sm text-muted-foreground">
-              {data.entries?.length ?? 0} entries retrieved, {data.matchedEntities?.length ?? 0} entities matched
+              {data.entries?.length ?? 0} entries retrieved,{" "}
+              {data.matchedEntities?.length ?? 0} entities matched
             </div>
 
             {/* Stage waterfall */}
@@ -78,7 +101,8 @@ function TracePage() {
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-mono font-medium">{step.stage}</h3>
                   <div className="text-sm text-muted-foreground">
-                    {step.input} in → {step.output} pass → {step.filtered} filtered
+                    {step.input} in → {step.output} pass → {step.filtered}{" "}
+                    filtered
                   </div>
                 </div>
                 <div className="space-y-1">
@@ -86,10 +110,18 @@ function TracePage() {
                     <div
                       key={j}
                       className={`text-xs font-mono p-1.5 rounded ${
-                        d.action === "pass" ? "bg-green-500/10" : "bg-red-500/10"
+                        d.action === "pass"
+                          ? "bg-green-500/10"
+                          : "bg-red-500/10"
                       }`}
                     >
-                      <span className={d.action === "pass" ? "text-green-600" : "text-red-600"}>
+                      <span
+                        className={
+                          d.action === "pass"
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }
+                      >
                         {d.action.toUpperCase()}
                       </span>{" "}
                       {d.content} — {d.reason}

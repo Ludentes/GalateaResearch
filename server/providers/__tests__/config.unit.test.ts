@@ -50,13 +50,13 @@ describe("LLM Provider Config", () => {
     )
   })
 
-  it("throws when claude-code missing ANTHROPIC_API_KEY", async () => {
+  it("accepts claude-code without API key (uses CLI auth)", async () => {
     process.env.LLM_PROVIDER = "claude-code"
     delete process.env.ANTHROPIC_API_KEY
     const { getLLMConfig } = await import("../config")
-    expect(() => getLLMConfig()).toThrow(
-      "ANTHROPIC_API_KEY is required when LLM_PROVIDER=claude-code",
-    )
+    const config = getLLMConfig()
+    expect(config.provider).toBe("claude-code")
+    expect(config.model).toBe("sonnet")
   })
 
   it("returns openrouter config when API key is set", async () => {

@@ -1,6 +1,6 @@
 import { Client, Events, GatewayIntentBits } from "discord.js"
-import { getDiscordConfig } from "../engine/config"
 import { registerHandler } from "../agent/dispatcher"
+import { getDiscordConfig } from "../engine/config"
 import { handleInboundMessage } from "./handlers"
 
 let client: Client | null = null

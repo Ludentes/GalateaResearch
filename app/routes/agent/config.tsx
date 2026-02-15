@@ -1,6 +1,6 @@
-import type React from "react"
-import { createFileRoute, Link } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
+import { createFileRoute, Link } from "@tanstack/react-router"
+import type React from "react"
 
 export const Route = createFileRoute("/agent/config")({
   component: ConfigPage,
@@ -18,11 +18,33 @@ function ConfigPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Config Viewer</h1>
           <nav className="flex gap-4 text-sm">
-            <Link to="/agent" className="text-muted-foreground hover:text-foreground">Status</Link>
-            <Link to="/agent/knowledge" className="text-muted-foreground hover:text-foreground">Knowledge</Link>
-            <Link to="/agent/trace" className="text-muted-foreground hover:text-foreground">Trace</Link>
-            <Link to="/agent/config" className="font-medium underline">Config</Link>
-            <Link to="/agent/chat" className="text-muted-foreground hover:text-foreground">Chat</Link>
+            <Link
+              to="/agent"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Status
+            </Link>
+            <Link
+              to="/agent/knowledge"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Knowledge
+            </Link>
+            <Link
+              to="/agent/trace"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Trace
+            </Link>
+            <Link to="/agent/config" className="font-medium underline">
+              Config
+            </Link>
+            <Link
+              to="/agent/chat"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Chat
+            </Link>
           </nav>
         </div>
 
@@ -31,14 +53,18 @@ function ConfigPage() {
         ) : (
           <div className="space-y-6">
             {data?.config &&
-              Object.entries(data.config).map(([section, values]: [string, any]) => (
-                <div key={section} className="border rounded-lg p-4">
-                  <h2 className="text-lg font-semibold mb-3 font-mono">{section}</h2>
-                  <div className="space-y-2">
-                    {renderConfigValues(values, "")}
+              Object.entries(data.config).map(
+                ([section, values]: [string, any]) => (
+                  <div key={section} className="border rounded-lg p-4">
+                    <h2 className="text-lg font-semibold mb-3 font-mono">
+                      {section}
+                    </h2>
+                    <div className="space-y-2">
+                      {renderConfigValues(values, "")}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ),
+              )}
           </div>
         )}
 
@@ -57,13 +83,18 @@ function renderConfigValues(obj: any, prefix: string): React.JSX.Element[] {
     if (typeof value === "object" && value !== null && !Array.isArray(value)) {
       elements.push(
         <div key={fullKey} className="ml-4">
-          <div className="text-sm font-medium text-muted-foreground">{key}:</div>
+          <div className="text-sm font-medium text-muted-foreground">
+            {key}:
+          </div>
           {renderConfigValues(value, fullKey)}
         </div>,
       )
     } else {
       elements.push(
-        <div key={fullKey} className="flex justify-between items-center py-1 ml-4">
+        <div
+          key={fullKey}
+          className="flex justify-between items-center py-1 ml-4"
+        >
           <span className="text-sm font-mono">{key}</span>
           <span className="text-sm font-mono text-muted-foreground">
             {Array.isArray(value) ? `[${value.length} items]` : String(value)}

@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
+import { createFileRoute, Link } from "@tanstack/react-router"
 
 export const Route = createFileRoute("/agent/")({
   component: AgentStatusPage,
@@ -30,11 +30,33 @@ function AgentStatusPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Agent Command Center</h1>
           <nav className="flex gap-4 text-sm">
-            <Link to="/agent" className="font-medium underline">Status</Link>
-            <Link to="/agent/knowledge" className="text-muted-foreground hover:text-foreground">Knowledge</Link>
-            <Link to="/agent/trace" className="text-muted-foreground hover:text-foreground">Trace</Link>
-            <Link to="/agent/config" className="text-muted-foreground hover:text-foreground">Config</Link>
-            <Link to="/agent/chat" className="text-muted-foreground hover:text-foreground">Chat</Link>
+            <Link to="/agent" className="font-medium underline">
+              Status
+            </Link>
+            <Link
+              to="/agent/knowledge"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Knowledge
+            </Link>
+            <Link
+              to="/agent/trace"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Trace
+            </Link>
+            <Link
+              to="/agent/config"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Config
+            </Link>
+            <Link
+              to="/agent/chat"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Chat
+            </Link>
           </nav>
         </div>
 
@@ -44,7 +66,8 @@ function AgentStatusPage() {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {dimensions.map((dim) => {
               const state = data?.homeostasis?.[dim] ?? "HEALTHY"
-              const method = data?.homeostasis?.assessment_method?.[dim] ?? "computed"
+              const method =
+                data?.homeostasis?.assessment_method?.[dim] ?? "computed"
               return (
                 <div
                   key={dim}
@@ -59,8 +82,12 @@ function AgentStatusPage() {
                   <div className="text-sm text-muted-foreground">
                     {dim.replace(/_/g, " ")}
                   </div>
-                  <div className="text-lg font-mono font-bold mt-1">{state}</div>
-                  <div className="text-xs text-muted-foreground mt-1">{method}</div>
+                  <div className="text-lg font-mono font-bold mt-1">
+                    {state}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {method}
+                  </div>
                 </div>
               )
             })}
@@ -77,7 +104,9 @@ function AgentStatusPage() {
               {data.pendingMessages.map((msg: any, i: number) => (
                 <div key={i} className="rounded border p-3 text-sm">
                   <span className="font-medium">{msg.from}</span>
-                  <span className="text-muted-foreground mx-2">via {msg.channel}</span>
+                  <span className="text-muted-foreground mx-2">
+                    via {msg.channel}
+                  </span>
                   <span>{msg.content.slice(0, 100)}</span>
                 </div>
               ))}
@@ -97,7 +126,9 @@ function AgentStatusPage() {
                   <div className="flex justify-between">
                     <span className="font-mono">{entry.action}</span>
                     <span className="text-muted-foreground text-xs">
-                      {entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString() : ""}
+                      {entry.timestamp
+                        ? new Date(entry.timestamp).toLocaleTimeString()
+                        : ""}
                     </span>
                   </div>
                   {entry.response?.text && (

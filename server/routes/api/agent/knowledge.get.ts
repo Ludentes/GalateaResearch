@@ -46,17 +46,12 @@ export default defineEventHandler(async (event) => {
     active: entries.filter((e) => !e.supersededBy).length,
     superseded: entries.filter((e) => e.supersededBy).length,
     byType: Object.fromEntries(
-      [
-        "fact",
-        "preference",
-        "rule",
-        "procedure",
-        "correction",
-        "decision",
-      ].map((t) => [
-        t,
-        entries.filter((e) => e.type === t && !e.supersededBy).length,
-      ]),
+      ["fact", "preference", "rule", "procedure", "correction", "decision"].map(
+        (t) => [
+          t,
+          entries.filter((e) => e.type === t && !e.supersededBy).length,
+        ],
+      ),
     ),
     entities: allEntities,
   }

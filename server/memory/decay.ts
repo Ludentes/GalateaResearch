@@ -39,8 +39,7 @@ export async function runDecay(storePath: string): Promise<DecayResult> {
     }
 
     const decayDays = daysSince - cfg.decay_start_days
-    const newConfidence =
-      entry.confidence * Math.pow(cfg.decay_factor, decayDays)
+    const newConfidence = entry.confidence * cfg.decay_factor ** decayDays
 
     if (newConfidence < cfg.archive_threshold) {
       archived++
