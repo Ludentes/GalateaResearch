@@ -11,6 +11,7 @@ import {
 import { filterSignalTurns } from "./signal-classifier"
 import { readTranscript } from "./transcript-reader"
 import { emitEvent } from "../observation/emit"
+import { consolidateToClaudeMd } from "./consolidation"
 import type { ExtractionResult, KnowledgeEntry, TranscriptTurn } from "./types"
 
 export interface ExtractionOptions {
@@ -20,6 +21,7 @@ export interface ExtractionOptions {
   chunkSize?: number
   force?: boolean
   observationStorePath?: string
+  claudeMdPath?: string
 }
 
 export async function runExtraction(
@@ -33,6 +35,7 @@ export async function runExtraction(
     chunkSize = extractionCfg.chunk_size,
     force = false,
     observationStorePath,
+    claudeMdPath,
   } = options
 
   const source = `session:${path.basename(transcriptPath, ".jsonl")}`
@@ -77,6 +80,11 @@ export async function runExtraction(
 
   if (newEntries.length > 0) {
     await appendEntries(newEntries, storePath)
+
+    // Run consolidation if claudeMdPath configured
+    if (claudeMdPath) {
+      consolidateToClaudeMd(storePath, claudeMdPath).catch(() => {})
+    }
   }
 
   emitEvent(

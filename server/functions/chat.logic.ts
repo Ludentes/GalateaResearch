@@ -123,6 +123,7 @@ export async function streamMessageLogic(
   message: string,
   model: LanguageModel,
   modelName: string,
+  opts?: { observationStorePath?: string },
 ) {
   // Store user message
   await db.insert(messages).values({
@@ -170,6 +171,21 @@ export async function streamMessageLogic(
         inputTokens: usage.inputTokens || 0,
         outputTokens: usage.outputTokens || 0,
       })
+
+      emitEvent(
+        {
+          type: "log",
+          source: "galatea-api",
+          body: "chat.response_delivered",
+          attributes: {
+            "event.name": "chat.response_delivered",
+            "session.id": sessionId,
+            model: modelName,
+            "tokens.total": usage.totalTokens || 0,
+          },
+        },
+        opts?.observationStorePath,
+      ).catch(() => {})
     },
   })
 
