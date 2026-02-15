@@ -4,6 +4,7 @@ import { asc, eq } from "drizzle-orm"
 import { db } from "../db"
 import { messages, sessions } from "../db/schema"
 import { assembleContext } from "../memory/context-assembler"
+import { retrieveRelevantFacts } from "../memory/fact-retrieval"
 
 /**
  * Create a new chat session.
@@ -58,7 +59,7 @@ export async function sendMessageLogic(
         role: m.role as "user" | "assistant",
         content: m.content,
       })),
-      retrievedFacts: [], // TODO: implement fact retrieval in Phase D
+      retrievedFacts: (await retrieveRelevantFacts(message)).entries,
     },
   })
 
@@ -125,7 +126,7 @@ export async function streamMessageLogic(
         role: m.role as "user" | "assistant",
         content: m.content,
       })),
-      retrievedFacts: [], // TODO: implement fact retrieval in Phase D
+      retrievedFacts: (await retrieveRelevantFacts(message)).entries,
     },
   })
 
