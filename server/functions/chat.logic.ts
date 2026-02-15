@@ -5,6 +5,7 @@ import { db } from "../db"
 import { messages, sessions } from "../db/schema"
 import { assembleContext } from "../memory/context-assembler"
 import { retrieveRelevantFacts } from "../memory/fact-retrieval"
+import { emitEvent } from "../observation/emit"
 
 /**
  * Create a new chat session.
@@ -35,6 +36,7 @@ export async function sendMessageLogic(
   message: string,
   model: LanguageModel,
   modelName: string,
+  opts?: { observationStorePath?: string },
 ) {
   // Store user message
   await db.insert(messages).values({
@@ -87,6 +89,21 @@ export async function sendMessageLogic(
       outputTokens: result.usage.outputTokens || 0,
     })
     .returning()
+
+  emitEvent(
+    {
+      type: "log",
+      source: "galatea-api",
+      body: "chat.response_delivered",
+      attributes: {
+        "event.name": "chat.response_delivered",
+        "session.id": sessionId,
+        model: modelName,
+        "tokens.total": result.usage.totalTokens || 0,
+      },
+    },
+    opts?.observationStorePath,
+  ).catch(() => {}) // fire-and-forget
 
   return { text: result.text }
 }

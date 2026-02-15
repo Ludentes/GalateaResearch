@@ -19,6 +19,8 @@ import type {
   KnowledgeEntry,
   TranscriptTurn,
 } from "../../../memory/types"
+import { readEvents } from "../../../observation/event-store"
+import type { ObservationEvent } from "../../../observation/types"
 import { updateAgentState } from "../../../agent/agent-state"
 import { tick as agentTick } from "../../../agent/tick"
 import type {
@@ -60,6 +62,9 @@ export interface TestWorld {
   extractOnce(): Promise<ExtractionResult>
   extractAgain(): Promise<ExtractionResult>
   getExtractionState(): Promise<ExtractionState>
+
+  // Observation
+  readObservationEvents(): Promise<ObservationEvent[]>
 
   // Layer 3: Tick
   tick(trigger: "manual" | "heartbeat"): Promise<TickResult>
@@ -207,6 +212,7 @@ class ScenarioBuilder {
 
     const storePath = path.join(testDir, "entries.jsonl")
     const statePath = path.join(testDir, "extraction-state.json")
+    const observationStorePath = path.join(testDir, "observations.jsonl")
 
     if (this.config.knowledgeFromPath) {
       const entries = await readEntries(this.config.knowledgeFromPath)
@@ -255,6 +261,7 @@ class ScenarioBuilder {
       statePath,
       agentStatePath,
       transcriptPath,
+      observationStorePath,
       model,
       tempFiles,
       prepromptIds,
@@ -274,6 +281,7 @@ interface TestWorldConfig {
   statePath: string
   agentStatePath: string
   transcriptPath: string
+  observationStorePath: string
   model?: LanguageModel
   tempFiles: string[]
   prepromptIds: string[]
@@ -286,6 +294,7 @@ function createTestWorld(config: TestWorldConfig): TestWorld {
     statePath,
     agentStatePath,
     transcriptPath,
+    observationStorePath,
     model,
     tempFiles,
     prepromptIds,
@@ -322,6 +331,7 @@ function createTestWorld(config: TestWorldConfig): TestWorld {
         content,
         model,
         "test-model",
+        { observationStorePath },
       )
       const lastMsg = await db
         .select()
@@ -398,6 +408,7 @@ function createTestWorld(config: TestWorldConfig): TestWorld {
         model,
         storePath,
         force: opts?.force ?? false,
+        observationStorePath,
       })
       extractedOnce = true
       return result
@@ -415,6 +426,12 @@ function createTestWorld(config: TestWorldConfig): TestWorld {
 
     async getExtractionState(): Promise<ExtractionState> {
       return getExtractionState(statePath)
+    },
+
+    // Observation
+
+    async readObservationEvents(): Promise<ObservationEvent[]> {
+      return readEvents(observationStorePath)
     },
 
     // Layer 3: Tick

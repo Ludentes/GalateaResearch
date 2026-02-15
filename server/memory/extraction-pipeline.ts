@@ -10,6 +10,7 @@ import {
 } from "./knowledge-store"
 import { filterSignalTurns } from "./signal-classifier"
 import { readTranscript } from "./transcript-reader"
+import { emitEvent } from "../observation/emit"
 import type { ExtractionResult, KnowledgeEntry, TranscriptTurn } from "./types"
 
 export interface ExtractionOptions {
@@ -18,6 +19,7 @@ export interface ExtractionOptions {
   storePath: string
   chunkSize?: number
   force?: boolean
+  observationStorePath?: string
 }
 
 export async function runExtraction(
@@ -30,6 +32,7 @@ export async function runExtraction(
     storePath,
     chunkSize = extractionCfg.chunk_size,
     force = false,
+    observationStorePath,
   } = options
 
   const source = `session:${path.basename(transcriptPath, ".jsonl")}`
@@ -75,6 +78,21 @@ export async function runExtraction(
   if (newEntries.length > 0) {
     await appendEntries(newEntries, storePath)
   }
+
+  emitEvent(
+    {
+      type: "log",
+      source: "galatea-api",
+      body: "extraction.complete",
+      attributes: {
+        "event.name": "extraction.complete",
+        "entries.count": newEntries.length,
+        "turns.processed": allTurns.length,
+        "duplicates.skipped": duplicatesSkipped,
+      },
+    },
+    observationStorePath,
+  ).catch(() => {}) // fire-and-forget
 
   return {
     entries: newEntries,

@@ -96,10 +96,16 @@ describe("Layer 2: Umka session ends, knowledge extracted", () => {
     expect(ctx.systemPrompt).not.toContain(target.content)
   }, 30_000)
 
-  it.todo("OTEL event emitted on extraction completion")
-  // Given: OTEL collector running
-  // When: extraction completes
-  // Then: event store has extraction.complete event with entriesCount
+  it("OTEL event emitted on extraction completion", async () => {
+    // extract() already ran in earlier tests — events should exist
+    const events = await world.readObservationEvents()
+    const extractEvents = events.filter(
+      (e) => e.attributes?.["event.name"] === "extraction.complete",
+    )
+    expect(extractEvents.length).toBeGreaterThan(0)
+    expect(extractEvents[0].source).toBe("galatea-api")
+    expect(extractEvents[0].attributes["entries.count"]).toBeDefined()
+  })
 
   it.todo("high-confidence entries consolidated to CLAUDE.md")
   // Given: entry seen 3+ times with avg confidence >= 0.85

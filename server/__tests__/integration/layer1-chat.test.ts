@@ -107,10 +107,15 @@ describe("Layer 1: Developer works on Umka MQTT persistence", () => {
     expect(alinaEntries).toHaveLength(0)
   }, 30_000)
 
-  it.todo("emits OTEL event after response delivered")
-  // Given: OTEL collector running
-  // When: response delivered
-  // Then: event store has chat.response_delivered event
+  it("emits OTEL event after response delivered", async () => {
+    // roundTrip() already ran in earlier test — events should exist
+    const events = await world.readObservationEvents()
+    const chatEvents = events.filter(
+      (e) => e.attributes?.["event.name"] === "chat.response_delivered",
+    )
+    expect(chatEvents.length).toBeGreaterThan(0)
+    expect(chatEvents[0].source).toBe("galatea-api")
+  })
 
   it.todo("runs signal classification on the user's message in real-time")
   // Given: user sends high-signal message ("I prefer using pnpm")
