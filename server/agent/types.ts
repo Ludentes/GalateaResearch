@@ -10,6 +10,8 @@ export interface AgentState {
   }
   lastActivity: string
   pendingMessages: PendingMessage[]
+  activityLog?: TickResult[]
+  lastDecayRun?: string
 }
 
 export interface PendingMessage {
@@ -17,6 +19,7 @@ export interface PendingMessage {
   channel: string
   content: string
   receivedAt: string
+  metadata?: Record<string, string>
 }
 
 export interface SelfModel {
@@ -32,4 +35,5 @@ export interface TickResult {
   action: "respond" | "extract" | "idle"
   action_target?: { channel: string; to?: string }
   response?: { text: string }
+  timestamp?: string
 }
