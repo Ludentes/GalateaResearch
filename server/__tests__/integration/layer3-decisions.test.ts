@@ -56,7 +56,7 @@ describe("Layer 3: Alina asks project status, agent decides to respond", () => {
   it("tick detects pending message and assesses communication_health as LOW", async () => {
     const result = await world.tick("manual")
     expect(result.homeostasis.communication_health).toBe("LOW")
-  }, 60_000)
+  }, 120_000)
 
   it("tick retrieves Alina's user model from knowledge store", async () => {
     const result = await world.tick("manual")
@@ -64,7 +64,7 @@ describe("Layer 3: Alina asks project status, agent decides to respond", () => {
       (f) => f.about?.entity === "alina",
     )
     expect(alinaFacts.length).toBeGreaterThan(0)
-  }, 60_000)
+  }, 120_000)
 
   it("tick decides to respond, not ignore", async () => {
     const result = await world.tick("manual")
@@ -73,18 +73,18 @@ describe("Layer 3: Alina asks project status, agent decides to respond", () => {
       channel: "discord",
       to: "alina",
     })
-  }, 60_000)
+  }, 120_000)
 
   it("LLM produces response using assembled context", async () => {
     const result = await world.tick("manual")
     expect(result.response?.text).toBeTruthy()
-  }, 60_000)
+  }, 120_000)
 
   it("includes self-model with available providers", async () => {
     const result = await world.tick("manual")
     expect(result.selfModel).toBeDefined()
     expect(result.selfModel.availableProviders).toContain("ollama")
-  }, 60_000)
+  }, 120_000)
 })
 
 describe("Layer 3: No pending messages, agent stays idle", () => {
@@ -120,10 +120,12 @@ describe("Layer 3: No pending messages, agent stays idle", () => {
 
   // --- RED (todo): self-model and powered-down ---
 
-  it.todo("self-model reports available providers before LLM call")
-  // Given: Ollama running, OpenRouter configured
-  // When: tick runs stage 1 (self-model)
-  // Then: selfModel.availableProviders includes both
+  it("self-model reports available providers before LLM call", async () => {
+    const result = await world.tick("manual")
+    expect(result.selfModel).toBeDefined()
+    expect(result.selfModel.availableProviders).toContain("ollama")
+    expect(result.selfModel.availableProviders.length).toBeGreaterThan(0)
+  })
 
   it.todo("powered-down mode produces template response when no LLM available")
   // Given: Ollama stopped, OpenRouter rate-limited

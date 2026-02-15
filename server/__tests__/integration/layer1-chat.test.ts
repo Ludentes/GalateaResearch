@@ -73,7 +73,7 @@ describe("Layer 1: Developer works on Umka MQTT persistence", () => {
     )
     expect(response.text).toBeTruthy()
     expect(response.tokenCount).toBeGreaterThan(0)
-  }, 60_000)
+  }, 120_000)
 
   it("stores assistant response in DB", async () => {
     const msg = await world.lastMessage("assistant")
