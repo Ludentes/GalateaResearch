@@ -7,7 +7,7 @@ import {
   ensureTestDb,
 } from "./helpers/setup"
 import { type TestWorld, scenario } from "./helpers/test-world"
-import { readEntries, supersedeEntry } from "../../memory/knowledge-store"
+import { appendEntries, readEntries, supersedeEntry } from "../../memory/knowledge-store"
 import { assembleContext } from "../../memory/context-assembler"
 
 describe("Layer 2: Umka session ends, knowledge extracted", () => {
@@ -107,8 +107,42 @@ describe("Layer 2: Umka session ends, knowledge extracted", () => {
     expect(extractEvents[0].attributes["entries.count"]).toBeDefined()
   })
 
-  it.todo("high-confidence entries consolidated to CLAUDE.md")
-  // Given: entry seen 3+ times with avg confidence >= 0.85
-  // When: consolidation runs after extraction
-  // Then: entry appears in CLAUDE.md
+  it("high-confidence entries consolidated to CLAUDE.md", async () => {
+    // Ensure store has at least one entry (seed if extraction timed out)
+    let entries = await readEntries(world.storePath)
+    if (entries.length === 0) {
+      await appendEntries(
+        [
+          {
+            id: crypto.randomUUID(),
+            type: "preference",
+            content: "Use pnpm in all projects",
+            confidence: 0.95,
+            entities: [],
+            source: "session:seed",
+            extractedAt: new Date().toISOString(),
+          },
+        ],
+        world.storePath,
+      )
+      entries = await readEntries(world.storePath)
+    }
+
+    // Seed duplicates to simulate 3+ occurrences of the same knowledge
+    const target = entries[0]
+    await appendEntries(
+      [
+        { ...target, id: crypto.randomUUID(), source: "session:dup-1" },
+        { ...target, id: crypto.randomUUID(), source: "session:dup-2" },
+      ],
+      world.storePath,
+    )
+
+    const result = await world.consolidate()
+    expect(result.consolidated).toBeGreaterThan(0)
+
+    const md = world.readClaudeMd()
+    expect(md.length).toBeGreaterThan(0)
+    expect(md).toContain(target.content)
+  }, 30_000)
 })

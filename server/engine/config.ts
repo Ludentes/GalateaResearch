@@ -86,8 +86,14 @@ export interface DecayConfig {
   exempt_types: string[]
 }
 
+export interface ConsolidationConfig {
+  min_occurrences: number
+  min_avg_confidence: number
+}
+
 export interface MemoryConfig {
   decay: DecayConfig
+  consolidation: ConsolidationConfig
 }
 
 export interface DiscordConfig {
@@ -164,6 +170,10 @@ export function getHeartbeatConfig(): HeartbeatConfig {
 
 export function getDecayConfig(): DecayConfig {
   return loadConfig().memory.decay
+}
+
+export function getConsolidationConfig(): ConsolidationConfig {
+  return loadConfig().memory.consolidation
 }
 
 export function getDiscordConfig(): DiscordConfig {

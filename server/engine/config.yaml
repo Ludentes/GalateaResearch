@@ -175,6 +175,17 @@ memory:
     run_interval_minutes: 60
     exempt_types:
       - rule
+  # Consolidation — server/memory/consolidation.ts
+  # Promotes high-confidence repeated entries to CLAUDE.md.
+  consolidation:
+    # Minimum times an entry must appear (across sessions) to be promoted.
+    # Raise: stricter — only frequently repeated knowledge gets promoted.
+    # Lower: more entries promoted to CLAUDE.md.
+    min_occurrences: 3
+    # Minimum average confidence across occurrences.
+    # Raise: only very confident entries promoted.
+    # Lower: more entries qualify.
+    min_avg_confidence: 0.85
 
 # -----------------------------------------------------------------------------
 # HOMEOSTASIS — server/engine/homeostasis-engine.ts

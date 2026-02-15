@@ -1,6 +1,7 @@
 // @vitest-environment node
 import type { LanguageModel } from "ai"
 import { asc, desc, eq } from "drizzle-orm"
+import { existsSync, readFileSync } from "node:fs"
 import { mkdir, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { messages, preprompts, sessions } from "../../../db/schema"
@@ -10,6 +11,7 @@ import {
   getExtractionState,
   type ExtractionState,
 } from "../../../memory/extraction-state"
+import { consolidateToClaudeMd } from "../../../memory/consolidation"
 import { appendEntries, readEntries } from "../../../memory/knowledge-store"
 import { filterSignalTurns } from "../../../memory/signal-classifier"
 import { readTranscript } from "../../../memory/transcript-reader"
@@ -63,6 +65,10 @@ export interface TestWorld {
   extractOnce(): Promise<ExtractionResult>
   extractAgain(): Promise<ExtractionResult>
   getExtractionState(): Promise<ExtractionState>
+
+  // Consolidation
+  consolidate(): Promise<{ consolidated: number }>
+  readClaudeMd(): string
 
   // Observation
   readObservationEvents(): Promise<ObservationEvent[]>
@@ -214,6 +220,7 @@ class ScenarioBuilder {
     const storePath = path.join(testDir, "entries.jsonl")
     const statePath = path.join(testDir, "extraction-state.json")
     const observationStorePath = path.join(testDir, "observations.jsonl")
+    const claudeMdPath = path.join(testDir, "CLAUDE.md")
 
     if (this.config.knowledgeFromPath) {
       const entries = await readEntries(this.config.knowledgeFromPath)
@@ -263,6 +270,7 @@ class ScenarioBuilder {
       agentStatePath,
       transcriptPath,
       observationStorePath,
+      claudeMdPath,
       model,
       tempFiles,
       prepromptIds,
@@ -283,6 +291,7 @@ interface TestWorldConfig {
   agentStatePath: string
   transcriptPath: string
   observationStorePath: string
+  claudeMdPath: string
   model?: LanguageModel
   tempFiles: string[]
   prepromptIds: string[]
@@ -296,6 +305,7 @@ function createTestWorld(config: TestWorldConfig): TestWorld {
     agentStatePath,
     transcriptPath,
     observationStorePath,
+    claudeMdPath,
     model,
     tempFiles,
     prepromptIds,
@@ -428,6 +438,17 @@ function createTestWorld(config: TestWorldConfig): TestWorld {
 
     async getExtractionState(): Promise<ExtractionState> {
       return getExtractionState(statePath)
+    },
+
+    // Consolidation
+
+    async consolidate(): Promise<{ consolidated: number }> {
+      return consolidateToClaudeMd(storePath, claudeMdPath)
+    },
+
+    readClaudeMd(): string {
+      if (!existsSync(claudeMdPath)) return ""
+      return readFileSync(claudeMdPath, "utf-8")
     },
 
     // Observation
