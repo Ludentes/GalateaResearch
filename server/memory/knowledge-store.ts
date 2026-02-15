@@ -2,6 +2,7 @@ import { existsSync } from "node:fs"
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { getDedupConfig, getStopWords } from "../engine/config"
+import { ollamaQueue } from "../providers/ollama-queue"
 import type {
   KnowledgeEntry,
   KnowledgeSubjectType,
@@ -47,7 +48,9 @@ function tokenize(text: string): Set<string> {
     text
       .toLowerCase()
       .split(/\W+/)
-      .filter((w) => w.length >= cfg.tokenize_min_word_length && !stopWords.has(w)),
+      .filter(
+        (w) => w.length >= cfg.tokenize_min_word_length && !stopWords.has(w),
+      ),
   )
 }
 
@@ -83,14 +86,23 @@ export async function batchEmbed(
       `[embed] batchEmbed start: ${texts.length} texts, total ${texts.reduce((s, t) => s + t.length, 0)} chars`,
     )
     const t0 = Date.now()
-    const resp = await fetch(`${ollamaBaseUrl}/api/embed`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "nomic-embed-text:latest", input: texts }),
-      signal: AbortSignal.timeout(30_000),
-    })
+    const resp = await ollamaQueue.enqueue(
+      () =>
+        fetch(`${ollamaBaseUrl}/api/embed`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "nomic-embed-text:latest",
+            input: texts,
+          }),
+          signal: AbortSignal.timeout(30_000),
+        }),
+      "batch",
+    )
     if (!resp.ok) {
-      console.log(`[embed] batchEmbed failed: HTTP ${resp.status} in ${Date.now() - t0}ms`)
+      console.log(
+        `[embed] batchEmbed failed: HTTP ${resp.status} in ${Date.now() - t0}ms`,
+      )
       return null
     }
     const data = await resp.json()
@@ -118,7 +130,11 @@ export function isDuplicate(
       candidate.evidence && e.evidence
         ? normalizedJaccard(candidate.evidence, e.evidence)
         : 0
-    if (evidenceSim >= cfg.evidence_jaccard_threshold && contentSim >= cfg.content_with_evidence_threshold) return true
+    if (
+      evidenceSim >= cfg.evidence_jaccard_threshold &&
+      contentSim >= cfg.content_with_evidence_threshold
+    )
+      return true
     if (contentSim >= cfg.content_jaccard_threshold) return true
     return false
   })
@@ -163,7 +179,8 @@ export async function deduplicateEntries(
         const isDup = pool.some((e) => {
           const poolEmb = embMap.get(e.id)
           return poolEmb
-            ? cosineSimilarity(candidateEmb, poolEmb) > getDedupConfig().embedding_cosine_threshold
+            ? cosineSimilarity(candidateEmb, poolEmb) >
+                getDedupConfig().embedding_cosine_threshold
             : false
         })
         if (isDup) {

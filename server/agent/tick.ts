@@ -1,10 +1,20 @@
 import { generateText } from "ai"
-import type { AgentContext } from "../engine/types"
 import { assessDimensions } from "../engine/homeostasis-engine"
+import type { AgentContext } from "../engine/types"
 import { assembleContext } from "../memory/context-assembler"
 import { retrieveRelevantFacts } from "../memory/fact-retrieval"
-import { getModel } from "../providers"
-import { appendActivityLog, getAgentState, removePendingMessage, updateAgentState } from "./agent-state"
+import { getModelWithFallback } from "../providers"
+import {
+  OllamaBackpressureError,
+  OllamaCircuitOpenError,
+  ollamaQueue,
+} from "../providers/ollama-queue"
+import {
+  appendActivityLog,
+  getAgentState,
+  removePendingMessage,
+  updateAgentState,
+} from "./agent-state"
 import { dispatch } from "./dispatcher"
 import type { SelfModel, TickResult } from "./types"
 
@@ -53,19 +63,39 @@ export async function tick(
     })
 
     // Stage 4: LLM action (only if provider available)
+    let llmResult: string | undefined
     if (selfModel.availableProviders.length > 0) {
-      const { model } = getModel()
-      const result = await generateText({
-        model,
-        system: context.systemPrompt,
-        messages: [{ role: "user", content: msg.content }],
-      })
+      const { model } = getModelWithFallback()
+      try {
+        const result = await ollamaQueue.enqueue(
+          () =>
+            generateText({
+              model,
+              system: context.systemPrompt,
+              messages: [{ role: "user", content: msg.content }],
+              abortSignal: AbortSignal.timeout(60_000),
+            }),
+          "batch",
+        )
+        llmResult = result.text
+      } catch (err) {
+        if (
+          err instanceof OllamaCircuitOpenError ||
+          err instanceof OllamaBackpressureError
+        ) {
+          // Fall through to powered-down template response below
+        } else {
+          throw err
+        }
+      }
+    }
 
+    if (llmResult !== undefined) {
       // Dispatch response to channel
       try {
         await dispatch(
           { channel: msg.channel, to: msg.from },
-          result.text,
+          llmResult,
           msg.metadata,
         )
       } catch {
@@ -87,14 +117,14 @@ export async function tick(
         pendingMessages: pending,
         action: "respond",
         action_target: { channel: msg.channel, to: msg.from },
-        response: { text: result.text },
+        response: { text: llmResult },
         timestamp: new Date().toISOString(),
       }
       await appendActivityLog(tickResult, statePath)
       return tickResult
     }
 
-    // Powered-down mode: pending message but no LLM available
+    // Powered-down mode: pending message but no LLM available (or circuit/backpressure)
     const templateText =
       "I received your message but I'm currently unable to generate a response — no language model is available. I'll respond properly once connectivity is restored."
 

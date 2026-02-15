@@ -1,6 +1,7 @@
 import type { LanguageModel } from "ai"
 import { generateObject } from "ai"
 import { z } from "zod"
+import { ollamaQueue } from "../providers/ollama-queue"
 import type { KnowledgeEntry, TranscriptTurn } from "./types"
 
 export const ExtractionSchema = z.object({
@@ -32,13 +33,21 @@ export const ExtractionSchema = z.object({
         .describe("Technologies, tools, libraries, patterns mentioned"),
       about: z
         .object({
-          entity: z.string().describe("Who/what this is about: a person's name, project name, or domain. Use lowercase."),
-          type: z.enum(["user", "project", "agent", "domain", "team"]).describe(
-            "user=about a person, project=about the codebase, agent=about the AI agent, domain=about the problem space, team=about team dynamics",
-          ),
+          entity: z
+            .string()
+            .describe(
+              "Who/what this is about: a person's name, project name, or domain. Use lowercase.",
+            ),
+          type: z
+            .enum(["user", "project", "agent", "domain", "team"])
+            .describe(
+              "user=about a person, project=about the codebase, agent=about the AI agent, domain=about the problem space, team=about team dynamics",
+            ),
         })
         .optional()
-        .describe("Who/what this knowledge is about. Omit if about the current project in general."),
+        .describe(
+          "Who/what this knowledge is about. Omit if about the current project in general.",
+        ),
     }),
   ),
 })
@@ -95,14 +104,18 @@ export async function extractKnowledge(
   )
   const t0 = Date.now()
 
-  const { object } = await generateObject({
-    model,
-    schema: ExtractionSchema,
-    prompt: promptText,
-    temperature,
-    maxRetries: 0,
-    abortSignal: AbortSignal.timeout(60_000),
-  })
+  const { object } = await ollamaQueue.enqueue(
+    () =>
+      generateObject({
+        model,
+        schema: ExtractionSchema,
+        prompt: promptText,
+        temperature,
+        maxRetries: 0,
+        abortSignal: AbortSignal.timeout(60_000),
+      }),
+    "batch",
+  )
 
   console.log(
     `[extraction] generateObject done: ${object.items.length} items in ${Date.now() - t0}ms`,
