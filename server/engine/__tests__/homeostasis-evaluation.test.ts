@@ -283,8 +283,8 @@ describe("Homeostasis Goal Achievement", () => {
   beforeEach(() => clearCache())
   it("achieves Scenario L7 goal: temporal awareness for communication_health", () => {
     // From Scenario L7: Don't flag silence during lunch break
-    const lunchTime = new Date()
-    lunchTime.setHours(12, 15, 0, 0) // 12:15 PM
+    // Use a time 2 hours ago (well under the 4-hour threshold)
+    const recentMessage = new Date(Date.now() - 2 * 60 * 60 * 1000)
 
     const ctx: AgentContext = {
       sessionId: "scenario-l7",
@@ -292,12 +292,12 @@ describe("Homeostasis Goal Achievement", () => {
       messageHistory: [
         { role: "user", content: "Working on feature" }
       ],
-      lastMessageTime: lunchTime
+      lastMessageTime: recentMessage,
     }
 
     const state = assessDimensions(ctx)
 
-    // Should NOT flag as LOW during lunch (< 4 hours)
+    // Should NOT flag as LOW when last message was < 4 hours ago
     expect(state.communication_health).toBe("HEALTHY")
   })
 
