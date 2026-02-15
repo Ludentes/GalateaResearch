@@ -169,13 +169,22 @@ function assessProgressMomentumL1(ctx: AgentContext): DimensionState {
   if (userMessages.length < cfg.stuck_detection_window) return "HEALTHY"
 
   // Detect repeated similar questions (user stuck)
+  // Uses stem-frequency counting: if N+ stems appear in 2+ messages, user is stuck.
+  // This is more robust than pairwise Jaccard which fails when messages have
+  // varied surrounding words but share the same core topic.
   const recent = userMessages.slice(-cfg.stuck_detection_window).map((m) => m.content.toLowerCase())
   const words = recent.map((m) => stemTokenize(m))
 
   if (words.length >= cfg.stuck_detection_window) {
-    for (let i = 0; i < words.length - 1; i++) {
-      if (jaccardSets(words[i], words[i + 1]) > cfg.stuck_jaccard_threshold) return "LOW"
+    // Count how many stems appear in 2+ of the recent messages
+    const stemCounts = new Map<string, number>()
+    for (const wordSet of words) {
+      for (const stem of wordSet) {
+        stemCounts.set(stem, (stemCounts.get(stem) || 0) + 1)
+      }
     }
+    const repeatedStems = [...stemCounts.values()].filter((count) => count >= 2).length
+    if (repeatedStems >= cfg.stuck_shared_stems_min) return "LOW"
   }
 
   return "HEALTHY"
@@ -200,12 +209,6 @@ function assessProductiveEngagementL1(ctx: AgentContext): DimensionState {
     return "LOW"
   }
   return "HEALTHY"
-}
-
-function jaccardSets(a: Set<string>, b: Set<string>): number {
-  const intersection = [...a].filter((w) => b.has(w))
-  const union = new Set([...a, ...b])
-  return union.size === 0 ? 0 : intersection.length / union.size
 }
 
 // ============ Main Assessment Function (L0-L1) ============

@@ -1,5 +1,5 @@
 import { stemmer } from "stemmer"
-import { getHomeostasisConfig } from "./config"
+import { getHomeostasisConfig, getStopWords } from "./config"
 
 /**
  * Minimum prefix length for the short-stem heuristic.
@@ -25,13 +25,14 @@ const SHORT_STEM_LENGTH = 4
 export function stemTokenize(text: string): Set<string> {
   const cfg = getHomeostasisConfig()
   const minLen = cfg.keyword_min_length
+  const stopWords = getStopWords("dedup")
 
   const result = new Set<string>()
 
   const words = text
     .toLowerCase()
     .split(/\W+/)
-    .filter((w) => w.length >= minLen)
+    .filter((w) => w.length >= minLen && !stopWords.has(w))
 
   for (const word of words) {
     const stem = stemmer(word)

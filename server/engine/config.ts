@@ -57,6 +57,7 @@ export interface HomeostasisConfig {
   communication_idle_hours: number
   stuck_detection_window: number
   stuck_jaccard_threshold: number
+  stuck_shared_stems_min: number
   knowledge_message_min_length: number
   knowledge_keyword_overlap: number
   knowledge_high_score: number

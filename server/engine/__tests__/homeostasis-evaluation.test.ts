@@ -7,11 +7,12 @@
  *
  * Measures if L0-L2 thinking levels improve detection accuracy.
  */
-import { describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it } from "vitest"
 import type { AgentContext } from "../types"
-import { assessDimensions, assessDimensionsAsync, getGuidance } from "../homeostasis-engine"
+import { assessDimensions, assessDimensionsAsync, clearCache, getGuidance } from "../homeostasis-engine"
 
 describe("Homeostasis Evaluation - Reference Scenarios", () => {
+  beforeEach(() => clearCache())
 
   describe("S1: Knowledge Gap (knowledge_sufficiency)", () => {
     it("detects LOW when user asks about OAuth2 with no auth facts", () => {
@@ -30,10 +31,7 @@ describe("Homeostasis Evaluation - Reference Scenarios", () => {
       expect(guidance).toContain("Knowledge gap")
     })
 
-    // TODO(Phase D): Keyword matching too strict - "auth" vs "authentication" don't match
-    // Requires >= 2 keyword overlap. Options: lower to 1, add stemming, or use L2 LLM
-    // See: docs/plans/2026-02-12-homeostasis-l0-l2-evaluation-report.md
-    it.todo("detects HEALTHY when relevant auth facts available", () => {
+    it("detects HEALTHY when relevant auth facts available", () => {
       const ctx: AgentContext = {
         sessionId: "eval-s1-healthy",
         currentMessage: "How do I implement OAuth2 authentication?",
@@ -72,10 +70,7 @@ describe("Homeostasis Evaluation - Reference Scenarios", () => {
   })
 
   describe("S2: Stuck Repetition (progress_momentum)", () => {
-    // TODO(Phase D): Stuck detection Jaccard similarity edge case - not detecting repetition
-    // Same root cause as homeostasis-engine.test.ts stuck detection test
-    // See: docs/plans/2026-02-12-homeostasis-l0-l2-evaluation-report.md
-    it.todo("detects LOW when user repeats similar questions", () => {
+    it("detects LOW when user repeats similar questions", () => {
       const ctx: AgentContext = {
         sessionId: "eval-s2",
         currentMessage: "This still doesn't work, how do I fix the auth issue?",
@@ -285,6 +280,7 @@ describe("Homeostasis Evaluation - Reference Scenarios", () => {
 })
 
 describe("Homeostasis Goal Achievement", () => {
+  beforeEach(() => clearCache())
   it("achieves Scenario L7 goal: temporal awareness for communication_health", () => {
     // From Scenario L7: Don't flag silence during lunch break
     const lunchTime = new Date()
@@ -321,10 +317,7 @@ describe("Homeostasis Goal Achievement", () => {
     expect(guidance.length).toBeGreaterThan(0) // Should provide guidance
   })
 
-  // TODO(Phase D): Cascades from stuck detection bug in S2.1
-  // Once Jaccard similarity is fixed, this test should pass
-  // See: docs/plans/2026-02-12-homeostasis-l0-l2-evaluation-report.md
-  it.todo("achieves stuck detection goal", () => {
+  it("achieves stuck detection goal", () => {
     // Agent should detect when user is repeating questions (stuck)
     const stuckCtx: AgentContext = {
       sessionId: "goal-stuck",

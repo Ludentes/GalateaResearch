@@ -196,6 +196,13 @@ homeostasis:
   # Lower: flag loosely related repeated questions.
   stuck_jaccard_threshold: 0.35
 
+  # Minimum number of stemmed words that must appear in 2+ of the last N
+  # user messages to flag as stuck. Uses stem-frequency counting instead of
+  # pairwise Jaccard (which fails when messages have varied surrounding words).
+  # Raise: require more shared topic words to flag stuck.
+  # Lower: flag even loosely related repeated questions.
+  stuck_shared_stems_min: 2
+
   # Minimum message length to trigger knowledge sufficiency check.
   # Very short messages ("hi") shouldn't trigger LOW knowledge.
   knowledge_message_min_length: 20
