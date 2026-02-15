@@ -304,7 +304,7 @@ pnpm exec tsx -e "
 ```bash
 # Start the dev server first (in another terminal): pnpm dev
 # Then call the endpoint:
-curl -s -X POST http://localhost:3000/api/agent/tick | python3 -m json.tool | head -30
+curl -s -X POST http://localhost:13000/api/agent/tick | python3 -m json.tool | head -30
 ```
 
 **Expected:** JSON response with `action`, `homeostasis`, `selfModel`, etc. Will likely be `"idle"` unless you've set up agent state with pending messages.
