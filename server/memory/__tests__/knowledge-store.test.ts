@@ -11,6 +11,7 @@ import {
   normalizedJaccard,
   readEntries,
   renderMarkdown,
+  supersedeEntry,
 } from "../knowledge-store"
 import type { KnowledgeEntry } from "../types"
 
@@ -236,5 +237,67 @@ describe("deduplicateEntries", () => {
     expect(result.duplicatesSkipped).toBe(1)
     expect(result.unique).toHaveLength(1)
     expect(result.unique[0].id).toBe("new-fact")
+  })
+})
+
+describe("supersedeEntry", () => {
+  const SUPERSEDE_DIR = path.join(__dirname, "fixtures", "test-supersede")
+  const SUPERSEDE_STORE = path.join(SUPERSEDE_DIR, "entries.jsonl")
+
+  afterEach(() => {
+    if (existsSync(SUPERSEDE_DIR)) rmSync(SUPERSEDE_DIR, { recursive: true })
+  })
+
+  it("marks entry as superseded", async () => {
+    const entry1: KnowledgeEntry = {
+      ...sampleEntry,
+      id: "entry-1",
+      content: "MQTT uses QoS 0",
+    }
+    const entry2: KnowledgeEntry = {
+      ...sampleEntry,
+      id: "entry-2",
+      content: "MQTT uses QoS 1",
+    }
+    await appendEntries([entry1, entry2], SUPERSEDE_STORE)
+
+    await supersedeEntry("entry-1", "entry-2", SUPERSEDE_STORE)
+
+    const entries = await readEntries(SUPERSEDE_STORE)
+    const old = entries.find((e) => e.id === "entry-1")
+    expect(old?.supersededBy).toBe("entry-2")
+  })
+
+  it("superseded entries excluded from active set", async () => {
+    const entry1: KnowledgeEntry = {
+      ...sampleEntry,
+      id: "entry-1",
+      content: "MQTT uses QoS 0",
+    }
+    const entry2: KnowledgeEntry = {
+      ...sampleEntry,
+      id: "entry-2",
+      content: "MQTT uses QoS 1",
+    }
+    await appendEntries([entry1, entry2], SUPERSEDE_STORE)
+    await supersedeEntry("entry-1", "entry-2", SUPERSEDE_STORE)
+
+    const entries = await readEntries(SUPERSEDE_STORE)
+    const active = entries.filter((e) => !e.supersededBy)
+    expect(active.find((e) => e.id === "entry-1")).toBeUndefined()
+    expect(active.find((e) => e.id === "entry-2")).toBeDefined()
+  })
+
+  it("does not affect other entries", async () => {
+    const entries: KnowledgeEntry[] = [
+      { ...sampleEntry, id: "a", content: "A" },
+      { ...sampleEntry, id: "b", content: "B" },
+      { ...sampleEntry, id: "c", content: "C" },
+    ]
+    await appendEntries(entries, SUPERSEDE_STORE)
+    await supersedeEntry("a", "b", SUPERSEDE_STORE)
+
+    const result = await readEntries(SUPERSEDE_STORE)
+    expect(result.find((e) => e.id === "c")?.supersededBy).toBeUndefined()
   })
 })

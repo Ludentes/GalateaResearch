@@ -95,17 +95,4 @@ describe("Extraction Pipeline", () => {
     expect(result2.entries).toHaveLength(0) // all dupes
   })
 
-  it("renders knowledge.md alongside entries.jsonl", async () => {
-    const storePath = path.join(TEST_DIR, "entries.jsonl")
-    const mdPath = path.join(TEST_DIR, "knowledge.md")
-
-    await runExtraction({
-      transcriptPath: FIXTURE,
-      model: MOCK_MODEL,
-      storePath,
-      mdPath,
-    })
-
-    expect(existsSync(mdPath)).toBe(true)
-  })
 })

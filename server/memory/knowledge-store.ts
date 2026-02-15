@@ -296,3 +296,31 @@ export function distinctEntities(
   }
   return [...entities].sort()
 }
+
+/**
+ * Mark an entry as superseded by a newer entry.
+ * Rewrites the entire store (entries are small enough for full rewrite).
+ */
+export async function supersedeEntry(
+  oldEntryId: string,
+  newEntryId: string,
+  storePath = "data/memory/entries.jsonl",
+): Promise<void> {
+  const entries = await readEntries(storePath)
+  const updated = entries.map((e) =>
+    e.id === oldEntryId ? { ...e, supersededBy: newEntryId } : e,
+  )
+  await writeEntries(updated, storePath)
+}
+
+/**
+ * Overwrite the entire store with the given entries.
+ */
+export async function writeEntries(
+  entries: KnowledgeEntry[],
+  storePath: string,
+): Promise<void> {
+  await mkdir(path.dirname(storePath), { recursive: true })
+  const lines = entries.map((e) => JSON.stringify(e)).join("\n")
+  await writeFile(storePath, lines ? `${lines}\n` : "")
+}

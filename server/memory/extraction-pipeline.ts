@@ -6,7 +6,6 @@ import {
   appendEntries,
   deduplicateEntries,
   readEntries,
-  renderMarkdown,
 } from "./knowledge-store"
 import { filterSignalTurns } from "./signal-classifier"
 import { readTranscript } from "./transcript-reader"
@@ -16,7 +15,6 @@ export interface ExtractionOptions {
   transcriptPath: string
   model: LanguageModel
   storePath: string
-  mdPath?: string
   chunkSize?: number
   force?: boolean
 }
@@ -28,7 +26,6 @@ export async function runExtraction(
     transcriptPath,
     model,
     storePath,
-    mdPath = path.join(path.dirname(storePath), "knowledge.md"),
     chunkSize = 20,
     force = false,
   } = options
@@ -37,7 +34,6 @@ export async function runExtraction(
   const existing = await readEntries(storePath)
 
   if (!force && existing.some((e) => e.source === source)) {
-    await renderMarkdown(existing, mdPath)
     return {
       entries: [],
       stats: {
@@ -77,8 +73,6 @@ export async function runExtraction(
   if (newEntries.length > 0) {
     await appendEntries(newEntries, storePath)
   }
-
-  await renderMarkdown([...existing, ...newEntries], mdPath)
 
   return {
     entries: newEntries,
