@@ -45,6 +45,12 @@ export interface ContextConfig {
   truncation_min_remaining: number
   truncation_min_content: number
   truncation_header_buffer: number
+  compression: {
+    strategy: string
+    chars_per_token: number
+    reserve_ratio: number
+    model_budgets: Record<string, number>
+  }
 }
 
 export interface HomeostasisConfig {

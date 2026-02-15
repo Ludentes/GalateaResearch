@@ -151,6 +151,17 @@ context:
   #    3: PROCEDURES (truncatable)
   # These are hardcoded in context-assembler.ts section construction.
 
+  # Context compression — prevents history from exceeding model limits.
+  compression:
+    strategy: "sliding_window"
+    chars_per_token: 4
+    reserve_ratio: 0.10
+    model_budgets:
+      "glm-4.7-flash": 8192
+      "gpt-oss:latest": 8192
+      "sonnet": 200000
+      default: 8192
+
 # -----------------------------------------------------------------------------
 # MEMORY DECAY — server/memory/decay.ts
 # Ebbinghaus-style confidence reduction for entries not recently retrieved.
