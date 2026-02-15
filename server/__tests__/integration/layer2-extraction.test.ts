@@ -129,11 +129,12 @@ describe("Layer 2: Umka session ends, knowledge extracted", () => {
     }
 
     // Seed duplicates to simulate 3+ occurrences of the same knowledge
-    const target = entries[0]
+    // Pick a non-superseded entry (earlier tests may have superseded entries[0])
+    const target = entries.find((e) => !e.supersededBy) ?? entries[0]
     await appendEntries(
       [
-        { ...target, id: crypto.randomUUID(), source: "session:dup-1" },
-        { ...target, id: crypto.randomUUID(), source: "session:dup-2" },
+        { ...target, id: crypto.randomUUID(), source: "session:dup-1", supersededBy: undefined },
+        { ...target, id: crypto.randomUUID(), source: "session:dup-2", supersededBy: undefined },
       ],
       world.storePath,
     )
