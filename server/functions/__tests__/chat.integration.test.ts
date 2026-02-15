@@ -48,5 +48,5 @@ describe("Chat Logic (integration with Ollama)", () => {
     expect(msgs[0].role).toBe("user")
     expect(msgs[1].role).toBe("assistant")
     expect(msgs[1].model).toBe("glm-4.7-flash")
-  }, 60000)
+  }, 120_000)
 })

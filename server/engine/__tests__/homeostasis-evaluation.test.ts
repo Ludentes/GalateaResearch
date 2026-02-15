@@ -215,7 +215,7 @@ describe("Homeostasis Evaluation - Reference Scenarios", () => {
       expect(["LOW", "HEALTHY", "HIGH"]).toContain(state.certainty_alignment)
       // Assessment method should be "llm" when L2 succeeds
       expect(["llm", "computed"]).toContain(state.assessment_method.certainty_alignment)
-    }, 60_000)
+    }, 120_000)
   })
 
   describe("S6: Knowledge Not Applied (knowledge_application) - L2 needed", () => {
@@ -254,7 +254,7 @@ describe("Homeostasis Evaluation - Reference Scenarios", () => {
       expect(["LOW", "HEALTHY", "HIGH"]).toContain(state.knowledge_application)
       // Assessment method should be "llm" when L2 succeeds
       expect(["llm", "computed"]).toContain(state.assessment_method.knowledge_application)
-    }, 60_000)
+    }, 120_000)
   })
 
   describe("Baseline vs L1 Improvement Metrics", () => {
