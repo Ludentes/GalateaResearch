@@ -1,0 +1,324 @@
+# =============================================================================
+# Galatea Pipeline Configuration
+# =============================================================================
+#
+# Single source of truth for all thresholds, filters, and tuning parameters
+# across the memory, retrieval, and homeostasis pipelines.
+#
+# Each value includes:
+#   - What it controls
+#   - What happens when you raise/lower it
+#   - Which module reads it
+#
+# To debug why a fact wasn't retrieved or an entry was filtered:
+#   pnpm exec tsx scripts/trace.ts "your query here"
+#
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# RETRIEVAL — server/memory/fact-retrieval.ts
+# Controls how facts are found when a user sends a message.
+# -----------------------------------------------------------------------------
+retrieval:
+  # Maximum facts returned per query.
+  # Raise: more context for LLM but higher token cost.
+  # Lower: cheaper but may miss relevant facts.
+  max_entries: 20
+
+  # Minimum character length for an entity name to be considered.
+  # Filters out "I", "a", "it" etc. from entity matching.
+  # Raise: miss short but valid entity names (e.g. "Go", "CI").
+  # Lower: false positives from common short words.
+  entity_name_min_length: 3
+
+  # Minimum character length for a word to be a keyword (Pass 2).
+  # Raise: miss short technical terms like "pnpm", "mqtt".
+  # Lower: noise from articles and prepositions.
+  keyword_min_length: 4
+
+  # Minimum keyword overlap for Pass 2 (content-based matching).
+  # With stop word filtering, 1 is usually sufficient.
+  # Raise: fewer but more precise matches.
+  # Lower: more matches but more noise.
+  keyword_overlap_threshold: 1
+
+# -----------------------------------------------------------------------------
+# SIGNAL CLASSIFICATION — server/memory/signal-classifier.ts
+# Pre-filters transcript turns before LLM extraction.
+# Determines which turns are "signal" (worth extracting) vs "noise".
+# -----------------------------------------------------------------------------
+signal:
+  # Messages shorter than this are checked against greeting patterns.
+  # Prevents "Hi, I'd like to discuss our architecture" being classified as greeting.
+  # Raise: more messages treated as potential greetings.
+  # Lower: only very short greetings filtered.
+  greeting_max_length: 30
+
+  # Confidence assigned to turns matching signal patterns (preference, correction, etc.)
+  signal_confidence: 0.8
+
+  # Confidence assigned to noise matches (greetings, confirmations).
+  noise_confidence: 0.95
+
+  # Minimum length for a message to be considered "factual" (fallback signal).
+  # Messages longer than this that don't match any pattern are assumed to contain facts.
+  # Raise: stricter — more messages fall through as noise.
+  # Lower: more messages treated as potential facts.
+  factual_min_length: 50
+
+  # Confidence for factual fallback classification.
+  factual_confidence: 0.5
+
+  # Default noise confidence for messages that match nothing.
+  default_noise_confidence: 0.6
+
+# -----------------------------------------------------------------------------
+# DEDUPLICATION — server/memory/knowledge-store.ts
+# Prevents the same fact from being stored twice.
+# Uses Jaccard similarity (word overlap) + optional embedding cosine similarity.
+# -----------------------------------------------------------------------------
+dedup:
+  # Jaccard similarity on content text. Two entries with >= this overlap are dupes.
+  # Raise: allows near-duplicates through (slight rewordings stored separately).
+  # Lower: aggressive dedup, may merge distinct facts that share vocabulary.
+  content_jaccard_threshold: 0.5
+
+  # When both content and evidence text are available, content threshold is relaxed
+  # if evidence overlap is high. This pair works together.
+  evidence_jaccard_threshold: 0.5
+  content_with_evidence_threshold: 0.2
+
+  # Cosine similarity on embeddings (requires Ollama). Catches semantic duplicates
+  # that Jaccard misses (different words, same meaning).
+  # Raise: only near-identical embeddings are dupes.
+  # Lower: more aggressive semantic dedup.
+  embedding_cosine_threshold: 0.85
+
+  # Minimum word length for Jaccard tokenization.
+  # Raise: ignore more short words in similarity calculation.
+  # Lower: include short words, changes similarity scores.
+  tokenize_min_word_length: 3
+
+# -----------------------------------------------------------------------------
+# EXTRACTION — server/memory/extraction-pipeline.ts + knowledge-extractor.ts
+# Controls how knowledge is extracted from transcripts via LLM.
+# -----------------------------------------------------------------------------
+extraction:
+  # Number of transcript turns processed per LLM call.
+  # Raise: fewer API calls but larger context per call.
+  # Lower: more API calls but each chunk is more focused.
+  chunk_size: 20
+
+  # LLM temperature for extraction. 0 = deterministic.
+  # Temperature sequence for retries: [0, 0.3, 0.7]
+  default_temperature: 0
+
+  # Maximum retries on extraction failure.
+  max_retries: 0
+
+  # Truncation limit for tool input in extraction prompt.
+  tool_input_truncation: 150
+
+# -----------------------------------------------------------------------------
+# CONTEXT ASSEMBLY — server/memory/context-assembler.ts
+# Builds the system prompt from preprompts + knowledge + homeostasis.
+# -----------------------------------------------------------------------------
+context:
+  # Total token budget for the system prompt.
+  # Raise: more knowledge fits but costs more per message.
+  # Lower: cheaper but may truncate important knowledge.
+  token_budget: 4000
+
+  # Approximate characters per token. Used to convert token budget to char budget.
+  # GPT-family models average ~4 chars/token. Adjust for other tokenizers.
+  chars_per_token: 4
+
+  # Minimum remaining chars before attempting to truncate a section.
+  truncation_min_remaining: 100
+
+  # Minimum chars of content worth including in a truncated section.
+  truncation_min_content: 50
+
+  # Buffer chars subtracted for section header when truncating.
+  truncation_header_buffer: 10
+
+  # Section priorities (lower = higher priority, assembled first).
+  # Sections with truncatable: false are always included regardless of budget.
+  #   -1: SELF-REGULATION (homeostasis guidance)
+  #    0: CONSTRAINTS (hard rules, never truncated)
+  #    1: IDENTITY (core persona, never truncated)
+  #    2: LEARNED KNOWLEDGE (truncatable)
+  #    3: PROCEDURES (truncatable)
+  # These are hardcoded in context-assembler.ts section construction.
+
+# -----------------------------------------------------------------------------
+# HOMEOSTASIS — server/engine/homeostasis-engine.ts
+# Self-regulation: assesses 6 dimensions and generates behavioral guidance.
+# -----------------------------------------------------------------------------
+homeostasis:
+  # Hours of inactivity before communication_health drops to LOW.
+  # Raise: more tolerance for slow responses.
+  # Lower: agent feels urgency to respond sooner.
+  communication_idle_hours: 4
+
+  # Number of recent user messages checked for stuck detection.
+  # Raise: look further back but may detect false patterns.
+  # Lower: only detect very recent repetition.
+  stuck_detection_window: 3
+
+  # Jaccard similarity between consecutive messages to detect "stuck" user.
+  # Raise: only flag very similar messages as stuck.
+  # Lower: flag loosely related repeated questions.
+  stuck_jaccard_threshold: 0.5
+
+  # Minimum message length to trigger knowledge sufficiency check.
+  # Very short messages ("hi") shouldn't trigger LOW knowledge.
+  knowledge_message_min_length: 20
+
+  # Minimum keyword overlap between message and facts for relevance.
+  knowledge_keyword_overlap: 2
+
+  # Score threshold for HIGH knowledge sufficiency.
+  # Score = relevant_facts * avg_confidence. E.g., 3 facts at 0.9 = 2.7.
+  knowledge_high_score: 2.5
+
+  # Minimum word length for keyword extraction in homeostasis assessors.
+  keyword_min_length: 3
+
+  # Cache TTLs per dimension (milliseconds). 0 = no cache.
+  cache_ttl:
+    knowledge_sufficiency: 0
+    certainty_alignment: 60000
+    progress_momentum: 120000
+    communication_health: 1800000
+    productive_engagement: 0
+    knowledge_application: 300000
+
+# -----------------------------------------------------------------------------
+# STOP WORDS
+# Used by both retrieval (fact-retrieval.ts) and deduplication (knowledge-store.ts).
+# English-only for now. TODO: add multilingual support or use a library.
+# -----------------------------------------------------------------------------
+stop_words:
+  # Used by fact-retrieval.ts for keyword extraction (Pass 2).
+  # These are filtered OUT — they don't count as meaningful keywords.
+  retrieval:
+    - about
+    - after
+    - also
+    - been
+    - before
+    - being
+    - between
+    - both
+    - came
+    - come
+    - could
+    - does
+    - done
+    - each
+    - even
+    - from
+    - have
+    - here
+    - into
+    - just
+    - know
+    - like
+    - long
+    - look
+    - make
+    - many
+    - more
+    - most
+    - much
+    - must
+    - need
+    - only
+    - other
+    - over
+    - said
+    - same
+    - should
+    - show
+    - some
+    - such
+    - take
+    - tell
+    - than
+    - that
+    - their
+    - them
+    - then
+    - there
+    - these
+    - they
+    - this
+    - those
+    - time
+    - very
+    - want
+    - well
+    - were
+    - what
+    - when
+    - which
+    - will
+    - with
+    - work
+    - would
+    - your
+
+  # Used by knowledge-store.ts for Jaccard tokenization.
+  # Shorter function words that shouldn't affect similarity scoring.
+  dedup:
+    - the
+    - is
+    - are
+    - was
+    - were
+    - be
+    - been
+    - being
+    - a
+    - an
+    - and
+    - or
+    - but
+    - not
+    - no
+    - for
+    - to
+    - in
+    - of
+    - on
+    - at
+    - by
+    - with
+    - from
+    - that
+    - this
+    - it
+    - its
+    - has
+    - have
+    - had
+    - will
+    - can
+    - could
+    - would
+    - should
+    - do
+    - does
+    - did
+    - use
+    - uses
+    - used
+    - using
+    - also
+    - very
+    - just
+    - only
+    - must
+    - may
+    - might
