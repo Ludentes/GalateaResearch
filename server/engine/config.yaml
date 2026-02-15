@@ -236,6 +236,17 @@ heartbeat:
   skip_when_idle: true
 
 # -----------------------------------------------------------------------------
+# DISCORD — server/discord/bot.ts
+# Bot connector for Discord messaging.
+# -----------------------------------------------------------------------------
+discord:
+  enabled: false
+  respond_to_dms: true
+  respond_to_mentions: true
+  allowed_guilds: []
+  allowed_channels: []
+
+# -----------------------------------------------------------------------------
 # STOP WORDS
 # Used by both retrieval (fact-retrieval.ts) and deduplication (knowledge-store.ts).
 # English-only for now. TODO: add multilingual support or use a library.

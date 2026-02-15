@@ -89,6 +89,14 @@ export interface MemoryConfig {
   decay: DecayConfig
 }
 
+export interface DiscordConfig {
+  enabled: boolean
+  respond_to_dms: boolean
+  respond_to_mentions: boolean
+  allowed_guilds: string[]
+  allowed_channels: string[]
+}
+
 export interface StopWordsConfig {
   retrieval: string[]
   dedup: string[]
@@ -103,6 +111,7 @@ export interface PipelineConfig {
   homeostasis: HomeostasisConfig
   heartbeat: HeartbeatConfig
   memory: MemoryConfig
+  discord: DiscordConfig
   stop_words: StopWordsConfig
 }
 
@@ -154,6 +163,10 @@ export function getHeartbeatConfig(): HeartbeatConfig {
 
 export function getDecayConfig(): DecayConfig {
   return loadConfig().memory.decay
+}
+
+export function getDiscordConfig(): DiscordConfig {
+  return loadConfig().discord
 }
 
 export function getStopWords(list: "retrieval" | "dedup"): Set<string> {

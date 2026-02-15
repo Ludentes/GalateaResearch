@@ -36,6 +36,7 @@
     "ai-sdk-provider-claude-code": "^3.3.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "discord.js": "^14.25.1",
     "dotenv": "^17.2.4",
     "drizzle-orm": "^0.45.1",
     "langfuse": "^3.38.6",
