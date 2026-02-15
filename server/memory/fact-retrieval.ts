@@ -51,11 +51,11 @@ export async function retrieveRelevantFacts(
     }
   }
 
-  // Pass 2: domain-tagged entries matching message keywords
-  const keywords = extractKeywords(message)
+  // Pass 2: entries matching message keywords by content overlap
+  const keywords = extractSignificantKeywords(message)
   for (const entry of active) {
     if (seen.has(entry.id)) continue
-    if (entry.about?.type === "domain" && keywordOverlap(keywords, entry) >= 2) {
+    if (keywords.size > 0 && keywordOverlap(keywords, entry) >= 1) {
       relevant.push(entry)
       seen.add(entry.id)
     }
@@ -97,12 +97,23 @@ function extractEntityMentions(
   return [...knownEntities].filter((entity) => msgLower.includes(entity))
 }
 
-function extractKeywords(message: string): Set<string> {
+const STOP_WORDS = new Set([
+  "about", "after", "also", "been", "before", "being", "between", "both",
+  "came", "come", "could", "does", "done", "each", "even", "from", "have",
+  "here", "into", "just", "know", "like", "long", "look", "make", "many",
+  "more", "most", "much", "must", "need", "only", "other", "over", "said",
+  "same", "should", "show", "some", "such", "take", "tell", "than", "that",
+  "their", "them", "then", "there", "these", "they", "this", "those", "time",
+  "very", "want", "well", "were", "what", "when", "which", "will", "with",
+  "work", "would", "your",
+])
+
+function extractSignificantKeywords(message: string): Set<string> {
   return new Set(
     message
       .toLowerCase()
       .split(/\W+/)
-      .filter((w) => w.length > 3),
+      .filter((w) => w.length > 3 && !STOP_WORDS.has(w)),
   )
 }
 
