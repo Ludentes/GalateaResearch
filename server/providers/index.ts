@@ -16,7 +16,10 @@ export function getModelWithFallback(
   // If Ollama and circuit is open, try OpenRouter fallback
   if (provider === "ollama" && ollamaQueue.state.circuitState === "open") {
     if (config.openrouterApiKey) {
-      console.log("[providers] Ollama circuit open, falling back to OpenRouter")
+      console.warn(
+        "[providers] ⚠️  FALLBACK ACTIVE: Ollama circuit breaker is OPEN — routing to OpenRouter. " +
+          "This incurs external API costs. Check Ollama health.",
+      )
       const fallbackModel =
         process.env.OPENROUTER_MODEL || "z-ai/glm-4.5-air:free"
       return {

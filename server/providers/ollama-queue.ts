@@ -179,6 +179,10 @@ export class OllamaQueue {
     this.consecutiveFailures++
     if (this.consecutiveFailures >= this.config.circuitBreakerThreshold) {
       this.circuitOpenUntil = Date.now() + this.config.circuitBreakerCooldownMs
+      console.warn(
+        `[ollama-queue] ⚠️  CIRCUIT BREAKER TRIPPED: ${this.consecutiveFailures} consecutive failures. ` +
+          `Ollama requests blocked for ${this.config.circuitBreakerCooldownMs}ms.`,
+      )
     }
   }
 }
