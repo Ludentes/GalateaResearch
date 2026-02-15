@@ -10,17 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as MemoriesIndexRouteImport } from './routes/memories/index'
 import { Route as ChatSessionIdRouteImport } from './routes/chat/$sessionId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MemoriesIndexRoute = MemoriesIndexRouteImport.update({
-  id: '/memories/',
-  path: '/memories/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChatSessionIdRoute = ChatSessionIdRouteImport.update({
@@ -32,31 +26,27 @@ const ChatSessionIdRoute = ChatSessionIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/chat/$sessionId': typeof ChatSessionIdRoute
-  '/memories/': typeof MemoriesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/chat/$sessionId': typeof ChatSessionIdRoute
-  '/memories': typeof MemoriesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/chat/$sessionId': typeof ChatSessionIdRoute
-  '/memories/': typeof MemoriesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/chat/$sessionId' | '/memories/'
+  fullPaths: '/' | '/chat/$sessionId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/chat/$sessionId' | '/memories'
-  id: '__root__' | '/' | '/chat/$sessionId' | '/memories/'
+  to: '/' | '/chat/$sessionId'
+  id: '__root__' | '/' | '/chat/$sessionId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ChatSessionIdRoute: typeof ChatSessionIdRoute
-  MemoriesIndexRoute: typeof MemoriesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -66,13 +56,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/memories/': {
-      id: '/memories/'
-      path: '/memories'
-      fullPath: '/memories/'
-      preLoaderRoute: typeof MemoriesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/chat/$sessionId': {
@@ -88,7 +71,6 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ChatSessionIdRoute: ChatSessionIdRoute,
-  MemoriesIndexRoute: MemoriesIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
