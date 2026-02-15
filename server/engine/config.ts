@@ -58,6 +58,12 @@ export interface HomeostasisConfig {
   cache_ttl: Record<string, number>
 }
 
+export interface HeartbeatConfig {
+  enabled: boolean
+  interval_ms: number
+  skip_when_idle: boolean
+}
+
 export interface StopWordsConfig {
   retrieval: string[]
   dedup: string[]
@@ -70,6 +76,7 @@ export interface PipelineConfig {
   extraction: ExtractionConfig
   context: ContextConfig
   homeostasis: HomeostasisConfig
+  heartbeat: HeartbeatConfig
   stop_words: StopWordsConfig
 }
 
@@ -113,6 +120,10 @@ export function getContextConfig(): ContextConfig {
 
 export function getHomeostasisConfig(): HomeostasisConfig {
   return loadConfig().homeostasis
+}
+
+export function getHeartbeatConfig(): HeartbeatConfig {
+  return loadConfig().heartbeat
 }
 
 export function getStopWords(list: "retrieval" | "dedup"): Set<string> {

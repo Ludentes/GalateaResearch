@@ -195,6 +195,15 @@ homeostasis:
     knowledge_application: 300000
 
 # -----------------------------------------------------------------------------
+# HEARTBEAT — server/agent/heartbeat.ts
+# Periodic tick() scheduler for autonomous operation.
+# -----------------------------------------------------------------------------
+heartbeat:
+  enabled: true
+  interval_ms: 30000
+  skip_when_idle: true
+
+# -----------------------------------------------------------------------------
 # STOP WORDS
 # Used by both retrieval (fact-retrieval.ts) and deduplication (knowledge-store.ts).
 # English-only for now. TODO: add multilingual support or use a library.
