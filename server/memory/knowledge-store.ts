@@ -1,8 +1,8 @@
 import { existsSync } from "node:fs"
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
+import { getDedupConfig, getStopWords } from "../engine/config"
 import type {
-  KnowledgeAbout,
   KnowledgeEntry,
   KnowledgeSubjectType,
   KnowledgeType,
@@ -39,65 +39,15 @@ export async function appendEntries(
 }
 
 // --- Stop words + tokenization ---
-const STOP_WORDS = new Set([
-  "the",
-  "is",
-  "are",
-  "was",
-  "were",
-  "be",
-  "been",
-  "being",
-  "a",
-  "an",
-  "and",
-  "or",
-  "but",
-  "not",
-  "no",
-  "for",
-  "to",
-  "in",
-  "of",
-  "on",
-  "at",
-  "by",
-  "with",
-  "from",
-  "that",
-  "this",
-  "it",
-  "its",
-  "has",
-  "have",
-  "had",
-  "will",
-  "can",
-  "could",
-  "would",
-  "should",
-  "do",
-  "does",
-  "did",
-  "use",
-  "uses",
-  "used",
-  "using",
-  "also",
-  "very",
-  "just",
-  "only",
-  "must",
-  "may",
-  "might",
-])
 
 function tokenize(text: string): Set<string> {
+  const cfg = getDedupConfig()
+  const stopWords = getStopWords("dedup")
   return new Set(
     text
       .toLowerCase()
       .split(/\W+/)
-      .filter((w) => w.length > 2 && !STOP_WORDS.has(w)),
+      .filter((w) => w.length >= cfg.tokenize_min_word_length && !stopWords.has(w)),
   )
 }
 
@@ -147,14 +97,15 @@ export function isDuplicate(
   candidate: KnowledgeEntry,
   existing: KnowledgeEntry[],
 ): boolean {
+  const cfg = getDedupConfig()
   return existing.some((e) => {
     const contentSim = normalizedJaccard(candidate.content, e.content)
     const evidenceSim =
       candidate.evidence && e.evidence
         ? normalizedJaccard(candidate.evidence, e.evidence)
         : 0
-    if (evidenceSim >= 0.5 && contentSim >= 0.2) return true
-    if (contentSim >= 0.5) return true
+    if (evidenceSim >= cfg.evidence_jaccard_threshold && contentSim >= cfg.content_with_evidence_threshold) return true
+    if (contentSim >= cfg.content_jaccard_threshold) return true
     return false
   })
 }
@@ -198,7 +149,7 @@ export async function deduplicateEntries(
         const isDup = pool.some((e) => {
           const poolEmb = embMap.get(e.id)
           return poolEmb
-            ? cosineSimilarity(candidateEmb, poolEmb) > 0.85
+            ? cosineSimilarity(candidateEmb, poolEmb) > getDedupConfig().embedding_cosine_threshold
             : false
         })
         if (isDup) {

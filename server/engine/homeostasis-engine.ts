@@ -44,6 +44,7 @@
 import { readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import { getHomeostasisConfig } from "./config"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -69,31 +70,16 @@ interface DimensionConfig {
   thinkingLevel: 0 | 1 | 2  // 0=cached, 1=computed, 2=LLM
 }
 
-const DIMENSION_CONFIGS: Record<Dimension, DimensionConfig> = {
-  knowledge_sufficiency: {
-    cacheTTL: 0,          // Don't cache - changes every message
-    thinkingLevel: 1,
-  },
-  certainty_alignment: {
-    cacheTTL: 60_000,     // Cache 1 min (expensive LLM)
-    thinkingLevel: 2,     // Needs LLM (defaults to 1 without)
-  },
-  progress_momentum: {
-    cacheTTL: 120_000,    // Cache 2 min
-    thinkingLevel: 1,
-  },
-  communication_health: {
-    cacheTTL: 1800_000,   // Cache 30 min (time-based, slow changing)
-    thinkingLevel: 1,
-  },
-  productive_engagement: {
-    cacheTTL: 0,          // Don't cache
-    thinkingLevel: 1,
-  },
-  knowledge_application: {
-    cacheTTL: 300_000,    // Cache 5 min (expensive LLM)
-    thinkingLevel: 2,     // Needs LLM (defaults to 1 without)
-  },
+function getDimensionConfigs(): Record<Dimension, DimensionConfig> {
+  const ttl = getHomeostasisConfig().cache_ttl
+  return {
+    knowledge_sufficiency: { cacheTTL: ttl.knowledge_sufficiency ?? 0, thinkingLevel: 1 },
+    certainty_alignment: { cacheTTL: ttl.certainty_alignment ?? 60_000, thinkingLevel: 2 },
+    progress_momentum: { cacheTTL: ttl.progress_momentum ?? 120_000, thinkingLevel: 1 },
+    communication_health: { cacheTTL: ttl.communication_health ?? 1800_000, thinkingLevel: 1 },
+    productive_engagement: { cacheTTL: ttl.productive_engagement ?? 0, thinkingLevel: 1 },
+    knowledge_application: { cacheTTL: ttl.knowledge_application ?? 300_000, thinkingLevel: 2 },
+  }
 }
 
 function getCacheKey(dimension: Dimension, sessionId: string): string {
@@ -104,7 +90,7 @@ function assessL0Cached(
   dimension: Dimension,
   sessionId: string
 ): DimensionState | null {
-  const config = DIMENSION_CONFIGS[dimension]
+  const config = getDimensionConfigs()[dimension]
   if (config.cacheTTL === 0) return null
 
   const cacheKey = getCacheKey(dimension, sessionId)
@@ -135,9 +121,10 @@ function updateCache(
 // ============ L1: Improved Computed Assessors ============
 
 function assessKnowledgeSufficiencyL1(ctx: AgentContext): DimensionState {
+  const cfg = getHomeostasisConfig()
   const facts = ctx.retrievedFacts || []
 
-  if (facts.length === 0 && ctx.currentMessage.length > 20) {
+  if (facts.length === 0 && ctx.currentMessage.length > cfg.knowledge_message_min_length) {
     return "LOW"
   }
 
@@ -145,7 +132,7 @@ function assessKnowledgeSufficiencyL1(ctx: AgentContext): DimensionState {
   const messageWords = new Set(
     ctx.currentMessage.toLowerCase()
       .split(/\W+/)
-      .filter(w => w.length >= 3)
+      .filter(w => w.length >= cfg.keyword_min_length)
   )
 
   if (messageWords.size === 0) {
@@ -155,10 +142,10 @@ function assessKnowledgeSufficiencyL1(ctx: AgentContext): DimensionState {
   // Find relevant facts (keyword overlap)
   const relevantFacts = facts.filter(f => {
     const factWords = new Set(
-      f.content.toLowerCase().split(/\W+/).filter(w => w.length >= 3)
+      f.content.toLowerCase().split(/\W+/).filter(w => w.length >= cfg.keyword_min_length)
     )
     const overlap = [...messageWords].filter(w => factWords.has(w)).length
-    return overlap >= 2 // At least 2 matching keywords
+    return overlap >= cfg.knowledge_keyword_overlap
   })
 
   // Weight by confidence
@@ -169,36 +156,36 @@ function assessKnowledgeSufficiencyL1(ctx: AgentContext): DimensionState {
   const score = relevantFacts.length * avgConfidence
 
   if (score === 0) return "LOW"
-  if (score >= 2.5) return "HIGH"  // e.g., 3 relevant facts at 90% confidence
+  if (score >= cfg.knowledge_high_score) return "HIGH"
   return "HEALTHY"
 }
 
 function assessProgressMomentumL1(ctx: AgentContext): DimensionState {
+  const cfg = getHomeostasisConfig()
   const userMessages = ctx.messageHistory.filter((m) => m.role === "user")
-  if (userMessages.length < 3) return "HEALTHY"
+  if (userMessages.length < cfg.stuck_detection_window) return "HEALTHY"
 
   // Detect repeated similar questions (user stuck)
-  const recent = userMessages.slice(-3).map((m) => m.content.toLowerCase())
+  const recent = userMessages.slice(-cfg.stuck_detection_window).map((m) => m.content.toLowerCase())
   const words = recent.map((m) =>
-    new Set(m.split(/\W+/).filter((w) => w.length >= 3)),
+    new Set(m.split(/\W+/).filter((w) => w.length >= cfg.keyword_min_length)),
   )
 
-  if (words.length >= 3) {
-    const overlap01 = jaccardSets(words[0], words[1])
-    const overlap12 = jaccardSets(words[1], words[2])
-
-    // Detect stuck if ANY consecutive pair has high overlap
-    if (overlap01 > 0.5 || overlap12 > 0.5) return "LOW"
+  if (words.length >= cfg.stuck_detection_window) {
+    for (let i = 0; i < words.length - 1; i++) {
+      if (jaccardSets(words[i], words[i + 1]) > cfg.stuck_jaccard_threshold) return "LOW"
+    }
   }
 
   return "HEALTHY"
 }
 
 function assessCommunicationHealthL1(ctx: AgentContext): DimensionState {
+  const cfg = getHomeostasisConfig()
   if (ctx.lastMessageTime) {
     const elapsed = Date.now() - ctx.lastMessageTime.getTime()
     const hours = elapsed / (1000 * 60 * 60)
-    if (hours > 4) return "LOW"
+    if (hours > cfg.communication_idle_hours) return "LOW"
   }
   return "HEALTHY"
 }

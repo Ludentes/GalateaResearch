@@ -1,5 +1,6 @@
 import path from "node:path"
 import type { LanguageModel } from "ai"
+import { getExtractionConfig } from "../engine/config"
 import { getLLMConfig } from "../providers/config"
 import { extractWithRetry } from "./knowledge-extractor"
 import {
@@ -22,11 +23,12 @@ export interface ExtractionOptions {
 export async function runExtraction(
   options: ExtractionOptions,
 ): Promise<ExtractionResult> {
+  const extractionCfg = getExtractionConfig()
   const {
     transcriptPath,
     model,
     storePath,
-    chunkSize = 20,
+    chunkSize = extractionCfg.chunk_size,
     force = false,
   } = options
 

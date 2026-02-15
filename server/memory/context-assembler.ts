@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm"
 import { db } from "../db"
 import { preprompts } from "../db/schema"
+import { getContextConfig } from "../engine/config"
 import type { AgentContext } from "../engine/types"
 import { assessDimensions, getGuidance } from "../engine/homeostasis-engine"
 import { readEntries } from "./knowledge-store"
@@ -15,9 +16,10 @@ interface AssembleOptions {
 export async function assembleContext(
   options: AssembleOptions = {},
 ): Promise<AssembledContext> {
+  const ctxConfig = getContextConfig()
   const {
     storePath = "data/memory/entries.jsonl",
-    tokenBudget = 4000,
+    tokenBudget = ctxConfig.token_budget,
     agentContext,
   } = options
 
@@ -119,7 +121,8 @@ export async function assembleContext(
 }
 
 function buildPrompt(sections: ContextSection[], tokenBudget: number): string {
-  const charBudget = tokenBudget * 4
+  const cfg = getContextConfig()
+  const charBudget = tokenBudget * cfg.chars_per_token
   let result = ""
   let remaining = charBudget
 
@@ -140,10 +143,10 @@ function buildPrompt(sections: ContextSection[], tokenBudget: number): string {
     if (block.length <= remaining) {
       result += block
       remaining -= block.length
-    } else if (remaining > 100) {
+    } else if (remaining > cfg.truncation_min_remaining) {
       const header = `## ${section.name}\n`
-      const available = remaining - header.length - 10
-      if (available > 50) {
+      const available = remaining - header.length - cfg.truncation_header_buffer
+      if (available > cfg.truncation_min_content) {
         result += `${header}${section.content.slice(0, available)}\n...\n\n`
         remaining = 0
       }

@@ -1,3 +1,4 @@
+import { getSignalConfig } from "../engine/config"
 import type { SignalClassification, SignalType, TranscriptTurn } from "./types"
 
 /**
@@ -26,6 +27,8 @@ const SIGNAL_PATTERNS: Record<string, RegExp> = {
 }
 
 export function classifyTurn(turn: TranscriptTurn): SignalClassification {
+  const cfg = getSignalConfig()
+
   if (turn.role !== "user") {
     return { type: "noise", confidence: 1.0 }
   }
@@ -36,26 +39,26 @@ export function classifyTurn(turn: TranscriptTurn): SignalClassification {
   }
 
   // Check noise — only for short messages (greetings in long messages lose to signal)
-  if (NOISE_PATTERNS.greeting.test(text) && text.length < 30) {
-    return { type: "noise", pattern: "greeting", confidence: 0.95 }
+  if (NOISE_PATTERNS.greeting.test(text) && text.length < cfg.greeting_max_length) {
+    return { type: "noise", pattern: "greeting", confidence: cfg.noise_confidence }
   }
   if (NOISE_PATTERNS.confirmation.test(text)) {
-    return { type: "noise", pattern: "confirmation", confidence: 0.95 }
+    return { type: "noise", pattern: "confirmation", confidence: cfg.noise_confidence }
   }
 
   // Check signal patterns (order: preference > correction > policy > decision)
   for (const [type, regex] of Object.entries(SIGNAL_PATTERNS)) {
     if (regex.test(text)) {
-      return { type: type as SignalType, pattern: type, confidence: 0.8 }
+      return { type: type as SignalType, pattern: type, confidence: cfg.signal_confidence }
     }
   }
 
   // Fallback: substantial messages may contain facts
-  if (text.length > 50) {
-    return { type: "factual", confidence: 0.5 }
+  if (text.length > cfg.factual_min_length) {
+    return { type: "factual", confidence: cfg.factual_confidence }
   }
 
-  return { type: "noise", confidence: 0.6 }
+  return { type: "noise", confidence: cfg.default_noise_confidence }
 }
 
 export function filterSignalTurns(turns: TranscriptTurn[]): TranscriptTurn[] {
