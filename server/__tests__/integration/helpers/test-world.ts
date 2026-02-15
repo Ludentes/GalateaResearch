@@ -42,6 +42,7 @@ interface PrepromptSeed {
 
 export interface TestWorld {
   sessionId: string
+  storePath: string
 
   // Layer 1: Chat
   sendMessage(content: string): Promise<void>
@@ -295,6 +296,7 @@ function createTestWorld(config: TestWorldConfig): TestWorld {
 
   return {
     sessionId,
+    storePath,
 
     // Layer 1: Chat
 

@@ -7,6 +7,8 @@ import {
   ensureTestDb,
 } from "./helpers/setup"
 import { type TestWorld, scenario } from "./helpers/test-world"
+import { readEntries, supersedeEntry } from "../../memory/knowledge-store"
+import { assembleContext } from "../../memory/context-assembler"
 
 describe("Layer 2: Umka session ends, knowledge extracted", () => {
   let world: TestWorld
@@ -73,17 +75,26 @@ describe("Layer 2: Umka session ends, knowledge extracted", () => {
 
   // --- RED (todo): these assert missing behavior ---
 
-  it.todo("extracted facts appear in next chat's context")
-  // THE FEEDBACK LOOP TEST
-  // Given: extraction just completed with MQTT facts
-  // When: developer starts new chat asking about MQTT
-  // Then: assembleContext includes the freshly extracted facts
-  // Then: knowledge_sufficiency changes from LOW to HEALTHY
+  it("extracted facts appear in next chat's context", async () => {
+    const entries = await readEntries(world.storePath)
+    expect(entries.length).toBeGreaterThan(0)
 
-  it.todo("superseded entries filtered from context")
-  // Given: entry A exists, entry B created with supersededBy pointing to A
-  // When: assembleContext runs
-  // Then: only B appears, A is filtered out
+    const ctx = await assembleContext({ storePath: world.storePath })
+    expect(ctx.systemPrompt).toContain("LEARNED KNOWLEDGE")
+  }, 30_000)
+
+  it("superseded entries filtered from context", async () => {
+    const entries = await readEntries(world.storePath)
+    expect(entries.length).toBeGreaterThanOrEqual(2)
+
+    const target = entries[0]
+    const replacement = entries[1]
+    await supersedeEntry(target.id, replacement.id, world.storePath)
+
+    const ctx = await assembleContext({ storePath: world.storePath })
+    // The superseded entry's content should not appear in the system prompt
+    expect(ctx.systemPrompt).not.toContain(target.content)
+  }, 30_000)
 
   it.todo("OTEL event emitted on extraction completion")
   // Given: OTEL collector running
