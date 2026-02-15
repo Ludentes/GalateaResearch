@@ -194,6 +194,13 @@ homeostasis:
     productive_engagement: 0
     knowledge_application: 300000
 
+  # L2 LLM Assessment — semantic assessment for hard-to-compute dimensions
+  l2:
+    enabled: true
+    model: "glm-4.7-flash"
+    max_tokens: 50
+    timeout_ms: 10000
+
 # -----------------------------------------------------------------------------
 # HEARTBEAT — server/agent/heartbeat.ts
 # Periodic tick() scheduler for autonomous operation.

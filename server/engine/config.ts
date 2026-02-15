@@ -56,6 +56,12 @@ export interface HomeostasisConfig {
   knowledge_high_score: number
   keyword_min_length: number
   cache_ttl: Record<string, number>
+  l2: {
+    enabled: boolean
+    model: string
+    max_tokens: number
+    timeout_ms: number
+  }
 }
 
 export interface HeartbeatConfig {

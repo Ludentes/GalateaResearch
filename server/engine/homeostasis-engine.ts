@@ -269,6 +269,159 @@ export function assessDimensions(ctx: AgentContext): HomeostasisState {
   }
 }
 
+// ============ L2: LLM Semantic Assessment ============
+
+import { generateText } from "ai"
+import { createOllamaModel } from "../providers/ollama"
+import type { AssessmentMethod } from "./types"
+
+export async function assessDimensionsAsync(
+  ctx: AgentContext,
+): Promise<HomeostasisState> {
+  const sessionId = ctx.sessionId
+  const cfg = getHomeostasisConfig()
+
+  // L1 dimensions (same as sync version)
+  const knowledge_sufficiency =
+    assessL0Cached("knowledge_sufficiency", sessionId) ??
+    assessKnowledgeSufficiencyL1(ctx)
+  const progress_momentum =
+    assessL0Cached("progress_momentum", sessionId) ??
+    assessProgressMomentumL1(ctx)
+  const communication_health =
+    assessL0Cached("communication_health", sessionId) ??
+    assessCommunicationHealthL1(ctx)
+  const productive_engagement =
+    assessL0Cached("productive_engagement", sessionId) ??
+    assessProductiveEngagementL1(ctx)
+
+  // L2 dimensions — try LLM, fall back to HEALTHY
+  let certainty_alignment: DimensionState =
+    assessL0Cached("certainty_alignment", sessionId) ?? "HEALTHY"
+  let knowledge_application: DimensionState =
+    assessL0Cached("knowledge_application", sessionId) ?? "HEALTHY"
+  let certaintyMethod: AssessmentMethod = "computed"
+  let applicationMethod: AssessmentMethod = "computed"
+
+  if (cfg.l2?.enabled) {
+    const [ca, ka] = await Promise.all([
+      assessL0Cached("certainty_alignment", sessionId)
+        ? Promise.resolve(null)
+        : assessL2Semantic(ctx, "certainty_alignment"),
+      assessL0Cached("knowledge_application", sessionId)
+        ? Promise.resolve(null)
+        : assessL2Semantic(ctx, "knowledge_application"),
+    ])
+    if (ca) {
+      certainty_alignment = ca
+      certaintyMethod = "llm"
+    }
+    if (ka) {
+      knowledge_application = ka
+      applicationMethod = "llm"
+    }
+  }
+
+  // Update all caches
+  updateCache("knowledge_sufficiency", sessionId, knowledge_sufficiency)
+  updateCache("progress_momentum", sessionId, progress_momentum)
+  updateCache("communication_health", sessionId, communication_health)
+  updateCache("productive_engagement", sessionId, productive_engagement)
+  updateCache("certainty_alignment", sessionId, certainty_alignment)
+  updateCache("knowledge_application", sessionId, knowledge_application)
+
+  return {
+    knowledge_sufficiency,
+    certainty_alignment,
+    progress_momentum,
+    communication_health,
+    productive_engagement,
+    knowledge_application,
+    assessed_at: new Date(),
+    assessment_method: {
+      knowledge_sufficiency: "computed",
+      certainty_alignment: certaintyMethod,
+      progress_momentum: "computed",
+      communication_health: "computed",
+      productive_engagement: "computed",
+      knowledge_application: applicationMethod,
+    },
+  }
+}
+
+async function assessL2Semantic(
+  ctx: AgentContext,
+  dimension: "certainty_alignment" | "knowledge_application",
+): Promise<DimensionState | null> {
+  const cfg = getHomeostasisConfig()
+  try {
+    const ollamaUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434"
+    const model = createOllamaModel(cfg.l2.model, ollamaUrl)
+
+    const prompt = buildL2Prompt(dimension, ctx)
+    const result = await generateText({
+      model,
+      prompt,
+      abortSignal: AbortSignal.timeout(cfg.l2.timeout_ms),
+    })
+
+    return parseL2Result(result.text)
+  } catch {
+    return null // Ollama unavailable — fall back to HEALTHY
+  }
+}
+
+function buildL2Prompt(
+  dimension: "certainty_alignment" | "knowledge_application",
+  ctx: AgentContext,
+): string {
+  const factCount = ctx.retrievedFacts?.length ?? 0
+
+  if (dimension === "certainty_alignment") {
+    return `You are assessing an AI agent's psychological state.
+
+Dimension: certainty_alignment
+Question: Does the agent's confidence match its actions?
+
+Context:
+- Current message: "${ctx.currentMessage.slice(0, 200)}"
+- Retrieved facts: ${factCount} facts available
+- Message history length: ${ctx.messageHistory.length} messages
+
+Respond with exactly one word: LOW, HEALTHY, or HIGH
+- LOW: Agent is uncertain but acting anyway, or confident without evidence
+- HEALTHY: Confidence level matches the available information
+- HIGH: Agent is over-qualifying or asking too many clarifying questions
+
+Your answer (one word):`
+  }
+
+  return `You are assessing an AI agent's psychological state.
+
+Dimension: knowledge_application
+Question: Is the agent balancing learning and doing?
+
+Context:
+- Current message: "${ctx.currentMessage.slice(0, 200)}"
+- Retrieved facts: ${factCount} facts available
+- Message history length: ${ctx.messageHistory.length} messages
+- Has active task: ${ctx.hasAssignedTask ?? false}
+
+Respond with exactly one word: LOW, HEALTHY, or HIGH
+- LOW: Acting without sufficient knowledge (doing without learning)
+- HEALTHY: Good balance of research and action
+- HIGH: Over-researching, analysis paralysis
+
+Your answer (one word):`
+}
+
+function parseL2Result(text: string): DimensionState {
+  const upper = text.trim().toUpperCase()
+  if (upper.startsWith("LOW")) return "LOW"
+  if (upper.startsWith("HIGH")) return "HIGH"
+  return "HEALTHY"
+}
+
 // ============ Guidance (unchanged from original) ============
 
 interface GuidanceEntry {
