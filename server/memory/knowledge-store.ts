@@ -275,9 +275,14 @@ export function entriesByEntity(
   entries: KnowledgeEntry[],
   entity: string,
 ): KnowledgeEntry[] {
-  return entries.filter(
-    (e) => e.about?.entity.toLowerCase() === entity.toLowerCase(),
-  )
+  const lower = entity.toLowerCase()
+  return entries.filter((e) => {
+    if (e.about?.entity?.toLowerCase() === lower) return true
+    if (e.entities?.some((ent) => ent.toLowerCase() === lower)) return true
+    // Also check content for entity name mention (handles entries with no about/entities)
+    if (e.content.toLowerCase().includes(lower)) return true
+    return false
+  })
 }
 
 /**

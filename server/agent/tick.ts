@@ -3,7 +3,6 @@ import type { AgentContext } from "../engine/types"
 import { assessDimensions } from "../engine/homeostasis-engine"
 import { assembleContext } from "../memory/context-assembler"
 import { retrieveRelevantFacts } from "../memory/fact-retrieval"
-import { entriesByEntity, readEntries } from "../memory/knowledge-store"
 import { getModel } from "../providers"
 import { getAgentState, removePendingMessage, updateAgentState } from "./agent-state"
 import type { SelfModel, TickResult } from "./types"
@@ -31,21 +30,11 @@ export async function tick(
   if (pending.length > 0) {
     const msg = pending[0] // oldest first
 
-    // Retrieve facts relevant to the message
-    const facts = await retrieveRelevantFacts(msg.content, storePath)
-
-    // Retrieve user model entries for the sender
-    const allEntries = await readEntries(storePath)
-    const active = allEntries.filter((e) => !e.supersededBy)
-    const userFacts = entriesByEntity(active, msg.from)
-    const allRetrieved = [...facts.entries, ...userFacts]
-    // Deduplicate by id
-    const seen = new Set<string>()
-    const retrievedFacts = allRetrieved.filter((e) => {
-      if (seen.has(e.id)) return false
-      seen.add(e.id)
-      return true
+    // Retrieve facts relevant to the message + sender entity
+    const facts = await retrieveRelevantFacts(msg.content, storePath, {
+      additionalEntities: [msg.from],
     })
+    const retrievedFacts = facts.entries
 
     const agentContext: AgentContext = {
       sessionId: `tick-${Date.now()}`,

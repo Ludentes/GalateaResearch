@@ -19,7 +19,7 @@ export interface RetrievalResult {
 export async function retrieveRelevantFacts(
   message: string,
   storePath = "data/memory/entries.jsonl",
-  opts?: { maxEntries?: number },
+  opts?: { maxEntries?: number; additionalEntities?: string[] },
 ): Promise<RetrievalResult> {
   const entries = await readEntries(storePath)
   const active = entries.filter((e) => !e.supersededBy)
@@ -29,6 +29,14 @@ export async function retrieveRelevantFacts(
   }
 
   const mentionedEntities = extractEntityMentions(message, active)
+  // Add explicitly requested entities (e.g. message sender)
+  if (opts?.additionalEntities) {
+    for (const e of opts.additionalEntities) {
+      if (!mentionedEntities.includes(e.toLowerCase())) {
+        mentionedEntities.push(e.toLowerCase())
+      }
+    }
+  }
   const relevant: KnowledgeEntry[] = []
   const seen = new Set<string>()
 
@@ -67,6 +75,7 @@ function matchesEntity(entry: KnowledgeEntry, entity: string): boolean {
   const lower = entity.toLowerCase()
   if (entry.about?.entity?.toLowerCase() === lower) return true
   if (entry.entities?.some((e) => e.toLowerCase() === lower)) return true
+  if (entry.content.toLowerCase().includes(lower)) return true
   return false
 }
 
