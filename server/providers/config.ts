@@ -37,10 +37,7 @@ export function getLLMConfig(): LLMConfig {
     throw new Error(
       "OPENROUTER_API_KEY is required when LLM_PROVIDER=openrouter",
     )
-  if (typed === "claude-code" && !anthropicApiKey)
-    throw new Error(
-      "ANTHROPIC_API_KEY is required when LLM_PROVIDER=claude-code",
-    )
+  // claude-code uses CLI auth (claude login), no API key needed
 
   return {
     provider: typed,

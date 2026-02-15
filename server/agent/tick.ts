@@ -136,9 +136,13 @@ async function checkSelfModel(): Promise<SelfModel> {
     providers.push("openrouter")
   }
 
-  // Check Claude Code
-  if (process.env.ANTHROPIC_API_KEY) {
+  // Check Claude Code (uses CLI auth, not API key)
+  try {
+    const { execSync } = await import("node:child_process")
+    execSync("claude --version", { timeout: 3000, stdio: "pipe" })
     providers.push("claude-code")
+  } catch {
+    // Claude CLI not installed or not authenticated
   }
 
   return { availableProviders: providers }
