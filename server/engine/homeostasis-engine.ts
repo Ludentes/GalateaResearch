@@ -106,7 +106,7 @@ function assessL0Cached(
   return null
 }
 
-function updateCache(
+export function updateCache(
   dimension: Dimension,
   sessionId: string,
   state: DimensionState
@@ -116,6 +116,14 @@ function updateCache(
     state,
     timestamp: Date.now(),
   })
+}
+
+export function clearCache(dimension?: Dimension, sessionId?: string): void {
+  if (dimension && sessionId) {
+    dimensionCache.delete(getCacheKey(dimension, sessionId))
+  } else {
+    dimensionCache.clear()
+  }
 }
 
 // ============ L1: Improved Computed Assessors ============
