@@ -1,0 +1,39 @@
+sequenceDiagram
+    participant Hook as auto-extract.ts
+    participant State as extraction-state.ts
+    participant Reader as transcript-reader.ts
+    participant Classifier as signal-classifier.ts
+    participant Pipeline as extraction-pipeline.ts
+    participant Extractor as knowledge-extractor.ts
+    participant LLM as Ollama
+    participant Store as knowledge-store.ts
+    participant Embed as Ollama (embeddings)
+
+    Hook->>State: isSessionExtracted(session_id)
+    State-->>Hook: false
+    Hook->>Pipeline: runExtraction({transcriptPath, model, storePath})
+    Pipeline->>Reader: readTranscript(path)
+    Reader-->>Pipeline: TranscriptTurn[]
+    Pipeline->>Classifier: filterSignalTurns(turns)
+    Classifier-->>Pipeline: signal turns (~49%)
+    loop each chunk of 20 signal turns
+        Pipeline->>Extractor: extractWithRetry(chunk, model, source)
+        Extractor->>LLM: generateObject(schema, prompt, temp=0)
+        alt success
+            LLM-->>Extractor: {items: KnowledgeEntry[]}
+        else failure
+            Extractor->>LLM: retry temp=0.3, then 0.7
+        end
+        Extractor-->>Pipeline: entries
+    end
+    Pipeline->>Store: deduplicateEntries(extracted, existing)
+    Store->>Embed: batchEmbed(texts)
+    Embed-->>Store: embeddings
+    Store-->>Pipeline: {unique, duplicatesSkipped}
+    Pipeline->>Store: appendEntries(unique, entries.jsonl)
+    Pipeline->>Store: renderMarkdown(all, knowledge.md)
+    Note over Store: knowledge.md is dead artifact — unreferenced (GAP)
+    Pipeline-->>Hook: {entries, stats}
+    Hook->>State: markSessionExtracted(session_id)
+    Note over Hook: No OTEL event, no CLAUDE.md update (GAP)
+    Note over Hook: No feedback to chat — retrievedFacts still [] (GAP)

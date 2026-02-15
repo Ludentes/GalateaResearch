@@ -1,0 +1,29 @@
+sequenceDiagram
+    participant Trigger as POST /api/agent/tick
+    participant Tick as tick.ts
+    participant SelfModel as self-model (Stage 1)
+    participant Homeo as homeostasis (Stage 2)
+    participant Channels as channel scan (Stage 3)
+    participant Assembler as context-assembler.ts
+    participant KStore as knowledge-store.ts
+    participant LLM as Ollama/OpenRouter (Stage 4)
+    participant AgentState as agent-state.json
+
+    Trigger->>Tick: tick("manual")
+    Tick->>SelfModel: checkResources()
+    Note over SelfModel: providers, tools, budget, capacity (GAP)
+    SelfModel-->>Tick: SelfModel
+    Tick->>AgentState: getAgentState()
+    AgentState-->>Tick: {activeTask, lastActivity}
+    Tick->>Homeo: assessDimensions(agentContext)
+    Homeo-->>Tick: {communication_health: LOW, ...}
+    Tick->>Channels: getPendingMessages()
+    Channels-->>Tick: [{from: "alina", content: "Как дела?"}]
+    Tick->>KStore: entriesByEntity("alina")
+    KStore-->>Tick: Alina user model entries
+    Tick->>Assembler: assembleContext({agentContext, retrievedFacts})
+    Assembler-->>Tick: systemPrompt (status-oriented)
+    Tick->>LLM: streamText(system, [{role: "user", content: "Как дела?"}])
+    LLM-->>Tick: response
+    Tick->>AgentState: updateState({lastResponse, communication_health: HEALTHY})
+    Tick-->>Trigger: TickResult {action: "respond", response}

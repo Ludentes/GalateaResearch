@@ -1,0 +1,27 @@
+sequenceDiagram
+    participant Browser
+    participant ChatAPI as chat.post.ts
+    participant ChatLogic as chat.logic.ts
+    participant DB as PostgreSQL
+    participant Assembler as context-assembler.ts
+    participant KStore as knowledge-store.ts
+    participant Homeo as homeostasis-engine.ts
+    participant LLM as Ollama
+
+    Browser->>ChatAPI: POST /api/chat {sessionId, message, provider, model}
+    ChatAPI->>ChatLogic: streamMessageLogic()
+    ChatLogic->>DB: INSERT message (role=user)
+    ChatLogic->>DB: SELECT messages WHERE session_id ORDER BY created_at
+    ChatLogic->>Assembler: assembleContext({agentContext})
+    Assembler->>DB: SELECT preprompts WHERE active=true
+    Assembler->>KStore: readEntries(entries.jsonl)
+    Note over Assembler: retrievedFacts=[] — no entity filtering (GAP)
+    Assembler->>Homeo: assessDimensions(agentContext)
+    Note over Homeo: knowledge_sufficiency always LOW (empty facts) (GAP)
+    Homeo-->>Assembler: dimensions + guidance
+    Assembler-->>ChatLogic: systemPrompt + metadata
+    ChatLogic->>LLM: streamText(system, messages)
+    LLM-->>ChatLogic: chunks
+    ChatLogic-->>Browser: text/event-stream
+    ChatLogic->>DB: INSERT message (role=assistant, tokens)
+    Note over ChatLogic: No OTEL event, no signal classification (GAP)
