@@ -194,14 +194,14 @@ homeostasis:
   # Jaccard similarity between consecutive messages to detect "stuck" user.
   # Raise: only flag very similar messages as stuck.
   # Lower: flag loosely related repeated questions.
-  stuck_jaccard_threshold: 0.5
+  stuck_jaccard_threshold: 0.35
 
   # Minimum message length to trigger knowledge sufficiency check.
   # Very short messages ("hi") shouldn't trigger LOW knowledge.
   knowledge_message_min_length: 20
 
   # Minimum keyword overlap between message and facts for relevance.
-  knowledge_keyword_overlap: 2
+  knowledge_keyword_overlap: 1
 
   # Score threshold for HIGH knowledge sufficiency.
   # Score = relevant_facts * avg_confidence. E.g., 3 facts at 0.9 = 2.7.

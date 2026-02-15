@@ -45,6 +45,7 @@ import { readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { getHomeostasisConfig } from "./config"
+import { stemTokenize } from "./stemmer"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -136,22 +137,16 @@ function assessKnowledgeSufficiencyL1(ctx: AgentContext): DimensionState {
     return "LOW"
   }
 
-  // Extract keywords from current message
-  const messageWords = new Set(
-    ctx.currentMessage.toLowerCase()
-      .split(/\W+/)
-      .filter(w => w.length >= cfg.keyword_min_length)
-  )
+  // Extract stemmed keywords from current message
+  const messageWords = stemTokenize(ctx.currentMessage)
 
   if (messageWords.size === 0) {
     return facts.length > 0 ? "HEALTHY" : "LOW"
   }
 
-  // Find relevant facts (keyword overlap)
+  // Find relevant facts (keyword overlap with stemming)
   const relevantFacts = facts.filter(f => {
-    const factWords = new Set(
-      f.content.toLowerCase().split(/\W+/).filter(w => w.length >= cfg.keyword_min_length)
-    )
+    const factWords = stemTokenize(f.content)
     const overlap = [...messageWords].filter(w => factWords.has(w)).length
     return overlap >= cfg.knowledge_keyword_overlap
   })
@@ -175,9 +170,7 @@ function assessProgressMomentumL1(ctx: AgentContext): DimensionState {
 
   // Detect repeated similar questions (user stuck)
   const recent = userMessages.slice(-cfg.stuck_detection_window).map((m) => m.content.toLowerCase())
-  const words = recent.map((m) =>
-    new Set(m.split(/\W+/).filter((w) => w.length >= cfg.keyword_min_length)),
-  )
+  const words = recent.map((m) => stemTokenize(m))
 
   if (words.length >= cfg.stuck_detection_window) {
     for (let i = 0; i < words.length - 1; i++) {
