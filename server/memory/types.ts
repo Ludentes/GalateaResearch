@@ -65,6 +65,8 @@ export interface KnowledgeEntry {
   extractedAt: string // ISO 8601
   supersededBy?: string // ID of newer entry that replaces this one
   about?: KnowledgeAbout // who/what this knowledge is about (default: project)
+  lastRetrievedAt?: string // ISO 8601, updated on retrieval
+  archivedAt?: string // ISO 8601, set when confidence drops below threshold
 }
 
 // ============ Transcript Reader ============

@@ -70,6 +70,19 @@ export interface HeartbeatConfig {
   skip_when_idle: boolean
 }
 
+export interface DecayConfig {
+  enabled: boolean
+  decay_start_days: number
+  decay_factor: number
+  archive_threshold: number
+  run_interval_minutes: number
+  exempt_types: string[]
+}
+
+export interface MemoryConfig {
+  decay: DecayConfig
+}
+
 export interface StopWordsConfig {
   retrieval: string[]
   dedup: string[]
@@ -83,6 +96,7 @@ export interface PipelineConfig {
   context: ContextConfig
   homeostasis: HomeostasisConfig
   heartbeat: HeartbeatConfig
+  memory: MemoryConfig
   stop_words: StopWordsConfig
 }
 
@@ -130,6 +144,10 @@ export function getHomeostasisConfig(): HomeostasisConfig {
 
 export function getHeartbeatConfig(): HeartbeatConfig {
   return loadConfig().heartbeat
+}
+
+export function getDecayConfig(): DecayConfig {
+  return loadConfig().memory.decay
 }
 
 export function getStopWords(list: "retrieval" | "dedup"): Set<string> {

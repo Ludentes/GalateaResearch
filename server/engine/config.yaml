@@ -152,6 +152,20 @@ context:
   # These are hardcoded in context-assembler.ts section construction.
 
 # -----------------------------------------------------------------------------
+# MEMORY DECAY — server/memory/decay.ts
+# Ebbinghaus-style confidence reduction for entries not recently retrieved.
+# -----------------------------------------------------------------------------
+memory:
+  decay:
+    enabled: true
+    decay_start_days: 30
+    decay_factor: 0.95
+    archive_threshold: 0.3
+    run_interval_minutes: 60
+    exempt_types:
+      - rule
+
+# -----------------------------------------------------------------------------
 # HOMEOSTASIS — server/engine/homeostasis-engine.ts
 # Self-regulation: assesses 6 dimensions and generates behavioral guidance.
 # -----------------------------------------------------------------------------
