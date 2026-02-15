@@ -4,7 +4,8 @@ import { assessDimensions } from "../engine/homeostasis-engine"
 import { assembleContext } from "../memory/context-assembler"
 import { retrieveRelevantFacts } from "../memory/fact-retrieval"
 import { getModel } from "../providers"
-import { getAgentState, removePendingMessage, updateAgentState } from "./agent-state"
+import { appendActivityLog, getAgentState, removePendingMessage, updateAgentState } from "./agent-state"
+import { dispatch } from "./dispatcher"
 import type { SelfModel, TickResult } from "./types"
 
 interface TickOptions {
@@ -60,6 +61,17 @@ export async function tick(
         messages: [{ role: "user", content: msg.content }],
       })
 
+      // Dispatch response to channel
+      try {
+        await dispatch(
+          { channel: msg.channel, to: msg.from },
+          result.text,
+          msg.metadata,
+        )
+      } catch {
+        // No handler registered for this channel — response still returned via API
+      }
+
       // Update state: remove pending message, update activity
       await removePendingMessage(msg, statePath)
       await updateAgentState(
@@ -67,7 +79,7 @@ export async function tick(
         statePath,
       )
 
-      return {
+      const tickResult: TickResult = {
         homeostasis,
         retrievedFacts,
         context,
@@ -76,7 +88,10 @@ export async function tick(
         action: "respond",
         action_target: { channel: msg.channel, to: msg.from },
         response: { text: result.text },
+        timestamp: new Date().toISOString(),
       }
+      await appendActivityLog(tickResult, statePath)
+      return tickResult
     }
   }
 
@@ -89,14 +104,17 @@ export async function tick(
     hasAssignedTask: !!state.activeTask,
   }
 
-  return {
+  const tickResult: TickResult = {
     homeostasis: assessDimensions(agentContext),
     retrievedFacts: [],
     context: await assembleContext({ storePath, agentContext }),
     selfModel,
     pendingMessages: pending,
     action: "idle",
+    timestamp: new Date().toISOString(),
   }
+  await appendActivityLog(tickResult, statePath)
+  return tickResult
 }
 
 async function checkSelfModel(): Promise<SelfModel> {
