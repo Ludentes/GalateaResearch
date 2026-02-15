@@ -17,6 +17,7 @@ import type {
   AssembledContext,
   ExtractionResult,
   KnowledgeEntry,
+  SignalClassification,
   TranscriptTurn,
 } from "../../../memory/types"
 import { readEvents } from "../../../observation/event-store"
@@ -50,7 +51,7 @@ export interface TestWorld {
   sendMessage(content: string): Promise<void>
   roundTrip(
     content: string,
-  ): Promise<{ text: string; tokenCount: number }>
+  ): Promise<{ text: string; tokenCount: number; signalClassification?: SignalClassification }>
   lastMessage(role: "user" | "assistant"): Promise<MessageRow>
   getHistory(): Promise<MessageRow[]>
   assembleContext(): Promise<AssembledContext>
@@ -319,7 +320,7 @@ function createTestWorld(config: TestWorldConfig): TestWorld {
 
     async roundTrip(
       content: string,
-    ): Promise<{ text: string; tokenCount: number }> {
+    ): Promise<{ text: string; tokenCount: number; signalClassification?: SignalClassification }> {
       if (!model) throw new Error("No model configured. Use withModel().")
 
       // Import dynamically to avoid circular deps with db singleton
@@ -343,6 +344,7 @@ function createTestWorld(config: TestWorldConfig): TestWorld {
       return {
         text: result.text,
         tokenCount: lastMsg[0]?.tokenCount ?? 0,
+        signalClassification: result.signalClassification,
       }
     },
 

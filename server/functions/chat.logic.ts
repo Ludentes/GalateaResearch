@@ -5,6 +5,7 @@ import { db } from "../db"
 import { messages, sessions } from "../db/schema"
 import { assembleContext } from "../memory/context-assembler"
 import { retrieveRelevantFacts } from "../memory/fact-retrieval"
+import { classifyTurn } from "../memory/signal-classifier"
 import { emitEvent } from "../observation/emit"
 
 /**
@@ -44,6 +45,9 @@ export async function sendMessageLogic(
     role: "user",
     content: message,
   })
+
+  // Classify user message signal in real-time
+  const signalClassification = classifyTurn({ role: "user", content: message })
 
   // Get conversation history
   const history = await db
@@ -105,7 +109,7 @@ export async function sendMessageLogic(
     opts?.observationStorePath,
   ).catch(() => {}) // fire-and-forget
 
-  return { text: result.text }
+  return { text: result.text, signalClassification }
 }
 
 /**

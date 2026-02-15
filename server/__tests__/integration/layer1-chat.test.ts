@@ -117,8 +117,9 @@ describe("Layer 1: Developer works on Umka MQTT persistence", () => {
     expect(chatEvents[0].source).toBe("galatea-api")
   })
 
-  it.todo("runs signal classification on the user's message in real-time")
-  // Given: user sends high-signal message ("I prefer using pnpm")
-  // When: message processed
-  // Then: signal classified and logged (for real-time learning, not just batch)
+  it("runs signal classification on the user's message in real-time", async () => {
+    const response = await world.roundTrip("I prefer using pnpm over npm for all projects")
+    expect(response.signalClassification).toBeDefined()
+    expect(response.signalClassification?.type).toBe("preference")
+  }, 120_000)
 })
