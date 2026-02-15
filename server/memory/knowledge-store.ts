@@ -79,15 +79,29 @@ export async function batchEmbed(
   ollamaBaseUrl: string,
 ): Promise<number[][] | null> {
   try {
+    console.log(
+      `[embed] batchEmbed start: ${texts.length} texts, total ${texts.reduce((s, t) => s + t.length, 0)} chars`,
+    )
+    const t0 = Date.now()
     const resp = await fetch(`${ollamaBaseUrl}/api/embed`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ model: "nomic-embed-text:latest", input: texts }),
+      signal: AbortSignal.timeout(30_000),
     })
-    if (!resp.ok) return null
+    if (!resp.ok) {
+      console.log(`[embed] batchEmbed failed: HTTP ${resp.status} in ${Date.now() - t0}ms`)
+      return null
+    }
     const data = await resp.json()
+    console.log(
+      `[embed] batchEmbed done: ${data.embeddings?.length ?? 0} embeddings in ${Date.now() - t0}ms`,
+    )
     return data.embeddings
-  } catch {
+  } catch (err) {
+    console.log(
+      `[embed] batchEmbed error: ${err instanceof Error ? err.message : err}`,
+    )
     return null // Ollama unavailable — degrade gracefully
   }
 }

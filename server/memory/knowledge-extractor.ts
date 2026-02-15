@@ -89,13 +89,24 @@ export async function extractKnowledge(
     })
     .join("\n\n")
 
+  const promptText = `${EXTRACTION_PROMPT}\n\n---\n\nTRANSCRIPT:\n${transcript}`
+  console.log(
+    `[extraction] generateObject start: ${turns.length} turns, ${transcript.length} chars, temp=${temperature}`,
+  )
+  const t0 = Date.now()
+
   const { object } = await generateObject({
     model,
     schema: ExtractionSchema,
-    prompt: `${EXTRACTION_PROMPT}\n\n---\n\nTRANSCRIPT:\n${transcript}`,
+    prompt: promptText,
     temperature,
     maxRetries: 0,
+    abortSignal: AbortSignal.timeout(60_000),
   })
+
+  console.log(
+    `[extraction] generateObject done: ${object.items.length} items in ${Date.now() - t0}ms`,
+  )
 
   return object.items.map((item) => ({
     id: crypto.randomUUID(),
@@ -122,15 +133,15 @@ export async function extractWithRetry(
       return await extractKnowledge(turns, model, source, temperatures[i])
     } catch (error) {
       const isLast = i === temperatures.length - 1
+      const errMsg = error instanceof Error ? error.message : String(error)
       if (isLast) {
         console.warn(
-          `[extraction] All ${temperatures.length} attempts failed for ${source}, chunk skipped`,
-          error instanceof Error ? error.message : error,
+          `[extraction] All ${temperatures.length} attempts failed for ${source}, chunk skipped. Last error: ${errMsg}`,
         )
         return []
       }
       console.warn(
-        `[extraction] Attempt ${i + 1} failed (temp=${temperatures[i]}), retrying with temp=${temperatures[i + 1]}`,
+        `[extraction] Attempt ${i + 1} failed (temp=${temperatures[i]}): ${errMsg.slice(0, 200)}. Retrying with temp=${temperatures[i + 1]}`,
       )
     }
   }
