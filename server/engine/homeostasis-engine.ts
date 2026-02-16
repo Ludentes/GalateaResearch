@@ -362,8 +362,9 @@ async function assessL2Semantic(
     })
 
     return parseL2Result(result.text)
-  } catch {
-    return null // Ollama unavailable — fall back to HEALTHY
+  } catch (err) {
+    console.warn(`[homeostasis] L2 assessment failed for ${dimension}, falling back to HEALTHY:`, (err as Error)?.message ?? err)
+    return null
   }
 }
 

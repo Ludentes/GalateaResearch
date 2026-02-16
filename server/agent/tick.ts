@@ -9,6 +9,7 @@ import {
   OllamaCircuitOpenError,
   ollamaQueue,
 } from "../providers/ollama-queue"
+import { emitEvent } from "../observation/emit"
 import {
   appendActivityLog,
   getAgentState,
@@ -98,8 +99,19 @@ export async function tick(
           llmResult,
           msg.metadata,
         )
-      } catch {
-        // No handler registered for this channel — response still returned via API
+      } catch (err) {
+        emitEvent({
+          type: "log",
+          source: "galatea-api",
+          body: "tick.dispatch_failed",
+          attributes: {
+            "event.name": "tick.dispatch_failed",
+            severity: "warning",
+            channel: msg.channel,
+            to: msg.from,
+            error: String(err),
+          },
+        }).catch(() => {})
       }
 
       // Update state: remove pending message, update activity
@@ -134,8 +146,20 @@ export async function tick(
         templateText,
         msg.metadata,
       )
-    } catch {
-      // No handler registered
+    } catch (err) {
+      emitEvent({
+        type: "log",
+        source: "galatea-api",
+        body: "tick.dispatch_failed",
+        attributes: {
+          "event.name": "tick.dispatch_failed",
+          severity: "warning",
+          channel: msg.channel,
+          to: msg.from,
+          mode: "powered-down",
+          error: String(err),
+        },
+      }).catch(() => {})
     }
 
     await removePendingMessage(msg, statePath)
@@ -188,7 +212,7 @@ async function checkSelfModel(): Promise<SelfModel> {
     })
     if (res.ok) providers.push("ollama")
   } catch {
-    // Ollama not available
+    // Expected: Ollama not running — not an error
   }
 
   // Check OpenRouter
@@ -202,7 +226,7 @@ async function checkSelfModel(): Promise<SelfModel> {
     execSync("claude --version", { timeout: 3000, stdio: "pipe" })
     providers.push("claude-code")
   } catch {
-    // Claude CLI not installed or not authenticated
+    // Expected: Claude CLI not installed — not an error
   }
 
   return { availableProviders: providers }

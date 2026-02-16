@@ -102,9 +102,20 @@ export async function runExtraction(
 
     // Run consolidation if claudeMdPath configured
     if (claudeMdPath) {
-      consolidateToClaudeMd(storePath, claudeMdPath).catch((err) =>
-        console.warn("[pipeline] consolidateToClaudeMd failed:", err),
-      )
+      consolidateToClaudeMd(storePath, claudeMdPath).catch((err) => {
+        emitEvent({
+          type: "log",
+          source: "galatea-api",
+          body: "consolidation.failed",
+          attributes: {
+            "event.name": "consolidation.failed",
+            severity: "warning",
+            error: String(err),
+            storePath,
+            claudeMdPath,
+          },
+        }).catch(() => {})
+      })
     }
   }
 
@@ -121,7 +132,7 @@ export async function runExtraction(
       },
     },
     observationStorePath,
-  ).catch((err) => console.warn("[pipeline] emitEvent(extraction.complete) failed:", err))
+  ).catch(() => {}) // emitEvent logs to console internally
 
   return {
     entries: newEntries,

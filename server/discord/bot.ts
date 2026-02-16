@@ -62,11 +62,16 @@ export async function startDiscordBot(): Promise<Client | null> {
   registerHandler("discord", {
     send: async (_target, response, metadata) => {
       const channelId = metadata?.discordChannelId
-      if (!channelId || !client) return
+      if (!channelId || !client) {
+        console.warn(`[discord] Cannot send: ${!channelId ? "missing channelId" : "client not ready"}`)
+        return
+      }
 
       const channel = await client.channels.fetch(channelId)
       if (channel?.isTextBased() && "send" in channel) {
         await channel.send(response)
+      } else {
+        console.warn(`[discord] Channel ${channelId} not text-based or not found`)
       }
     },
   })
