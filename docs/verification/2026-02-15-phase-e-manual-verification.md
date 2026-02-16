@@ -2,7 +2,7 @@
 
 **Date:** 2026-02-15
 **Branch:** `feature/phase-e-launch-observe` (worktree: `.worktrees/phase-e`)
-**Test count:** 209 passing (32 files), 1 flaky integration test (Ollama-dependent)
+**Test count:** 199 unit tests (31 files, ~8s), 6 integration tests (3 files, ~80s, require Ollama)
 **Prerequisites:** Docker Compose up, Ollama running with `glm-4.7-flash`, `pnpm install` done
 
 ---
@@ -17,13 +17,13 @@ curl -s http://localhost:11434/api/tags     # Ollama should respond with model l
 # Verify knowledge store has entries
 wc -l data/memory/entries.jsonl            # Should be ~279 entries
 
-# Run automated tests (non-integration, fast)
+# Run unit tests (fast, no Ollama needed)
 pnpm vitest run --exclude='**/integration/**' --reporter=verbose 2>&1 | tail -5
-# Expected: 182+ tests, 0 failures
+# Expected: 199 tests, 0 failures, ~8s
 
-# Run integration tests (requires Ollama, ~3 min)
-pnpm vitest run server/__tests__/integration/ --reporter=verbose 2>&1 | tail -10
-# Expected: 27+ tests, 0 failures (consolidation test may be flaky — see note)
+# Run integration tests (requires Ollama, ~2 min)
+pnpm vitest run server/__tests__/integration/ server/engine/__tests__/integration/ server/functions/__tests__/integration/ --reporter=verbose 2>&1 | tail -10
+# Expected: 33+ tests, 0 failures (consolidation test may be flaky — see note)
 ```
 
 **Note on flaky consolidation test:** The `layer2-extraction > high-confidence entries consolidated to CLAUDE.md` test depends on earlier extraction tests producing entries. If Ollama times out during extraction, the store may be empty or entries may be superseded, causing this test to fail. This is a test isolation issue, not a code bug. The unit tests (`server/memory/__tests__/consolidation.test.ts`) validate the logic independently.
@@ -63,7 +63,7 @@ pnpm vitest run server/engine/__tests__/homeostasis-engine.test.ts --reporter=ve
 pnpm vitest run server/engine/__tests__/homeostasis-evaluation.test.ts --reporter=verbose
 ```
 
-**Expected:** All 13 tests pass, including:
+**Expected:** All 11 unit tests pass (L2 async tests moved to integration), including:
 - S1: "detects HEALTHY when relevant auth facts available" — "authentication" in message matches "auth" in fact content
 - S2: "detects LOW when user repeats similar questions" — repeated question stems detected
 - "achieves stuck detection goal" — overall stuck detection works
@@ -145,7 +145,7 @@ grep -A2 "consolidation:" server/engine/config.yaml
 Check the wiring in `server/memory/extraction-pipeline.ts`:
 ```bash
 grep -A3 "consolidateToClaudeMd" server/memory/extraction-pipeline.ts
-# Expected: consolidateToClaudeMd(storePath, claudeMdPath).catch(() => {})
+# Expected: consolidateToClaudeMd(storePath, claudeMdPath).catch((err) => console.warn(...))
 ```
 
 ### 1.8 Context Compression (Sliding Window)
@@ -180,12 +180,16 @@ pnpm vitest run server/memory/__tests__/decay.test.ts --reporter=verbose
 **What we're verifying:** Two dimensions (`certainty_alignment`, `knowledge_application`) use LLM assessment (Ollama) for richer evaluation beyond rule-based L1.
 
 ```bash
-pnpm vitest run server/engine/__tests__/homeostasis-l2.test.ts --reporter=verbose 2>&1 | head -20
+# L2 unit behavior (fast, no Ollama)
+pnpm vitest run server/engine/__tests__/homeostasis-evaluation.test.ts -t "L2 needed" --reporter=verbose
+
+# L2 integration (requires Ollama, ~80s)
+pnpm vitest run server/engine/__tests__/integration/ --reporter=verbose
 ```
 
 **Expected:**
-- L2 assessment calls local Ollama model
-- Falls back to HEALTHY if Ollama unavailable
+- L2 assessment calls local Ollama model (integration tests)
+- Falls back to HEALTHY if Ollama unavailable (unit tests: "defaults to HEALTHY without LLM")
 - Cache TTL prevents redundant calls
 
 ### 1.11 Claude Code Provider (CLI Auth)
@@ -193,13 +197,14 @@ pnpm vitest run server/engine/__tests__/homeostasis-l2.test.ts --reporter=verbos
 **What we're verifying:** Claude Code provider uses `claude --version` CLI check instead of requiring `ANTHROPIC_API_KEY`.
 
 ```bash
-pnpm vitest run server/providers/ --reporter=verbose
+pnpm vitest run server/providers/ --exclude='**/integration/**' --reporter=verbose
 ```
 
 **Expected:**
 - No API key validation for Claude Code provider
 - CLI health check detects installed + authenticated claude
 - Error message references `claude login`
+- OllamaQueue + fallback tests pass (semaphore, backpressure, circuit breaker)
 
 ### 1.12 Heartbeat Scheduler
 
