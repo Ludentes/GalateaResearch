@@ -102,7 +102,9 @@ export async function runExtraction(
 
     // Run consolidation if claudeMdPath configured
     if (claudeMdPath) {
-      consolidateToClaudeMd(storePath, claudeMdPath).catch(() => {})
+      consolidateToClaudeMd(storePath, claudeMdPath).catch((err) =>
+        console.warn("[pipeline] consolidateToClaudeMd failed:", err),
+      )
     }
   }
 
@@ -119,7 +121,7 @@ export async function runExtraction(
       },
     },
     observationStorePath,
-  ).catch(() => {}) // fire-and-forget
+  ).catch((err) => console.warn("[pipeline] emitEvent(extraction.complete) failed:", err))
 
   return {
     entries: newEntries,

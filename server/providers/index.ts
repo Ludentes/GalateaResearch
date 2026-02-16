@@ -21,7 +21,7 @@ export function getModelWithFallback(
           "This incurs external API costs. Check Ollama health.",
       )
       const fallbackModel =
-        process.env.OPENROUTER_MODEL || "z-ai/glm-4.5-air:free"
+        process.env.OPENROUTER_MODEL || "z-ai/glm-4.7-flash"
       return {
         model: createOpenRouterModel(fallbackModel, config.openrouterApiKey),
         modelName: `openrouter:${fallbackModel}`,

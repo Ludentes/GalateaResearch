@@ -113,7 +113,7 @@ export async function sendMessageLogic(
       },
     },
     opts?.observationStorePath,
-  ).catch(() => {}) // fire-and-forget
+  ).catch((err) => console.warn("[chat] emitEvent(chat.response_delivered) failed:", err))
 
   return { text: result.text, signalClassification }
 }
@@ -194,7 +194,7 @@ export async function streamMessageLogic(
             },
           },
           opts?.observationStorePath,
-        ).catch(() => {})
+        ).catch((err) => console.warn("[chat] emitEvent(chat.response_delivered) failed:", err))
       },
     })
 

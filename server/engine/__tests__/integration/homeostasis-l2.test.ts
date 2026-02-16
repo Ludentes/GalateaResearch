@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
-import type { AgentContext } from "../types"
-import { assessDimensionsAsync } from "../homeostasis-engine"
+import type { AgentContext } from "../../types"
+import { assessDimensionsAsync } from "../../homeostasis-engine"
 
 const baseContext: AgentContext = {
   sessionId: "test-l2",

@@ -30,7 +30,7 @@ describe("getModelWithFallback", () => {
     process.env.LLM_MODEL = "glm-4.7-flash"
     process.env.OLLAMA_BASE_URL = "http://localhost:11434"
     process.env.OPENROUTER_API_KEY = "sk-test-key"
-    process.env.OPENROUTER_MODEL = "z-ai/glm-4.5-air:free"
+    process.env.OPENROUTER_MODEL = "z-ai/glm-4.7-flash"
 
     // Reset circuit to closed
     ;(ollamaQueue as any).state = {
@@ -62,7 +62,7 @@ describe("getModelWithFallback", () => {
     const result = getModelWithFallback()
 
     expect(result.fallback).toBe(true)
-    expect(result.modelName).toBe("openrouter:z-ai/glm-4.5-air:free")
+    expect(result.modelName).toBe("openrouter:z-ai/glm-4.7-flash")
   })
 
   it("returns primary Ollama model when circuit open but no OpenRouter API key", () => {

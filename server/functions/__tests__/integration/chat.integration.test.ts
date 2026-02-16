@@ -5,12 +5,12 @@ import { eq } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/postgres-js"
 import postgres from "postgres"
 import { afterAll, describe, expect, it } from "vitest"
-import { messages, sessions } from "../../db/schema"
+import { messages, sessions } from "../../../db/schema"
 import {
   createSessionLogic,
   getSessionMessagesLogic,
   sendMessageLogic,
-} from "../chat.logic"
+} from "../../chat.logic"
 
 const TEST_DB_URL =
   process.env.DATABASE_URL ||
