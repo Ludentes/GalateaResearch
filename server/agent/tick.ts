@@ -61,6 +61,7 @@ export async function tick(
     const context = await assembleContext({
       storePath,
       agentContext,
+      retrievedEntries: facts.entries,
     })
 
     // Stage 4: LLM action (only if provider available)
