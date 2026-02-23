@@ -9,13 +9,15 @@ import {
   getAgentState,
   updateAgentState,
 } from "../agent-state"
-import { tick } from "../tick"
+import { tick, clearConversationHistory } from "../tick"
 
-// Mock the LLM call and providers
-vi.mock("ai", () => ({
-  generateText: vi.fn().mockResolvedValue({
+// Mock the agent loop — tick now delegates to runAgentLoop
+vi.mock("../agent-loop", () => ({
+  runAgentLoop: vi.fn().mockResolvedValue({
     text: "Here's a status update on the project.",
-    usage: { totalTokens: 100, inputTokens: 50, outputTokens: 50 },
+    steps: [{ type: "text", text: "Here's a status update on the project.", durationMs: 10 }],
+    finishReason: "text",
+    totalSteps: 1,
   }),
 }))
 
@@ -32,12 +34,6 @@ vi.mock("../../providers", () => ({
 }))
 
 vi.mock("../../providers/ollama-queue", () => ({
-  ollamaQueue: {
-    enqueue: vi.fn(async (fn: () => Promise<unknown>) => fn()),
-    acquireSlot: vi.fn(async () => ({ release: vi.fn() })),
-    state: { circuitState: "closed", active: false, queueDepth: 0 },
-    reset: vi.fn(),
-  },
   OllamaCircuitOpenError: class extends Error {},
   OllamaBackpressureError: class extends Error {},
 }))
@@ -104,6 +100,7 @@ describe("tick()", () => {
 
   afterEach(() => {
     if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true })
+    clearConversationHistory()
   })
 
   it("returns idle when no pending messages", async () => {

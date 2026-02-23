@@ -1,4 +1,3 @@
-import { generateText } from "ai"
 import { assessDimensions } from "../engine/homeostasis-engine"
 import type { AgentContext } from "../engine/types"
 import { assembleContext } from "../memory/context-assembler"
@@ -7,7 +6,6 @@ import { getModelWithFallback } from "../providers"
 import {
   OllamaBackpressureError,
   OllamaCircuitOpenError,
-  ollamaQueue,
 } from "../providers/ollama-queue"
 import { emitEvent } from "../observation/emit"
 import {
@@ -16,8 +14,53 @@ import {
   removeMessage,
   updateAgentState,
 } from "./agent-state"
+import { runAgentLoop } from "./agent-loop"
+import type { AgentTool, LoopMessage } from "./agent-loop"
 import { dispatchMessage } from "./dispatcher"
 import type { ChannelMessage, SelfModel, TickResult } from "./types"
+
+// ---------------------------------------------------------------------------
+// Conversation history — bounded FIFO buffer
+// ---------------------------------------------------------------------------
+
+const MAX_HISTORY = 5
+let conversationHistory: LoopMessage[] = []
+
+export function getConversationHistory(): LoopMessage[] {
+  return [...conversationHistory]
+}
+
+export function clearConversationHistory(): void {
+  conversationHistory = []
+}
+
+function pushHistory(role: "user" | "assistant", content: string): void {
+  conversationHistory.push({ role, content })
+  if (conversationHistory.length > MAX_HISTORY * 2) {
+    // Keep last MAX_HISTORY exchanges (2 messages per exchange)
+    conversationHistory = conversationHistory.slice(-MAX_HISTORY * 2)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tool registry — stub tools for F.2 scaffolding
+// ---------------------------------------------------------------------------
+
+const registeredTools: Record<string, AgentTool> = {}
+
+export function registerTool(name: string, tool: AgentTool): void {
+  registeredTools[name] = tool
+}
+
+export function clearTools(): void {
+  for (const key of Object.keys(registeredTools)) {
+    delete registeredTools[key]
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tick
+// ---------------------------------------------------------------------------
 
 interface TickOptions {
   statePath?: string
@@ -64,22 +107,46 @@ export async function tick(
       retrievedEntries: facts.entries,
     })
 
-    // Stage 4: LLM action (only if provider available)
+    // Stage 4: Agent loop (ReAct pattern with budget controls)
     let llmResult: string | undefined
     if (selfModel.availableProviders.length > 0) {
       const { model } = getModelWithFallback()
       try {
-        const result = await ollamaQueue.enqueue(
-          () =>
-            generateText({
-              model,
-              system: context.systemPrompt,
-              messages: [{ role: "user", content: msg.content }],
-              abortSignal: AbortSignal.timeout(60_000),
-            }),
-          "batch",
-        )
-        llmResult = result.text
+        // Add user message to history before loop
+        pushHistory("user", msg.content)
+
+        const loopResult = await runAgentLoop({
+          model,
+          system: context.systemPrompt,
+          messages: [{ role: "user", content: msg.content }],
+          tools: Object.keys(registeredTools).length > 0
+            ? registeredTools
+            : undefined,
+          history: getConversationHistory().slice(0, -2), // Exclude the message we just added
+          config: { maxSteps: 5, timeoutMs: 60_000 },
+        })
+
+        llmResult = loopResult.text
+
+        // Record assistant response in history
+        pushHistory("assistant", llmResult)
+
+        // Log loop metadata
+        if (loopResult.totalSteps > 1 || loopResult.finishReason !== "text") {
+          emitEvent({
+            type: "log",
+            source: "galatea-api",
+            body: "agent_loop.completed",
+            attributes: {
+              "event.name": "agent_loop.completed",
+              finishReason: loopResult.finishReason,
+              totalSteps: String(loopResult.totalSteps),
+              toolCalls: String(
+                loopResult.steps.filter((s) => s.type === "tool_call").length,
+              ),
+            },
+          }).catch(() => {})
+        }
       } catch (err) {
         if (
           err instanceof OllamaCircuitOpenError ||
@@ -149,7 +216,7 @@ export async function tick(
       return tickResult
     }
 
-    // Powered-down mode: pending message but no LLM available (or circuit/backpressure)
+    // Powered-down mode: pending message but no LLM available
     const templateText =
       "I received your message but I'm currently unable to generate a response — no language model is available. I'll respond properly once connectivity is restored."
 
