@@ -22,6 +22,7 @@
     "db:seed": "tsx server/db/seed.ts"
   },
   "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.2.50",
     "@langfuse/otel": "^4.5.1",
     "@openrouter/ai-sdk-provider": "^2.1.1",
     "@opentelemetry/sdk-node": "^0.211.0",
