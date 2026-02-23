@@ -11,7 +11,8 @@ export async function findConsolidationCandidates(
 ): Promise<KnowledgeEntry[]> {
   const cfg = getConsolidationConfig()
   const entries = await readEntries(storePath)
-  const groups = groupSimilarEntries(entries)
+  const active = entries.filter((e) => !e.supersededBy)
+  const groups = groupSimilarEntries(active)
 
   return groups
     .filter((group) => group.length >= cfg.min_occurrences)

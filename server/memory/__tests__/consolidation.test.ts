@@ -70,6 +70,19 @@ describe("Consolidation", () => {
     expect(candidates).toHaveLength(0)
   })
 
+  it("excludes superseded entries from grouping", async () => {
+    const entries: KnowledgeEntry[] = [
+      makeEntry("Use pnpm in all projects", "preference", 0.9, "session:1"),
+      makeEntry("Use pnpm in all projects", "preference", 0.95, "session:2"),
+      makeEntry("Use pnpm in all projects", "preference", 0.85, "session:3"),
+    ]
+    // Supersede one — now only 2 active, below threshold
+    entries[0].supersededBy = entries[1].id
+    await appendEntries(entries, TEST_STORE)
+    const candidates = await findConsolidationCandidates(TEST_STORE)
+    expect(candidates).toHaveLength(0)
+  })
+
   it("skips entries below confidence threshold", async () => {
     const entries: KnowledgeEntry[] = [
       makeEntry("Prefer tabs over spaces", "preference", 0.5, "session:1"),

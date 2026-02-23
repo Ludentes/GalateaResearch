@@ -155,8 +155,7 @@ Phase F built the runtime. Phase G fills it with capability.
 **What is fragile:**
 - The agent loop is tested with mocks but never with a real LLM doing real tool calls — that's the Phase G integration boundary
 - Trust levels default to NONE (most restrictive) because the trust resolver doesn't exist yet — every destructive pattern triggers safety guidance regardless of who's asking
-- The consolidation integration test has been flaky since Phase E and nobody has fixed it
-- Vector retrieval is built but Qdrant isn't deployed or populated — it always falls back to keyword retrieval in practice
+- Qdrant is running but the `galatea-knowledge` collection hasn't been created or populated yet — vector retrieval falls back to keyword until the sync pipeline is wired
 
 **What I'd worry about:**
 - Phase G is where theory meets reality. The agent loop, safety model, and tool definitions are designed but untested end-to-end with real tools operating on real codebases
