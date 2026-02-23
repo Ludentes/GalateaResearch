@@ -240,6 +240,7 @@ class ScenarioBuilder {
 
     // 4. Set up agent state
     const agentStatePath = path.join(testDir, "agent-state.json")
+    const opContextPath = path.join(testDir, "operational-context.json")
     const agentState: AgentState = {
       lastActivity: new Date().toISOString(),
       pendingMessages: [],
@@ -273,6 +274,7 @@ class ScenarioBuilder {
       storePath,
       statePath,
       agentStatePath,
+      opContextPath,
       transcriptPath,
       observationStorePath,
       claudeMdPath,
@@ -294,6 +296,7 @@ interface TestWorldConfig {
   storePath: string
   statePath: string
   agentStatePath: string
+  opContextPath: string
   transcriptPath: string
   observationStorePath: string
   claudeMdPath: string
@@ -308,6 +311,7 @@ function createTestWorld(config: TestWorldConfig): TestWorld {
     storePath,
     statePath,
     agentStatePath,
+    opContextPath,
     transcriptPath,
     observationStorePath,
     claudeMdPath,
@@ -468,6 +472,7 @@ function createTestWorld(config: TestWorldConfig): TestWorld {
       return agentTick(trigger, {
         statePath: agentStatePath,
         storePath,
+        opContextPath,
       })
     },
 
