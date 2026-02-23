@@ -77,13 +77,27 @@ export async function tick(
     })
     const retrievedFacts = facts.entries
 
+    // Find active task from operational context
+    const activeOpTask = opCtx.tasks.find(
+      (t) => t.status === "in_progress" || t.status === "assigned",
+    )
+
     const agentContext: AgentContext = {
       sessionId: `tick-${Date.now()}`,
       currentMessage: msg.content,
       messageHistory: [],
       retrievedFacts,
       lastMessageTime: new Date(msg.receivedAt),
-      hasAssignedTask: !!state.activeTask,
+      hasAssignedTask: !!state.activeTask || !!activeOpTask,
+      // Operational memory fields
+      lastOutboundAt: opCtx.lastOutboundAt || undefined,
+      phaseEnteredAt: activeOpTask?.phaseStartedAt || opCtx.phaseEnteredAt,
+      taskPhase: activeOpTask?.phase,
+      taskCount: opCtx.tasks.filter((t) => t.status !== "done").length,
+      taskToolCallCount: activeOpTask?.toolCallCount,
+      // Trust/safety
+      sourceChannel: msg.channel,
+      sourceIdentity: msg.from,
     }
 
     const homeostasis = assessDimensions(agentContext)
@@ -267,12 +281,17 @@ export async function tick(
   }
 
   // No pending messages → idle
+  const idleActiveTask = opCtx.tasks.find(
+    (t) => t.status === "in_progress" || t.status === "assigned",
+  )
   const agentContext: AgentContext = {
     sessionId: `tick-${Date.now()}`,
     currentMessage: "",
     messageHistory: [],
     retrievedFacts: [],
-    hasAssignedTask: !!state.activeTask,
+    hasAssignedTask: !!state.activeTask || !!idleActiveTask,
+    lastOutboundAt: opCtx.lastOutboundAt || undefined,
+    taskCount: opCtx.tasks.filter((t) => t.status !== "done").length,
   }
 
   await saveOperationalContext(opCtx, opContextPath)

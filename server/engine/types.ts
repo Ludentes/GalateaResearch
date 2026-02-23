@@ -18,6 +18,7 @@ export type Dimension =
   | "communication_health" // "Am I connected?"
   | "productive_engagement" // "Am I contributing?"
   | "knowledge_application" // "Learning vs doing?"
+  | "self_preservation" // Asimov 3-in-1: don't harm people → obey authorized orders → protect self/environment
 
 /**
  * State for a single dimension.
@@ -44,6 +45,7 @@ export interface HomeostasisState {
   communication_health: DimensionState
   productive_engagement: DimensionState
   knowledge_application: DimensionState
+  self_preservation: DimensionState
   assessed_at: Date
   assessment_method: Record<Dimension, AssessmentMethod>
 }
@@ -52,6 +54,8 @@ export interface HomeostasisState {
  * Context needed for homeostasis assessment.
  * Contains session state, memory, and task information.
  */
+export type TrustLevel = "NONE" | "LOW" | "MEDIUM" | "HIGH" | "ABSOLUTE"
+
 export interface AgentContext {
   sessionId: string
   currentMessage: string
@@ -64,6 +68,18 @@ export interface AgentContext {
   hasAssignedTask?: boolean
   timeSpentResearching?: number // milliseconds
   timeSpentBuilding?: number // milliseconds
+
+  // Operational memory fields (F.4)
+  lastOutboundAt?: string // ISO timestamp of last outbound message
+  phaseEnteredAt?: string // ISO timestamp when current phase started
+  taskPhase?: "exploring" | "deciding" | "implementing" | "verifying"
+  taskCount?: number // number of active tasks
+  taskToolCallCount?: number // tool calls on current task
+
+  // Trust/safety fields (F.4 self_preservation)
+  sourceTrustLevel?: TrustLevel
+  sourceChannel?: string
+  sourceIdentity?: string // who sent the message
 }
 
 /**
