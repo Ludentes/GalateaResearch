@@ -121,6 +121,59 @@ describe("executeWorkArc", () => {
     expect(result.transcript.length).toBe(2)
   })
 
+  it("populates extractedTurns on successful completion with transcript", async () => {
+    const adapter = createMockAdapter([
+      {
+        type: "result",
+        subtype: "success",
+        text: "Done",
+        durationMs: 1000,
+        transcript: [
+          { role: "assistant" as const, content: "Using pnpm for this project", timestamp: new Date().toISOString() },
+          { role: "tool_call" as const, content: '{"command":"pnpm test"}', toolName: "Bash", timestamp: new Date().toISOString() },
+        ],
+      },
+    ])
+
+    const result = await executeWorkArc({
+      adapter,
+      task: { id: "task-extract", description: "Test extraction" },
+      context: makeContext(),
+      workingDirectory: "/tmp/test-extraction",
+      trustLevel: "MEDIUM",
+    })
+
+    expect(result.status).toBe("completed")
+    expect(result.extractedTurns).toBeDefined()
+    expect(result.extractedTurns!.length).toBe(2)
+    expect(result.extractedTurns![0].role).toBe("assistant")
+  })
+
+  it("does not populate extractedTurns on failed result", async () => {
+    const adapter = createMockAdapter([
+      {
+        type: "result",
+        subtype: "error",
+        text: "Failed",
+        durationMs: 100,
+        transcript: [
+          { role: "assistant" as const, content: "Tried something", timestamp: new Date().toISOString() },
+        ],
+      },
+    ])
+
+    const result = await executeWorkArc({
+      adapter,
+      task: { id: "task-no-extract", description: "Test no extraction" },
+      context: makeContext(),
+      workingDirectory: "/tmp",
+      trustLevel: "MEDIUM",
+    })
+
+    expect(result.status).toBe("failed")
+    expect(result.extractedTurns).toBeUndefined()
+  })
+
   it("preserves error details for retry with narrower scope", async () => {
     const adapter = createMockAdapter([
       {

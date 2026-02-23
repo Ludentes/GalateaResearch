@@ -1,6 +1,7 @@
 import type { TrustLevel } from "../../engine/types"
-import type { AssembledContext } from "../../memory/types"
+import type { AssembledContext, TranscriptTurn } from "../../memory/types"
 import { createPreToolUseHook } from "./hooks"
+import { transcriptToTurns } from "./transcript-to-extraction"
 import type {
   CodingToolAdapter,
   CodingSessionMessage,
@@ -25,6 +26,7 @@ export interface WorkArcResult {
   durationMs: number
   costUsd?: number
   numTurns?: number
+  extractedTurns?: TranscriptTurn[]
 }
 
 /**
@@ -89,7 +91,7 @@ export async function executeWorkArc(input: WorkArcInput): Promise<WorkArcResult
     budget_exceeded: "budget_exceeded",
   }
 
-  return {
+  const result: WorkArcResult = {
     status: statusMap[resultMsg.subtype] ?? "failed",
     text: resultMsg.text,
     transcript: resultMsg.transcript ?? [],
@@ -97,4 +99,18 @@ export async function executeWorkArc(input: WorkArcInput): Promise<WorkArcResult
     costUsd: resultMsg.costUsd,
     numTurns: resultMsg.numTurns,
   }
+
+  // Feed transcript to extraction pipeline (G.5) — best-effort, non-blocking
+  if (result.transcript.length > 0 && result.status === "completed") {
+    try {
+      const turns = transcriptToTurns(result.transcript)
+      if (turns.length > 0) {
+        result.extractedTurns = turns
+      }
+    } catch {
+      // Extraction is best-effort — don't fail the work arc
+    }
+  }
+
+  return result
 }
