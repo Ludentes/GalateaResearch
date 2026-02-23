@@ -7,3 +7,4 @@ export type {
 } from "./types"
 
 export { ClaudeCodeAdapter } from "./claude-code-adapter"
+export { createPreToolUseHook } from "./hooks"

@@ -55,6 +55,9 @@ import type {
   Dimension,
   DimensionState,
   HomeostasisState,
+  SafetyCheckResult,
+  ToolCallCheckInput,
+  TrustLevel,
 } from "./types"
 
 // ============ L0: Caching Layer ============
@@ -576,6 +579,107 @@ export function getGuidance(state: HomeostasisState): string {
 }
 
 // NOTE: L2 LLM Assessment is implemented above via assessL2Semantic() and assessDimensionsAsync().
+
+// ============ Tool Call Safety (PreToolUse guardrails) ============
+
+const PROTECTED_BRANCHES = ["main", "master", "production", "release"]
+
+export function checkBranchProtection(cmd: string): string | null {
+  const pushMatch = cmd.match(/\bgit\s+push\b.*?\b([\w/.-]+)\s*$/)
+  if (pushMatch) {
+    const branch = pushMatch[1]
+    if (PROTECTED_BRANCHES.some((pb) => branch === pb || branch.startsWith(`${pb}/`))) {
+      return `Push to protected branch "${branch}" is not allowed`
+    }
+  }
+  const deleteBranchMatch = cmd.match(/\bgit\s+branch\s+-[dD]\s+([\w/.-]+)/)
+  if (deleteBranchMatch) {
+    const branch = deleteBranchMatch[1]
+    if (PROTECTED_BRANCHES.some((pb) => branch === pb)) {
+      return `Deleting protected branch "${branch}" is not allowed`
+    }
+  }
+  return null
+}
+
+/**
+ * Returns a SafetyCheckResult based on trust level.
+ * HIGH/ABSOLUTE → ask (escalate for confirmation)
+ * MEDIUM/LOW/NONE → deny
+ */
+function trustDecision(trustLevel: TrustLevel, reason: string): SafetyCheckResult {
+  if (trustLevel === "ABSOLUTE") {
+    return { decision: "allow", reason, triggeredBy: "trust-override" }
+  }
+  if (trustLevel === "HIGH") {
+    return { decision: "ask", reason, triggeredBy: "trust-escalation" }
+  }
+  return { decision: "deny", reason, triggeredBy: "safety-guardrail" }
+}
+
+// Tool-call destructive patterns (different from message-level DESTRUCTIVE_PATTERNS above)
+const TOOL_DESTRUCTIVE_PATTERNS = [
+  /\brm\s+-rf\b/i,
+  /\bgit\s+push\s+.*--force\b/i,
+  /\bgit\s+reset\s+--hard\b/i,
+  /\bdrop\s+(table|database|collection)\b/i,
+  /\bdelete\b.*\b(database|db|production)\b/i,
+]
+
+/**
+ * Check a tool call for safety before execution.
+ * Used by PreToolUse hooks in CodingToolAdapter.
+ *
+ * Checks (in order):
+ * 1. Workspace boundary — files must be within workingDirectory
+ * 2. Branch protection — prevent push to main/master/production/release
+ * 3. Destructive patterns — block dangerous commands
+ *
+ * Read-only tools (Read, Glob, Grep, WebSearch) are always allowed.
+ */
+export function checkToolCallSafety(input: ToolCallCheckInput): SafetyCheckResult {
+  const { toolName, toolArgs, trustLevel, workingDirectory } = input
+
+  // Read-only tools are always safe
+  const readOnlyTools = ["Read", "Glob", "Grep", "WebSearch", "WebFetch", "ListMcpResourcesTool", "ReadMcpResourceTool"]
+  if (readOnlyTools.includes(toolName)) {
+    return { decision: "allow", reason: "Read-only tool" }
+  }
+
+  // Check 1: Workspace boundary
+  if (workingDirectory) {
+    const filePath =
+      (toolArgs.file_path as string) ??
+      (toolArgs.path as string) ??
+      (toolArgs.notebook_path as string)
+    if (filePath && !filePath.startsWith(workingDirectory)) {
+      return {
+        decision: "deny",
+        reason: `Path "${filePath}" is outside workspace "${workingDirectory}"`,
+        triggeredBy: "workspace-boundary",
+      }
+    }
+  }
+
+  // Check 2: Branch protection
+  if ((toolName === "Bash" || toolName === "bash") && typeof toolArgs.command === "string") {
+    const branchResult = checkBranchProtection(toolArgs.command as string)
+    if (branchResult) {
+      return trustDecision(trustLevel, branchResult)
+    }
+  }
+
+  // Check 3: Destructive patterns in Bash commands
+  if ((toolName === "Bash" || toolName === "bash") && typeof toolArgs.command === "string") {
+    const cmd = toolArgs.command as string
+    const matched = TOOL_DESTRUCTIVE_PATTERNS.find((p) => p.test(cmd))
+    if (matched) {
+      return trustDecision(trustLevel, `Destructive command detected: ${cmd}`)
+    }
+  }
+
+  return { decision: "allow", reason: "No safety concerns detected" }
+}
 
 /**
  * FUTURE: L3 Meta-Assessment (Phase D/E)
