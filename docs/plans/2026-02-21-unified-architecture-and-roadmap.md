@@ -1,7 +1,7 @@
 # Galatea Unified Architecture & Roadmap
 
 **Date**: 2026-02-21
-**Status**: Draft v2 — rewritten after independent review
+**Status**: Draft v3 — updated post-Phase F with Coding Tool Adapter decision
 **Context**: Synthesizes Psychological Architecture, current implementation (Phase A-E), KNOWN_GAPS, Reference Scenarios, OpenClaw research, and a 3-agent adversarial review into a unified vision and build plan.
 
 ---
@@ -27,30 +27,37 @@
 | Heartbeat scheduler | Done | Configurable, idle-skip |
 | Extraction eval infrastructure | Done | Gold-standard 52 items, Langfuse |
 
-### Honest Assessment of Current Limitations
+### Limitations Resolved by Phase F
 
-The tick loop is a **request-response handler pretending to be an agent loop**:
+The tick loop was a request-response handler pretending to be an agent loop. Phase F resolved these structural blockers:
 
-- Processes **one message**, calls the LLM **once**, returns **text**
-- **No conversation history** between ticks — each tick sees a single message
-- **No tool execution** infrastructure — `generateText()` has no tools parameter
-- **No outbound delivery** — tick returns JSON but nothing sends it to any channel
-- **4K token budget** already tight before adding operational memory or tool schemas
-- Chat UI and tick loop are **completely separate code paths** that don't interact
-- `PendingMessage` carries only `{from, channel, content, receivedAt}` — too thin for routing
+| Limitation (Phase A-E) | Resolution (Phase F) |
+|---|---|
+| Processes one message, calls LLM once, returns text | F.2: ReAct agent loop with multi-turn tool calls, budget controls |
+| No conversation history between ticks | F.3: Operational memory persists last 5 exchanges across ticks |
+| No tool execution infrastructure | F.2: Tool scaffolding with `registerTool()`, ZodSchema validation |
+| No outbound delivery | F.1: Channel abstraction + dispatcher to Discord/dashboard |
+| 4K token budget too tight | F.7: 12K budget with per-section accounting |
+| Chat UI and tick loop completely separate | F.1: Both unified under ChannelMessage |
+| PendingMessage too thin for routing | F.1: Replaced by ChannelMessage with full routing metadata |
 
-These are not bugs. They were fine for Phases A-E (shadow learning, knowledge extraction, homeostasis assessment). But they are **structural blockers for work execution**.
+### Remaining Limitations Post-Phase F
+
+- **No actual coding execution** — tool scaffolding exists but only stub tools are registered
+- **No GitLab integration** — no webhook normalization, no MR creation
+- **Single-agent only** — interfaces designed for multi-agent but only one agent runs
+- **Extraction pipeline blind to agent actions** — reads user transcripts, not agent work output
 
 ### Open Gaps
 
-| # | Gap | Severity |
-|---|-----|----------|
-| 11 | **Session model unclear** — no definition of session boundaries | High |
-| 12 | **Work execution model missing** — agent can't do things, only talk | Critical |
-| 13 | **LLM hallucination** — local models need strict prompts + validation | High |
-| 14 | **Tick loop is not an agent loop** — no tools, no history, no multi-step | Critical |
-| 15 | **No channel abstraction** — no outbound delivery, no unified message routing | High |
-| 16 | **Extraction blind to agent actions** — pipeline reads chat, not tool outputs | High |
+| # | Gap | Severity | Status |
+|---|-----|----------|--------|
+| 11 | **Session model unclear** — no definition of session boundaries | High | Resolved (F.1, F.3) |
+| 12 | **Work execution model missing** — agent can't do things, only talk | Critical | Partially resolved — loop exists, coding tool adapter needed (G.1) |
+| 13 | **LLM hallucination** — local models need strict prompts + validation | High | Partially resolved — confabulation guard (F.6), extraction eval |
+| 14 | **Tick loop is not an agent loop** — no tools, no history, no multi-step | Critical | Resolved (F.2, F.3) |
+| 15 | **No channel abstraction** — no outbound delivery, no unified message routing | High | Resolved (F.1) |
+| 16 | **Extraction blind to agent actions** — pipeline reads chat, not tool outputs | High | Designed — SDK transcripts feed existing pipeline (G.5) |
 
 ### What Reference Scenarios Demand — Full Audit
 
@@ -85,28 +92,76 @@ But the deeper insight from three failed phase transitions: **You can't bolt han
 The unified architecture needs three things, but they must be built **bottom-up**, not layered on:
 
 ```
-┌───────────────────────────────────────────────────────────────────┐
-│                      GALATEA UNIFIED                              │
-│                                                                   │
-│  ┌─────────────┐   ┌──────────────────┐   ┌───────────────────┐ │
-│  │   BRAIN     │   │   RUNTIME        │   │   HANDS           │ │
-│  │             │   │                  │   │                   │ │
-│  │ Homeostasis │◄─►│ Agent Loop       │──►│ Tool Execution    │ │
-│  │ 6 dimensions│   │ - Multi-turn     │   │ MCP tools         │ │
-│  │ L0-L2       │   │ - Tool calls     │   │ File/Git/Shell    │ │
-│  │             │   │ - History        │   │ Web search        │ │
-│  │ Long-term   │   │ - Work arcs      │   │                   │ │
-│  │ Memory      │◄─►│ Operational Mem  │   │ Channel Dispatch  │ │
-│  │ entries.jsonl│   │ - Task state     │──►│ Discord/GitLab    │ │
-│  │             │   │ - Phase tracking │   │ Dashboard         │ │
-│  │ Qdrant      │   │ - Conversation   │   │                   │ │
-│  │ (retrieval) │   │   history        │   │ Safety Layer      │ │
-│  └─────────────┘   └──────────────────┘   │ Pre/post filters  │ │
-│                                           └───────────────────┘ │
-└───────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                          GALATEA UNIFIED                                  │
+│                                                                          │
+│  ┌──────────────┐   ┌───────────────────┐   ┌────────────────────────┐ │
+│  │   BRAIN      │   │   RUNTIME         │   │   HANDS                │ │
+│  │              │   │                   │   │                        │ │
+│  │ Homeostasis  │◄─►│ Agent Loop        │──►│ CodingToolAdapter      │ │
+│  │ 7 dimensions │   │ - Tick handler    │   │ ┌────────────────────┐ │ │
+│  │ L0-L2        │   │ - Goal-level      │   │ │ Claude Code SDK    │ │ │
+│  │              │   │   delegation      │   │ │ + PreToolUse hooks │ │ │
+│  │ Long-term    │   │                   │   │ │   (homeostasis)    │ │ │
+│  │ Memory       │◄─►│ Operational Mem   │   │ └────────────────────┘ │ │
+│  │ entries.jsonl │   │ - Task state      │   │ ┌────────────────────┐ │ │
+│  │              │   │ - Work phases     │   │ │ Future adapters:   │ │ │
+│  │ Qdrant       │   │ - Conversation    │   │ │ Cursor, KiloCode   │ │ │
+│  │ (retrieval)  │   │   history         │   │ └────────────────────┘ │ │
+│  │              │   │                   │   │                        │ │
+│  │ Slow Loop    │   │  Fast Loop        │   │ Channel Dispatch       │ │
+│  │ (learning)   │   │  (execution)      │──►│ Discord / GitLab       │ │
+│  │ days/weeks   │   │  minutes          │   │ Dashboard              │ │
+│  └──────────────┘   └───────────────────┘   └────────────────────────┘ │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
 The **Runtime** is the new foundational layer. It replaces the current tick loop with an actual agent loop that supports multi-turn execution, tool calling, conversation history, and outbound message dispatch. This must exist before work execution (Phase G) can begin.
+
+### The Coding Tool Adapter Pattern
+
+**Key decision (post-Phase F):** Galatea does NOT reimplement file editing, git, shell, or web search. Coding tools are behind a pluggable adapter interface. The first implementation uses Claude Code Agent SDK.
+
+**Why:** Claude Code already has battle-tested Read/Write/Edit/Bash/Grep/Glob with context management, error recovery, and retry logic. Reimplementing these as custom MCP tools would take months with worse quality. Other coding tools (Cursor, KiloCode) provide similar capabilities.
+
+```typescript
+interface CodingToolAdapter {
+  query(options: {
+    prompt: string              // Goal-level task description
+    systemPrompt: string        // Galatea identity + knowledge + guidance
+    workingDirectory: string    // Project workspace
+    hooks?: {
+      preToolUse?: PreToolUseHook[]    // Homeostasis safety checks
+      postToolUse?: PostToolUseHook[]  // Audit + knowledge extraction
+      stop?: StopHook[]                // Completion verification
+    }
+    claudeMdPath?: string       // Path to generated CLAUDE.md
+    timeout?: number
+  }): AsyncIterable<CodingSessionMessage>
+
+  isAvailable(): Promise<boolean>
+}
+```
+
+**Ownership boundary:**
+
+| Galatea Owns | Adapter Provides |
+|---|---|
+| Tick loop and work arc decisions | File read/write/edit |
+| Memory (long-term, operational, episodic) | Git operations |
+| Homeostasis (all 7 dimensions) | Shell execution |
+| Safety checks (via hooks injected into adapter) | Code search/navigation |
+| Context assembly (knowledge → system prompt) | Web search |
+| Knowledge extraction (from session transcripts) | Context window management |
+| Task routing and prioritization | Multi-file editing |
+| Artifact generation (CLAUDE.md, skills, subagents) | Tool permission handling |
+
+**Two loops at different speeds:**
+
+- **Fast loop (minutes):** Task arrives → Galatea assembles context → `adapter.query()` with hooks → result + transcript → extract knowledge → report back
+- **Slow loop (days/weeks):** Galatea shadows sessions (user + agent) → detects patterns → generates artifacts (CLAUDE.md, `.claude/skills/*.md`, `.claude/agents/*.md`) → these improve the fast loop over time
+
+The slow loop's output is consumed natively by Claude Code. No custom integration needed — `.claude/` is the standard configuration directory.
 
 ---
 
@@ -830,28 +885,195 @@ Feature: Four-layer safety model designed and documented
 
 ### Phase G: Work Execution (following — 2 weeks)
 
-**Goal**: The agent can do things, not just talk.
+**Goal**: The agent can do things, not just talk. Via the Coding Tool Adapter pattern.
 
-**Prerequisite**: Phase F's agent loop, channel abstraction, and safety design.
+**Prerequisite**: Phase F's agent loop, channel abstraction, safety design, and hooks/subagents research.
+
+**Key insight**: Galatea does NOT build coding tools. It delegates to Claude Code Agent SDK via an adapter interface, injecting homeostasis checks as PreToolUse hooks.
 
 | # | Deliverable | Why | Scenarios Addressed |
 |---|------------|-----|---------------------|
-| G.1 | **Tool implementation** — MCP tools with risk metadata: file ops (read/write), git (branch/commit/push), shell (build/test/lint), web search | Reference Scenario Phase 4: agent executes tasks. Web search for Trace 6 "research briefly". | Trace 4, 6, Scenario 4.2 |
-| G.2 | **Safety implementation** — local guardrail model integration (Ollama, Layer 0.5), pre/post filters, workspace boundaries, audit trail (OTEL events for tool calls), approval flow for destructive ops | From Phase F design. Can't let agent run arbitrary commands. Guardrail model classifies inbound/outbound. | All traces |
-| G.3 | **Work arc** — homeostasis-driven explore→decide→implement→verify cycle. Heartbeat advances in-progress work. | Trace 4: agent receives and executes multi-step task | Trace 4, 8 |
-| G.4 | **GitLab integration** — read issues, fetch MR diffs, create MRs, process review comments, get pipeline status. Webhook/polling → ChannelMessage normalization. | Trace 5: agent handles feedback. Scenario 4.3: code review. | Trace 5, Scenario 4.3 |
-| G.5 | **Work-to-knowledge pipeline** — task completion → knowledge entries. Self-observations from mistakes. Tool output logging for future extraction. | Extraction pipeline is blind to agent actions. Without this, agent has amnesia about its own work. | Trace 5, Scenario 4.2, Memory Scenario 8a |
-| G.6 | **Task routing** — parse Discord mentions (@Agent-Dev-1), route to correct agent's operational memory. Dashboard task assignment UI. | Scenario 4.1: PM assigns tasks via Discord | Scenario 4.1 |
+| G.1 | **CodingToolAdapter interface + Claude Code SDK adapter** — define adapter interface, implement first adapter using `@anthropic-ai/claude-agent-sdk`, wire `query()` into agent loop where stub tools currently live | Replaces need to build MCP tools for file/git/shell. Claude Code already has Read/Write/Edit/Bash/Grep/Glob. | Trace 4, 6, Scenario 4.2 |
+| G.2 | **PreToolUse hook integration with homeostasis** — implement hook callbacks that call homeostasis engine before each tool call within SDK session. Maps Layer 2 hard guardrails (workspace boundaries, branch protection, command allowlist) to PreToolUse deny/allow decisions. | Safety checks run WITHIN the coding session, not just at tick level. Every Bash, Edit, Write call passes through homeostasis. | All traces |
+| G.3 | **Goal-level work arc** — agent loop delegates GOALS to adapter, not individual steps. Work arc: receive task → assemble context → `adapter.query("Implement X", {hooks, claudeMd})` → monitor result → extract knowledge. Galatea decides WHAT; adapter decides HOW. | Step-by-step orchestration is fragile and slow. Goal-level delegation leverages the coding tool's own planning. | Trace 4, 8 |
+| G.4 | **GitLab integration** — read issues, fetch MR diffs, create MRs, process review comments, get pipeline status. Webhook/polling → ChannelMessage normalization. (Galatea-level, not delegated to adapter.) | Trace 5: agent handles feedback. Scenario 4.3: code review. | Trace 5, Scenario 4.3 |
+| G.5 | **Session transcript → extraction pipeline** — feed SDK session transcripts to the same extraction pipeline used for user shadow learning. Tool call logs become input for knowledge entries. | The extraction pipeline already exists. SDK transcripts are structurally identical to Claude Code JSONL files we already process. | Trace 5, Scenario 4.2, Memory Scenario 8a |
+| G.6 | **Task routing** — parse Discord mentions (@Agent-Dev-1), route to correct agent's operational memory. Dashboard task assignment UI. | Scenario 4.1: PM assigns tasks via Discord. | Scenario 4.1 |
+| G.7 | **Artifact generation** — generate CLAUDE.md sections, `.claude/skills/*.md` files, and `.claude/agents/*.md` subagent definitions from learned patterns. Consumed natively by Claude Code in future sessions. | The slow loop's output. Patterns detected over days/weeks become artifacts that improve future task execution. | Phase 1, Scenario 4.4 |
 
 **Success criteria:**
-- Agent receives task on Discord, creates file, runs tests, commits, pushes, creates MR
-- Agent handles MR review feedback (GitLab comment → fix → re-push)
-- Agent creates self-observation after mistake ("I tend to miss null checks")
-- Agent's completed work appears in knowledge store (not just operational memory)
-- Safety boundaries prevent: push to main, rm -rf, commands outside workspace
-- Work arc visible in dashboard (phase transitions, progress, tool calls)
-- Web search works for unknown topics (Trace 6)
+- Agent receives task on Discord → `adapter.query()` creates files, runs tests, commits, pushes, creates MR
+- PreToolUse hook blocks: push to main, rm -rf, commands outside workspace (within SDK session)
+- Agent handles MR review feedback (GitLab comment → new `adapter.query()` with feedback context → re-push)
+- SDK session transcript fed to extraction pipeline → agent's work appears in knowledge store
+- Work arc visible in dashboard (goal delegated, adapter session active, result received)
+- Web search works for unknown topics (Trace 6) — via Claude Code's built-in WebSearch
+- Generated CLAUDE.md contains learned preferences from shadow sessions
+- At least one skill file generated from high-confidence procedure entries
 - Pipeline status check after push (Scenario 4.2 step 6)
+
+### Phase G Requirements (BDD-style)
+
+#### G.1 CodingToolAdapter + Claude Code SDK Adapter
+
+```gherkin
+Feature: Coding tool adapter delegates execution to Claude Code SDK
+  Galatea delegates coding tasks to the CodingToolAdapter,
+  which wraps the Claude Code Agent SDK.
+
+  Scenario: Simple task delegation
+    Given a task "Create a new file hello.ts with console.log('hello')"
+    And the Claude Code SDK adapter is available
+    When the agent loop delegates to the adapter
+    Then adapter.query() is called with the task as prompt
+    And the assembled context is passed as system prompt
+    And the working directory is set to the agent's workspace
+    And the session runs to completion
+    And the adapter returns the session transcript and result
+
+  Scenario: Adapter injects CLAUDE.md
+    Given Galatea has generated a CLAUDE.md with learned preferences
+    When adapter.query() is called
+    Then claudeMdPath points to the generated CLAUDE.md
+    And Claude Code loads it as project context
+    And the preferences influence coding decisions
+
+  Scenario: Adapter not available
+    Given the Claude Code SDK is not installed or API key missing
+    When the agent loop attempts to delegate
+    Then adapter.isAvailable() returns false
+    And the agent reports the blocker via channel dispatch
+    And the task remains in operational memory as "blocked"
+
+  Scenario: SDK session timeout
+    Given a timeout of 300 seconds is configured
+    When the SDK session exceeds 300 seconds
+    Then the session is terminated
+    And partial results (transcript so far) are captured
+    And the task status remains "in_progress" with carryover notes
+```
+
+#### G.2 PreToolUse Hook Integration with Homeostasis
+
+```gherkin
+Feature: Homeostasis safety checks run within SDK sessions
+  Every tool call in a Claude Code session passes through
+  Galatea's homeostasis engine via PreToolUse hooks.
+
+  Scenario: Safe tool call allowed
+    Given a PreToolUse hook is registered for Bash|Edit|Write
+    When Claude Code calls Write("src/profile.tsx", content)
+    Then the hook calls POST /api/v1/safety/check
+    And the path is within workspace — Layer 2 allows
+    And self_preservation is HEALTHY — Layer 1 allows
+    And the hook returns allow
+    And the file is written
+
+  Scenario: Destructive command blocked
+    Given a PreToolUse hook is registered for Bash
+    When Claude Code calls Bash("rm -rf /")
+    Then the hook calls POST /api/v1/safety/check
+    And Layer 2 command pattern matches BLOCKED_PATTERNS
+    And the hook returns deny with reason
+    And Claude Code sees the denial and adjusts approach
+
+  Scenario: Protected branch push blocked
+    Given a PreToolUse hook is registered for Bash
+    When Claude Code calls Bash("git push origin main")
+    Then the hook checks branch protection
+    And "main" is in PROTECTED_BRANCHES
+    And the hook returns deny
+    And Claude Code adjusts to push to feature branch
+
+  Scenario: Hook failure — fail-open for reads
+    Given the homeostasis API is temporarily unavailable
+    When Claude Code calls Read("src/profile.tsx")
+    Then the hook times out (5s) and returns allow
+    And a warning is logged
+
+  Scenario: Hook failure — fail-closed for writes
+    Given the homeostasis API is temporarily unavailable
+    When Claude Code calls Bash("git push --force")
+    Then the hook times out and returns deny
+    And a warning is logged
+```
+
+#### G.3 Goal-Level Work Arc
+
+```gherkin
+Feature: Agent delegates goals, not steps, to the coding tool
+  The agent loop determines WHAT to do and delegates HOW to the adapter.
+
+  Scenario: Task becomes adapter query
+    Given a task "Implement user profile screen with edit functionality"
+    And knowledge retrieval returns NativeWind preference and null-check rule
+    When the agent loop processes the task
+    Then it assembles a goal-level prompt including retrieved knowledge
+    And delegates to adapter.query() with the full prompt
+    And does NOT break the task into individual file operations
+
+  Scenario: Multi-step task in single adapter session
+    Given a task requiring file creation, testing, and git operations
+    When delegated to the adapter
+    Then the entire work arc runs within one SDK session
+    And Galatea does not intervene between tool calls
+    And only PreToolUse hooks provide guardrails within the session
+
+  Scenario: Adapter result triggers Galatea-level actions
+    Given a coding task completed by the adapter
+    When the adapter returns success
+    Then Galatea creates the MR via GitLab integration (Galatea-level)
+    And posts status in Discord (Galatea-level)
+    And feeds transcript to extraction pipeline
+    And updates operational memory: task → "done"
+```
+
+#### G.5 Session Transcript → Extraction Pipeline
+
+```gherkin
+Feature: SDK session transcripts feed the extraction pipeline
+  The same pipeline used for shadow learning processes adapter transcripts.
+
+  Scenario: Transcript contains tool calls
+    Given an SDK session that created 3 files and ran tests
+    When the session transcript is fed to the extraction pipeline
+    Then knowledge entries are created from the session
+    And entries include entities from files touched
+
+  Scenario: Self-observation from mistake
+    Given the adapter session failed a test, then fixed the code
+    When the transcript is processed
+    Then a self-observation entry is created
+    And the relevant fact is reinforced (confidence +0.05)
+```
+
+#### G.7 Artifact Generation
+
+```gherkin
+Feature: Slow loop generates Claude Code artifacts from learned patterns
+
+  Scenario: CLAUDE.md generated from knowledge
+    Given 10+ hard rules and 20+ high-confidence preferences in knowledge store
+    When the artifact generator runs
+    Then a CLAUDE.md file is generated at .claude/CLAUDE.md
+    And it contains all hard rules as "## Rules" section
+    And high-confidence preferences as "## Preferences" section
+
+  Scenario: Skill file generated from procedure
+    Given a procedure "Create Expo screen" with confidence >= 0.9
+    And the procedure has been used 3+ times
+    When the artifact generator runs
+    Then a skill file is created at .claude/skills/create-expo-screen.md
+    And it contains the procedure steps as instructions
+    And it has YAML frontmatter with name, description, trigger
+
+  Scenario: Subagent definition from specialization
+    Given an agent has accumulated review-specific knowledge
+    And 5+ review procedures with high success rates
+    When the artifact generator runs
+    Then a subagent definition is created at .claude/agents/code-reviewer.md
+    And it has appropriate tool restrictions (Read, Grep, Glob only)
+```
 
 ### Phase H: Persona + Multi-Agent (later — 2-3 weeks)
 
@@ -863,8 +1085,8 @@ Feature: Four-layer safety model designed and documented
 |---|------------|-----|---------------------|
 | H.1 | **Per-agent state** — agent ID on all state files, per-agent operational memory, per-agent workspace | Currently single `state.json`, single `entries.jsonl`. Multi-agent requires partition. | Trace 3, Scenario 4.1 |
 | H.2 | **Shared + private memory** — shared knowledge namespace (imported persona), private episodic memory per agent | Scenario 4.2: agents share semantic memories but have own episodes | Trace 3, Scenario 4.2-4.5 |
-| H.3 | **Persona export** — semantic + procedural + rules + thresholds + skill proficiency + privacy filtering | Reference Scenario Phase 2. Must filter episodic data, track provenance. | Phase 2 |
-| H.4 | **Persona import** — create agent from exported spec. UI for PM to instantiate agents. | Reference Scenario Phase 3. PM creates 3 agents from one persona. | Trace 3 |
+| H.3 | **Persona export** — export = package the `.claude/` directory: CLAUDE.md (preferences, rules, identity), `skills/*.md` (procedures), `agents/*.md` (subagent definitions), plus filtered knowledge entries. The `.claude/` directory IS the persona. | Claude Code consumes `.claude/` natively. No custom format needed. | Phase 2 |
+| H.4 | **Persona import** — import = copy packaged `.claude/` to new workspace + load knowledge entries into new agent's store. PM creates agent by importing a persona package. | Reference Scenario Phase 3. PM creates 3 agents from one persona. | Trace 3 |
 | H.5 | **Agent registry** — who's available, what skills, current status. Enables cross-agent MR discovery (Trace 7). | Trace 7: idle agent checks if teammates need help | Trace 7, Scenario 4.3 |
 | H.6 | **Cross-agent pattern detection** — track patterns across agents (e.g., "Dev-1 misses null checks") | Memory Scenario 5: cross-agent learning | Memory Scenario 5 |
 
@@ -874,6 +1096,52 @@ Feature: Four-layer safety model designed and documented
 - Agents coordinate on startup (Trace 3: avoid spam)
 - Idle agent discovers teammate's MR and reviews it
 - Cross-agent pattern detected within 3 occurrences
+
+### Phase H Requirements (BDD-style)
+
+#### H.3 Persona Export
+
+```gherkin
+Feature: Export persona as .claude/ directory package
+
+  Scenario: Export includes generated artifacts
+    Given an agent with CLAUDE.md, 3 skill files, and 1 subagent definition
+    When persona export is triggered
+    Then the export package contains .claude/CLAUDE.md, skills/*.md, agents/*.md
+    And filtered knowledge entries as knowledge-export.jsonl
+
+  Scenario: Privacy filtering on export
+    Given knowledge entries include episodic memories with user names
+    When persona export runs
+    Then episodic entries are excluded or anonymized
+    And semantic entries (facts, procedures, rules) are included
+
+  Scenario: Export is self-contained
+    Given the exported package
+    When imported into a fresh workspace with no prior Galatea state
+    Then Claude Code can load the .claude/ directory and function
+    And the knowledge entries can populate a new store
+```
+
+#### H.4 Persona Import
+
+```gherkin
+Feature: Import persona creates new agent from package
+
+  Scenario: Import creates working agent
+    Given an exported persona package
+    When PM imports it into /workspace/new-project/
+    Then .claude/ directory is created with all artifacts
+    And knowledge entries are loaded into the new agent's store
+    And the agent can immediately use skills and preferences
+
+  Scenario: Three agents from one persona
+    Given one exported persona package
+    When PM creates Agent-Dev-1, Agent-Dev-2, Agent-Dev-3
+    Then each gets a copy of .claude/ in their workspace
+    And each gets the shared knowledge entries
+    And each has independent operational memory (empty)
+```
 
 ### Deferred (with rationale)
 
@@ -898,7 +1166,7 @@ Feature: Four-layer safety model designed and documented
 
 3. **File-based storage + vector search.** JSONL for structured data, Markdown for human-readable artifacts. Qdrant for embeddings/retrieval (already running locally).
 
-4. **Ecosystem leverage.** Claude Code for coding, MCP for tools, AI SDK for LLM abstraction. Galatea owns homeostasis + memory + operational context + agent loop.
+4. **Ecosystem leverage.** Coding tools (Claude Code, Cursor, etc.) are pluggable adapters behind `CodingToolAdapter`. Galatea owns the loop and memory; coding tools are interchangeable.
 
 5. **Strict prompts, schema enforcement.** Never trust the LLM to "figure it out." Structure embodies desired behavior.
 
@@ -909,6 +1177,10 @@ Feature: Four-layer safety model designed and documented
 8. **Safety before tools.** Design the trust model before implementing the tool layer. Tool interfaces carry risk metadata. Safety is not a feature — it's a constraint on the tool design.
 
 9. **The agent must remember its own actions.** Work outputs (files created, commands run, MRs opened) must enter the knowledge store. An agent that forgets what it did is useless across sessions.
+
+10. **Two loops — fast and slow.** The fast loop (minutes) executes tasks via the coding tool adapter. The slow loop (days/weeks) learns from all sessions — user shadow + agent execution — and generates artifacts that improve the fast loop.
+
+11. **Delegate execution, own safety.** Galatea delegates coding to battle-tested tools but injects homeostasis safety checks within those sessions via hooks. Safety is never delegated.
 
 ---
 
@@ -923,6 +1195,7 @@ Feature: Four-layer safety model designed and documented
 | Quality assurance | Trust the model | Eval datasets + strict prompts + confabulation guards |
 | Working memory | Unstructured `active-context.md` | Structured `OperationalContext` with TaskState |
 | Work execution | Direct tool calls (reactive) | Homeostasis-driven work arc (explore→decide→implement→verify) |
+| Tool execution | Direct MCP tool calls built in-house | Goal-level delegation via CodingToolAdapter + PreToolUse hooks |
 | Channel routing | 15+ adapters via gateway | `ChannelMessage` abstraction with typed routing metadata |
 | Safety | Session-scoped trust + weekly audit | Tool risk classification + pre/post filters + workspace boundaries |
 | Agent's self-knowledge | None | Work-to-knowledge pipeline: agent remembers what it did |
@@ -939,6 +1212,9 @@ Feature: Four-layer safety model designed and documented
 | Safety design delays Phase G | Time-boxed: 2-3 days for design doc. Doesn't need to be perfect, needs to exist. | F.8 |
 | Phase H requires rethinking F/G assumptions | Principle 7 (design for multi-agent). Use agent IDs everywhere. Avoid `data/agent/state.json` — use `data/agents/{id}/state.json`. | F, G |
 | Local LLM quality insufficient for tool decisions | Use frontier model (Claude) for tool-use ticks, local model for assessment ticks. Matches OpenClaw's System 1/2 pattern. | G |
+| Claude Code SDK limitations (context window, tool failures) | Adapter interface allows fallback. Partial transcript captured on failure. Retry with narrowed scope. | G.1 |
+| Hook latency impacts coding speed | Homeostasis API must respond in <100ms. Cache trust decisions. Fail-open for read tools, fail-closed for write/destructive. | G.2 |
+| SDK transcript format changes between versions | Pin SDK version. Extraction pipeline uses flexible parsing. | G.5 |
 
 ---
 

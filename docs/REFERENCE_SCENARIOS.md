@@ -315,16 +315,9 @@ discord:
   - get_mentions()
   - add_reaction(message_id, emoji)
 
-filesystem:
-  - read_file(path)
-  - write_file(path, content)
-  - list_directory(path)
-  - search_files(pattern)
-  - get_file_info(path)
-
-terminal:
-  - run_command(cmd, cwd)
-  - get_output()
+# Coding tools are delegated to the CodingToolAdapter (first implementation: Claude Code Agent SDK)
+# The adapter provides: Read, Write, Edit, Bash, Grep, Glob, WebSearch
+# Galatea injects homeostasis safety checks via PreToolUse hooks within each coding session
 ```
 
 ---
@@ -359,16 +352,36 @@ Retrieved:
 - Rule: "Check null on user objects before PR"
 ```
 
-**Execution:**
+**Execution (via CodingToolAdapter):**
 ```
-1. Creates app/(tabs)/profile.tsx
-2. Implements profile view with NativeWind
-3. Adds edit functionality
-4. Runs local tests
-5. Checks for null safety
-6. Commits, pushes to feature branch
-7. Creates MR in GitLab
-8. Posts in Discord: "PR ready for review: <link>"
+1. Galatea assembles context:
+   - System prompt: identity + homeostasis guidance + retrieved knowledge
+   - CLAUDE.md: learned preferences, hard rules
+   - Skills: "create-expo-screen.md", "submit-pr.md" (if generated)
+
+2. Galatea delegates to adapter:
+   adapter.query({
+     prompt: "Implement user profile screen with edit for #101",
+     systemPrompt: assembledContext,
+     workingDirectory: "/workspace/customer-app",
+     hooks: { preToolUse: [homeostasisCheck], postToolUse: [auditLog] },
+     claudeMdPath: "/workspace/customer-app/.claude/CLAUDE.md",
+   })
+
+3. Within the SDK session (Claude Code handles autonomously):
+   - Creates app/(tabs)/profile.tsx
+   - Implements with NativeWind (knows from CLAUDE.md)
+   - Runs tests
+   - Checks null safety (knows from skills)
+   - PreToolUse hook: "git push" → homeostasis → allow (feature branch)
+
+4. Session completes → Galatea receives transcript + result
+
+5. Galatea post-processing:
+   - Creates MR in GitLab (Galatea-level, G.4)
+   - Posts in Discord: "PR ready for review: <link>"
+   - Feeds transcript to extraction pipeline (G.5)
+   - Updates operational memory: task → "done"
 ```
 
 **New episodic memory:**
@@ -801,15 +814,32 @@ Retrieved:
 Assessment: knowledge_sufficiency → HEALTHY
 ```
 
-**Agent-1 begins work:**
+**Agent-1 delegates to coding tool adapter:**
 
 ```
-1. Creates app/(tabs)/profile.tsx
-2. Implements with NativeWind
-3. Runs tests
-4. Checks null safety (remembered from learning)
-5. Creates MR
-6. Posts: "MR ready for #101"
+adapter.query({
+  prompt: "Implement user profile screen for issue #101.
+           Use NativeWind for styling. Check null safety on user objects.",
+  systemPrompt: [assembled context with homeostasis guidance],
+  hooks: { preToolUse: [homeostasisCheck] },
+})
+```
+
+**Within the SDK session:**
+```
+1. Creates app/(tabs)/profile.tsx    ← PreToolUse: Write → allow
+2. Implements with NativeWind        ← PreToolUse: Edit → allow
+3. Runs tests                        ← PreToolUse: Bash("pnpm test") → allow
+4. Checks null safety                ← (Claude Code, guided by CLAUDE.md)
+5. git commit + push                 ← PreToolUse: Bash("git push") → allow (feature branch)
+```
+
+**Galatea post-processing:**
+```
+6. Creates MR in GitLab (Galatea-level API)
+7. Posts in Discord: "MR ready for #101"
+8. Feeds transcript to extraction pipeline
+9. Updates operational memory: task → "done"
 ```
 
 ---
@@ -983,6 +1013,145 @@ progress_momentum.when_low:
 "I've researched OAuth2 patterns for 2 hours. I think I understand
 the options. Should I proceed with my best approach, or do I need
 more input before implementing?"
+```
+
+---
+
+### Trace 9: PreToolUse Hook Blocks Destructive Command
+
+**Agent-1 is working on a task and Claude Code attempts a dangerous operation:**
+
+```
+SDK session in progress for "Clean up old test fixtures"
+
+Claude Code decides: Bash("rm -rf /workspace/customer-app/tests/")
+  │
+  ▼
+PreToolUse hook fires → calls homeostasis engine API:
+  POST /api/v1/safety/check {
+    tool_name: "Bash",
+    tool_input: { command: "rm -rf /workspace/customer-app/tests/" },
+    session_id: "session-456",
+  }
+
+Homeostasis engine evaluates:
+  - Layer 2: "rm -rf" matches BLOCKED_PATTERNS → destructive
+  - Layer 1: self_preservation → LOW
+  - Decision: DENY
+
+Hook response: permissionDecision = "deny"
+  reason: "Blocked: rm -rf targets entire directory. Use specific file deletion."
+
+Claude Code sees the denial reason and adjusts:
+  → "I'll delete specific obsolete fixture files instead"
+  → Bash("rm tests/fixtures/old-user-data.json")
+  → PreToolUse: allows (specific file, within workspace)
+```
+
+**What Galatea records:**
+```yaml
+audit_event:
+  type: "tool_blocked"
+  tool: "Bash"
+  args: "rm -rf /workspace/customer-app/tests/"
+  reason: "destructive_pattern"
+  trust_level: "MEDIUM"
+  followup: "Agent self-corrected to specific file deletion"
+```
+
+---
+
+### Trace 10: Pattern Detection Generates Skill File
+
+**Over 2 weeks, the extraction pipeline detects a recurring pattern:**
+
+```
+Session 1: User creates Expo screen, uses NativeWind, adds to router
+Session 3: User creates another screen, same pattern
+Session 5: Agent executes task, follows same pattern (from knowledge)
+Session 8: Agent executes again, same pattern confirmed
+
+Slow loop detects:
+  - 4+ occurrences of "create Expo screen" procedure
+  - Steps are consistent across sessions
+  - Confidence: 0.95
+
+PROMOTION TRIGGER: High-confidence procedure with 4+ uses
+```
+
+**Galatea generates skill file:**
+
+```markdown
+# .claude/skills/create-expo-screen.md
+---
+name: create-expo-screen
+description: Create a new screen in an Expo project
+trigger: "Need to add a new screen/page"
+---
+
+## Steps
+
+1. Create file at `app/(tabs)/<name>.tsx` or `app/<name>.tsx`
+2. Use functional component with TypeScript
+3. Style with NativeWind (className, not inline styles)
+4. For animated props: use inline style (NativeWind <4.1 workaround)
+5. Add navigation entry if needed
+6. Run `pnpm test` to verify
+
+## Notes
+- Check for null safety on any user/data objects
+- Use Clerk for auth if the screen needs authentication
+```
+
+**In the next SDK session, Claude Code loads this skill automatically.**
+
+---
+
+### Trace 11: Coding Tool Adapter Failure and Recovery
+
+**The Claude Code SDK session fails mid-execution:**
+
+```
+Agent-1 delegates task: "Add push notification support"
+
+adapter.query() starts → SDK session begins → ...
+  → After 3 tool calls, SDK returns error: "API rate limit exceeded"
+
+Galatea receives partial result:
+  - Transcript shows: created 2 files, tests not yet written
+  - Session status: FAILED (incomplete)
+```
+
+**Galatea recovery flow:**
+```yaml
+operational_memory:
+  task: "Add push notification support"
+  status: "in_progress"    # NOT failed — Galatea decides recovery
+  progress:
+    - "Created notification-service.ts (from partial transcript)"
+    - "Created notification-types.ts (from partial transcript)"
+  carryover:
+    - "SDK session failed after file creation. Tests not written."
+
+homeostasis:
+  progress_momentum: LOW   # Stalled
+  productive_engagement: HEALTHY  # Has task, attempting recovery
+```
+
+**Next tick: Galatea retries with narrower scope:**
+```
+adapter.query({
+  prompt: "Continue implementing push notifications.
+           Files notification-service.ts and notification-types.ts already exist.
+           Write tests and commit.",
+  // Context includes carryover from failed session
+})
+```
+
+**If adapter is completely unavailable:**
+```
+Agent posts to Discord:
+  "@PM Coding tool temporarily unavailable. Task #201 blocked. Will retry."
 ```
 
 ---

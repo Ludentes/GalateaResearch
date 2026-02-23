@@ -180,6 +180,42 @@ These are addressed by:
 
 **Principle:** Deterministic, non-negotiable constraints. No LLM involved. Cannot be bypassed by prompt engineering.
 
+### Implementation via PreToolUse Hooks (Coding Tool Adapter)
+
+**Key change from original design:** Layer 2 hard guardrails are NOT implemented as custom pre/post filter functions wrapping a built-in tool executor. Instead, they are implemented as **PreToolUse hooks** injected into the CodingToolAdapter (Claude Code Agent SDK).
+
+Every tool call (Bash, Edit, Write, etc.) within a Claude Code session passes through our hook before execution. The hook calls Galatea's homeostasis engine, which evaluates all Layer 2 checks and returns allow/deny.
+
+```
+Claude Code SDK session
+  └── Claude decides to call tool
+       └── PreToolUse hook fires
+            └── Calls Galatea API: POST /api/v1/safety/check
+                 ├── Layer 2: workspace boundary check
+                 ├── Layer 2: branch protection check
+                 ├── Layer 2: command allowlist check
+                 ├── Layer 2: secrets scan
+                 ├── Layer 1: homeostasis self_preservation
+                 └── Returns: { decision: "allow"|"deny"|"ask", reason: "..." }
+            └── Hook returns decision to Claude Code
+                 ├── deny → tool blocked, Claude sees reason and adjusts
+                 ├── ask → escalated to user
+                 └── allow → tool executes normally
+```
+
+**Fail-open vs fail-closed on hook timeout:**
+- Read tools (Read, Glob, Grep): fail-open (allow on timeout)
+- Write tools (Edit, Write): fail-closed (deny on timeout)
+- Destructive tools (Bash with dangerous patterns): fail-closed (deny on timeout)
+
+**Advantages over custom tool wrappers:**
+- No need to reimplement file/git/shell tools
+- Safety checks run within the coding session, not just at Galatea's tick level
+- Same safety logic applies regardless of which coding tool adapter is used
+- Claude Code handles tool execution, error recovery, and retry logic
+
+See: `docs/research/2026-02-23-claude-code-hooks-subagents-research.md` for hook implementation details.
+
 ### Tool Risk Classification
 
 Every tool registered with the agent carries a `risk` metadata field:
@@ -473,6 +509,18 @@ A complete request flow through all four layers:
 7. If all layers pass → execute tool → post-execution filters → return result
 ```
 
+**Tool execution via CodingToolAdapter (Phase G):**
+
+1. Agent loop delegates goal to `adapter.query()` with hooks attached
+2. Within SDK session, Claude Code calls a tool (e.g., `Bash("git push origin feature-123")`)
+3. PreToolUse hook fires → calls `POST /api/v1/safety/check` with tool name + args
+4. Safety API evaluates: Layer 2 checks (workspace, branch, command, secrets) → Layer 1 (homeostasis)
+5. Response: `{ decision: "allow", reason: "feature branch, within workspace" }`
+6. Hook returns allow → tool executes
+7. PostToolUse hook fires → logs audit event to OTEL
+8. Session continues until Claude Code produces final text response
+9. Galatea receives transcript → feeds to extraction pipeline
+
 ## Implementation Roadmap
 
 | Component | File | Phase |
@@ -482,12 +530,16 @@ A complete request flow through all four layers:
 | Safety guidance YAML | `server/engine/guidance.yaml` | F (done) |
 | Guardrail classifier | `server/safety/guardrail-classifier.ts` | G |
 | Tool risk schema | `server/agent/types.ts` | G |
-| Pre-execution filters | `server/safety/pre-execution.ts` | G |
-| Post-execution filters | `server/safety/post-execution.ts` | G |
+| Pre-execution filters | `server/safety/pre-execution.ts` | G (Replaced by PreToolUse/PostToolUse hooks — G.2) |
+| Post-execution filters | `server/safety/post-execution.ts` | G (Replaced by PreToolUse/PostToolUse hooks — G.2) |
 | Trust resolver | `server/safety/trust-resolver.ts` | G |
 | Workspace boundary checker | `server/safety/workspace.ts` | G |
 | Audit logging | `server/observation/tool-audit.ts` | G |
 | Safety config in config.yaml | `server/engine/config.yaml` | G |
+| CodingToolAdapter interface | `server/agent/coding-tool-adapter.ts` | G.1 |
+| Claude Code SDK adapter | `server/agent/adapters/claude-code-adapter.ts` | G.1 |
+| PreToolUse hook script | Shell script or SDK callback calling safety API | G.2 |
+| Safety check API endpoint | `POST /api/v1/safety/check` — evaluates all layers | G.2 |
 
 ## Design Decisions
 
