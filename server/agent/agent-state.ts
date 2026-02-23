@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs"
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
-import type { AgentState, PendingMessage } from "./types"
+import type { AgentState, PendingMessage, TickResult } from "./types"
 
 const DEFAULT_STATE_PATH = "data/agent/state.json"
 
@@ -51,4 +51,19 @@ export async function removePendingMessage(
       ),
   )
   await updateAgentState(state, statePath)
+}
+
+const ACTIVITY_LOG_MAX = 50
+
+export async function appendActivityLog(
+  tickResult: TickResult,
+  statePath = DEFAULT_STATE_PATH,
+): Promise<void> {
+  const state = await getAgentState(statePath)
+  const log = state.activityLog ?? []
+  log.push(tickResult)
+  if (log.length > ACTIVITY_LOG_MAX) {
+    log.splice(0, log.length - ACTIVITY_LOG_MAX)
+  }
+  await updateAgentState({ activityLog: log }, statePath)
 }

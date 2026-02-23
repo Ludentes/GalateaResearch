@@ -1,16 +1,17 @@
 // @vitest-environment node
 
-import { ollama } from "ai-sdk-ollama"
 import { eq } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/postgres-js"
 import postgres from "postgres"
 import { afterAll, describe, expect, it } from "vitest"
-import { messages, sessions } from "../../db/schema"
+import { messages, sessions } from "../../../db/schema"
 import {
   createSessionLogic,
   getSessionMessagesLogic,
   sendMessageLogic,
-} from "../chat.logic"
+} from "../../chat.logic"
+import { getLLMConfig } from "../../../providers/config"
+import { createOllamaModel } from "../../../providers/ollama"
 
 const TEST_DB_URL =
   process.env.DATABASE_URL ||
@@ -33,11 +34,14 @@ describe("Chat Logic (integration with Ollama)", () => {
     const session = await createSessionLogic("Integration Test Session")
     testSessionId = session.id
 
+    const config = getLLMConfig()
+    const model = createOllamaModel(config.model, config.ollamaBaseUrl)
+
     const result = await sendMessageLogic(
       testSessionId,
       "What is 2 + 2? Reply with just the number.",
-      ollama("glm-4.7-flash"),
-      "glm-4.7-flash",
+      model,
+      config.model,
     )
 
     expect(result.text).toBeDefined()
@@ -47,6 +51,6 @@ describe("Chat Logic (integration with Ollama)", () => {
     expect(msgs).toHaveLength(2)
     expect(msgs[0].role).toBe("user")
     expect(msgs[1].role).toBe("assistant")
-    expect(msgs[1].model).toBe("glm-4.7-flash")
-  }, 60000)
+    expect(msgs[1].model).toBe(config.model)
+  }, 120_000)
 })

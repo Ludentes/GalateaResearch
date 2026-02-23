@@ -40,6 +40,6 @@ export async function appendEvents(
     await mkdir(dir, { recursive: true })
   }
 
-  const lines = events.map((e) => JSON.stringify(e)).join("\n") + "\n"
+  const lines = `${events.map((e) => JSON.stringify(e)).join("\n")}\n`
   await appendFile(storePath, lines)
 }

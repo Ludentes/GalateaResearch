@@ -74,8 +74,5 @@ coverage/
 # Git worktrees
 .worktrees/
 
-# Shadow learning knowledge store (local agent memory)
-data/memory/
-
-# Observation event store (OTEL logs)
-data/observation/
+# Runtime data (agent state, memory, observations, test output)
+data/

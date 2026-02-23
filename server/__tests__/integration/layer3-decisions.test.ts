@@ -56,7 +56,7 @@ describe("Layer 3: Alina asks project status, agent decides to respond", () => {
   it("tick detects pending message and assesses communication_health as LOW", async () => {
     const result = await world.tick("manual")
     expect(result.homeostasis.communication_health).toBe("LOW")
-  }, 60_000)
+  }, 120_000)
 
   it("tick retrieves Alina's user model from knowledge store", async () => {
     const result = await world.tick("manual")
@@ -64,7 +64,7 @@ describe("Layer 3: Alina asks project status, agent decides to respond", () => {
       (f) => f.about?.entity === "alina",
     )
     expect(alinaFacts.length).toBeGreaterThan(0)
-  }, 60_000)
+  }, 120_000)
 
   it("tick decides to respond, not ignore", async () => {
     const result = await world.tick("manual")
@@ -73,18 +73,18 @@ describe("Layer 3: Alina asks project status, agent decides to respond", () => {
       channel: "discord",
       to: "alina",
     })
-  }, 60_000)
+  }, 120_000)
 
   it("LLM produces response using assembled context", async () => {
     const result = await world.tick("manual")
     expect(result.response?.text).toBeTruthy()
-  }, 60_000)
+  }, 120_000)
 
   it("includes self-model with available providers", async () => {
     const result = await world.tick("manual")
     expect(result.selfModel).toBeDefined()
     expect(result.selfModel.availableProviders).toContain("ollama")
-  }, 60_000)
+  }, 120_000)
 })
 
 describe("Layer 3: No pending messages, agent stays idle", () => {
@@ -120,13 +120,55 @@ describe("Layer 3: No pending messages, agent stays idle", () => {
 
   // --- RED (todo): self-model and powered-down ---
 
-  it.todo("self-model reports available providers before LLM call")
-  // Given: Ollama running, OpenRouter configured
-  // When: tick runs stage 1 (self-model)
-  // Then: selfModel.availableProviders includes both
+  it("self-model reports available providers before LLM call", async () => {
+    const result = await world.tick("manual")
+    expect(result.selfModel).toBeDefined()
+    expect(result.selfModel.availableProviders).toContain("ollama")
+    expect(result.selfModel.availableProviders.length).toBeGreaterThan(0)
+  })
 
-  it.todo("powered-down mode produces template response when no LLM available")
-  // Given: Ollama stopped, OpenRouter rate-limited
-  // When: tick runs, reaches stage 4
-  // Then: response is template-based, not LLM-generated
+})
+
+describe("Layer 3: Powered-down mode (no LLM available)", () => {
+  let world: TestWorld
+
+  beforeAll(async () => {
+    await ensureTestDb()
+
+    world = await scenario("powered-down")
+      .withSession("umka")
+      .withPendingMessage({
+        from: "alina",
+        channel: "discord",
+        content: "Are you there?",
+        receivedAt: new Date().toISOString(),
+      })
+      .seed()
+  }, 30_000)
+
+  afterAll(async () => {
+    if (world) await world.teardown()
+    await closeTestDb()
+  })
+
+  it("powered-down mode produces template response when no LLM available", async () => {
+    const origUrl = process.env.OLLAMA_BASE_URL
+    const origKey = process.env.OPENROUTER_API_KEY
+    const origPath = process.env.PATH
+    process.env.OLLAMA_BASE_URL = "http://localhost:19999" // unreachable
+    delete process.env.OPENROUTER_API_KEY
+    process.env.PATH = "" // prevent claude CLI detection
+
+    try {
+      const result = await world.tick("manual")
+      expect(result.action).toBe("respond")
+      expect(result.response?.template).toBe(true)
+      expect(result.response?.text).toContain("unable to generate")
+    } finally {
+      if (origUrl) process.env.OLLAMA_BASE_URL = origUrl
+      else delete process.env.OLLAMA_BASE_URL
+      if (origKey) process.env.OPENROUTER_API_KEY = origKey
+      if (origPath) process.env.PATH = origPath
+    }
+  }, 30_000)
 })

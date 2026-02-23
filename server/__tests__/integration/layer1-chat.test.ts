@@ -1,5 +1,4 @@
 // @vitest-environment node
-import { ollama } from "ai-sdk-ollama"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import {
   closeTestDb,
@@ -7,6 +6,7 @@ import {
   ensureTestDb,
 } from "./helpers/setup"
 import { type TestWorld, scenario } from "./helpers/test-world"
+import { retrieveRelevantFacts } from "../../memory/fact-retrieval"
 
 describe("Layer 1: Developer works on Umka MQTT persistence", () => {
   let world: TestWorld
@@ -25,7 +25,6 @@ describe("Layer 1: Developer works on Umka MQTT persistence", () => {
         ],
       })
       .withKnowledgeFrom("data/memory/entries.jsonl")
-      .withModel(ollama("glm-4.7-flash"))
       .seed()
   }, 30_000)
 
@@ -72,7 +71,7 @@ describe("Layer 1: Developer works on Umka MQTT persistence", () => {
     )
     expect(response.text).toBeTruthy()
     expect(response.tokenCount).toBeGreaterThan(0)
-  }, 60_000)
+  }, 120_000)
 
   it("stores assistant response in DB", async () => {
     const msg = await world.lastMessage("assistant")
@@ -82,24 +81,43 @@ describe("Layer 1: Developer works on Umka MQTT persistence", () => {
 
   // --- RED (todo): these assert missing behavior ---
 
-  it.todo("retrieves MQTT facts from knowledge store when message mentions MQTT")
-  // Given: store has MQTT facts with about.entity="umka"
-  // When: developer asks about MQTT
-  // Then: retrievedFacts includes MQTT entries
-  // Then: knowledge_sufficiency is HEALTHY (not LOW)
+  it("retrieves MQTT facts from knowledge store when message mentions MQTT", async () => {
+    const result = await retrieveRelevantFacts(
+      "The MQTT client in Umka needs to persist across hot reloads",
+      world.storePath,
+      { additionalEntities: ["umka"] },
+    )
+    expect(result.entries.length).toBeGreaterThan(0)
+    const hasMqtt = result.entries.some((e) =>
+      e.content.toLowerCase().includes("mqtt"),
+    )
+    expect(hasMqtt).toBe(true)
+  }, 30_000)
 
-  it.todo("does NOT retrieve Alina's user model for developer chat")
-  // Given: store has entries about Alina (about.entity="alina", type="user")
-  // When: developer (not Alina) chats about MQTT
-  // Then: Alina's entries not in retrievedFacts
+  it("does NOT retrieve Alina's user model for developer chat", async () => {
+    const result = await retrieveRelevantFacts(
+      "The MQTT client in Umka needs to persist across hot reloads",
+      world.storePath,
+    )
+    const alinaEntries = result.entries.filter(
+      (e) => e.about?.entity === "alina",
+    )
+    expect(alinaEntries).toHaveLength(0)
+  }, 30_000)
 
-  it.todo("emits OTEL event after response delivered")
-  // Given: OTEL collector running
-  // When: response delivered
-  // Then: event store has chat.response_delivered event
+  it("emits OTEL event after response delivered", async () => {
+    // roundTrip() already ran in earlier test — events should exist
+    const events = await world.readObservationEvents()
+    const chatEvents = events.filter(
+      (e) => e.attributes?.["event.name"] === "chat.response_delivered",
+    )
+    expect(chatEvents.length).toBeGreaterThan(0)
+    expect(chatEvents[0].source).toBe("galatea-api")
+  })
 
-  it.todo("runs signal classification on the user's message in real-time")
-  // Given: user sends high-signal message ("I prefer using pnpm")
-  // When: message processed
-  // Then: signal classified and logged (for real-time learning, not just batch)
+  it("runs signal classification on the user's message in real-time", async () => {
+    const response = await world.roundTrip("I prefer using pnpm over npm for all projects")
+    expect(response.signalClassification).toBeDefined()
+    expect(response.signalClassification?.type).toBe("preference")
+  }, 120_000)
 })

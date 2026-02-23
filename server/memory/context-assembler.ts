@@ -5,12 +5,13 @@ import { getContextConfig } from "../engine/config"
 import type { AgentContext } from "../engine/types"
 import { assessDimensions, getGuidance } from "../engine/homeostasis-engine"
 import { readEntries } from "./knowledge-store"
-import type { AssembledContext, ContextSection } from "./types"
+import type { AssembledContext, ContextSection, KnowledgeEntry } from "./types"
 
 interface AssembleOptions {
   storePath?: string
   tokenBudget?: number
   agentContext?: AgentContext
+  retrievedEntries?: KnowledgeEntry[]
 }
 
 export async function assembleContext(
@@ -31,12 +32,22 @@ export async function assembleContext(
     .from(preprompts)
     .where(eq(preprompts.active, true))
 
-  // 2. Load knowledge entries from file store
-  const entries = await readEntries(storePath)
-  const active = entries.filter((e) => !e.supersededBy)
+  // 2. Load knowledge entries — use retrieved entries if provided, else load all
+  const { retrievedEntries } = options
+  const allActive = (await readEntries(storePath)).filter(
+    (e) => !e.supersededBy,
+  )
+
+  // When retrieval provided relevant entries, use those for knowledge/procedures
+  // but always include ALL rules (they're non-negotiable constraints)
+  const active =
+    retrievedEntries && retrievedEntries.length > 0
+      ? retrievedEntries.filter((e) => !e.supersededBy)
+      : allActive
 
   // 3. CONSTRAINTS section — rules + hard_rule preprompts (never truncated)
-  const rules = active.filter((e) => e.type === "rule")
+  // Rules always come from the full store, not filtered by retrieval
+  const rules = allActive.filter((e) => e.type === "rule")
   const hardRulePrompts = activePrompts.filter((p) => p.type === "hard_rule")
   const constraintParts = [
     ...hardRulePrompts.map((p) => p.content),

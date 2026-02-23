@@ -1,6 +1,7 @@
 import type { LanguageModel } from "ai"
 import { generateObject } from "ai"
 import { z } from "zod"
+import { ollamaQueue } from "../providers/ollama-queue"
 import type { KnowledgeEntry, TranscriptTurn } from "./types"
 
 export const ExtractionSchema = z.object({
@@ -32,13 +33,21 @@ export const ExtractionSchema = z.object({
         .describe("Technologies, tools, libraries, patterns mentioned"),
       about: z
         .object({
-          entity: z.string().describe("Who/what this is about: a person's name, project name, or domain. Use lowercase."),
-          type: z.enum(["user", "project", "agent", "domain", "team"]).describe(
-            "user=about a person, project=about the codebase, agent=about the AI agent, domain=about the problem space, team=about team dynamics",
-          ),
+          entity: z
+            .string()
+            .describe(
+              "Who/what this is about: a person's name, project name, or domain. Use lowercase.",
+            ),
+          type: z
+            .enum(["user", "project", "agent", "domain", "team"])
+            .describe(
+              "user=about a person, project=about the codebase, agent=about the AI agent, domain=about the problem space, team=about team dynamics",
+            ),
         })
         .optional()
-        .describe("Who/what this knowledge is about. Omit if about the current project in general."),
+        .describe(
+          "Who/what this knowledge is about. ALWAYS set this when a person, tool, or domain is the subject. Only omit for generic project-wide rules.",
+        ),
     }),
   ),
 })
@@ -62,14 +71,18 @@ Rules for extraction:
 - Be conservative: when in doubt, don't extract
 - Set confidence to 1.0 for explicit "I always/never/prefer" statements
 
-Subject tagging (about field):
-- Tag WHO or WHAT the knowledge is about
-- "Mary prefers Discord" → about: {entity: "mary", type: "user"}
-- "Never push to main" → about: {entity: "galatea", type: "project"} or omit (project is default)
-- "Mobile apps need offline support" → about: {entity: "mobile-dev", type: "domain"}
-- If the subject is the current project in general, omit the about field
-- Use the person's first name (lowercase) as entity for user-specific knowledge
-- When a user states a personal preference, tag it as about that user`
+Subject tagging (about field) — IMPORTANT, always fill this in:
+- ALWAYS set the about field. Only omit it for generic project-wide rules with no specific subject.
+- Tag WHO or WHAT the knowledge is about using entity (lowercase name) and type.
+- Types: user (a person), project (the codebase), agent (the AI), domain (problem space), team (group dynamics)
+- Examples:
+  "Alina prefers Discord" → about: {entity: "alina", type: "user"}
+  "Never push to main" → about: {entity: "galatea", type: "project"}
+  "Mobile apps need offline support" → about: {entity: "mobile-dev", type: "domain"}
+  "The team uses Scrum" → about: {entity: "dev-team", type: "team"}
+- When someone is mentioned by name, ALWAYS tag about with their name
+- When a user states a personal preference, tag about with that user
+- When a technology/tool is the main subject, tag it as domain`
 
 export async function extractKnowledge(
   turns: TranscriptTurn[],
@@ -89,13 +102,28 @@ export async function extractKnowledge(
     })
     .join("\n\n")
 
-  const { object } = await generateObject({
-    model,
-    schema: ExtractionSchema,
-    prompt: `${EXTRACTION_PROMPT}\n\n---\n\nTRANSCRIPT:\n${transcript}`,
-    temperature,
-    maxRetries: 0,
-  })
+  const promptText = `${EXTRACTION_PROMPT}\n\n---\n\nTRANSCRIPT:\n${transcript}`
+  console.log(
+    `[extraction] generateObject start: ${turns.length} turns, ${transcript.length} chars, temp=${temperature}`,
+  )
+  const t0 = Date.now()
+
+  const { object } = await ollamaQueue.enqueue(
+    () =>
+      generateObject({
+        model,
+        schema: ExtractionSchema,
+        prompt: promptText,
+        temperature,
+        maxRetries: 0,
+        abortSignal: AbortSignal.timeout(60_000),
+      }),
+    "batch",
+  )
+
+  console.log(
+    `[extraction] generateObject done: ${object.items.length} items in ${Date.now() - t0}ms`,
+  )
 
   return object.items.map((item) => ({
     id: crypto.randomUUID(),
@@ -122,15 +150,15 @@ export async function extractWithRetry(
       return await extractKnowledge(turns, model, source, temperatures[i])
     } catch (error) {
       const isLast = i === temperatures.length - 1
+      const errMsg = error instanceof Error ? error.message : String(error)
       if (isLast) {
         console.warn(
-          `[extraction] All ${temperatures.length} attempts failed for ${source}, chunk skipped`,
-          error instanceof Error ? error.message : error,
+          `[extraction] All ${temperatures.length} attempts failed for ${source}, chunk skipped. Last error: ${errMsg}`,
         )
         return []
       }
       console.warn(
-        `[extraction] Attempt ${i + 1} failed (temp=${temperatures[i]}), retrying with temp=${temperatures[i + 1]}`,
+        `[extraction] Attempt ${i + 1} failed (temp=${temperatures[i]}): ${errMsg.slice(0, 200)}. Retrying with temp=${temperatures[i + 1]}`,
       )
     }
   }

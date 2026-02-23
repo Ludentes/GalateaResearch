@@ -23,6 +23,22 @@ vi.mock("../../providers", () => ({
     model: {},
     modelName: "test-model",
   }),
+  getModelWithFallback: vi.fn().mockReturnValue({
+    model: {},
+    modelName: "test-model",
+    fallback: false,
+  }),
+}))
+
+vi.mock("../../providers/ollama-queue", () => ({
+  ollamaQueue: {
+    enqueue: vi.fn(async (fn: () => Promise<unknown>) => fn()),
+    acquireSlot: vi.fn(async () => ({ release: vi.fn() })),
+    state: { circuitState: "closed", active: false, queueDepth: 0 },
+    reset: vi.fn(),
+  },
+  OllamaCircuitOpenError: class extends Error {},
+  OllamaBackpressureError: class extends Error {},
 }))
 
 // Mock the DB-dependent assembleContext

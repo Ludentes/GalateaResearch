@@ -10,11 +10,21 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AgentIndexRouteImport } from './routes/agent/index'
 import { Route as ChatSessionIdRouteImport } from './routes/chat/$sessionId'
+import { Route as AgentTraceRouteImport } from './routes/agent/trace'
+import { Route as AgentKnowledgeRouteImport } from './routes/agent/knowledge'
+import { Route as AgentConfigRouteImport } from './routes/agent/config'
+import { Route as AgentChatRouteImport } from './routes/agent/chat'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentIndexRoute = AgentIndexRouteImport.update({
+  id: '/agent/',
+  path: '/agent/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChatSessionIdRoute = ChatSessionIdRouteImport.update({
@@ -22,31 +32,93 @@ const ChatSessionIdRoute = ChatSessionIdRouteImport.update({
   path: '/chat/$sessionId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AgentTraceRoute = AgentTraceRouteImport.update({
+  id: '/agent/trace',
+  path: '/agent/trace',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentKnowledgeRoute = AgentKnowledgeRouteImport.update({
+  id: '/agent/knowledge',
+  path: '/agent/knowledge',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentConfigRoute = AgentConfigRouteImport.update({
+  id: '/agent/config',
+  path: '/agent/config',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentChatRoute = AgentChatRouteImport.update({
+  id: '/agent/chat',
+  path: '/agent/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/agent/chat': typeof AgentChatRoute
+  '/agent/config': typeof AgentConfigRoute
+  '/agent/knowledge': typeof AgentKnowledgeRoute
+  '/agent/trace': typeof AgentTraceRoute
   '/chat/$sessionId': typeof ChatSessionIdRoute
+  '/agent/': typeof AgentIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/agent/chat': typeof AgentChatRoute
+  '/agent/config': typeof AgentConfigRoute
+  '/agent/knowledge': typeof AgentKnowledgeRoute
+  '/agent/trace': typeof AgentTraceRoute
   '/chat/$sessionId': typeof ChatSessionIdRoute
+  '/agent': typeof AgentIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/agent/chat': typeof AgentChatRoute
+  '/agent/config': typeof AgentConfigRoute
+  '/agent/knowledge': typeof AgentKnowledgeRoute
+  '/agent/trace': typeof AgentTraceRoute
   '/chat/$sessionId': typeof ChatSessionIdRoute
+  '/agent/': typeof AgentIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/chat/$sessionId'
+  fullPaths:
+    | '/'
+    | '/agent/chat'
+    | '/agent/config'
+    | '/agent/knowledge'
+    | '/agent/trace'
+    | '/chat/$sessionId'
+    | '/agent/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/chat/$sessionId'
-  id: '__root__' | '/' | '/chat/$sessionId'
+  to:
+    | '/'
+    | '/agent/chat'
+    | '/agent/config'
+    | '/agent/knowledge'
+    | '/agent/trace'
+    | '/chat/$sessionId'
+    | '/agent'
+  id:
+    | '__root__'
+    | '/'
+    | '/agent/chat'
+    | '/agent/config'
+    | '/agent/knowledge'
+    | '/agent/trace'
+    | '/chat/$sessionId'
+    | '/agent/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AgentChatRoute: typeof AgentChatRoute
+  AgentConfigRoute: typeof AgentConfigRoute
+  AgentKnowledgeRoute: typeof AgentKnowledgeRoute
+  AgentTraceRoute: typeof AgentTraceRoute
   ChatSessionIdRoute: typeof ChatSessionIdRoute
+  AgentIndexRoute: typeof AgentIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -58,6 +130,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/agent/': {
+      id: '/agent/'
+      path: '/agent'
+      fullPath: '/agent/'
+      preLoaderRoute: typeof AgentIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/chat/$sessionId': {
       id: '/chat/$sessionId'
       path: '/chat/$sessionId'
@@ -65,12 +144,45 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatSessionIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/agent/trace': {
+      id: '/agent/trace'
+      path: '/agent/trace'
+      fullPath: '/agent/trace'
+      preLoaderRoute: typeof AgentTraceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent/knowledge': {
+      id: '/agent/knowledge'
+      path: '/agent/knowledge'
+      fullPath: '/agent/knowledge'
+      preLoaderRoute: typeof AgentKnowledgeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent/config': {
+      id: '/agent/config'
+      path: '/agent/config'
+      fullPath: '/agent/config'
+      preLoaderRoute: typeof AgentConfigRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent/chat': {
+      id: '/agent/chat'
+      path: '/agent/chat'
+      fullPath: '/agent/chat'
+      preLoaderRoute: typeof AgentChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AgentChatRoute: AgentChatRoute,
+  AgentConfigRoute: AgentConfigRoute,
+  AgentKnowledgeRoute: AgentKnowledgeRoute,
+  AgentTraceRoute: AgentTraceRoute,
   ChatSessionIdRoute: ChatSessionIdRoute,
+  AgentIndexRoute: AgentIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

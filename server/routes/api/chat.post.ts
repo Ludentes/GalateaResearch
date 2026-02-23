@@ -1,6 +1,6 @@
 import { defineEventHandler, HTTPError, readBody } from "h3"
 import { streamMessageLogic } from "../../functions/chat.logic"
-import { getModel } from "../../providers"
+import { getModelWithFallback } from "../../providers"
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
     throw new HTTPError("sessionId and message required", { status: 400 })
   }
 
-  const { model, modelName } = getModel(provider, modelId)
+  const { model, modelName } = getModelWithFallback(provider, modelId)
   const result = await streamMessageLogic(sessionId, message, model, modelName)
 
   return result.toTextStreamResponse()

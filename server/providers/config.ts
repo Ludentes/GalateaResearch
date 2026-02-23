@@ -7,7 +7,7 @@ export const VALID_PROVIDERS: readonly string[] = [
 ]
 
 export const DEFAULT_MODELS: Record<LLMProvider, string> = {
-  ollama: "glm-4.7-flash",
+  ollama: "gemma3:12b",
   openrouter: "z-ai/glm-4.5-air:free",
   "claude-code": "sonnet",
 }
@@ -37,10 +37,7 @@ export function getLLMConfig(): LLMConfig {
     throw new Error(
       "OPENROUTER_API_KEY is required when LLM_PROVIDER=openrouter",
     )
-  if (typed === "claude-code" && !anthropicApiKey)
-    throw new Error(
-      "ANTHROPIC_API_KEY is required when LLM_PROVIDER=claude-code",
-    )
+  // claude-code uses CLI auth (claude login), no API key needed
 
   return {
     provider: typed,

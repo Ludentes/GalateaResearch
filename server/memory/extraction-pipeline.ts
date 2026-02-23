@@ -10,6 +10,8 @@ import {
 } from "./knowledge-store"
 import { filterSignalTurns } from "./signal-classifier"
 import { readTranscript } from "./transcript-reader"
+import { emitEvent } from "../observation/emit"
+import { consolidateToClaudeMd } from "./consolidation"
 import type { ExtractionResult, KnowledgeEntry, TranscriptTurn } from "./types"
 
 export interface ExtractionOptions {
@@ -18,6 +20,8 @@ export interface ExtractionOptions {
   storePath: string
   chunkSize?: number
   force?: boolean
+  observationStorePath?: string
+  claudeMdPath?: string
 }
 
 export async function runExtraction(
@@ -30,6 +34,8 @@ export async function runExtraction(
     storePath,
     chunkSize = extractionCfg.chunk_size,
     force = false,
+    observationStorePath,
+    claudeMdPath,
   } = options
 
   const source = `session:${path.basename(transcriptPath, ".jsonl")}`
@@ -53,28 +59,80 @@ export async function runExtraction(
   const signalTurns = filterSignalTurns(allTurns)
   const noiseTurns = allTurns.length - signalTurns.length
 
+  console.log(
+    `[pipeline] ${source}: ${allTurns.length} turns, ${signalTurns.length} signal, ${noiseTurns} noise, chunkSize=${chunkSize}`,
+  )
+
   const allExtracted: KnowledgeEntry[] = []
   let chunksFailed = 0
 
   for (let i = 0; i < signalTurns.length; i += chunkSize) {
     const chunk = signalTurns.slice(i, i + chunkSize)
     const withContext = addSurroundingContext(chunk, allTurns)
+    const chunkNum = Math.floor(i / chunkSize) + 1
+    console.log(
+      `[pipeline] chunk ${chunkNum}: ${chunk.length} signal + ${withContext.length - chunk.length} context = ${withContext.length} turns`,
+    )
+    const t0 = Date.now()
     const extracted = await extractWithRetry(withContext, model, source)
+    console.log(
+      `[pipeline] chunk ${chunkNum}: extracted ${extracted.length} entries in ${Date.now() - t0}ms`,
+    )
     if (extracted.length === 0 && withContext.length > 0) {
       chunksFailed++
     }
     allExtracted.push(...extracted)
   }
 
+  console.log(
+    `[pipeline] dedup start: ${allExtracted.length} candidates vs ${existing.length} existing`,
+  )
+  const t1 = Date.now()
   const { unique: newEntries, duplicatesSkipped } = await deduplicateEntries(
     allExtracted,
     existing,
     getLLMConfig().ollamaBaseUrl,
   )
+  console.log(
+    `[pipeline] dedup done: ${newEntries.length} unique, ${duplicatesSkipped} skipped in ${Date.now() - t1}ms`,
+  )
 
   if (newEntries.length > 0) {
     await appendEntries(newEntries, storePath)
+
+    // Run consolidation if claudeMdPath configured
+    if (claudeMdPath) {
+      consolidateToClaudeMd(storePath, claudeMdPath).catch((err) => {
+        emitEvent({
+          type: "log",
+          source: "galatea-api",
+          body: "consolidation.failed",
+          attributes: {
+            "event.name": "consolidation.failed",
+            severity: "warning",
+            error: String(err),
+            storePath,
+            claudeMdPath,
+          },
+        }).catch(() => {})
+      })
+    }
   }
+
+  emitEvent(
+    {
+      type: "log",
+      source: "galatea-api",
+      body: "extraction.complete",
+      attributes: {
+        "event.name": "extraction.complete",
+        "entries.count": newEntries.length,
+        "turns.processed": allTurns.length,
+        "duplicates.skipped": duplicatesSkipped,
+      },
+    },
+    observationStorePath,
+  ).catch(() => {}) // emitEvent logs to console internally
 
   return {
     entries: newEntries,

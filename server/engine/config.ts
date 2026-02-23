@@ -45,17 +45,63 @@ export interface ContextConfig {
   truncation_min_remaining: number
   truncation_min_content: number
   truncation_header_buffer: number
+  compression: {
+    strategy: string
+    chars_per_token: number
+    reserve_ratio: number
+    model_budgets: Record<string, number>
+  }
 }
 
 export interface HomeostasisConfig {
   communication_idle_hours: number
   stuck_detection_window: number
   stuck_jaccard_threshold: number
+  stuck_shared_stems_min: number
   knowledge_message_min_length: number
   knowledge_keyword_overlap: number
   knowledge_high_score: number
   keyword_min_length: number
   cache_ttl: Record<string, number>
+  l2: {
+    enabled: boolean
+    model: string
+    max_tokens: number
+    timeout_ms: number
+  }
+}
+
+export interface HeartbeatConfig {
+  enabled: boolean
+  interval_ms: number
+  skip_when_idle: boolean
+}
+
+export interface DecayConfig {
+  enabled: boolean
+  decay_start_days: number
+  decay_factor: number
+  archive_threshold: number
+  run_interval_minutes: number
+  exempt_types: string[]
+}
+
+export interface ConsolidationConfig {
+  min_occurrences: number
+  min_avg_confidence: number
+}
+
+export interface MemoryConfig {
+  decay: DecayConfig
+  consolidation: ConsolidationConfig
+}
+
+export interface DiscordConfig {
+  enabled: boolean
+  respond_to_dms: boolean
+  respond_to_mentions: boolean
+  allowed_guilds: string[]
+  allowed_channels: string[]
 }
 
 export interface StopWordsConfig {
@@ -70,6 +116,9 @@ export interface PipelineConfig {
   extraction: ExtractionConfig
   context: ContextConfig
   homeostasis: HomeostasisConfig
+  heartbeat: HeartbeatConfig
+  memory: MemoryConfig
+  discord: DiscordConfig
   stop_words: StopWordsConfig
 }
 
@@ -113,6 +162,22 @@ export function getContextConfig(): ContextConfig {
 
 export function getHomeostasisConfig(): HomeostasisConfig {
   return loadConfig().homeostasis
+}
+
+export function getHeartbeatConfig(): HeartbeatConfig {
+  return loadConfig().heartbeat
+}
+
+export function getDecayConfig(): DecayConfig {
+  return loadConfig().memory.decay
+}
+
+export function getConsolidationConfig(): ConsolidationConfig {
+  return loadConfig().memory.consolidation
+}
+
+export function getDiscordConfig(): DiscordConfig {
+  return loadConfig().discord
 }
 
 export function getStopWords(list: "retrieval" | "dedup"): Set<string> {

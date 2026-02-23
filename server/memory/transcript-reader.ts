@@ -34,6 +34,7 @@ export async function readTranscript(
     try {
       entry = JSON.parse(line)
     } catch {
+      console.warn(`[transcript] Skipping invalid JSON line: ${line.slice(0, 100)}`)
       continue
     }
 

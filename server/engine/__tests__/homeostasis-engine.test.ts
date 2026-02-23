@@ -1,7 +1,7 @@
 // @vitest-environment node
-import { describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it } from "vitest"
 import type { AgentContext, HomeostasisState } from "../types"
-import { assessDimensions, getGuidance, loadGuidanceText } from "../homeostasis-engine"
+import { assessDimensions, clearCache, getGuidance, loadGuidanceText } from "../homeostasis-engine"
 
 const baseContext: AgentContext = {
   sessionId: "test-session",
@@ -12,6 +12,8 @@ const baseContext: AgentContext = {
 }
 
 describe("Homeostasis Engine", () => {
+  beforeEach(() => clearCache())
+
   describe("assessDimensions", () => {
     it("returns all 6 dimensions", () => {
       const state = assessDimensions(baseContext)
@@ -71,10 +73,7 @@ describe("Homeostasis Engine", () => {
       expect(state.communication_health).toBe("HEALTHY")
     })
 
-    // TODO(Phase D): Stuck detection has Jaccard similarity edge case bug
-    // See: docs/plans/2026-02-12-homeostasis-l0-l2-evaluation-report.md
-    // Current L1 implementation: 33% fewer failures than baseline, acceptable for Phase C
-    it.todo("detects LOW progress_momentum when stuck (repeated messages)", () => {
+    it("detects LOW progress_momentum when stuck (repeated messages)", () => {
       const ctx: AgentContext = {
         ...baseContext,
         messageHistory: [

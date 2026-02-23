@@ -5,6 +5,9 @@ import { db } from "../db"
 import { messages, sessions } from "../db/schema"
 import { assembleContext } from "../memory/context-assembler"
 import { retrieveRelevantFacts } from "../memory/fact-retrieval"
+import { classifyTurn } from "../memory/signal-classifier"
+import { emitEvent } from "../observation/emit"
+import { ollamaQueue } from "../providers/ollama-queue"
 
 /**
  * Create a new chat session.
@@ -35,6 +38,7 @@ export async function sendMessageLogic(
   message: string,
   model: LanguageModel,
   modelName: string,
+  opts?: { observationStorePath?: string },
 ) {
   // Store user message
   await db.insert(messages).values({
@@ -42,6 +46,9 @@ export async function sendMessageLogic(
     role: "user",
     content: message,
   })
+
+  // Classify user message signal in real-time
+  const signalClassification = classifyTurn({ role: "user", content: message })
 
   // Get conversation history
   const history = await db
@@ -64,15 +71,20 @@ export async function sendMessageLogic(
   })
 
   // Generate response
-  const result = await generateText({
-    system: context.systemPrompt || undefined,
-    model,
-    messages: history.map((m) => ({
-      role: m.role as "user" | "assistant",
-      content: m.content,
-    })),
-    experimental_telemetry: { isEnabled: true },
-  })
+  const result = await ollamaQueue.enqueue(
+    () =>
+      generateText({
+        system: context.systemPrompt || undefined,
+        model,
+        messages: history.map((m) => ({
+          role: m.role as "user" | "assistant",
+          content: m.content,
+        })),
+        experimental_telemetry: { isEnabled: true },
+        abortSignal: AbortSignal.timeout(60_000),
+      }),
+    "interactive",
+  )
 
   // Store assistant response
   await db
@@ -88,7 +100,22 @@ export async function sendMessageLogic(
     })
     .returning()
 
-  return { text: result.text }
+  emitEvent(
+    {
+      type: "log",
+      source: "galatea-api",
+      body: "chat.response_delivered",
+      attributes: {
+        "event.name": "chat.response_delivered",
+        "session.id": sessionId,
+        model: modelName,
+        "tokens.total": result.usage.totalTokens || 0,
+      },
+    },
+    opts?.observationStorePath,
+  ).catch(() => {}) // emitEvent logs to console internally; swallow file-write failures
+
+  return { text: result.text, signalClassification }
 }
 
 /**
@@ -102,6 +129,7 @@ export async function streamMessageLogic(
   message: string,
   model: LanguageModel,
   modelName: string,
+  opts?: { observationStorePath?: string },
 ) {
   // Store user message
   await db.insert(messages).values({
@@ -130,27 +158,49 @@ export async function streamMessageLogic(
     },
   })
 
-  // Stream response
-  const result = streamText({
-    system: context.systemPrompt || undefined,
-    model,
-    messages: history.map((m) => ({
-      role: m.role as "user" | "assistant",
-      content: m.content,
-    })),
-    experimental_telemetry: { isEnabled: true },
-    onFinish: async ({ text, usage }) => {
-      await db.insert(messages).values({
-        sessionId,
-        role: "assistant",
-        content: text,
-        model: modelName,
-        tokenCount: usage.totalTokens || 0,
-        inputTokens: usage.inputTokens || 0,
-        outputTokens: usage.outputTokens || 0,
-      })
-    },
-  })
+  // Stream response — acquire slot manually since streamText returns synchronously
+  const slot = await ollamaQueue.acquireSlot("interactive")
+  try {
+    const result = streamText({
+      system: context.systemPrompt || undefined,
+      model,
+      messages: history.map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      })),
+      experimental_telemetry: { isEnabled: true },
+      onFinish: async ({ text, usage }) => {
+        slot.release()
+        await db.insert(messages).values({
+          sessionId,
+          role: "assistant",
+          content: text,
+          model: modelName,
+          tokenCount: usage.totalTokens || 0,
+          inputTokens: usage.inputTokens || 0,
+          outputTokens: usage.outputTokens || 0,
+        })
 
-  return result
+        emitEvent(
+          {
+            type: "log",
+            source: "galatea-api",
+            body: "chat.response_delivered",
+            attributes: {
+              "event.name": "chat.response_delivered",
+              "session.id": sessionId,
+              model: modelName,
+              "tokens.total": usage.totalTokens || 0,
+            },
+          },
+          opts?.observationStorePath,
+        ).catch(() => {}) // emitEvent logs to console internally
+      },
+    })
+
+    return result
+  } catch (err) {
+    slot.release(false)
+    throw err
+  }
 }

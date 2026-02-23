@@ -151,6 +151,42 @@ context:
   #    3: PROCEDURES (truncatable)
   # These are hardcoded in context-assembler.ts section construction.
 
+  # Context compression — prevents history from exceeding model limits.
+  compression:
+    strategy: "sliding_window"
+    chars_per_token: 4
+    reserve_ratio: 0.10
+    model_budgets:
+      "gemma3:12b": 8192
+      "gpt-oss:latest": 8192
+      "sonnet": 200000
+      default: 8192
+
+# -----------------------------------------------------------------------------
+# MEMORY DECAY — server/memory/decay.ts
+# Ebbinghaus-style confidence reduction for entries not recently retrieved.
+# -----------------------------------------------------------------------------
+memory:
+  decay:
+    enabled: true
+    decay_start_days: 30
+    decay_factor: 0.95
+    archive_threshold: 0.3
+    run_interval_minutes: 60
+    exempt_types:
+      - rule
+  # Consolidation — server/memory/consolidation.ts
+  # Promotes high-confidence repeated entries to CLAUDE.md.
+  consolidation:
+    # Minimum times an entry must appear (across sessions) to be promoted.
+    # Raise: stricter — only frequently repeated knowledge gets promoted.
+    # Lower: more entries promoted to CLAUDE.md.
+    min_occurrences: 3
+    # Minimum average confidence across occurrences.
+    # Raise: only very confident entries promoted.
+    # Lower: more entries qualify.
+    min_avg_confidence: 0.85
+
 # -----------------------------------------------------------------------------
 # HOMEOSTASIS — server/engine/homeostasis-engine.ts
 # Self-regulation: assesses 6 dimensions and generates behavioral guidance.
@@ -169,14 +205,21 @@ homeostasis:
   # Jaccard similarity between consecutive messages to detect "stuck" user.
   # Raise: only flag very similar messages as stuck.
   # Lower: flag loosely related repeated questions.
-  stuck_jaccard_threshold: 0.5
+  stuck_jaccard_threshold: 0.35
+
+  # Minimum number of stemmed words that must appear in 2+ of the last N
+  # user messages to flag as stuck. Uses stem-frequency counting instead of
+  # pairwise Jaccard (which fails when messages have varied surrounding words).
+  # Raise: require more shared topic words to flag stuck.
+  # Lower: flag even loosely related repeated questions.
+  stuck_shared_stems_min: 2
 
   # Minimum message length to trigger knowledge sufficiency check.
   # Very short messages ("hi") shouldn't trigger LOW knowledge.
   knowledge_message_min_length: 20
 
   # Minimum keyword overlap between message and facts for relevance.
-  knowledge_keyword_overlap: 2
+  knowledge_keyword_overlap: 1
 
   # Score threshold for HIGH knowledge sufficiency.
   # Score = relevant_facts * avg_confidence. E.g., 3 facts at 0.9 = 2.7.
@@ -193,6 +236,33 @@ homeostasis:
     communication_health: 1800000
     productive_engagement: 0
     knowledge_application: 300000
+
+  # L2 LLM Assessment — semantic assessment for hard-to-compute dimensions
+  l2:
+    enabled: true
+    model: "gemma3:12b"
+    max_tokens: 50
+    timeout_ms: 10000
+
+# -----------------------------------------------------------------------------
+# HEARTBEAT — server/agent/heartbeat.ts
+# Periodic tick() scheduler for autonomous operation.
+# -----------------------------------------------------------------------------
+heartbeat:
+  enabled: true
+  interval_ms: 30000
+  skip_when_idle: true
+
+# -----------------------------------------------------------------------------
+# DISCORD — server/discord/bot.ts
+# Bot connector for Discord messaging.
+# -----------------------------------------------------------------------------
+discord:
+  enabled: true
+  respond_to_dms: true
+  respond_to_mentions: true
+  allowed_guilds: []
+  allowed_channels: []
 
 # -----------------------------------------------------------------------------
 # STOP WORDS

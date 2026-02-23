@@ -1,6 +1,7 @@
 // @vitest-environment node
 import type { LanguageModel } from "ai"
 import { asc, desc, eq } from "drizzle-orm"
+import { existsSync, readFileSync } from "node:fs"
 import { mkdir, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { messages, preprompts, sessions } from "../../../db/schema"
@@ -10,6 +11,7 @@ import {
   getExtractionState,
   type ExtractionState,
 } from "../../../memory/extraction-state"
+import { consolidateToClaudeMd } from "../../../memory/consolidation"
 import { appendEntries, readEntries } from "../../../memory/knowledge-store"
 import { filterSignalTurns } from "../../../memory/signal-classifier"
 import { readTranscript } from "../../../memory/transcript-reader"
@@ -17,8 +19,11 @@ import type {
   AssembledContext,
   ExtractionResult,
   KnowledgeEntry,
+  SignalClassification,
   TranscriptTurn,
 } from "../../../memory/types"
+import { readEvents } from "../../../observation/event-store"
+import type { ObservationEvent } from "../../../observation/types"
 import { updateAgentState } from "../../../agent/agent-state"
 import { tick as agentTick } from "../../../agent/tick"
 import type {
@@ -32,6 +37,8 @@ import {
   cleanupTempFiles,
   getTestDb,
 } from "./setup"
+import { getLLMConfig } from "../../../providers/config"
+import { createOllamaModel } from "../../../providers/ollama"
 
 // ---- Types ----
 
@@ -42,12 +49,13 @@ interface PrepromptSeed {
 
 export interface TestWorld {
   sessionId: string
+  storePath: string
 
   // Layer 1: Chat
   sendMessage(content: string): Promise<void>
   roundTrip(
     content: string,
-  ): Promise<{ text: string; tokenCount: number }>
+  ): Promise<{ text: string; tokenCount: number; signalClassification?: SignalClassification }>
   lastMessage(role: "user" | "assistant"): Promise<MessageRow>
   getHistory(): Promise<MessageRow[]>
   assembleContext(): Promise<AssembledContext>
@@ -59,6 +67,13 @@ export interface TestWorld {
   extractOnce(): Promise<ExtractionResult>
   extractAgain(): Promise<ExtractionResult>
   getExtractionState(): Promise<ExtractionState>
+
+  // Consolidation
+  consolidate(): Promise<{ consolidated: number }>
+  readClaudeMd(): string
+
+  // Observation
+  readObservationEvents(): Promise<ObservationEvent[]>
 
   // Layer 3: Tick
   tick(trigger: "manual" | "heartbeat"): Promise<TickResult>
@@ -206,6 +221,8 @@ class ScenarioBuilder {
 
     const storePath = path.join(testDir, "entries.jsonl")
     const statePath = path.join(testDir, "extraction-state.json")
+    const observationStorePath = path.join(testDir, "observations.jsonl")
+    const claudeMdPath = path.join(testDir, "CLAUDE.md")
 
     if (this.config.knowledgeFromPath) {
       const entries = await readEntries(this.config.knowledgeFromPath)
@@ -246,7 +263,10 @@ class ScenarioBuilder {
         "fixtures",
         "sample-session.jsonl",
       )
-    const model = this.config.model
+    const model = this.config.model ?? (() => {
+      const cfg = getLLMConfig()
+      return createOllamaModel(cfg.model, cfg.ollamaBaseUrl)
+    })()
 
     return createTestWorld({
       sessionId: session.id,
@@ -254,6 +274,8 @@ class ScenarioBuilder {
       statePath,
       agentStatePath,
       transcriptPath,
+      observationStorePath,
+      claudeMdPath,
       model,
       tempFiles,
       prepromptIds,
@@ -273,6 +295,8 @@ interface TestWorldConfig {
   statePath: string
   agentStatePath: string
   transcriptPath: string
+  observationStorePath: string
+  claudeMdPath: string
   model?: LanguageModel
   tempFiles: string[]
   prepromptIds: string[]
@@ -285,6 +309,8 @@ function createTestWorld(config: TestWorldConfig): TestWorld {
     statePath,
     agentStatePath,
     transcriptPath,
+    observationStorePath,
+    claudeMdPath,
     model,
     tempFiles,
     prepromptIds,
@@ -295,6 +321,7 @@ function createTestWorld(config: TestWorldConfig): TestWorld {
 
   return {
     sessionId,
+    storePath,
 
     // Layer 1: Chat
 
@@ -308,7 +335,7 @@ function createTestWorld(config: TestWorldConfig): TestWorld {
 
     async roundTrip(
       content: string,
-    ): Promise<{ text: string; tokenCount: number }> {
+    ): Promise<{ text: string; tokenCount: number; signalClassification?: SignalClassification }> {
       if (!model) throw new Error("No model configured. Use withModel().")
 
       // Import dynamically to avoid circular deps with db singleton
@@ -320,6 +347,7 @@ function createTestWorld(config: TestWorldConfig): TestWorld {
         content,
         model,
         "test-model",
+        { observationStorePath },
       )
       const lastMsg = await db
         .select()
@@ -331,6 +359,7 @@ function createTestWorld(config: TestWorldConfig): TestWorld {
       return {
         text: result.text,
         tokenCount: lastMsg[0]?.tokenCount ?? 0,
+        signalClassification: result.signalClassification,
       }
     },
 
@@ -396,6 +425,7 @@ function createTestWorld(config: TestWorldConfig): TestWorld {
         model,
         storePath,
         force: opts?.force ?? false,
+        observationStorePath,
       })
       extractedOnce = true
       return result
@@ -413,6 +443,23 @@ function createTestWorld(config: TestWorldConfig): TestWorld {
 
     async getExtractionState(): Promise<ExtractionState> {
       return getExtractionState(statePath)
+    },
+
+    // Consolidation
+
+    async consolidate(): Promise<{ consolidated: number }> {
+      return consolidateToClaudeMd(storePath, claudeMdPath)
+    },
+
+    readClaudeMd(): string {
+      if (!existsSync(claudeMdPath)) return ""
+      return readFileSync(claudeMdPath, "utf-8")
+    },
+
+    // Observation
+
+    async readObservationEvents(): Promise<ObservationEvent[]> {
+      return readEvents(observationStorePath)
     },
 
     // Layer 3: Tick

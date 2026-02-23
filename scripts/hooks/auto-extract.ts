@@ -65,7 +65,7 @@ try {
   await log(`Extracting: ${session_id} from ${transcript_path}`)
 
   const model = createOllamaModel(
-    process.env.LLM_MODEL || "glm-4.7-flash:latest",
+    process.env.LLM_MODEL || "gemma3:12b",
     process.env.OLLAMA_BASE_URL || "http://localhost:11434",
   )
 
