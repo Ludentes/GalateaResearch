@@ -231,3 +231,15 @@ export interface Issue {
 
 // NOTE: AssembledContext and ContextSection are defined in server/memory/types.ts
 // The legacy Phase 2/3 versions (PromptSection, AssembledContext) were removed in Phase F.
+
+// ============================================================================
+// Safety Types (Phase G)
+// ============================================================================
+
+/**
+ * Result of a safety check on a tool invocation.
+ */
+export interface SafetyCheckResult {
+  allowed: boolean
+  reason?: string
+}
