@@ -5,13 +5,21 @@ import { getContextConfig } from "../engine/config"
 import type { AgentContext } from "../engine/types"
 import { assessDimensions, getGuidance } from "../engine/homeostasis-engine"
 import { readEntries } from "./knowledge-store"
-import type { AssembledContext, ContextSection, KnowledgeEntry } from "./types"
+import type {
+  AssembledContext,
+  ContextSection,
+  KnowledgeEntry,
+  SectionAccounting,
+} from "./types"
 
 interface AssembleOptions {
   storePath?: string
   tokenBudget?: number
   agentContext?: AgentContext
   retrievedEntries?: KnowledgeEntry[]
+  operationalSummary?: string
+  conversationHistory?: Array<{ role: string; content: string }>
+  toolDefinitions?: string
 }
 
 export async function assembleContext(
@@ -75,32 +83,7 @@ export async function assembleContext(
     })
   }
 
-  // 5. LEARNED KNOWLEDGE section — preferences, facts, decisions, corrections
-  const knowledge = active.filter(
-    (e) => e.type !== "rule" && e.type !== "procedure",
-  )
-  if (knowledge.length > 0) {
-    const sorted = knowledge.sort((a, b) => b.confidence - a.confidence)
-    sections.push({
-      name: "LEARNED KNOWLEDGE",
-      content: sorted.map((e) => `- ${e.content}`).join("\n"),
-      priority: 2,
-      truncatable: true,
-    })
-  }
-
-  // 6. PROCEDURES section
-  const procedures = active.filter((e) => e.type === "procedure")
-  if (procedures.length > 0) {
-    sections.push({
-      name: "PROCEDURES",
-      content: procedures.map((e) => `- ${e.content}`).join("\n"),
-      priority: 3,
-      truncatable: true,
-    })
-  }
-
-  // 7. HOMEOSTASIS GUIDANCE — assess dimensions and inject guidance if needed
+  // 5. HOMEOSTASIS GUIDANCE — assess dimensions and inject guidance if needed
   let homeostasisGuidanceIncluded = false
   if (agentContext) {
     const dimensions = assessDimensions(agentContext)
@@ -116,8 +99,69 @@ export async function assembleContext(
     }
   }
 
-  // 8. Assemble final prompt (respect token budget)
-  const systemPrompt = buildPrompt(sections, tokenBudget)
+  // 6. OPERATIONAL CONTEXT — task state, work phase, carryover
+  if (options.operationalSummary) {
+    sections.push({
+      name: "OPERATIONAL CONTEXT",
+      content: options.operationalSummary,
+      priority: 2,
+      truncatable: true,
+    })
+  }
+
+  // 7. CONVERSATION HISTORY — recent exchanges
+  if (options.conversationHistory && options.conversationHistory.length > 0) {
+    const historyText = options.conversationHistory
+      .map((h) => `[${h.role.toUpperCase()}]: ${h.content}`)
+      .join("\n")
+    sections.push({
+      name: "CONVERSATION HISTORY",
+      content: historyText,
+      priority: 3,
+      truncatable: true,
+    })
+  }
+
+  // 8. TOOL DEFINITIONS — registered tools
+  if (options.toolDefinitions) {
+    sections.push({
+      name: "TOOL DEFINITIONS",
+      content: options.toolDefinitions,
+      priority: 4,
+      truncatable: true,
+    })
+  }
+
+  // 9. LEARNED KNOWLEDGE section — preferences, facts, decisions, corrections
+  const knowledge = active.filter(
+    (e) => e.type !== "rule" && e.type !== "procedure",
+  )
+  if (knowledge.length > 0) {
+    const sorted = knowledge.sort((a, b) => b.confidence - a.confidence)
+    sections.push({
+      name: "LEARNED KNOWLEDGE",
+      content: sorted.map((e) => `- ${e.content}`).join("\n"),
+      priority: 5,
+      truncatable: true,
+    })
+  }
+
+  // 10. PROCEDURES section
+  const procedures = active.filter((e) => e.type === "procedure")
+  if (procedures.length > 0) {
+    sections.push({
+      name: "PROCEDURES",
+      content: procedures.map((e) => `- ${e.content}`).join("\n"),
+      priority: 6,
+      truncatable: true,
+    })
+  }
+
+  // 11. Assemble final prompt (respect token budget with per-section accounting)
+  const { systemPrompt, accounting } = buildPromptWithAccounting(
+    sections,
+    tokenBudget,
+  )
 
   return {
     systemPrompt,
@@ -127,16 +171,39 @@ export async function assembleContext(
       knowledgeEntries: active.length,
       rulesCount: rules.length,
       homeostasisGuidanceIncluded,
+      tokenAccounting: accounting,
+      totalTokens: accounting.reduce((sum, a) => sum + a.tokens, 0),
+      budgetUsedPercent: Math.round(
+        (accounting.reduce((sum, a) => sum + a.tokens, 0) / tokenBudget) * 100,
+      ),
     },
   }
 }
 
-function buildPrompt(sections: ContextSection[], tokenBudget: number): string {
+// ---------------------------------------------------------------------------
+// Build prompt with per-section accounting
+// ---------------------------------------------------------------------------
+
+function estimateTokens(text: string, charsPerToken: number): number {
+  return Math.ceil(text.length / charsPerToken)
+}
+
+interface BuildResult {
+  systemPrompt: string
+  accounting: SectionAccounting[]
+}
+
+function buildPromptWithAccounting(
+  sections: ContextSection[],
+  tokenBudget: number,
+): BuildResult {
   const cfg = getContextConfig()
   const charBudget = tokenBudget * cfg.chars_per_token
   let result = ""
   let remaining = charBudget
+  const accounting: SectionAccounting[] = []
 
+  // Phase 1: Required sections (never truncated)
   const required = sections
     .filter((s) => !s.truncatable)
     .sort((a, b) => a.priority - b.priority)
@@ -144,8 +211,26 @@ function buildPrompt(sections: ContextSection[], tokenBudget: number): string {
     const block = `## ${section.name}\n${section.content}\n\n`
     result += block
     remaining -= block.length
+    accounting.push({
+      name: section.name,
+      tokens: estimateTokens(block, cfg.chars_per_token),
+      percentOfBudget: Math.round(
+        (estimateTokens(block, cfg.chars_per_token) / tokenBudget) * 100,
+      ),
+      truncated: false,
+    })
   }
 
+  // Warn if non-truncatable sections consume too much budget
+  const requiredTokens = accounting.reduce((sum, a) => sum + a.tokens, 0)
+  const requiredPercent = Math.round((requiredTokens / tokenBudget) * 100)
+  if (requiredPercent > 80) {
+    console.warn(
+      `[context] Non-truncatable sections consume ${requiredPercent}% of budget`,
+    )
+  }
+
+  // Phase 2: Optional sections (truncatable, lowest priority last)
   const optional = sections
     .filter((s) => s.truncatable)
     .sort((a, b) => a.priority - b.priority)
@@ -154,15 +239,81 @@ function buildPrompt(sections: ContextSection[], tokenBudget: number): string {
     if (block.length <= remaining) {
       result += block
       remaining -= block.length
+      accounting.push({
+        name: section.name,
+        tokens: estimateTokens(block, cfg.chars_per_token),
+        percentOfBudget: Math.round(
+          (estimateTokens(block, cfg.chars_per_token) / tokenBudget) * 100,
+        ),
+        truncated: false,
+      })
     } else if (remaining > cfg.truncation_min_remaining) {
       const header = `## ${section.name}\n`
       const available = remaining - header.length - cfg.truncation_header_buffer
       if (available > cfg.truncation_min_content) {
-        result += `${header}${section.content.slice(0, available)}\n...\n\n`
-        remaining = 0
+        // For LEARNED KNOWLEDGE, drop lowest-ranked entries first
+        const truncatedContent = truncateByLines(
+          section.content,
+          available,
+        )
+        const truncatedBlock = `${header}${truncatedContent.text}\n...\n\n`
+        result += truncatedBlock
+        remaining -= truncatedBlock.length
+        accounting.push({
+          name: section.name,
+          tokens: estimateTokens(truncatedBlock, cfg.chars_per_token),
+          percentOfBudget: Math.round(
+            (estimateTokens(truncatedBlock, cfg.chars_per_token) /
+              tokenBudget) *
+              100,
+          ),
+          truncated: true,
+          droppedEntries: truncatedContent.droppedLines,
+        })
+      } else {
+        accounting.push({
+          name: section.name,
+          tokens: 0,
+          percentOfBudget: 0,
+          truncated: true,
+          droppedEntries: section.content.split("\n").length,
+        })
       }
+    } else {
+      // No space at all
+      accounting.push({
+        name: section.name,
+        tokens: 0,
+        percentOfBudget: 0,
+        truncated: true,
+        droppedEntries: section.content.split("\n").length,
+      })
     }
   }
 
-  return result.trim()
+  return { systemPrompt: result.trim(), accounting }
+}
+
+// ---------------------------------------------------------------------------
+// Line-based truncation (drops from end = lowest-ranked entries)
+// ---------------------------------------------------------------------------
+
+function truncateByLines(
+  content: string,
+  maxChars: number,
+): { text: string; droppedLines: number } {
+  const lines = content.split("\n")
+  let text = ""
+  let included = 0
+
+  for (const line of lines) {
+    if (text.length + line.length + 1 > maxChars) break
+    text += (included > 0 ? "\n" : "") + line
+    included++
+  }
+
+  return {
+    text,
+    droppedLines: lines.length - included,
+  }
 }

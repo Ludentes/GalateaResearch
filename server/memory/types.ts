@@ -118,6 +118,14 @@ export interface ContextSection {
   truncatable: boolean
 }
 
+export interface SectionAccounting {
+  name: string
+  tokens: number
+  percentOfBudget: number
+  truncated: boolean
+  droppedEntries?: number
+}
+
 export interface AssembledContext {
   systemPrompt: string
   sections: ContextSection[]
@@ -126,5 +134,8 @@ export interface AssembledContext {
     knowledgeEntries: number
     rulesCount: number
     homeostasisGuidanceIncluded: boolean
+    tokenAccounting?: SectionAccounting[]
+    totalTokens?: number
+    budgetUsedPercent?: number
   }
 }

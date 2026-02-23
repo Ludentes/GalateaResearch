@@ -1,4 +1,3 @@
-import { generateText } from "ai"
 import { assessDimensions } from "../engine/homeostasis-engine"
 import type { AgentContext } from "../engine/types"
 import { assembleContext } from "../memory/context-assembler"
@@ -7,21 +6,49 @@ import { getModelWithFallback } from "../providers"
 import {
   OllamaBackpressureError,
   OllamaCircuitOpenError,
-  ollamaQueue,
 } from "../providers/ollama-queue"
 import { emitEvent } from "../observation/emit"
 import {
   appendActivityLog,
   getAgentState,
-  removePendingMessage,
+  removeMessage,
   updateAgentState,
 } from "./agent-state"
-import { dispatch } from "./dispatcher"
-import type { SelfModel, TickResult } from "./types"
+import { runAgentLoop } from "./agent-loop"
+import type { AgentTool } from "./agent-loop"
+import { dispatchMessage } from "./dispatcher"
+import {
+  loadOperationalContext,
+  pushHistoryEntry,
+  recordOutbound,
+  saveOperationalContext,
+} from "./operational-memory"
+import type { ChannelMessage, SelfModel, TickResult } from "./types"
+
+// ---------------------------------------------------------------------------
+// Tool registry — stub tools for F.2 scaffolding
+// ---------------------------------------------------------------------------
+
+const registeredTools: Record<string, AgentTool> = {}
+
+export function registerTool(name: string, tool: AgentTool): void {
+  registeredTools[name] = tool
+}
+
+export function clearTools(): void {
+  for (const key of Object.keys(registeredTools)) {
+    delete registeredTools[key]
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tick
+// ---------------------------------------------------------------------------
 
 interface TickOptions {
   statePath?: string
   storePath?: string
+  opContextPath?: string
 }
 
 export async function tick(
@@ -30,9 +57,11 @@ export async function tick(
 ): Promise<TickResult> {
   const statePath = opts?.statePath
   const storePath = opts?.storePath ?? "data/memory/entries.jsonl"
+  const opContextPath = opts?.opContextPath
 
-  // Stage 1: Self-model (check available providers)
+  // Stage 1: Load operational context + self-model
   const selfModel = await checkSelfModel()
+  const opCtx = await loadOperationalContext(opContextPath)
 
   // Stage 2: Read state
   const state = await getAgentState(statePath)
@@ -48,13 +77,28 @@ export async function tick(
     })
     const retrievedFacts = facts.entries
 
+    // Find active task from operational context
+    const activeOpTask = opCtx.tasks.find(
+      (t) => t.status === "in_progress" || t.status === "assigned",
+    )
+
     const agentContext: AgentContext = {
       sessionId: `tick-${Date.now()}`,
       currentMessage: msg.content,
       messageHistory: [],
       retrievedFacts,
       lastMessageTime: new Date(msg.receivedAt),
-      hasAssignedTask: !!state.activeTask,
+      hasAssignedTask: !!state.activeTask || !!activeOpTask,
+      // Operational memory fields
+      lastOutboundAt: opCtx.lastOutboundAt || undefined,
+      phaseEnteredAt: activeOpTask?.phaseStartedAt || opCtx.phaseEnteredAt,
+      taskPhase: activeOpTask?.phase,
+      taskCount: opCtx.tasks.filter((t) => t.status !== "done").length,
+      taskToolCallCount: activeOpTask?.toolCallCount,
+      // Trust/safety — sourceTrustLevel is set by trust resolver (Phase G).
+      // Until then, defaults to "NONE" (most restrictive).
+      sourceChannel: msg.channel,
+      sourceIdentity: msg.from,
     }
 
     const homeostasis = assessDimensions(agentContext)
@@ -64,22 +108,51 @@ export async function tick(
       retrievedEntries: facts.entries,
     })
 
-    // Stage 4: LLM action (only if provider available)
+    // Stage 4: Agent loop (ReAct pattern with budget controls)
     let llmResult: string | undefined
     if (selfModel.availableProviders.length > 0) {
       const { model } = getModelWithFallback()
       try {
-        const result = await ollamaQueue.enqueue(
-          () =>
-            generateText({
-              model,
-              system: context.systemPrompt,
-              messages: [{ role: "user", content: msg.content }],
-              abortSignal: AbortSignal.timeout(60_000),
-            }),
-          "batch",
-        )
-        llmResult = result.text
+        // Record inbound in operational history
+        pushHistoryEntry(opCtx, "user", msg.content)
+
+        // Build history from operational context (exclude the message we just added)
+        const history = opCtx.recentHistory
+          .slice(0, -1)
+          .map((h) => ({ role: h.role, content: h.content }))
+
+        const loopResult = await runAgentLoop({
+          model,
+          system: context.systemPrompt,
+          messages: [{ role: "user", content: msg.content }],
+          tools: Object.keys(registeredTools).length > 0
+            ? registeredTools
+            : undefined,
+          history,
+          config: { maxSteps: 5, timeoutMs: 60_000 },
+        })
+
+        llmResult = loopResult.text
+
+        // Record assistant response in operational history
+        pushHistoryEntry(opCtx, "assistant", llmResult)
+
+        // Log loop metadata
+        if (loopResult.totalSteps > 1 || loopResult.finishReason !== "text") {
+          emitEvent({
+            type: "log",
+            source: "galatea-api",
+            body: "agent_loop.completed",
+            attributes: {
+              "event.name": "agent_loop.completed",
+              finishReason: loopResult.finishReason,
+              totalSteps: String(loopResult.totalSteps),
+              toolCalls: String(
+                loopResult.steps.filter((s) => s.type === "tool_call").length,
+              ),
+            },
+          }).catch(() => {})
+        }
       } catch (err) {
         if (
           err instanceof OllamaCircuitOpenError ||
@@ -93,13 +166,25 @@ export async function tick(
     }
 
     if (llmResult !== undefined) {
+      // Build outbound ChannelMessage
+      const outbound: ChannelMessage = {
+        id: `reply-${msg.id}`,
+        channel: msg.channel,
+        direction: "outbound",
+        routing: {
+          ...msg.routing,
+          replyToId: msg.id,
+        },
+        from: "galatea",
+        content: llmResult,
+        messageType: msg.messageType,
+        receivedAt: new Date().toISOString(),
+        metadata: { ...msg.metadata },
+      }
+
       // Dispatch response to channel
       try {
-        await dispatch(
-          { channel: msg.channel, to: msg.from },
-          llmResult,
-          msg.metadata,
-        )
+        await dispatchMessage(outbound)
       } catch (err) {
         emitEvent({
           type: "log",
@@ -115,8 +200,12 @@ export async function tick(
         }).catch(() => {})
       }
 
+      // Record outbound time + save operational context
+      recordOutbound(opCtx)
+      await saveOperationalContext(opCtx, opContextPath)
+
       // Update state: remove pending message, update activity
-      await removePendingMessage(msg, statePath)
+      await removeMessage(msg, statePath)
       await updateAgentState(
         { lastActivity: new Date().toISOString() },
         statePath,
@@ -137,16 +226,27 @@ export async function tick(
       return tickResult
     }
 
-    // Powered-down mode: pending message but no LLM available (or circuit/backpressure)
+    // Powered-down mode: pending message but no LLM available
     const templateText =
       "I received your message but I'm currently unable to generate a response — no language model is available. I'll respond properly once connectivity is restored."
 
+    const templateOutbound: ChannelMessage = {
+      id: `template-${msg.id}`,
+      channel: msg.channel,
+      direction: "outbound",
+      routing: {
+        ...msg.routing,
+        replyToId: msg.id,
+      },
+      from: "galatea",
+      content: templateText,
+      messageType: msg.messageType,
+      receivedAt: new Date().toISOString(),
+      metadata: { ...msg.metadata },
+    }
+
     try {
-      await dispatch(
-        { channel: msg.channel, to: msg.from },
-        templateText,
-        msg.metadata,
-      )
+      await dispatchMessage(templateOutbound)
     } catch (err) {
       emitEvent({
         type: "log",
@@ -163,7 +263,8 @@ export async function tick(
       }).catch(() => {})
     }
 
-    await removePendingMessage(msg, statePath)
+    await removeMessage(msg, statePath)
+    await saveOperationalContext(opCtx, opContextPath)
 
     const templateResult: TickResult = {
       homeostasis,
@@ -181,13 +282,20 @@ export async function tick(
   }
 
   // No pending messages → idle
+  const idleActiveTask = opCtx.tasks.find(
+    (t) => t.status === "in_progress" || t.status === "assigned",
+  )
   const agentContext: AgentContext = {
     sessionId: `tick-${Date.now()}`,
     currentMessage: "",
     messageHistory: [],
     retrievedFacts: [],
-    hasAssignedTask: !!state.activeTask,
+    hasAssignedTask: !!state.activeTask || !!idleActiveTask,
+    lastOutboundAt: opCtx.lastOutboundAt || undefined,
+    taskCount: opCtx.tasks.filter((t) => t.status !== "done").length,
   }
+
+  await saveOperationalContext(opCtx, opContextPath)
 
   const tickResult: TickResult = {
     homeostasis: assessDimensions(agentContext),

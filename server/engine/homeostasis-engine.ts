@@ -80,6 +80,7 @@ function getDimensionConfigs(): Record<Dimension, DimensionConfig> {
     communication_health: { cacheTTL: ttl.communication_health ?? 1800_000, thinkingLevel: 1 },
     productive_engagement: { cacheTTL: ttl.productive_engagement ?? 0, thinkingLevel: 1 },
     knowledge_application: { cacheTTL: ttl.knowledge_application ?? 300_000, thinkingLevel: 2 },
+    self_preservation: { cacheTTL: ttl.self_preservation ?? 0, thinkingLevel: 1 },
   }
 }
 
@@ -192,22 +193,107 @@ function assessProgressMomentumL1(ctx: AgentContext): DimensionState {
 
 function assessCommunicationHealthL1(ctx: AgentContext): DimensionState {
   const cfg = getHomeostasisConfig()
+
+  // Check outbound cooldown: HIGH if we just sent a message (< 5 min ago)
+  if (ctx.lastOutboundAt) {
+    const outboundElapsedMs = Date.now() - new Date(ctx.lastOutboundAt).getTime()
+    if (outboundElapsedMs < 5 * 60_000) return "HIGH"
+  }
+
+  // Check silence during active work: LOW if has task but no outbound for 3+ hours
+  if (ctx.hasAssignedTask && ctx.lastOutboundAt) {
+    const outboundElapsedMs = Date.now() - new Date(ctx.lastOutboundAt).getTime()
+    const hours = outboundElapsedMs / (1000 * 60 * 60)
+    if (hours >= 3) return "LOW"
+  }
+
+  // Original: check inbound idle time
   if (ctx.lastMessageTime) {
     const elapsed = Date.now() - ctx.lastMessageTime.getTime()
     const hours = elapsed / (1000 * 60 * 60)
     if (hours > cfg.communication_idle_hours) return "LOW"
   }
+
   return "HEALTHY"
 }
 
 function assessProductiveEngagementL1(ctx: AgentContext): DimensionState {
+  // No tasks and no messages → idle, seek work
   if (
     !ctx.hasAssignedTask &&
+    (ctx.taskCount ?? 0) === 0 &&
     ctx.messageHistory.length === 0 &&
     !ctx.currentMessage
   ) {
     return "LOW"
   }
+  return "HEALTHY"
+}
+
+// ============ L1: Self-Preservation ============
+
+// Patterns that could harm the agent, its environment, coworkers, or external systems
+const DESTRUCTIVE_PATTERNS = [
+  // Data destruction
+  /\bdelete\b.*\b(database|db|production|prod|server|all|account)\b/i,
+  /\bdrop\b.*\b(table|database|collection)\b/i,
+  /\brm\s+-rf\b/i,
+  /\bformat\b.*\bdisk\b/i,
+  /\bstart\s+over\b/i,
+  /\bwipe\b/i,
+  // Infrastructure / deployment
+  /\bdeploy\b.*\bproduction\b/i,
+  /\bpush\b.*\b(force|--force)\b/i,
+  /\breset\b.*\b--hard\b/i,
+  /\bshutdown\b/i,
+  /\brestart\b.*\b(server|service|production)\b/i,
+  // Communication to external parties / coworkers
+  /\bsend\b.*\b(email|message|notification)\b.*\b(all|everyone|team|client)\b/i,
+  /\bpost\b.*\b(public|announce|broadcast)\b/i,
+  /\bnotify\b.*\b(all|everyone|team)\b/i,
+  // Access / credentials
+  /\brevoke\b.*\b(access|token|key|permission)\b/i,
+  /\bchange\b.*\bpassword\b/i,
+  /\bmodify\b.*\bpermission\b/i,
+  // Financial / irreversible business actions
+  /\bcancel\b.*\b(subscription|contract|order)\b/i,
+  /\brefund\b/i,
+  /\btransfer\b.*\b(money|funds)\b/i,
+]
+
+function assessSelfPreservationL1(ctx: AgentContext): DimensionState {
+  const message = ctx.currentMessage
+
+  // Check for destructive patterns in the message
+  const isDestructive = DESTRUCTIVE_PATTERNS.some((p) => p.test(message))
+  if (!isDestructive) return "HEALTHY"
+
+  // Destructive action detected — trust level determines response
+  const trust = ctx.sourceTrustLevel ?? "NONE"
+
+  // ABSOLUTE trust → allow (HEALTHY)
+  if (trust === "ABSOLUTE") return "HEALTHY"
+
+  // HIGH trust → still flag destructive actions for confirmation
+  // MEDIUM/LOW/NONE trust → definitely flag
+  return "LOW"
+}
+
+// ============ L1: Knowledge Application (phase-duration aware) ============
+
+function assessKnowledgeApplicationL1(ctx: AgentContext): DimensionState {
+  // Over-research guardrail: exploring for 2+ hours with sufficient knowledge → HIGH
+  if (ctx.taskPhase === "exploring" && ctx.phaseEnteredAt) {
+    const phaseMs = Date.now() - new Date(ctx.phaseEnteredAt).getTime()
+    const phaseHours = phaseMs / (1000 * 60 * 60)
+
+    // 2+ hours exploring when knowledge is sufficient → analysis paralysis
+    if (phaseHours >= 2) {
+      const facts = ctx.retrievedFacts || []
+      if (facts.length > 0) return "HIGH"
+    }
+  }
+
   return "HEALTHY"
 }
 
@@ -233,18 +319,26 @@ export function assessDimensions(ctx: AgentContext): HomeostasisState {
     assessL0Cached("productive_engagement", sessionId) ??
     assessProductiveEngagementL1(ctx)
 
+  const self_preservation =
+    assessL0Cached("self_preservation", sessionId) ??
+    assessSelfPreservationL1(ctx)
+
+  // L1 heuristic for knowledge_application using phase duration
+  const knowledge_application =
+    assessL0Cached("knowledge_application", sessionId) ??
+    assessKnowledgeApplicationL1(ctx)
+
   // Update caches
   updateCache("knowledge_sufficiency", sessionId, knowledge_sufficiency)
   updateCache("progress_momentum", sessionId, progress_momentum)
   updateCache("communication_health", sessionId, communication_health)
   updateCache("productive_engagement", sessionId, productive_engagement)
+  updateCache("self_preservation", sessionId, self_preservation)
+  updateCache("knowledge_application", sessionId, knowledge_application)
 
   // L2 dimensions (default to HEALTHY without LLM)
-  // TODO: Implement L2 LLM assessment in Phase D
   const certainty_alignment =
     assessL0Cached("certainty_alignment", sessionId) ?? "HEALTHY"
-  const knowledge_application =
-    assessL0Cached("knowledge_application", sessionId) ?? "HEALTHY"
 
   return {
     knowledge_sufficiency,
@@ -253,6 +347,7 @@ export function assessDimensions(ctx: AgentContext): HomeostasisState {
     communication_health,
     productive_engagement,
     knowledge_application,
+    self_preservation,
     assessed_at: new Date(),
     assessment_method: {
       knowledge_sufficiency: "computed",
@@ -260,7 +355,8 @@ export function assessDimensions(ctx: AgentContext): HomeostasisState {
       progress_momentum: "computed",
       communication_health: "computed",
       productive_engagement: "computed",
-      knowledge_application: "computed",  // Will be "llm" when L2 implemented
+      knowledge_application: "computed",
+      self_preservation: "computed",
     },
   }
 }
@@ -290,12 +386,16 @@ export async function assessDimensionsAsync(
   const productive_engagement =
     assessL0Cached("productive_engagement", sessionId) ??
     assessProductiveEngagementL1(ctx)
+  const self_preservation =
+    assessL0Cached("self_preservation", sessionId) ??
+    assessSelfPreservationL1(ctx)
 
-  // L2 dimensions — try LLM, fall back to HEALTHY
+  // L2 dimensions — try LLM, fall back to L1 heuristic
   let certainty_alignment: DimensionState =
     assessL0Cached("certainty_alignment", sessionId) ?? "HEALTHY"
   let knowledge_application: DimensionState =
-    assessL0Cached("knowledge_application", sessionId) ?? "HEALTHY"
+    assessL0Cached("knowledge_application", sessionId) ??
+    assessKnowledgeApplicationL1(ctx)
   let certaintyMethod: AssessmentMethod = "computed"
   let applicationMethod: AssessmentMethod = "computed"
 
@@ -325,6 +425,7 @@ export async function assessDimensionsAsync(
   updateCache("productive_engagement", sessionId, productive_engagement)
   updateCache("certainty_alignment", sessionId, certainty_alignment)
   updateCache("knowledge_application", sessionId, knowledge_application)
+  updateCache("self_preservation", sessionId, self_preservation)
 
   return {
     knowledge_sufficiency,
@@ -333,6 +434,7 @@ export async function assessDimensionsAsync(
     communication_health,
     productive_engagement,
     knowledge_application,
+    self_preservation,
     assessed_at: new Date(),
     assessment_method: {
       knowledge_sufficiency: "computed",
@@ -341,6 +443,7 @@ export async function assessDimensionsAsync(
       communication_health: "computed",
       productive_engagement: "computed",
       knowledge_application: applicationMethod,
+      self_preservation: "computed",
     },
   }
 }
@@ -472,21 +575,7 @@ export function getGuidance(state: HomeostasisState): string {
     .join("\n\n")
 }
 
-/**
- * FUTURE: L2 LLM Assessment (Phase D)
- *
- * async function assessL2Semantic(
- *   ctx: AgentContext,
- *   model: LanguageModel
- * ): Promise<{
- *   certainty_alignment: DimensionState
- *   knowledge_application: DimensionState
- * }> {
- *   const prompt = `Assess psychological state...`
- *   const result = await generateText({ model, prompt })
- *   return parseL2Result(result.text)
- * }
- */
+// NOTE: L2 LLM Assessment is implemented above via assessL2Semantic() and assessDimensionsAsync().
 
 /**
  * FUTURE: L3 Meta-Assessment (Phase D/E)

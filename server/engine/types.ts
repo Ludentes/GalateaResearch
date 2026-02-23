@@ -8,7 +8,7 @@
 // ============================================================================
 
 /**
- * The 6 dimensions of homeostatic balance.
+ * The 7 dimensions of homeostatic balance.
  * Based on Self-Determination Theory and Goal Theory.
  */
 export type Dimension =
@@ -18,6 +18,7 @@ export type Dimension =
   | "communication_health" // "Am I connected?"
   | "productive_engagement" // "Am I contributing?"
   | "knowledge_application" // "Learning vs doing?"
+  | "self_preservation" // Asimov 3-in-1: don't harm people → obey authorized orders → protect self/environment
 
 /**
  * State for a single dimension.
@@ -35,7 +36,7 @@ export type DimensionState = "LOW" | "HEALTHY" | "HIGH"
 export type AssessmentMethod = "computed" | "llm"
 
 /**
- * Complete homeostasis state across all 6 dimensions.
+ * Complete homeostasis state across all 7 dimensions.
  */
 export interface HomeostasisState {
   knowledge_sufficiency: DimensionState
@@ -44,6 +45,7 @@ export interface HomeostasisState {
   communication_health: DimensionState
   productive_engagement: DimensionState
   knowledge_application: DimensionState
+  self_preservation: DimensionState
   assessed_at: Date
   assessment_method: Record<Dimension, AssessmentMethod>
 }
@@ -52,6 +54,8 @@ export interface HomeostasisState {
  * Context needed for homeostasis assessment.
  * Contains session state, memory, and task information.
  */
+export type TrustLevel = "NONE" | "LOW" | "MEDIUM" | "HIGH" | "ABSOLUTE"
+
 export interface AgentContext {
   sessionId: string
   currentMessage: string
@@ -64,6 +68,18 @@ export interface AgentContext {
   hasAssignedTask?: boolean
   timeSpentResearching?: number // milliseconds
   timeSpentBuilding?: number // milliseconds
+
+  // Operational memory fields (F.4)
+  lastOutboundAt?: string // ISO timestamp of last outbound message
+  phaseEnteredAt?: string // ISO timestamp when current phase started
+  taskPhase?: "exploring" | "deciding" | "implementing" | "verifying"
+  taskCount?: number // number of active tasks
+  taskToolCallCount?: number // tool calls on current task
+
+  // Trust/safety fields (F.4 self_preservation)
+  sourceTrustLevel?: TrustLevel
+  sourceChannel?: string
+  sourceIdentity?: string // who sent the message
 }
 
 /**
@@ -213,31 +229,5 @@ export interface Issue {
 // Context Assembly Types (extended from Phase 2)
 // ============================================================================
 
-/**
- * Section in assembled prompt.
- */
-export interface PromptSection {
-  priority: number
-  name: string
-  content: string
-  truncatable: boolean
-  token_estimate: number
-}
-
-/**
- * Assembled context for LLM generation.
- * Extended from Phase 2 to include homeostasis guidance.
- */
-export interface AssembledContext {
-  system_prompt: string
-  sections: PromptSection[]
-  metadata: {
-    hard_rules_count: number
-    facts_retrieved: number
-    procedures_matched: number
-    episodes_included: number
-    self_model_included: boolean
-    user_model_included: boolean
-    homeostasis_guidance_included: boolean // NEW in Phase 3
-  }
-}
+// NOTE: AssembledContext and ContextSection are defined in server/memory/types.ts
+// The legacy Phase 2/3 versions (PromptSection, AssembledContext) were removed in Phase F.

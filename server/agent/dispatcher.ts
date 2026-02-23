@@ -1,21 +1,22 @@
-export interface ActionTarget {
-  channel: string
-  to?: string
+import type { ChannelMessage, ChannelName } from "./types"
+
+// ---------------------------------------------------------------------------
+// Channel handler interface — each channel adapter implements this
+// ---------------------------------------------------------------------------
+
+export interface ChannelMessageHandler {
+  send(message: ChannelMessage): Promise<void>
 }
 
-export interface ChannelHandler {
-  send(
-    target: ActionTarget,
-    response: string,
-    metadata?: Record<string, string>,
-  ): Promise<void>
-}
+// ---------------------------------------------------------------------------
+// Handler registry
+// ---------------------------------------------------------------------------
 
-const handlers = new Map<string, ChannelHandler>()
+const handlers = new Map<string, ChannelMessageHandler>()
 
 export function registerHandler(
-  channel: string,
-  handler: ChannelHandler,
+  channel: ChannelName,
+  handler: ChannelMessageHandler,
 ): void {
   handlers.set(channel, handler)
 }
@@ -24,14 +25,16 @@ export function clearHandlers(): void {
   handlers.clear()
 }
 
-export async function dispatch(
-  target: ActionTarget,
-  response: string,
-  metadata?: Record<string, string>,
+// ---------------------------------------------------------------------------
+// Dispatch
+// ---------------------------------------------------------------------------
+
+export async function dispatchMessage(
+  message: ChannelMessage,
 ): Promise<void> {
-  const handler = handlers.get(target.channel)
+  const handler = handlers.get(message.channel)
   if (!handler) {
-    throw new Error(`No handler registered for channel: ${target.channel}`)
+    throw new Error(`No handler registered for channel: ${message.channel}`)
   }
-  await handler.send(target, response, metadata)
+  await handler.send(message)
 }

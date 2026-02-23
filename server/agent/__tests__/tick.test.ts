@@ -4,17 +4,20 @@ import path from "node:path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { appendEntries } from "../../memory/knowledge-store"
 import type { KnowledgeEntry } from "../../memory/types"
+import type { ChannelMessage } from "../types"
 import {
   getAgentState,
   updateAgentState,
 } from "../agent-state"
 import { tick } from "../tick"
 
-// Mock the LLM call and providers
-vi.mock("ai", () => ({
-  generateText: vi.fn().mockResolvedValue({
+// Mock the agent loop — tick now delegates to runAgentLoop
+vi.mock("../agent-loop", () => ({
+  runAgentLoop: vi.fn().mockResolvedValue({
     text: "Here's a status update on the project.",
-    usage: { totalTokens: 100, inputTokens: 50, outputTokens: 50 },
+    steps: [{ type: "text", text: "Here's a status update on the project.", durationMs: 10 }],
+    finishReason: "text",
+    totalSteps: 1,
   }),
 }))
 
@@ -31,14 +34,26 @@ vi.mock("../../providers", () => ({
 }))
 
 vi.mock("../../providers/ollama-queue", () => ({
-  ollamaQueue: {
-    enqueue: vi.fn(async (fn: () => Promise<unknown>) => fn()),
-    acquireSlot: vi.fn(async () => ({ release: vi.fn() })),
-    state: { circuitState: "closed", active: false, queueDepth: 0 },
-    reset: vi.fn(),
-  },
   OllamaCircuitOpenError: class extends Error {},
   OllamaBackpressureError: class extends Error {},
+}))
+
+// Mock operational memory
+vi.mock("../operational-memory", () => ({
+  loadOperationalContext: vi.fn().mockResolvedValue({
+    tasks: [],
+    workPhase: "idle",
+    nextActions: [],
+    blockers: [],
+    carryover: [],
+    recentHistory: [],
+    phaseEnteredAt: new Date().toISOString(),
+    lastOutboundAt: "",
+    lastUpdated: new Date().toISOString(),
+  }),
+  saveOperationalContext: vi.fn().mockResolvedValue(undefined),
+  pushHistoryEntry: vi.fn(),
+  recordOutbound: vi.fn(),
 }))
 
 // Mock the DB-dependent assembleContext
@@ -81,6 +96,21 @@ const projectEntry: KnowledgeEntry = {
   extractedAt: "2026-02-11T10:00:00Z",
 }
 
+function makeMessage(overrides: Partial<ChannelMessage> = {}): ChannelMessage {
+  return {
+    id: `test-${Date.now()}`,
+    channel: "discord",
+    direction: "inbound",
+    routing: {},
+    from: "alina",
+    content: "Как дела? Что с проектом?",
+    messageType: "chat",
+    receivedAt: new Date().toISOString(),
+    metadata: {},
+    ...overrides,
+  }
+}
+
 describe("tick()", () => {
   beforeEach(async () => {
     await appendEntries([alinaEntry, projectEntry], STORE_PATH)
@@ -114,12 +144,9 @@ describe("tick()", () => {
       {
         lastActivity: new Date().toISOString(),
         pendingMessages: [
-          {
-            from: "alina",
-            channel: "discord",
-            content: "Как дела? Что с проектом?",
+          makeMessage({
             receivedAt: new Date(Date.now() - 5 * 60_000).toISOString(),
-          },
+          }),
         ],
       },
       STATE_PATH,
@@ -142,14 +169,7 @@ describe("tick()", () => {
     await updateAgentState(
       {
         lastActivity: new Date().toISOString(),
-        pendingMessages: [
-          {
-            from: "alina",
-            channel: "discord",
-            content: "Как дела?",
-            receivedAt: new Date().toISOString(),
-          },
-        ],
+        pendingMessages: [makeMessage({ content: "Как дела?" })],
       },
       STATE_PATH,
     )
@@ -169,14 +189,7 @@ describe("tick()", () => {
     await updateAgentState(
       {
         lastActivity: new Date().toISOString(),
-        pendingMessages: [
-          {
-            from: "alina",
-            channel: "discord",
-            content: "Status?",
-            receivedAt: new Date().toISOString(),
-          },
-        ],
+        pendingMessages: [makeMessage({ content: "Status?" })],
       },
       STATE_PATH,
     )

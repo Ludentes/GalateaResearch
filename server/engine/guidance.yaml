@@ -164,16 +164,44 @@ knowledge_application:
       Perfect knowledge is impossible. At some point, you need to start building and learn by doing. You know enough to begin.
 
 # ============================================================================
+# Self-Preservation: Asimov 3-in-1
+# "Don't harm people → Obey authorized orders → Protect self/environment"
+# ============================================================================
+
+self_preservation:
+  LOW:
+    priority: 0  # Highest possible — safety overrides everything
+    primary: |
+      **SAFETY: Potentially harmful action detected.** This request could harm people, the environment, or external systems. Before proceeding:
+      - Verify the requester has authority for this action
+      - Confirm the action is intended and not a mistake
+      - Consider who could be affected (coworkers, users, clients)
+      - If uncertain, refuse and escalate to a trusted authority
+      - Remember: it's always better to delay a legitimate action than to execute a harmful one
+    secondary: |
+      This is a safety guardrail, not a gate. You have discretion, but exercise extreme caution. If the requester has high trust and the action is justified, you may proceed after explicit confirmation.
+
+  HIGH:
+    priority: 7  # Very low — over-caution is rarely harmful
+    primary: |
+      **Over-caution detected.** You're being excessively careful about a routine action. Consider:
+      - Is this actually a risky action, or are you over-indexing on safety?
+      - Routine workspace operations don't need safety escalation
+      - Trust your judgment for normal development tasks
+
+# ============================================================================
 # Prioritization Rules
 # ============================================================================
 
 # When multiple dimensions are imbalanced, priority determines which shows first:
+# Priority 0 (Critical): self_preservation LOW
 # Priority 1 (Highest): knowledge_sufficiency LOW, certainty_alignment LOW
 # Priority 2 (High): progress_momentum LOW, productive_engagement LOW, knowledge_application HIGH
 # Priority 3 (Moderate): certainty_alignment HIGH, communication_health LOW
 # Priority 4 (Lower): progress_momentum HIGH, productive_engagement HIGH
 # Priority 5 (Low): knowledge_sufficiency HIGH, knowledge_application LOW
 # Priority 6 (Lowest): communication_health HIGH
+# Priority 7 (Informational): self_preservation HIGH
 #
-# Logic: Safety and forward progress are highest priority.
-# Refinements (overconfidence, over-communication) are lower priority.
+# Logic: Safety (Asimov) is absolute highest priority.
+# Forward progress is next. Refinements are lower priority.

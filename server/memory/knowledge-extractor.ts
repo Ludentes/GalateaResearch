@@ -2,6 +2,7 @@ import type { LanguageModel } from "ai"
 import { generateObject } from "ai"
 import { z } from "zod"
 import { ollamaQueue } from "../providers/ollama-queue"
+import { validateExtraction } from "./confabulation-guard"
 import type { KnowledgeEntry, TranscriptTurn } from "./types"
 
 export const ExtractionSchema = z.object({
@@ -84,12 +85,25 @@ Subject tagging (about field) — IMPORTANT, always fill this in:
 - When a user states a personal preference, tag about with that user
 - When a technology/tool is the main subject, tag it as domain`
 
+interface ExtractionOptions {
+  temperature?: number
+  knownPeople?: string[]
+  skipGuard?: boolean
+}
+
 export async function extractKnowledge(
   turns: TranscriptTurn[],
   model: LanguageModel,
   source: string,
-  temperature = 0,
+  optsOrTemp?: ExtractionOptions | number,
 ): Promise<KnowledgeEntry[]> {
+  // Backward compat: accept bare temperature number
+  const opts: ExtractionOptions =
+    typeof optsOrTemp === "number"
+      ? { temperature: optsOrTemp }
+      : optsOrTemp ?? {}
+  const temperature = opts.temperature ?? 0
+
   const transcript = turns
     .map((t) => {
       let line = `[${t.role.toUpperCase()}]: ${t.content}`
@@ -125,12 +139,32 @@ export async function extractKnowledge(
     `[extraction] generateObject done: ${object.items.length} items in ${Date.now() - t0}ms`,
   )
 
-  return object.items.map((item) => ({
+  const rawEntries: KnowledgeEntry[] = object.items.map((item) => ({
     id: crypto.randomUUID(),
     ...item,
     source,
     extractedAt: new Date().toISOString(),
   }))
+
+  // Post-extraction validation (confabulation guard)
+  if (opts.skipGuard) return rawEntries
+
+  const guardResult = validateExtraction(
+    rawEntries,
+    transcript,
+    opts.knownPeople,
+  )
+
+  if (guardResult.warnings.length > 0) {
+    for (const w of guardResult.warnings) {
+      console.warn(`[extraction:guard] ${w}`)
+    }
+    console.log(
+      `[extraction:guard] ${guardResult.dropped} dropped, ${guardResult.modified} modified out of ${rawEntries.length}`,
+    )
+  }
+
+  return guardResult.entries
 }
 
 /**

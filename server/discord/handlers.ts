@@ -1,28 +1,12 @@
-import { addPendingMessage } from "../agent/agent-state"
-import type { PendingMessage } from "../agent/types"
+import { addMessage } from "../agent/agent-state"
+import { normalizeDiscordMessage } from "./adapter"
+import type { InboundDiscordMessage } from "./adapter"
 
-interface InboundDiscordMessage {
-  authorUsername: string
-  content: string
-  channelId: string
-  messageId: string
-  guildId?: string
-}
+export type { InboundDiscordMessage }
 
 export async function handleInboundMessage(
   msg: InboundDiscordMessage,
 ): Promise<void> {
-  const pending: PendingMessage = {
-    from: msg.authorUsername,
-    channel: "discord",
-    content: msg.content,
-    receivedAt: new Date().toISOString(),
-    metadata: {
-      discordChannelId: msg.channelId,
-      discordMessageId: msg.messageId,
-      ...(msg.guildId && { discordGuildId: msg.guildId }),
-    },
-  }
-
-  await addPendingMessage(pending)
+  const cm = normalizeDiscordMessage(msg)
+  await addMessage(cm)
 }

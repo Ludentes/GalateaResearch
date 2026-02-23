@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs"
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
-import type { AgentState, PendingMessage, TickResult } from "./types"
+import type { AgentState, ChannelMessage, TickResult } from "./types"
 
 const DEFAULT_STATE_PATH = "data/agent/state.json"
 
@@ -28,8 +28,8 @@ export async function updateAgentState(
   await writeFile(statePath, JSON.stringify(updated, null, 2))
 }
 
-export async function addPendingMessage(
-  msg: PendingMessage,
+export async function addMessage(
+  msg: ChannelMessage,
   statePath = DEFAULT_STATE_PATH,
 ): Promise<void> {
   const state = await getAgentState(statePath)
@@ -37,18 +37,13 @@ export async function addPendingMessage(
   await updateAgentState(state, statePath)
 }
 
-export async function removePendingMessage(
-  msg: PendingMessage,
+export async function removeMessage(
+  msg: ChannelMessage,
   statePath = DEFAULT_STATE_PATH,
 ): Promise<void> {
   const state = await getAgentState(statePath)
   state.pendingMessages = state.pendingMessages.filter(
-    (m) =>
-      !(
-        m.from === msg.from &&
-        m.content === msg.content &&
-        m.receivedAt === msg.receivedAt
-      ),
+    (m) => m.id !== msg.id,
   )
   await updateAgentState(state, statePath)
 }

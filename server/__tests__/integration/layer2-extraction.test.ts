@@ -106,33 +106,14 @@ describe("Layer 2: Umka session ends, knowledge extracted", () => {
   })
 
   it("high-confidence entries consolidated to CLAUDE.md", async () => {
-    // Ensure store has at least one entry (seed if extraction timed out)
-    let entries = await readEntries(world.storePath)
-    if (entries.length === 0) {
-      await appendEntries(
-        [
-          {
-            id: crypto.randomUUID(),
-            type: "preference",
-            content: "Use pnpm in all projects",
-            confidence: 0.95,
-            entities: [],
-            source: "session:seed",
-            extractedAt: new Date().toISOString(),
-          },
-        ],
-        world.storePath,
-      )
-      entries = await readEntries(world.storePath)
-    }
-
-    // Seed duplicates to simulate 3+ occurrences of the same knowledge
-    // Pick a non-superseded entry (earlier tests may have superseded entries[0])
-    const target = entries.find((e) => !e.supersededBy) ?? entries[0]
+    // Seed 3 identical high-confidence entries directly — don't depend on
+    // extraction results which vary with LLM output and earlier test state.
+    const content = "Use pnpm in all projects"
     await appendEntries(
       [
-        { ...target, id: crypto.randomUUID(), source: "session:dup-1", supersededBy: undefined },
-        { ...target, id: crypto.randomUUID(), source: "session:dup-2", supersededBy: undefined },
+        { id: crypto.randomUUID(), type: "preference", content, confidence: 0.95, entities: [], source: "session:consol-1", extractedAt: new Date().toISOString() },
+        { id: crypto.randomUUID(), type: "preference", content, confidence: 0.90, entities: [], source: "session:consol-2", extractedAt: new Date().toISOString() },
+        { id: crypto.randomUUID(), type: "preference", content, confidence: 0.92, entities: [], source: "session:consol-3", extractedAt: new Date().toISOString() },
       ],
       world.storePath,
     )
@@ -142,6 +123,6 @@ describe("Layer 2: Umka session ends, knowledge extracted", () => {
 
     const md = world.readClaudeMd()
     expect(md.length).toBeGreaterThan(0)
-    expect(md).toContain(target.content)
+    expect(md).toContain(content)
   }, 30_000)
 })
