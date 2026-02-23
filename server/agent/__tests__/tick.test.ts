@@ -9,7 +9,7 @@ import {
   getAgentState,
   updateAgentState,
 } from "../agent-state"
-import { tick, clearConversationHistory } from "../tick"
+import { tick } from "../tick"
 
 // Mock the agent loop — tick now delegates to runAgentLoop
 vi.mock("../agent-loop", () => ({
@@ -36,6 +36,24 @@ vi.mock("../../providers", () => ({
 vi.mock("../../providers/ollama-queue", () => ({
   OllamaCircuitOpenError: class extends Error {},
   OllamaBackpressureError: class extends Error {},
+}))
+
+// Mock operational memory
+vi.mock("../operational-memory", () => ({
+  loadOperationalContext: vi.fn().mockResolvedValue({
+    tasks: [],
+    workPhase: "idle",
+    nextActions: [],
+    blockers: [],
+    carryover: [],
+    recentHistory: [],
+    phaseEnteredAt: new Date().toISOString(),
+    lastOutboundAt: "",
+    lastUpdated: new Date().toISOString(),
+  }),
+  saveOperationalContext: vi.fn().mockResolvedValue(undefined),
+  pushHistoryEntry: vi.fn(),
+  recordOutbound: vi.fn(),
 }))
 
 // Mock the DB-dependent assembleContext
@@ -100,7 +118,6 @@ describe("tick()", () => {
 
   afterEach(() => {
     if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true })
-    clearConversationHistory()
   })
 
   it("returns idle when no pending messages", async () => {

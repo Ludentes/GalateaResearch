@@ -15,32 +15,15 @@ import {
   updateAgentState,
 } from "./agent-state"
 import { runAgentLoop } from "./agent-loop"
-import type { AgentTool, LoopMessage } from "./agent-loop"
+import type { AgentTool } from "./agent-loop"
 import { dispatchMessage } from "./dispatcher"
+import {
+  loadOperationalContext,
+  pushHistoryEntry,
+  recordOutbound,
+  saveOperationalContext,
+} from "./operational-memory"
 import type { ChannelMessage, SelfModel, TickResult } from "./types"
-
-// ---------------------------------------------------------------------------
-// Conversation history — bounded FIFO buffer
-// ---------------------------------------------------------------------------
-
-const MAX_HISTORY = 5
-let conversationHistory: LoopMessage[] = []
-
-export function getConversationHistory(): LoopMessage[] {
-  return [...conversationHistory]
-}
-
-export function clearConversationHistory(): void {
-  conversationHistory = []
-}
-
-function pushHistory(role: "user" | "assistant", content: string): void {
-  conversationHistory.push({ role, content })
-  if (conversationHistory.length > MAX_HISTORY * 2) {
-    // Keep last MAX_HISTORY exchanges (2 messages per exchange)
-    conversationHistory = conversationHistory.slice(-MAX_HISTORY * 2)
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Tool registry — stub tools for F.2 scaffolding
@@ -65,6 +48,7 @@ export function clearTools(): void {
 interface TickOptions {
   statePath?: string
   storePath?: string
+  opContextPath?: string
 }
 
 export async function tick(
@@ -73,9 +57,11 @@ export async function tick(
 ): Promise<TickResult> {
   const statePath = opts?.statePath
   const storePath = opts?.storePath ?? "data/memory/entries.jsonl"
+  const opContextPath = opts?.opContextPath
 
-  // Stage 1: Self-model (check available providers)
+  // Stage 1: Load operational context + self-model
   const selfModel = await checkSelfModel()
+  const opCtx = await loadOperationalContext(opContextPath)
 
   // Stage 2: Read state
   const state = await getAgentState(statePath)
@@ -112,8 +98,13 @@ export async function tick(
     if (selfModel.availableProviders.length > 0) {
       const { model } = getModelWithFallback()
       try {
-        // Add user message to history before loop
-        pushHistory("user", msg.content)
+        // Record inbound in operational history
+        pushHistoryEntry(opCtx, "user", msg.content)
+
+        // Build history from operational context (exclude the message we just added)
+        const history = opCtx.recentHistory
+          .slice(0, -1)
+          .map((h) => ({ role: h.role, content: h.content }))
 
         const loopResult = await runAgentLoop({
           model,
@@ -122,14 +113,14 @@ export async function tick(
           tools: Object.keys(registeredTools).length > 0
             ? registeredTools
             : undefined,
-          history: getConversationHistory().slice(0, -2), // Exclude the message we just added
+          history,
           config: { maxSteps: 5, timeoutMs: 60_000 },
         })
 
         llmResult = loopResult.text
 
-        // Record assistant response in history
-        pushHistory("assistant", llmResult)
+        // Record assistant response in operational history
+        pushHistoryEntry(opCtx, "assistant", llmResult)
 
         // Log loop metadata
         if (loopResult.totalSteps > 1 || loopResult.finishReason !== "text") {
@@ -194,6 +185,10 @@ export async function tick(
         }).catch(() => {})
       }
 
+      // Record outbound time + save operational context
+      recordOutbound(opCtx)
+      await saveOperationalContext(opCtx, opContextPath)
+
       // Update state: remove pending message, update activity
       await removeMessage(msg, statePath)
       await updateAgentState(
@@ -254,6 +249,7 @@ export async function tick(
     }
 
     await removeMessage(msg, statePath)
+    await saveOperationalContext(opCtx, opContextPath)
 
     const templateResult: TickResult = {
       homeostasis,
@@ -278,6 +274,8 @@ export async function tick(
     retrievedFacts: [],
     hasAssignedTask: !!state.activeTask,
   }
+
+  await saveOperationalContext(opCtx, opContextPath)
 
   const tickResult: TickResult = {
     homeostasis: assessDimensions(agentContext),
