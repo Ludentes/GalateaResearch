@@ -2,81 +2,35 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { existsSync, mkdirSync, writeFileSync, rmSync } from "node:fs"
 import path from "node:path"
+import { tick, setAdapter } from "../tick"
+import type { ChannelMessage } from "../types"
+import { updateAgentState } from "../agent-state"
 
-// Mock the agent loop
-vi.mock("../agent-loop", () => ({
-  runAgentLoop: vi.fn().mockResolvedValue({
-    text: "I'll handle that task.",
-    steps: [{ type: "text", text: "I'll handle that task.", durationMs: 10 }],
-    finishReason: "text",
-    totalSteps: 1,
+// Mock modules that tick depends on but we don't want to call
+vi.mock("../../memory/context-assembler", () => ({
+  assembleContext: vi.fn().mockResolvedValue({
+    systemPrompt: "You are Galatea",
+    sections: [],
+    metadata: { prepromptsLoaded: 0, knowledgeEntries: 0, rulesCount: 0, homeostasisGuidanceIncluded: false },
   }),
 }))
 
 vi.mock("../../providers", () => ({
-  getModel: vi.fn().mockReturnValue({
-    model: {},
-    modelName: "test-model",
-  }),
-  getModelWithFallback: vi.fn().mockReturnValue({
-    model: {},
-    modelName: "test-model",
-    fallback: false,
-  }),
+  getModelWithFallback: vi.fn().mockReturnValue({ model: "test-model" }),
 }))
 
-vi.mock("../../providers/ollama-queue", () => ({
-  OllamaCircuitOpenError: class extends Error {},
-  OllamaBackpressureError: class extends Error {},
-}))
-
-const mockAddTask = vi.fn().mockImplementation((_ctx, description, _source) => ({
-  id: `task-mock-${Date.now()}`,
-  description,
-  source: _source,
-  status: "assigned",
-  phase: "exploring",
-  progress: [],
-  artifacts: [],
-  phaseStartedAt: new Date().toISOString(),
-  toolCallCount: 0,
-}))
-
-vi.mock("../operational-memory", () => ({
-  loadOperationalContext: vi.fn().mockResolvedValue({
-    tasks: [],
-    workPhase: "idle",
-    nextActions: [],
-    blockers: [],
-    carryover: [],
-    recentHistory: [],
-    phaseEnteredAt: new Date().toISOString(),
-    lastOutboundAt: "",
-    lastUpdated: new Date().toISOString(),
-  }),
-  saveOperationalContext: vi.fn().mockResolvedValue(undefined),
-  pushHistoryEntry: vi.fn(),
-  recordOutbound: vi.fn(),
-  addTask: (...args: unknown[]) => mockAddTask(...args),
-}))
-
-// Mock the DB-dependent assembleContext
-vi.mock("../../memory/context-assembler", () => ({
-  assembleContext: vi.fn().mockResolvedValue({
-    systemPrompt: "You are Galatea.",
-    sections: [],
-    metadata: {
-      prepromptsLoaded: 1,
-      knowledgeEntries: 0,
-      rulesCount: 0,
-      homeostasisGuidanceIncluded: false,
-    },
+vi.mock("../agent-loop", () => ({
+  runAgentLoop: vi.fn().mockResolvedValue({
+    text: "I'll help with that.",
+    totalSteps: 1,
+    finishReason: "text",
+    steps: [],
   }),
 }))
 
-import { tick, setAdapter } from "../tick"
-import type { ChannelMessage } from "../types"
-import { updateAgentState } from "../agent-state"
+vi.mock("../dispatcher", () => ({
+  dispatchMessage: vi.fn().mockResolvedValue(undefined),
+}))
 
 const TEST_DIR = "data/test-tick-delegate"
 const STATE_PATH = path.join(TEST_DIR, "state.json")
@@ -160,7 +114,7 @@ describe("tick with task delegation", () => {
       opContextPath: OP_PATH,
     })
 
-    // Without adapter, should respond or use template (depending on LLM availability)
-    expect(["respond", "idle"]).toContain(result.action)
+    // Without adapter, should respond normally via agent loop
+    expect(result.action).toBe("respond")
   })
 })
