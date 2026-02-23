@@ -1,6 +1,7 @@
 import { createError, defineEventHandler, readBody } from "h3"
 import { addPendingMessage } from "../../../agent/agent-state"
 import type { PendingMessage } from "../../../agent/types"
+import { normalizeDashboardMessage } from "../../../dashboard/adapter"
 
 export default defineEventHandler(async (event) => {
   const body = (await readBody(event)) as {
@@ -17,15 +18,23 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const msg: PendingMessage = {
+  // Normalize via channel adapter, then shim to PendingMessage for state
+  const cm = normalizeDashboardMessage({
     from: body.from,
-    channel: body.channel,
     content: body.content,
-    receivedAt: new Date().toISOString(),
+    metadata: body.metadata,
+  })
+
+  // Shim: convert ChannelMessage → PendingMessage for current state format
+  const pending: PendingMessage = {
+    from: cm.from,
+    channel: body.channel, // Preserve original channel from request
+    content: cm.content,
+    receivedAt: cm.receivedAt,
     metadata: body.metadata,
   }
 
-  await addPendingMessage(msg)
+  await addPendingMessage(pending)
 
-  return { queued: true, message: msg }
+  return { queued: true, message: pending }
 })

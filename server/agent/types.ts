@@ -1,6 +1,69 @@
 import type { HomeostasisState } from "../engine/types"
 import type { AssembledContext, KnowledgeEntry } from "../memory/types"
 
+// ---------------------------------------------------------------------------
+// Channel message — the unified message type for all inbound/outbound comms
+// ---------------------------------------------------------------------------
+
+export type ChannelName = "discord" | "dashboard" | "gitlab" | "internal"
+export type MessageDirection = "inbound" | "outbound"
+export type MessageType =
+  | "chat"
+  | "task_assignment"
+  | "review_comment"
+  | "status_update"
+
+export interface MessageRouting {
+  threadId?: string // Discord thread, GitLab MR discussion
+  replyToId?: string // Message being replied to
+  mentionedAgents?: string[] // @Agent-Dev-1 parsing
+  projectId?: string // GitLab project
+  mrId?: string // GitLab MR number
+}
+
+export interface ChannelMessage {
+  id: string
+  channel: ChannelName
+  direction: MessageDirection
+  routing: MessageRouting
+  from: string
+  content: string
+  messageType: MessageType
+  receivedAt: string
+  metadata: Record<string, unknown>
+}
+
+/**
+ * @deprecated Use ChannelMessage instead. Kept for backward compatibility
+ * during the Phase F transition.
+ */
+export interface PendingMessage {
+  from: string
+  channel: string
+  content: string
+  receivedAt: string
+  metadata?: Record<string, string>
+}
+
+/** Convert a legacy PendingMessage to a ChannelMessage */
+export function toChannelMessage(msg: PendingMessage): ChannelMessage {
+  return {
+    id: `legacy-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    channel: (msg.channel as ChannelName) || "internal",
+    direction: "inbound",
+    routing: {},
+    from: msg.from,
+    content: msg.content,
+    messageType: "chat",
+    receivedAt: msg.receivedAt,
+    metadata: msg.metadata ?? {},
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Agent state
+// ---------------------------------------------------------------------------
+
 export interface AgentState {
   activeTask?: {
     project: string
@@ -12,14 +75,6 @@ export interface AgentState {
   pendingMessages: PendingMessage[]
   activityLog?: TickResult[]
   lastDecayRun?: string
-}
-
-export interface PendingMessage {
-  from: string
-  channel: string
-  content: string
-  receivedAt: string
-  metadata?: Record<string, string>
 }
 
 export interface SelfModel {
