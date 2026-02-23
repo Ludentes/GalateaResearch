@@ -127,7 +127,7 @@ context:
   # Total token budget for the system prompt.
   # Raise: more knowledge fits but costs more per message.
   # Lower: cheaper but may truncate important knowledge.
-  token_budget: 4000
+  token_budget: 12000
 
   # Approximate characters per token. Used to convert token budget to char budget.
   # GPT-family models average ~4 chars/token. Adjust for other tokenizers.
