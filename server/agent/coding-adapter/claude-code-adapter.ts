@@ -51,11 +51,11 @@ export class ClaudeCodeAdapter implements CodingToolAdapter {
                   (hookInput.tool_input ?? {}) as Record<string, unknown>,
                 )
                 return {
-                  continue: result.allowed,
+                  continue: result.decision === "allow",
                   hookSpecificOutput: {
                     hookEventName: "PreToolUse" as const,
-                    permissionDecision: result.allowed ? ("allow" as const) : ("deny" as const),
-                    permissionDecisionReason: result.reason ?? "",
+                    permissionDecision: result.decision,
+                    permissionDecisionReason: result.reason,
                   },
                 }
               },

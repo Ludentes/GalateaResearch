@@ -51,7 +51,7 @@ describe("CodingToolAdapter types", () => {
     expect(emptyHooks.onStop).toBeUndefined()
 
     const partialHooks: AdapterHooks = {
-      preToolUse: async () => ({ allowed: true }),
+      preToolUse: async () => ({ decision: "allow" as const, reason: "safe" }),
     }
     expect(partialHooks.preToolUse).toBeDefined()
     expect(partialHooks.postToolUse).toBeUndefined()

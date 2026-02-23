@@ -121,7 +121,7 @@ describe("ClaudeCodeAdapter", () => {
   })
 
   it("wires preToolUse hook as SDK PreToolUse callback", async () => {
-    const preToolUse = vi.fn().mockResolvedValue({ allowed: true, reason: "safe" })
+    const preToolUse = vi.fn().mockResolvedValue({ decision: "allow" as const, reason: "safe" })
 
     mockQuery.mockReturnValue(
       fakeStream([
