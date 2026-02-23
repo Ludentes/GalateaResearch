@@ -203,6 +203,50 @@ describe("composite scoring formula", () => {
 })
 
 // ---------------------------------------------------------------------------
+// BDD Scenario: Entity-based filtering (F.5.2)
+// ---------------------------------------------------------------------------
+describe("entity-based filtering", () => {
+  it("passes entity filter to Qdrant search", async () => {
+    const entry = makeEntry({ id: "e1", entities: ["alina"], about: { entity: "alina", type: "user" } })
+    mockedIsQdrantAvailable.mockResolvedValue(true)
+    mockedBatchEmbed.mockResolvedValue([[0.1, 0.2]])
+    mockedSearchPoints.mockResolvedValue([
+      { id: "e1", score: 0.9, payload: {} },
+    ])
+
+    await retrieveVectorFacts("What does Alina prefer?", [entry], {
+      entityFilter: "alina",
+    })
+
+    expect(mockedSearchPoints).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        filter: {
+          should: [
+            { key: "about_entity", match: { value: "alina" } },
+            { key: "entities", match: { value: "alina" } },
+          ],
+        },
+      }),
+    )
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Fallback when Qdrant search throws
+// ---------------------------------------------------------------------------
+describe("Qdrant search error", () => {
+  it("returns keyword_fallback when Qdrant search throws", async () => {
+    mockedIsQdrantAvailable.mockResolvedValue(true)
+    mockedBatchEmbed.mockResolvedValue([[0.1, 0.2]])
+    mockedSearchPoints.mockRejectedValue(new Error("connection reset"))
+
+    const result = await retrieveVectorFacts("test", [makeEntry()])
+    expect(result.method).toBe("keyword_fallback")
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Superseded entries excluded
 // ---------------------------------------------------------------------------
 describe("superseded entries", () => {

@@ -8,7 +8,7 @@
 // ============================================================================
 
 /**
- * The 6 dimensions of homeostatic balance.
+ * The 7 dimensions of homeostatic balance.
  * Based on Self-Determination Theory and Goal Theory.
  */
 export type Dimension =
@@ -36,7 +36,7 @@ export type DimensionState = "LOW" | "HEALTHY" | "HIGH"
 export type AssessmentMethod = "computed" | "llm"
 
 /**
- * Complete homeostasis state across all 6 dimensions.
+ * Complete homeostasis state across all 7 dimensions.
  */
 export interface HomeostasisState {
   knowledge_sufficiency: DimensionState
@@ -229,31 +229,5 @@ export interface Issue {
 // Context Assembly Types (extended from Phase 2)
 // ============================================================================
 
-/**
- * Section in assembled prompt.
- */
-export interface PromptSection {
-  priority: number
-  name: string
-  content: string
-  truncatable: boolean
-  token_estimate: number
-}
-
-/**
- * Assembled context for LLM generation.
- * Extended from Phase 2 to include homeostasis guidance.
- */
-export interface AssembledContext {
-  system_prompt: string
-  sections: PromptSection[]
-  metadata: {
-    hard_rules_count: number
-    facts_retrieved: number
-    procedures_matched: number
-    episodes_included: number
-    self_model_included: boolean
-    user_model_included: boolean
-    homeostasis_guidance_included: boolean // NEW in Phase 3
-  }
-}
+// NOTE: AssembledContext and ContextSection are defined in server/memory/types.ts
+// The legacy Phase 2/3 versions (PromptSection, AssembledContext) were removed in Phase F.

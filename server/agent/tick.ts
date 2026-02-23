@@ -95,7 +95,8 @@ export async function tick(
       taskPhase: activeOpTask?.phase,
       taskCount: opCtx.tasks.filter((t) => t.status !== "done").length,
       taskToolCallCount: activeOpTask?.toolCallCount,
-      // Trust/safety
+      // Trust/safety — sourceTrustLevel is set by trust resolver (Phase G).
+      // Until then, defaults to "NONE" (most restrictive).
       sourceChannel: msg.channel,
       sourceIdentity: msg.from,
     }

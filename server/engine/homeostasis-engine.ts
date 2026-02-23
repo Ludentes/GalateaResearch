@@ -575,21 +575,7 @@ export function getGuidance(state: HomeostasisState): string {
     .join("\n\n")
 }
 
-/**
- * FUTURE: L2 LLM Assessment (Phase D)
- *
- * async function assessL2Semantic(
- *   ctx: AgentContext,
- *   model: LanguageModel
- * ): Promise<{
- *   certainty_alignment: DimensionState
- *   knowledge_application: DimensionState
- * }> {
- *   const prompt = `Assess psychological state...`
- *   const result = await generateText({ model, prompt })
- *   return parseL2Result(result.text)
- * }
- */
+// NOTE: L2 LLM Assessment is implemented above via assessL2Semantic() and assessDimensionsAsync().
 
 /**
  * FUTURE: L3 Meta-Assessment (Phase D/E)

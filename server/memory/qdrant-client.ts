@@ -138,7 +138,7 @@ export async function searchPoints(
   }
 
   if (opts.filter) body.filter = opts.filter
-  if (opts.scoreThreshold) body.score_threshold = opts.scoreThreshold
+  if (opts.scoreThreshold !== undefined) body.score_threshold = opts.scoreThreshold
 
   const res = await fetch(
     `${client.baseUrl}/collections/${client.collectionName}/points/search`,
