@@ -211,6 +211,68 @@ describe("ClaudeCodeAdapter", () => {
     expect(callArgs.options.abortController).toBeInstanceOf(AbortController)
   })
 
+  it("maps error_max_budget_usd to budget_exceeded", async () => {
+    mockQuery.mockReturnValue(
+      fakeStream([
+        {
+          type: "result",
+          subtype: "error_max_budget_usd",
+          errors: ["Budget limit reached"],
+          duration_ms: 300,
+          total_cost_usd: 1.0,
+          num_turns: 5,
+        },
+      ]),
+    )
+
+    const messages = await collect(
+      adapter.query({ prompt: "t", systemPrompt: "s", workingDirectory: "/tmp" }),
+    )
+
+    expect(messages).toHaveLength(1)
+    if (messages[0].type === "result") {
+      expect(messages[0].subtype).toBe("budget_exceeded")
+    }
+  })
+
+  it("maps error_max_turns to timeout", async () => {
+    mockQuery.mockReturnValue(
+      fakeStream([
+        {
+          type: "result",
+          subtype: "error_max_turns",
+          errors: ["Max turns reached"],
+          duration_ms: 400,
+          num_turns: 10,
+        },
+      ]),
+    )
+
+    const messages = await collect(
+      adapter.query({ prompt: "t", systemPrompt: "s", workingDirectory: "/tmp" }),
+    )
+
+    expect(messages).toHaveLength(1)
+    if (messages[0].type === "result") {
+      expect(messages[0].subtype).toBe("timeout")
+    }
+  })
+
+  it("handles SDK stream exceptions (catch block)", async () => {
+    mockQuery.mockReturnValue(
+      (async function* () {
+        throw new Error("connection lost")
+      })(),
+    )
+
+    const messages = await collect(
+      adapter.query({ prompt: "t", systemPrompt: "s", workingDirectory: "/tmp" }),
+    )
+
+    expect(messages[0]).toMatchObject({ type: "error", error: "connection lost" })
+    expect(messages[1]).toMatchObject({ type: "result", subtype: "error", text: "connection lost" })
+  })
+
   it("handles SDK error results gracefully (maps to subtype 'error')", async () => {
     mockQuery.mockReturnValue(
       fakeStream([
