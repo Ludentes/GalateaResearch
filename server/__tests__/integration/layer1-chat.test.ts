@@ -1,5 +1,4 @@
 // @vitest-environment node
-import { ollama } from "ai-sdk-ollama"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import {
   closeTestDb,
@@ -26,7 +25,6 @@ describe("Layer 1: Developer works on Umka MQTT persistence", () => {
         ],
       })
       .withKnowledgeFrom("data/memory/entries.jsonl")
-      .withModel(ollama("glm-4.7-flash"))
       .seed()
   }, 30_000)
 

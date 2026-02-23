@@ -20,6 +20,7 @@ vi.mock("../claude-code", () => ({
 
 import { getModelWithFallback } from "../index"
 import { ollamaQueue } from "../ollama-queue"
+import { DEFAULT_MODELS } from "../config"
 
 describe("getModelWithFallback", () => {
   const savedEnv = { ...process.env }
@@ -27,10 +28,10 @@ describe("getModelWithFallback", () => {
   beforeEach(() => {
     // Default: Ollama provider with OpenRouter key available
     process.env.LLM_PROVIDER = "ollama"
-    process.env.LLM_MODEL = "glm-4.7-flash"
+    process.env.LLM_MODEL = DEFAULT_MODELS.ollama
     process.env.OLLAMA_BASE_URL = "http://localhost:11434"
     process.env.OPENROUTER_API_KEY = "sk-test-key"
-    process.env.OPENROUTER_MODEL = "z-ai/glm-4.7-flash"
+    process.env.OPENROUTER_MODEL = "google/gemma-3-12b-it"
 
     // Reset circuit to closed
     ;(ollamaQueue as any).state = {
@@ -49,7 +50,7 @@ describe("getModelWithFallback", () => {
     const result = getModelWithFallback()
 
     expect(result.fallback).toBe(false)
-    expect(result.modelName).toBe("glm-4.7-flash")
+    expect(result.modelName).toBe(DEFAULT_MODELS.ollama)
   })
 
   it("returns OpenRouter model when Ollama circuit is open and API key set", () => {
@@ -62,7 +63,7 @@ describe("getModelWithFallback", () => {
     const result = getModelWithFallback()
 
     expect(result.fallback).toBe(true)
-    expect(result.modelName).toBe("openrouter:z-ai/glm-4.7-flash")
+    expect(result.modelName).toBe("openrouter:google/gemma-3-12b-it")
   })
 
   it("returns primary Ollama model when circuit open but no OpenRouter API key", () => {
@@ -77,7 +78,7 @@ describe("getModelWithFallback", () => {
     const result = getModelWithFallback()
 
     expect(result.fallback).toBe(false)
-    expect(result.modelName).toBe("glm-4.7-flash")
+    expect(result.modelName).toBe(DEFAULT_MODELS.ollama)
   })
 
   it("marks fallback: true when using OpenRouter fallback", () => {

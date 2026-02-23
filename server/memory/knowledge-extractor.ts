@@ -46,7 +46,7 @@ export const ExtractionSchema = z.object({
         })
         .optional()
         .describe(
-          "Who/what this knowledge is about. Omit if about the current project in general.",
+          "Who/what this knowledge is about. ALWAYS set this when a person, tool, or domain is the subject. Only omit for generic project-wide rules.",
         ),
     }),
   ),
@@ -71,14 +71,18 @@ Rules for extraction:
 - Be conservative: when in doubt, don't extract
 - Set confidence to 1.0 for explicit "I always/never/prefer" statements
 
-Subject tagging (about field):
-- Tag WHO or WHAT the knowledge is about
-- "Mary prefers Discord" → about: {entity: "mary", type: "user"}
-- "Never push to main" → about: {entity: "galatea", type: "project"} or omit (project is default)
-- "Mobile apps need offline support" → about: {entity: "mobile-dev", type: "domain"}
-- If the subject is the current project in general, omit the about field
-- Use the person's first name (lowercase) as entity for user-specific knowledge
-- When a user states a personal preference, tag it as about that user`
+Subject tagging (about field) — IMPORTANT, always fill this in:
+- ALWAYS set the about field. Only omit it for generic project-wide rules with no specific subject.
+- Tag WHO or WHAT the knowledge is about using entity (lowercase name) and type.
+- Types: user (a person), project (the codebase), agent (the AI), domain (problem space), team (group dynamics)
+- Examples:
+  "Alina prefers Discord" → about: {entity: "alina", type: "user"}
+  "Never push to main" → about: {entity: "galatea", type: "project"}
+  "Mobile apps need offline support" → about: {entity: "mobile-dev", type: "domain"}
+  "The team uses Scrum" → about: {entity: "dev-team", type: "team"}
+- When someone is mentioned by name, ALWAYS tag about with their name
+- When a user states a personal preference, tag about with that user
+- When a technology/tool is the main subject, tag it as domain`
 
 export async function extractKnowledge(
   turns: TranscriptTurn[],

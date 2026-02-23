@@ -9,13 +9,13 @@ describe("LLM Provider Config", () => {
     vi.resetModules()
   })
 
-  it("defaults to ollama with glm-4.7-flash", async () => {
+  it("defaults to ollama with DEFAULT_MODELS.ollama", async () => {
     delete process.env.LLM_PROVIDER
     delete process.env.LLM_MODEL
-    const { getLLMConfig } = await import("../config")
+    const { getLLMConfig, DEFAULT_MODELS } = await import("../config")
     const config = getLLMConfig()
     expect(config.provider).toBe("ollama")
-    expect(config.model).toBe("glm-4.7-flash")
+    expect(config.model).toBe(DEFAULT_MODELS.ollama)
     expect(config.ollamaBaseUrl).toBe("http://localhost:11434")
   })
 

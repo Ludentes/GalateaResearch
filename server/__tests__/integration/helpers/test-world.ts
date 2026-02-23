@@ -37,6 +37,8 @@ import {
   cleanupTempFiles,
   getTestDb,
 } from "./setup"
+import { getLLMConfig } from "../../../providers/config"
+import { createOllamaModel } from "../../../providers/ollama"
 
 // ---- Types ----
 
@@ -261,7 +263,10 @@ class ScenarioBuilder {
         "fixtures",
         "sample-session.jsonl",
       )
-    const model = this.config.model
+    const model = this.config.model ?? (() => {
+      const cfg = getLLMConfig()
+      return createOllamaModel(cfg.model, cfg.ollamaBaseUrl)
+    })()
 
     return createTestWorld({
       sessionId: session.id,

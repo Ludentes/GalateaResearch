@@ -352,12 +352,13 @@ async function assessL2Semantic(
   const cfg = getHomeostasisConfig()
   try {
     const ollamaUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434"
-    const model = createOllamaModel(cfg.l2.model, ollamaUrl)
+    const model = createOllamaModel(cfg.l2.model, ollamaUrl, { think: false })
 
     const prompt = buildL2Prompt(dimension, ctx)
     const result = await generateText({
       model,
       prompt,
+      maxOutputTokens: cfg.l2.max_tokens,
       abortSignal: AbortSignal.timeout(cfg.l2.timeout_ms),
     })
 

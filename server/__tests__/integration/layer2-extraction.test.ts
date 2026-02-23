@@ -1,5 +1,4 @@
 // @vitest-environment node
-import { ollama } from "ai-sdk-ollama"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import {
   closeTestDb,
@@ -20,7 +19,6 @@ describe("Layer 2: Umka session ends, knowledge extracted", () => {
     world = await scenario("umka-session-end")
       .withTranscript("server/memory/__tests__/fixtures/sample-session.jsonl")
       .withEmptyKnowledgeStore()
-      .withModel(ollama("glm-4.7-flash"))
       .seed()
   }, 30_000)
 

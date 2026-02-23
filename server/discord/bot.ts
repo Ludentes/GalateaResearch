@@ -1,4 +1,4 @@
-import { Client, Events, GatewayIntentBits } from "discord.js"
+import { Client, Events, GatewayIntentBits, Partials } from "discord.js"
 import { registerHandler } from "../agent/dispatcher"
 import { getDiscordConfig } from "../engine/config"
 import { handleInboundMessage } from "./handlers"
@@ -21,6 +21,7 @@ export async function startDiscordBot(): Promise<Client | null> {
       GatewayIntentBits.DirectMessages,
       GatewayIntentBits.MessageContent,
     ],
+    partials: [Partials.Channel],
   })
 
   client.once(Events.ClientReady, (c) => {

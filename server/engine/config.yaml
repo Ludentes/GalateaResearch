@@ -157,7 +157,7 @@ context:
     chars_per_token: 4
     reserve_ratio: 0.10
     model_budgets:
-      "glm-4.7-flash": 8192
+      "gemma3:12b": 8192
       "gpt-oss:latest": 8192
       "sonnet": 200000
       default: 8192
@@ -240,7 +240,7 @@ homeostasis:
   # L2 LLM Assessment — semantic assessment for hard-to-compute dimensions
   l2:
     enabled: true
-    model: "glm-4.7-flash"
+    model: "gemma3:12b"
     max_tokens: 50
     timeout_ms: 10000
 
@@ -258,7 +258,7 @@ heartbeat:
 # Bot connector for Discord messaging.
 # -----------------------------------------------------------------------------
 discord:
-  enabled: false
+  enabled: true
   respond_to_dms: true
   respond_to_mentions: true
   allowed_guilds: []

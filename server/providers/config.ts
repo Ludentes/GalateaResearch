@@ -7,7 +7,7 @@ export const VALID_PROVIDERS: readonly string[] = [
 ]
 
 export const DEFAULT_MODELS: Record<LLMProvider, string> = {
-  ollama: "glm-4.7-flash",
+  ollama: "gemma3:12b",
   openrouter: "z-ai/glm-4.5-air:free",
   "claude-code": "sonnet",
 }

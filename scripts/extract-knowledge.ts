@@ -10,7 +10,7 @@ const { values } = parseArgs({
       short: "s",
       default: "data/memory/entries.jsonl",
     },
-    model: { type: "string", short: "m", default: "glm-4.7-flash:latest" },
+    model: { type: "string", short: "m", default: "gemma3:12b" },
     "ollama-url": {
       type: "string",
       default: "http://localhost:11434",
@@ -28,7 +28,7 @@ if (!values.input) {
   console.error(
     "  -s  Knowledge store path (default: data/memory/entries.jsonl)",
   )
-  console.error("  -m  Ollama model (default: glm-4.7-flash:latest)")
+  console.error("  -m  Ollama model (default: gemma3:12b)")
   console.error("  -f  Force re-extraction even if session already processed")
   process.exit(1)
 }
