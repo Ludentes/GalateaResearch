@@ -13,11 +13,11 @@ import { emitEvent } from "../observation/emit"
 import {
   appendActivityLog,
   getAgentState,
-  removePendingMessage,
+  removeMessage,
   updateAgentState,
 } from "./agent-state"
-import { dispatch } from "./dispatcher"
-import type { SelfModel, TickResult } from "./types"
+import { dispatchMessage } from "./dispatcher"
+import type { ChannelMessage, SelfModel, TickResult } from "./types"
 
 interface TickOptions {
   statePath?: string
@@ -93,13 +93,25 @@ export async function tick(
     }
 
     if (llmResult !== undefined) {
+      // Build outbound ChannelMessage
+      const outbound: ChannelMessage = {
+        id: `reply-${msg.id}`,
+        channel: msg.channel,
+        direction: "outbound",
+        routing: {
+          ...msg.routing,
+          replyToId: msg.id,
+        },
+        from: "galatea",
+        content: llmResult,
+        messageType: msg.messageType,
+        receivedAt: new Date().toISOString(),
+        metadata: { ...msg.metadata },
+      }
+
       // Dispatch response to channel
       try {
-        await dispatch(
-          { channel: msg.channel, to: msg.from },
-          llmResult,
-          msg.metadata,
-        )
+        await dispatchMessage(outbound)
       } catch (err) {
         emitEvent({
           type: "log",
@@ -116,7 +128,7 @@ export async function tick(
       }
 
       // Update state: remove pending message, update activity
-      await removePendingMessage(msg, statePath)
+      await removeMessage(msg, statePath)
       await updateAgentState(
         { lastActivity: new Date().toISOString() },
         statePath,
@@ -141,12 +153,23 @@ export async function tick(
     const templateText =
       "I received your message but I'm currently unable to generate a response — no language model is available. I'll respond properly once connectivity is restored."
 
+    const templateOutbound: ChannelMessage = {
+      id: `template-${msg.id}`,
+      channel: msg.channel,
+      direction: "outbound",
+      routing: {
+        ...msg.routing,
+        replyToId: msg.id,
+      },
+      from: "galatea",
+      content: templateText,
+      messageType: msg.messageType,
+      receivedAt: new Date().toISOString(),
+      metadata: { ...msg.metadata },
+    }
+
     try {
-      await dispatch(
-        { channel: msg.channel, to: msg.from },
-        templateText,
-        msg.metadata,
-      )
+      await dispatchMessage(templateOutbound)
     } catch (err) {
       emitEvent({
         type: "log",
@@ -163,7 +186,7 @@ export async function tick(
       }).catch(() => {})
     }
 
-    await removePendingMessage(msg, statePath)
+    await removeMessage(msg, statePath)
 
     const templateResult: TickResult = {
       homeostasis,

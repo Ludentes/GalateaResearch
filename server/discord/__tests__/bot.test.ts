@@ -2,14 +2,14 @@
 import { describe, expect, it, vi } from "vitest"
 import { handleInboundMessage } from "../handlers"
 
-// Mock addPendingMessage
+// Mock addMessage
 vi.mock("../../agent/agent-state", () => ({
-  addPendingMessage: vi.fn(),
+  addMessage: vi.fn(),
 }))
 
 describe("Discord Handlers", () => {
-  it("converts Discord message to PendingMessage", async () => {
-    const { addPendingMessage } = await import("../../agent/agent-state")
+  it("converts Discord message to ChannelMessage and queues it", async () => {
+    const { addMessage } = await import("../../agent/agent-state")
 
     await handleInboundMessage({
       authorUsername: "testuser",
@@ -19,23 +19,24 @@ describe("Discord Handlers", () => {
       guildId: "789",
     })
 
-    expect(addPendingMessage).toHaveBeenCalledWith(
+    expect(addMessage).toHaveBeenCalledWith(
       expect.objectContaining({
-        from: "testuser",
         channel: "discord",
+        direction: "inbound",
+        from: "testuser",
         content: "Hello agent!",
-        metadata: {
+        metadata: expect.objectContaining({
           discordChannelId: "123",
           discordMessageId: "456",
           discordGuildId: "789",
-        },
+        }),
       }),
     )
   })
 
   it("omits guildId from metadata when not provided", async () => {
-    const { addPendingMessage } = await import("../../agent/agent-state")
-    vi.mocked(addPendingMessage).mockClear()
+    const { addMessage } = await import("../../agent/agent-state")
+    vi.mocked(addMessage).mockClear()
 
     await handleInboundMessage({
       authorUsername: "dmuser",
@@ -44,16 +45,8 @@ describe("Discord Handlers", () => {
       messageId: "888",
     })
 
-    expect(addPendingMessage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        from: "dmuser",
-        channel: "discord",
-        content: "DM message",
-        metadata: {
-          discordChannelId: "999",
-          discordMessageId: "888",
-        },
-      }),
-    )
+    const call = vi.mocked(addMessage).mock.calls[0][0]
+    expect(call.metadata.discordGuildId).toBeUndefined()
+    expect(call.metadata.discordChannelId).toBe("999")
   })
 })

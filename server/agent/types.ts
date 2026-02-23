@@ -33,33 +33,6 @@ export interface ChannelMessage {
   metadata: Record<string, unknown>
 }
 
-/**
- * @deprecated Use ChannelMessage instead. Kept for backward compatibility
- * during the Phase F transition.
- */
-export interface PendingMessage {
-  from: string
-  channel: string
-  content: string
-  receivedAt: string
-  metadata?: Record<string, string>
-}
-
-/** Convert a legacy PendingMessage to a ChannelMessage */
-export function toChannelMessage(msg: PendingMessage): ChannelMessage {
-  return {
-    id: `legacy-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    channel: (msg.channel as ChannelName) || "internal",
-    direction: "inbound",
-    routing: {},
-    from: msg.from,
-    content: msg.content,
-    messageType: "chat",
-    receivedAt: msg.receivedAt,
-    metadata: msg.metadata ?? {},
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Agent state
 // ---------------------------------------------------------------------------
@@ -72,7 +45,7 @@ export interface AgentState {
     startedAt?: string
   }
   lastActivity: string
-  pendingMessages: PendingMessage[]
+  pendingMessages: ChannelMessage[]
   activityLog?: TickResult[]
   lastDecayRun?: string
 }
@@ -86,7 +59,7 @@ export interface TickResult {
   retrievedFacts: KnowledgeEntry[]
   context: AssembledContext
   selfModel: SelfModel
-  pendingMessages: PendingMessage[]
+  pendingMessages: ChannelMessage[]
   action: "respond" | "extract" | "idle"
   action_target?: { channel: string; to?: string }
   response?: { text: string; template?: boolean }

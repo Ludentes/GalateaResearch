@@ -4,6 +4,7 @@ import path from "node:path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { appendEntries } from "../../memory/knowledge-store"
 import type { KnowledgeEntry } from "../../memory/types"
+import type { ChannelMessage } from "../types"
 import {
   getAgentState,
   updateAgentState,
@@ -81,6 +82,21 @@ const projectEntry: KnowledgeEntry = {
   extractedAt: "2026-02-11T10:00:00Z",
 }
 
+function makeMessage(overrides: Partial<ChannelMessage> = {}): ChannelMessage {
+  return {
+    id: `test-${Date.now()}`,
+    channel: "discord",
+    direction: "inbound",
+    routing: {},
+    from: "alina",
+    content: "Как дела? Что с проектом?",
+    messageType: "chat",
+    receivedAt: new Date().toISOString(),
+    metadata: {},
+    ...overrides,
+  }
+}
+
 describe("tick()", () => {
   beforeEach(async () => {
     await appendEntries([alinaEntry, projectEntry], STORE_PATH)
@@ -114,12 +130,9 @@ describe("tick()", () => {
       {
         lastActivity: new Date().toISOString(),
         pendingMessages: [
-          {
-            from: "alina",
-            channel: "discord",
-            content: "Как дела? Что с проектом?",
+          makeMessage({
             receivedAt: new Date(Date.now() - 5 * 60_000).toISOString(),
-          },
+          }),
         ],
       },
       STATE_PATH,
@@ -142,14 +155,7 @@ describe("tick()", () => {
     await updateAgentState(
       {
         lastActivity: new Date().toISOString(),
-        pendingMessages: [
-          {
-            from: "alina",
-            channel: "discord",
-            content: "Как дела?",
-            receivedAt: new Date().toISOString(),
-          },
-        ],
+        pendingMessages: [makeMessage({ content: "Как дела?" })],
       },
       STATE_PATH,
     )
@@ -169,14 +175,7 @@ describe("tick()", () => {
     await updateAgentState(
       {
         lastActivity: new Date().toISOString(),
-        pendingMessages: [
-          {
-            from: "alina",
-            channel: "discord",
-            content: "Status?",
-            receivedAt: new Date().toISOString(),
-          },
-        ],
+        pendingMessages: [makeMessage({ content: "Status?" })],
       },
       STATE_PATH,
     )

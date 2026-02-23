@@ -36,11 +36,16 @@ describe("Layer 3: Alina asks project status, agent decides to respond", () => {
           channel: "web",
         },
       })
-      .withPendingMessage({
-        from: "alina",
+      .withMessage({
+        id: "test-msg-1",
         channel: "discord",
+        direction: "inbound",
+        routing: {},
+        from: "alina",
         content: "Как дела? Что с проектом?",
+        messageType: "chat",
         receivedAt: new Date(Date.now() - 5 * 60 * 60_000).toISOString(), // 5 hours ago → triggers LOW
+        metadata: {},
       })
       .seed()
   }, 30_000)
@@ -137,11 +142,16 @@ describe("Layer 3: Powered-down mode (no LLM available)", () => {
 
     world = await scenario("powered-down")
       .withSession("umka")
-      .withPendingMessage({
-        from: "alina",
+      .withMessage({
+        id: "test-msg-2",
         channel: "discord",
+        direction: "inbound",
+        routing: {},
+        from: "alina",
         content: "Are you there?",
+        messageType: "chat",
         receivedAt: new Date().toISOString(),
+        metadata: {},
       })
       .seed()
   }, 30_000)

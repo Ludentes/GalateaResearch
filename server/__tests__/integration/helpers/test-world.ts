@@ -28,7 +28,7 @@ import { updateAgentState } from "../../../agent/agent-state"
 import { tick as agentTick } from "../../../agent/tick"
 import type {
   AgentState,
-  PendingMessage,
+  ChannelMessage,
   TickResult,
 } from "../../../agent/types"
 import {
@@ -106,7 +106,7 @@ interface ScenarioConfig {
   transcriptPath?: string
   model?: LanguageModel
   agentState?: Partial<AgentState>
-  pendingMessages?: PendingMessage[]
+  pendingMessages?: ChannelMessage[]
   noPendingMessages?: boolean
 }
 
@@ -157,7 +157,7 @@ class ScenarioBuilder {
     return this
   }
 
-  withPendingMessage(msg: PendingMessage): this {
+  withMessage(msg: ChannelMessage): this {
     if (!this.config.pendingMessages) this.config.pendingMessages = []
     this.config.pendingMessages.push(msg)
     return this
