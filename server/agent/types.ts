@@ -60,8 +60,15 @@ export interface TickResult {
   context: AssembledContext
   selfModel: SelfModel
   pendingMessages: ChannelMessage[]
-  action: "respond" | "extract" | "idle"
+  action: "respond" | "extract" | "idle" | "delegate"
   action_target?: { channel: string; to?: string }
   response?: { text: string; template?: boolean }
+  delegation?: {
+    adapter: string
+    taskId: string
+    status: "started" | "completed" | "failed" | "timeout"
+    transcript?: import("./coding-adapter/types").CodingTranscriptEntry[]
+    costUsd?: number
+  }
   timestamp?: string
 }

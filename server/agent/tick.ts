@@ -24,6 +24,10 @@ import {
   saveOperationalContext,
 } from "./operational-memory"
 import type { ChannelMessage, SelfModel, TickResult } from "./types"
+import type { CodingToolAdapter } from "./coding-adapter/types"
+import { executeWorkArc } from "./coding-adapter/work-arc"
+import { addTask } from "./operational-memory"
+import type { TrustLevel } from "../engine/types"
 
 // ---------------------------------------------------------------------------
 // Tool registry — stub tools for F.2 scaffolding
@@ -39,6 +43,20 @@ export function clearTools(): void {
   for (const key of Object.keys(registeredTools)) {
     delete registeredTools[key]
   }
+}
+
+// ---------------------------------------------------------------------------
+// Coding tool adapter (Phase G)
+// ---------------------------------------------------------------------------
+
+let codingAdapter: CodingToolAdapter | undefined
+
+export function setAdapter(adapter: CodingToolAdapter | undefined): void {
+  codingAdapter = adapter
+}
+
+export function getAdapter(): CodingToolAdapter | undefined {
+  return codingAdapter
 }
 
 // ---------------------------------------------------------------------------
@@ -107,6 +125,78 @@ export async function tick(
       agentContext,
       retrievedEntries: facts.entries,
     })
+
+    // Stage 3b: Delegate to coding adapter for task_assignment messages
+    if (msg.messageType === "task_assignment" && codingAdapter) {
+      const task = addTask(opCtx, msg.content, msg)
+      task.status = "in_progress"
+
+      const workDir = (msg.metadata?.workspace as string) ?? process.cwd()
+      const arcResult = await executeWorkArc({
+        adapter: codingAdapter,
+        task: { id: task.id, description: task.description },
+        context,
+        workingDirectory: workDir,
+        trustLevel: (agentContext.sourceTrustLevel ?? "MEDIUM") as TrustLevel,
+      })
+
+      // Update task status based on result
+      if (arcResult.status === "completed") {
+        task.status = "done"
+        task.progress.push(arcResult.text)
+      } else if (arcResult.status === "blocked") {
+        task.status = "blocked"
+        opCtx.blockers.push(arcResult.text)
+      } else {
+        task.status = "in_progress"
+        opCtx.carryover.push(`SDK session ${arcResult.status}: ${arcResult.text}`)
+      }
+
+      const statusText = arcResult.status === "completed"
+        ? `Task completed: ${arcResult.text}`
+        : `Task ${arcResult.status}: ${arcResult.text}`
+
+      const outbound: ChannelMessage = {
+        id: `delegate-${msg.id}`,
+        channel: msg.channel,
+        direction: "outbound",
+        routing: { ...msg.routing, replyToId: msg.id },
+        from: "galatea",
+        content: statusText,
+        messageType: "status_update",
+        receivedAt: new Date().toISOString(),
+        metadata: {},
+      }
+
+      try { await dispatchMessage(outbound) } catch { /* logged */ }
+
+      recordOutbound(opCtx)
+      await saveOperationalContext(opCtx, opContextPath)
+      await removeMessage(msg, statePath)
+
+      const tickResult: TickResult = {
+        homeostasis,
+        retrievedFacts,
+        context,
+        selfModel,
+        pendingMessages: pending,
+        action: "delegate",
+        action_target: { channel: msg.channel, to: msg.from },
+        response: { text: statusText },
+        delegation: {
+          adapter: codingAdapter.name,
+          taskId: task.id,
+          status: arcResult.status === "completed" ? "completed"
+            : arcResult.status === "blocked" ? "failed"
+            : arcResult.status as "started" | "completed" | "failed" | "timeout",
+          transcript: arcResult.transcript,
+          costUsd: arcResult.costUsd,
+        },
+        timestamp: new Date().toISOString(),
+      }
+      await appendActivityLog(tickResult, statePath)
+      return tickResult
+    }
 
     // Stage 4: Agent loop (ReAct pattern with budget controls)
     let llmResult: string | undefined
