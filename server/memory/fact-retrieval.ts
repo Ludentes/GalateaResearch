@@ -1,6 +1,7 @@
 import { type RetrievalConfig, getRetrievalConfig, getStopWords } from "../engine/config"
 import { readEntries } from "./knowledge-store"
 import type { KnowledgeEntry } from "./types"
+import { retrieveVectorFacts } from "./vector-retrieval"
 
 // ---- Trace Types ----
 
@@ -46,6 +47,7 @@ interface RetrievalOptions {
   maxEntries?: number
   additionalEntities?: string[]
   trace?: boolean
+  useVector?: boolean // Try vector retrieval first, fall back to keyword
 }
 
 // ---- Main Function ----
@@ -71,6 +73,34 @@ export async function retrieveRelevantFacts(
   const entries = await readEntries(storePath)
   const tracing = opts?.trace ?? false
   const steps: TraceStep[] = []
+
+  // Try vector retrieval if enabled
+  if (opts?.useVector) {
+    const active = entries.filter((e) => !e.supersededBy)
+    const vectorResult = await retrieveVectorFacts(message, active, {
+      maxEntries: opts?.maxEntries ?? config.max_entries,
+      entityFilter: opts?.additionalEntities?.[0],
+    })
+
+    if (vectorResult.method === "vector") {
+      // Extract matched entities for compatibility
+      const mentionedEntities = extractEntityMentions(
+        message,
+        active,
+        config.entity_name_min_length,
+      )
+      const additionalEntities = (opts?.additionalEntities ?? []).map((e) => e.toLowerCase())
+      for (const e of additionalEntities) {
+        if (!mentionedEntities.includes(e)) mentionedEntities.push(e)
+      }
+
+      return {
+        entries: vectorResult.entries,
+        matchedEntities: mentionedEntities,
+      }
+    }
+    // vector method was "keyword_fallback" — continue to keyword pipeline below
+  }
 
   // Stage 0: Filter superseded
   const active = entries.filter((e) => !e.supersededBy)
