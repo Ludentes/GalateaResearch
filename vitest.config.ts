@@ -8,7 +8,7 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./app/test/setup.ts"],
-    exclude: ["node_modules", "e2e", "docs/archive"],
+    exclude: ["node_modules", "e2e", "docs/archive", ".worktrees"],
     // Ollama tests must run sequentially — the 29.9B model can only serve
     // one request at a time, so parallel test files cause timeouts.
     fileParallelism: false,
