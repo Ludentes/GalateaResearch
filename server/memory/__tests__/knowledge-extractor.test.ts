@@ -12,6 +12,8 @@ const mockGenerateObject = vi.fn().mockResolvedValue({
         confidence: 0.95,
         evidence: "User said: I prefer using pnpm",
         entities: ["pnpm", "npm"],
+        novelty: "project-specific",
+        origin: "explicit-statement",
       },
       {
         type: "fact",
@@ -19,6 +21,8 @@ const mockGenerateObject = vi.fn().mockResolvedValue({
         confidence: 0.85,
         evidence: "User requested strict mode setup",
         entities: ["TypeScript"],
+        novelty: "project-specific",
+        origin: "observed-pattern",
       },
     ],
   },
@@ -26,6 +30,12 @@ const mockGenerateObject = vi.fn().mockResolvedValue({
 
 vi.mock("ai", () => ({
   generateObject: (...args: unknown[]) => mockGenerateObject(...args),
+}))
+
+vi.mock("../../providers/ollama-queue", () => ({
+  ollamaQueue: {
+    enqueue: <T>(fn: () => Promise<T>) => fn(),
+  },
 }))
 
 import { extractKnowledge, extractWithRetry } from "../knowledge-extractor"
@@ -145,6 +155,8 @@ describe("extractWithRetry", () => {
               confidence: 0.8,
               evidence: "test",
               entities: [],
+              novelty: "project-specific",
+              origin: "observed-pattern",
             },
           ],
         },
@@ -192,5 +204,100 @@ describe("extractWithRetry", () => {
 
     expect(entries).toHaveLength(0)
     expect(mockGenerateObject).toHaveBeenCalledTimes(3)
+  })
+})
+
+describe("Novelty and Origin extraction", () => {
+  const turns: TranscriptTurn[] = [
+    { role: "user", content: "I prefer using pnpm for package management" },
+    { role: "assistant", content: "I'll use pnpm going forward." },
+  ]
+
+  it("filters out general-knowledge entries and preserves project-specific (S5, S1)", async () => {
+    mockGenerateObject.mockResolvedValueOnce({
+      object: {
+        items: [
+          {
+            type: "preference",
+            content: "Uses pnpm",
+            confidence: 0.95,
+            evidence: "User said: I always use pnpm",
+            entities: ["pnpm"],
+            novelty: "project-specific",
+            origin: "explicit-statement",
+          },
+          {
+            type: "fact",
+            content: "Variables should have meaningful names",
+            confidence: 0.6,
+            evidence: "General coding advice",
+            entities: [],
+            novelty: "general-knowledge",
+            origin: "inferred",
+          },
+        ],
+      },
+    })
+    const entries = await extractKnowledge(
+      turns,
+      {} as unknown as LanguageModel,
+      "session:test",
+      { skipGuard: true },
+    )
+    // general-knowledge should be filtered out
+    expect(entries).toHaveLength(1)
+    expect(entries[0].novelty).toBe("project-specific")
+    expect(entries[0].origin).toBe("explicit-statement")
+  })
+
+  it("caps inferred entries at confidence 0.70 (S4)", async () => {
+    mockGenerateObject.mockResolvedValueOnce({
+      object: {
+        items: [
+          {
+            type: "fact",
+            content: "Team probably uses agile",
+            confidence: 0.90,
+            evidence: "Seems like agile from context",
+            entities: [],
+            novelty: "domain-specific",
+            origin: "inferred",
+          },
+        ],
+      },
+    })
+    const entries = await extractKnowledge(
+      turns,
+      {} as unknown as LanguageModel,
+      "session:test",
+      { skipGuard: true },
+    )
+    expect(entries[0].confidence).toBe(0.70)
+  })
+
+  it("auto-approves explicit statements with confidence >= 0.90 (S1)", async () => {
+    mockGenerateObject.mockResolvedValueOnce({
+      object: {
+        items: [
+          {
+            type: "preference",
+            content: "Always use pnpm",
+            confidence: 1.0,
+            evidence: "User said: I always use pnpm",
+            entities: ["pnpm"],
+            novelty: "project-specific",
+            origin: "explicit-statement",
+          },
+        ],
+      },
+    })
+    const entries = await extractKnowledge(
+      turns,
+      {} as unknown as LanguageModel,
+      "session:test",
+      { skipGuard: true },
+    )
+    expect(entries[0].curationStatus).toBe("approved")
+    expect(entries[0].curatedBy).toBe("auto-approved")
   })
 })

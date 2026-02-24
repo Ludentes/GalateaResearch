@@ -49,6 +49,16 @@ export const ExtractionSchema = z.object({
         .describe(
           "Who/what this knowledge is about. ALWAYS set this when a person, tool, or domain is the subject. Only omit for generic project-wide rules.",
         ),
+      novelty: z
+        .enum(["project-specific", "domain-specific", "general-knowledge"])
+        .describe(
+          "project-specific: about THIS project/team. domain-specific: specialized technical knowledge. general-knowledge: any competent developer knows this — DO NOT extract these.",
+        ),
+      origin: z
+        .enum(["explicit-statement", "observed-failure", "observed-pattern", "inferred"])
+        .describe(
+          "explicit-statement: user directly said it. observed-failure: lesson from something going wrong. observed-pattern: repeated behavior (2+ times). inferred: you inferred this — USE SPARINGLY.",
+        ),
     }),
   ),
 })
@@ -83,7 +93,52 @@ Subject tagging (about field) — IMPORTANT, always fill this in:
   "The team uses Scrum" → about: {entity: "dev-team", type: "team"}
 - When someone is mentioned by name, ALWAYS tag about with their name
 - When a user states a personal preference, tag about with that user
-- When a technology/tool is the main subject, tag it as domain`
+- When a technology/tool is the main subject, tag it as domain
+
+NOVELTY ASSESSMENT — For each extracted item, classify its novelty:
+- "project-specific": Knowledge specific to THIS project, codebase, or team.
+  Examples: "this project uses h3 not express", "tests go in __tests__/"
+- "domain-specific": Specialized technical knowledge a general developer might not know.
+  Examples: "FHIR resources require validation against profiles"
+- "general-knowledge": Any competent engineer already knows this.
+  Examples: "use version control", "write tests", "handle errors"
+
+IMPORTANT: Do NOT extract general-knowledge items. Skip them entirely.
+
+ORIGIN TRACKING — For each item, classify how it was discovered:
+- "explicit-statement": User directly said it. "I prefer...", "We always...", "Never do..."
+- "observed-failure": Something went wrong and this is the lesson.
+- "observed-pattern": Repeated behavior (must appear 2+ times in transcript).
+- "inferred": You inferred this from context. USE SPARINGLY — lowest reliability.`
+
+function applyNoveltyGateAndApproval(entries: KnowledgeEntry[]): KnowledgeEntry[] {
+  // 1. Novelty gate: drop general-knowledge entries
+  let filtered = entries.filter(
+    (e) => e.novelty !== "general-knowledge",
+  )
+
+  // 2. Cap inferred entries at confidence 0.70
+  filtered = filtered.map((e) =>
+    e.origin === "inferred"
+      ? { ...e, confidence: Math.min(e.confidence, 0.70) }
+      : e,
+  )
+
+  // 3. Auto-approve explicit statements with high confidence
+  filtered = filtered.map((e) => {
+    if (e.origin === "explicit-statement" && e.confidence >= 0.90) {
+      return {
+        ...e,
+        curationStatus: "approved" as const,
+        curatedBy: "auto-approved",
+        curatedAt: new Date().toISOString(),
+      }
+    }
+    return { ...e, curationStatus: "pending" as const }
+  })
+
+  return filtered
+}
 
 interface ExtractionOptions {
   temperature?: number
@@ -147,7 +202,7 @@ export async function extractKnowledge(
   }))
 
   // Post-extraction validation (confabulation guard)
-  if (opts.skipGuard) return rawEntries
+  if (opts.skipGuard) return applyNoveltyGateAndApproval(rawEntries)
 
   const guardResult = validateExtraction(
     rawEntries,
@@ -164,7 +219,7 @@ export async function extractKnowledge(
     )
   }
 
-  return guardResult.entries
+  return applyNoveltyGateAndApproval(guardResult.entries)
 }
 
 /**
