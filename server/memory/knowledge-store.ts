@@ -13,7 +13,7 @@ export function withDefaults(entry: KnowledgeEntry): KnowledgeEntry {
   return {
     ...entry,
     novelty: entry.novelty ?? "project-specific",
-    origin: entry.origin ?? "inferred",
+    origin: entry.origin ?? "observed-pattern",
     curationStatus: entry.curationStatus ?? "pending",
     sessionsExposed: entry.sessionsExposed ?? 0,
     sessionsHelpful: entry.sessionsHelpful ?? 0,
