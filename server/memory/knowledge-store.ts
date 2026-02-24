@@ -9,6 +9,18 @@ import type {
   KnowledgeType,
 } from "./types"
 
+export function withDefaults(entry: KnowledgeEntry): KnowledgeEntry {
+  return {
+    ...entry,
+    novelty: entry.novelty ?? "project-specific",
+    origin: entry.origin ?? "inferred",
+    curationStatus: entry.curationStatus ?? "pending",
+    sessionsExposed: entry.sessionsExposed ?? 0,
+    sessionsHelpful: entry.sessionsHelpful ?? 0,
+    sessionsHarmful: entry.sessionsHarmful ?? 0,
+  }
+}
+
 export async function readEntries(
   storePath: string,
 ): Promise<KnowledgeEntry[]> {
@@ -18,7 +30,7 @@ export async function readEntries(
     .trim()
     .split("\n")
     .filter(Boolean)
-    .map((line) => JSON.parse(line))
+    .map((line) => withDefaults(JSON.parse(line)))
 }
 
 export async function appendEntry(

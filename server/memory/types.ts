@@ -35,6 +35,19 @@ export type KnowledgeType =
   | "correction"
   | "decision"
 
+export type KnowledgeNovelty =
+  | "project-specific"
+  | "domain-specific"
+  | "general-knowledge"
+
+export type KnowledgeOrigin =
+  | "explicit-statement"
+  | "observed-failure"
+  | "observed-pattern"
+  | "inferred"
+
+export type CurationStatus = "pending" | "approved" | "rejected"
+
 /**
  * Who or what this knowledge is about. Enables future Cognitive Model
  * construction by filtering: entries.filter(e => e.about?.type === "user")
@@ -67,6 +80,25 @@ export interface KnowledgeEntry {
   about?: KnowledgeAbout // who/what this knowledge is about (default: project)
   lastRetrievedAt?: string // ISO 8601, updated on retrieval
   archivedAt?: string // ISO 8601, set when confidence drops below threshold
+
+  // Extraction metadata
+  novelty?: KnowledgeNovelty
+  origin?: KnowledgeOrigin
+
+  // Curation state
+  curationStatus?: CurationStatus
+  curatedAt?: string
+  curatedBy?: string // "human" | "auto-approved"
+
+  // Outcome tracking
+  sessionsExposed?: number
+  sessionsHelpful?: number
+  sessionsHarmful?: number
+  impactScore?: number
+
+  // Channel routing
+  enforcedBy?: "hook" | "ci" | "linter"
+  targetChannel?: "claude-md" | "skill" | "hook" | "none"
 }
 
 // ============ Transcript Reader ============
