@@ -163,6 +163,13 @@ export async function assembleContext(
     tokenBudget,
   )
 
+  // Track which entry IDs are included in the prompt
+  const exposedEntryIds: string[] = [
+    ...rules.map((e) => e.id),
+    ...knowledge.map((e) => e.id),
+    ...procedures.map((e) => e.id),
+  ]
+
   return {
     systemPrompt,
     sections,
@@ -177,6 +184,7 @@ export async function assembleContext(
         (accounting.reduce((sum, a) => sum + a.tokens, 0) / tokenBudget) * 100,
       ),
     },
+    exposedEntryIds,
   }
 }
 

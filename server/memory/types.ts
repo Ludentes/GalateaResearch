@@ -170,4 +170,5 @@ export interface AssembledContext {
     totalTokens?: number
     budgetUsedPercent?: number
   }
+  exposedEntryIds?: string[]
 }
