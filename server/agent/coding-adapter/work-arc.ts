@@ -1,6 +1,7 @@
 import type { TrustLevel } from "../../engine/types"
 import type { AssembledContext, TranscriptTurn } from "../../memory/types"
 import { createPreToolUseHook } from "./hooks"
+import { recordOutcome } from "../../memory/feedback-loop"
 import { transcriptToTurns } from "./transcript-to-extraction"
 import type {
   CodingToolAdapter,
@@ -17,6 +18,7 @@ export interface WorkArcInput {
   timeout?: number
   maxBudgetUsd?: number
   model?: string
+  storePath?: string
 }
 
 export interface WorkArcResult {
@@ -110,6 +112,20 @@ export async function executeWorkArc(input: WorkArcInput): Promise<WorkArcResult
     } catch {
       // Extraction is best-effort — don't fail the work arc
     }
+  }
+
+  // Record outcome for feedback loop (best-effort, non-blocking)
+  if (input.storePath && context.exposedEntryIds?.length) {
+    recordOutcome(
+      {
+        status: result.status,
+        text: result.text,
+        transcript: result.transcript,
+        durationMs: result.durationMs,
+      },
+      context.exposedEntryIds,
+      input.storePath,
+    ).catch((err) => console.warn("[work-arc] Failed to record outcome:", err))
   }
 
   return result
