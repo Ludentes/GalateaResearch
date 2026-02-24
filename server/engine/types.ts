@@ -231,3 +231,44 @@ export interface Issue {
 
 // NOTE: AssembledContext and ContextSection are defined in server/memory/types.ts
 // The legacy Phase 2/3 versions (PromptSection, AssembledContext) were removed in Phase F.
+
+// ============================================================================
+// Tool Safety Types (for PreToolUse hooks / CodingToolAdapter)
+// ============================================================================
+
+/**
+ * Risk level of a tool call. Used by Layer 2 hard guardrails.
+ * - read: no side effects (file read, search, status check)
+ * - write: reversible side effects (file write, git commit, send message)
+ * - destructive: irreversible or high-impact (force push, delete branch, rm -rf, deploy)
+ */
+export type ToolRisk = "read" | "write" | "destructive"
+
+/**
+ * Decision returned by the safety check.
+ * - allow: tool call proceeds normally
+ * - deny: tool call is blocked, reason is shown to the coding tool
+ * - ask: escalate to user for confirmation
+ */
+export type SafetyDecision = "allow" | "deny" | "ask"
+
+/**
+ * Result of a tool-call safety check (used by PreToolUse hooks in Phase G).
+ */
+export interface SafetyCheckResult {
+  decision: SafetyDecision
+  reason: string
+  /** Which check triggered the decision (for audit/tracing) */
+  triggeredBy?: string
+}
+
+/**
+ * Input for a tool-call safety check.
+ * Lightweight — does NOT require a full AgentContext.
+ */
+export interface ToolCallCheckInput {
+  toolName: string
+  toolArgs: Record<string, unknown>
+  trustLevel: TrustLevel
+  workingDirectory?: string
+}
