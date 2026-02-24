@@ -119,6 +119,15 @@ extraction:
   # Truncation limit for tool input in extraction prompt.
   tool_input_truncation: 150
 
+  # Evidence-based lifecycle: skip entries that duplicate existing knowledge.
+  novelty_filter: true
+
+  # Maximum confidence for inferred (non-explicit) entries.
+  inferred_confidence_cap: 0.70
+
+  # Entries with confidence >= this AND explicit origin are auto-approved.
+  auto_approve_explicit_threshold: 0.90
+
 # -----------------------------------------------------------------------------
 # CONTEXT ASSEMBLY — server/memory/context-assembler.ts
 # Builds the system prompt from preprompts + knowledge + homeostasis.
@@ -175,6 +184,15 @@ memory:
     run_interval_minutes: 60
     exempt_types:
       - rule
+    origin_grace_multipliers:
+      explicit-statement: 2.0
+      observed-failure: 1.5
+      observed-pattern: 1.0
+      inferred: 0.5
+    outcome_weighting:
+      harm_penalty_max: 0.3
+      help_bonus_max: 0.15
+    hook_entries_exempt: true
   # Consolidation — server/memory/consolidation.ts
   # Promotes high-confidence repeated entries to CLAUDE.md.
   consolidation:
@@ -263,6 +281,53 @@ discord:
   respond_to_mentions: true
   allowed_guilds: []
   allowed_channels: []
+
+# -----------------------------------------------------------------------------
+# ARTIFACT GENERATION — server/memory/channel-router.ts
+# Controls how approved knowledge gets routed to CLAUDE.md, skills, or hooks.
+# -----------------------------------------------------------------------------
+artifact_generation:
+  claude_md:
+    max_lines: 200
+    min_confidence: 0.80
+    require_curation: true
+    architecture_preamble: "# Project Knowledge\n\nAuto-generated from verified knowledge entries."
+  skills:
+    max_count: 3
+    max_lines_per_skill: 50
+    min_confidence: 0.85
+    require_curation: true
+    staleness_sessions: 10
+  hooks:
+    auto_convert: false
+    learned_patterns_file: ".claude/hooks/learned-patterns.json"
+  prior_overlap:
+    common_patterns:
+      - "use version control"
+      - "write tests"
+      - "handle errors"
+      - "use meaningful variable names"
+
+# -----------------------------------------------------------------------------
+# CURATION — server/memory/curation-queue.ts
+# Human-in-the-loop approval for non-auto-approved entries.
+# -----------------------------------------------------------------------------
+curation:
+  queue_max_items: 20
+  auto_reject_after_days: 30
+  auto_reject_after_defers: 5
+  present_on_idle: true
+
+# -----------------------------------------------------------------------------
+# FEEDBACK — server/memory/feedback-loop.ts
+# Outcome tracking for knowledge entries used in sessions.
+# -----------------------------------------------------------------------------
+feedback:
+  min_sessions_for_impact: 3
+  auto_demote_threshold: -0.3
+  confidence_boost_threshold: 0.7
+  confidence_boost_amount: 0.05
+  regen_debounce_minutes: 30
 
 # -----------------------------------------------------------------------------
 # STOP WORDS

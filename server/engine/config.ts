@@ -37,6 +37,9 @@ export interface ExtractionConfig {
   default_temperature: number
   max_retries: number
   tool_input_truncation: number
+  novelty_filter: boolean
+  inferred_confidence_cap: number
+  auto_approve_explicit_threshold: number
 }
 
 export interface ContextConfig {
@@ -84,6 +87,9 @@ export interface DecayConfig {
   archive_threshold: number
   run_interval_minutes: number
   exempt_types: string[]
+  origin_grace_multipliers: Record<string, number>
+  outcome_weighting: { harm_penalty_max: number; help_bonus_max: number }
+  hook_entries_exempt: boolean
 }
 
 export interface ConsolidationConfig {
@@ -109,6 +115,52 @@ export interface StopWordsConfig {
   dedup: string[]
 }
 
+export interface ArtifactClaudeMdConfig {
+  max_lines: number
+  min_confidence: number
+  require_curation: boolean
+  architecture_preamble: string
+}
+
+export interface ArtifactSkillsConfig {
+  max_count: number
+  max_lines_per_skill: number
+  min_confidence: number
+  require_curation: boolean
+  staleness_sessions: number
+}
+
+export interface ArtifactHooksConfig {
+  auto_convert: boolean
+  learned_patterns_file: string
+}
+
+export interface ArtifactPriorOverlapConfig {
+  common_patterns: string[]
+}
+
+export interface ArtifactGenerationConfig {
+  claude_md: ArtifactClaudeMdConfig
+  skills: ArtifactSkillsConfig
+  hooks: ArtifactHooksConfig
+  prior_overlap: ArtifactPriorOverlapConfig
+}
+
+export interface CurationConfig {
+  queue_max_items: number
+  auto_reject_after_days: number
+  auto_reject_after_defers: number
+  present_on_idle: boolean
+}
+
+export interface FeedbackConfig {
+  min_sessions_for_impact: number
+  auto_demote_threshold: number
+  confidence_boost_threshold: number
+  confidence_boost_amount: number
+  regen_debounce_minutes: number
+}
+
 export interface PipelineConfig {
   retrieval: RetrievalConfig
   signal: SignalConfig
@@ -120,6 +172,9 @@ export interface PipelineConfig {
   memory: MemoryConfig
   discord: DiscordConfig
   stop_words: StopWordsConfig
+  artifact_generation: ArtifactGenerationConfig
+  curation: CurationConfig
+  feedback: FeedbackConfig
 }
 
 // ---- Loader ----
@@ -182,6 +237,18 @@ export function getDiscordConfig(): DiscordConfig {
 
 export function getStopWords(list: "retrieval" | "dedup"): Set<string> {
   return new Set(loadConfig().stop_words[list])
+}
+
+export function getArtifactConfig(): ArtifactGenerationConfig {
+  return loadConfig().artifact_generation
+}
+
+export function getCurationConfig(): CurationConfig {
+  return loadConfig().curation
+}
+
+export function getFeedbackConfig(): FeedbackConfig {
+  return loadConfig().feedback
 }
 
 /**
