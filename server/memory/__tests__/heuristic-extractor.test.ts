@@ -22,7 +22,15 @@ vi.mock("../../engine/config", async (importOriginal) => {
         staleness_sessions: 3,
       },
       hooks: { auto_convert: false, learned_patterns_file: "learned-hooks.json" },
-      prior_overlap: { common_patterns: ["write.*tests?", "git|commit|push"] },
+      prior_overlap: {
+        common_patterns: [
+          "write.*tests?",
+          "git|commit|push",
+          "handle.*errors?|error.handling",
+          "meaningful.*(names?|variables?)",
+          "code review",
+        ],
+      },
     })),
   }
 })
@@ -124,6 +132,13 @@ describe("extractHeuristic", () => {
 
   it("marks general knowledge based on prior_overlap patterns", () => {
     const turn = user("I always write tests before committing")
+    const classification = classifyTurn(turn)
+    const result = extractHeuristic(turn, classification, "session:test")
+    expect(result.entries[0].novelty).toBe("general-knowledge")
+  })
+
+  it("marks 'handle errors' as general knowledge (S5)", () => {
+    const turn = user("Always handle errors in async functions")
     const classification = classifyTurn(turn)
     const result = extractHeuristic(turn, classification, "session:test")
     expect(result.entries[0].novelty).toBe("general-knowledge")

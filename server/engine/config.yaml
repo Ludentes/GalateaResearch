@@ -323,11 +323,23 @@ artifact_generation:
     auto_convert: false
     learned_patterns_file: ".claude/hooks/learned-patterns.json"
   prior_overlap:
+    # Regex patterns for general programming knowledge (matched case-insensitive).
+    # Entries matching these are marked general-knowledge and dropped by novelty gate.
     common_patterns:
-      - "use version control"
-      - "write tests"
-      - "handle errors"
-      - "use meaningful variable names"
+      - "version control|use git"
+      - "write.*tests?"
+      - "handle.*errors?|error.handling"
+      - "meaningful.*(names?|variables?)"
+      - "don'?t repeat yourself|DRY principle"
+      - "single responsibility"
+      - "code review"
+      - "document.*code|write.*docs"
+      - "clean code|readable code"
+      - "separation of concerns"
+      - "avoid.*global"
+      - "follow.*conventions?"
+      - "security best practices"
+      - "backup.*data"
 
 # -----------------------------------------------------------------------------
 # CURATION — server/memory/curation-queue.ts

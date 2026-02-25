@@ -25,7 +25,7 @@ const SIGNAL_PATTERNS: Record<string, RegExp> = {
   policy:
     /\b(we (always|never|should|must|don'?t)|our (standard|convention|policy|rule))\b/i,
   imperative_rule:
-    /(?:^|[.!?]\s+)(never|always|don'?t|do not|must not|must)\b/i,
+    /(?:^|[.!?,;:]\s+)(never|always|don'?t|do not|must not|must)\b/i,
   decision:
     /\b(let'?s (go with|use|choose|pick)|i'?ve decided|we'?ll use|the decision is)\b/i,
   procedure: /(?:^|\n)\s*1[.)]\s.+(?:\n\s*2[.)]\s)/i,
