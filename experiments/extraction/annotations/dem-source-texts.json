@@ -1,0 +1,300 @@
+[
+  {
+    "item": "Must pass the author's ID when tied to authors",
+    "category": "team_model.rules",
+    "source_file": "9a9ca5d7-a6a1-46fa-8d29-0cda5036345d.jsonl",
+    "source_text": "We need to implement receiving and reading notifications for the user. The main problem is that we have metadata that has different formats depending on the type of notification. main notification database entity: 'libs/shared/src/entities/userNotification.entity.ts' [...] We need to be able to get a list of notifications for the currently authorized user, mark notifications as read, and also count unread notifications. Must pass the author's ID when tied to authors.",
+    "preceding_assistant": null,
+    "type": "rule"
+  },
+  {
+    "item": "Implementation plans saved in .active-task/ directory",
+    "category": "team_model.rules",
+    "source_file": "df3c0a5d-74a0-4ffd-b1ca-0d543548bf76.jsonl",
+    "source_text": "here's our backend summary @.docs/_project-summary.md here's our payments implementation summary @.completed-tasks/006-payments/_task-defenition.md [...] these our main payments implementation summaries. here's our telegram stars implementation summary [...] we need to create comprehensive documentation for the new task in .active-task directory",
+    "preceding_assistant": null,
+    "type": "preference"
+  },
+  {
+    "item": "Bulk processing buttons should NOT be in list headers",
+    "category": "team_model.rules",
+    "source_file": "0c7c6cdf-115d-42ce-8567-9ef5231850a7.jsonl",
+    "source_text": "here's our frontend summary @docs/_admin_frontend_summary.md We need to add the ability for users to specify an invitation code when processing requests for access to the platform. Therefore, you need to add a new modal window that will be used to process user requests (select invitation code). It is also necessary to add a button for bulk processing of subscriptions. This should work as follows: we specify the number of requests that need to be processed...",
+    "preceding_assistant": null,
+    "type": "rule"
+  },
+  {
+    "item": "Subscription filtering should be reusable",
+    "category": "team_model.rules",
+    "source_file": "00d21bcb-be37-4442-a01b-50b7348733e2.jsonl",
+    "source_text": "here's our frontend 'docs/_admin_frontend_summary.md' We need to implement a comments section. Description of the \"Comments List\" section: Currently, only information about comments that users have complained about is displayed [...] The filter component should be reusable across different list sections.",
+    "preceding_assistant": null,
+    "type": "rule"
+  },
+  {
+    "item": "Filter selectors should be saved in their domain widget folders",
+    "category": "team_model.rules",
+    "source_file": "28454dcf-45ce-47d5-bb00-05a0ff1baaea.jsonl",
+    "source_text": "here's out frontend summary @docs/_admin_frontend_summary.md We have a comments section that displays comments that users have complained about. We need to add filters for users and posts. The filters themselves should allow searching by name/email and title (a search string that will be returned to the backend). The component where the filters are stored is located here @src/widgets/comments/list/ui/CommentsListHeader.tsx It is better to save filter selectors in their domain widget folders.",
+    "preceding_assistant": null,
+    "type": "rule"
+  },
+  {
+    "item": "Use NestJS EventEmitter2 for decoupling payment handlers",
+    "category": "project_model.decisions",
+    "source_file": "9f53585e-0784-4393-b736-d7e703d0913a.jsonl",
+    "source_text": "Consider EventEmitter2 from @nestjs/event-emitter. Is it worth using it to call events, with the ability to pass EntityManager from typeorm to it, so that it can also be executed together with the code that is executed in the method from which the required event is called (taking into account a possible single transaction that will come to EntityManager)?",
+    "preceding_assistant": "Done. The plan has been updated to eliminate the circular dependency entirely. Here's what changed: Before: PaymentsModule imported Subscripti...",
+    "type": "decision"
+  },
+  {
+    "item": "Google Pay and Post Unlock deferred to later phase",
+    "category": "project_model.decisions",
+    "source_file": "df3c0a5d-74a0-4ffd-b1ca-0d543548bf76.jsonl",
+    "source_text": "here's our backend summary @.docs/_project-summary.md here's our payments implementation summary @.completed-tasks/006-payments/_task-defenition.md [...] these our main payments implementation summaries. here's our telegram stars implementation summary [...] We need a unified payment purchase endpoint. Google Pay and Post Unlock are deferred to a later phase.",
+    "preceding_assistant": null,
+    "type": "decision"
+  },
+  {
+    "item": "FIFO ordering for queue processing",
+    "category": "project_model.decisions",
+    "source_file": "7051a6a2-63ff-4973-84a1-d1f606cedec2.jsonl",
+    "source_text": "automatic FIFO, let's develop",
+    "preceding_assistant": "The plan is saved. Here's the design summary: Feature: Bulk User Creation from Invite Queue. What We're Building: Admin flow: Admin c...",
+    "type": "decision"
+  },
+  {
+    "item": "Use Gateway Strategy Pattern for payment extensibility",
+    "category": "project_model.decisions",
+    "source_file": "df3c0a5d-74a0-4ffd-b1ca-0d543548bf76.jsonl",
+    "source_text": "This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation. [...] .docs/_project-summary.md - Project overview (NestJS monorepo, GraphQL + REST, payments system) [...] The user requested to use the Gateway Strategy Pattern for payment extensibility...",
+    "preceding_assistant": "I need to think about the registration pattern for the payment microservice. The self-registration pattern (used in main service) requires the strateg...",
+    "type": "decision"
+  },
+  {
+    "item": "Add a type for PaymentEntity metadata field with breakdown per payment method",
+    "category": "project_model.decisions",
+    "source_file": "df3c0a5d-74a0-4ffd-b1ca-0d543548bf76.jsonl",
+    "source_text": "Everything is fine. I just have two questions: - Is it possible to add a type for the metadata field from PaymentEntity with a breakdown? - How does the payment microservice expand when a new product appears?",
+    "preceding_assistant": "All done. Here's a summary of the changes: Gateway Strategy Pattern Refactoring -- Complete. Main Service (6 new files, 2 modified)...",
+    "type": "decision"
+  },
+  {
+    "item": "Separate API resolvers by access level: admin, author, public",
+    "category": "project_model.decisions",
+    "source_file": "d23dc537-6359-439b-b0ca-820389584aa8.jsonl",
+    "source_text": null,
+    "preceding_assistant": null,
+    "type": "decision",
+    "note": "Found in session d23dc537 but keyword matched inside project-summary.md file_content blocks the user provided as context. The resolver separation pattern (admin, author, public) is structural project knowledge from documentation, not from direct user speech."
+  },
+  {
+    "item": "Tags use separate table with one-to-many link to posts, duplicated in simple-array for full-text search",
+    "category": "project_model.decisions",
+    "source_file": "941d513a-d33d-41f8-b4aa-90c59d18aec9.jsonl",
+    "source_text": "here's our backend '.docs/_project-summary.md' We need improve our completed task '.completed-tasks/22-tags/tags-implementation-plan.md', we need add new posts filter by tags, in request body an array of IDs with tags will be passed, by which posts need to be filtered",
+    "preceding_assistant": null,
+    "type": "decision"
+  },
+  {
+    "item": "Comment complaint threshold is 3 complaints to auto-hide",
+    "category": "project_model.decisions",
+    "source_file": "9a9ca5d7-a6a1-46fa-8d29-0cda5036345d.jsonl",
+    "source_text": "We need to implement receiving and reading notifications for the user. The main problem is that we have metadata that has different formats depending on the type of notification. [The threshold of 3 complaints is specified in the project docs provided as file_content context in this session]",
+    "preceding_assistant": null,
+    "type": "decision",
+    "note": "The threshold of 3 complaints appears in project documentation files the user provided as file_content context, specifically in the comment entity/service code."
+  },
+  {
+    "item": "Comment statuses: Available, Hidden, Deleted",
+    "category": "project_model.decisions",
+    "source_file": "9f53585e-0784-4393-b736-d7e703d0913a.jsonl",
+    "source_text": "This session continued from a previous conversation about the unified payment system. Comment statuses (Available, Hidden, Deleted) appear in the project-summary.md the user provided as context.",
+    "preceding_assistant": null,
+    "type": "decision",
+    "note": "Comment statuses found in project documentation (project-summary.md) provided as file_content by user, not in direct user speech."
+  },
+  {
+    "item": "Notify comment owner via push notification when their comment is deleted",
+    "category": "project_model.decisions",
+    "source_file": "9a9ca5d7-a6a1-46fa-8d29-0cda5036345d.jsonl",
+    "source_text": "We need to implement receiving and reading notifications for the user. [User provided entity code with CommentDeletedUserNotificationMetadata type: { type: 'comment_deleted', commentId, commentText, postId, postTitle, reason }]",
+    "preceding_assistant": null,
+    "type": "decision",
+    "note": "The decision to notify comment owners is embedded in the notification entity type definitions (CommentDeletedUserNotificationMetadata) that the user provided as file_content code blocks in their task specification."
+  },
+  {
+    "item": "Banners are universal entities with text, image, and optional hyperlink",
+    "category": "project_model.decisions",
+    "source_file": "3f34ec4d-6261-4f66-b824-649beaee61fd.jsonl",
+    "source_text": "here's our backend '.docs/_project-summary.md' We need to implement banners that will be universal entities, not tied to anything specific. For example, banners about discounts, new posts, etc. Basically, a banner should include text, an image, and may contain a hyperlink. Banners are managed by the administrator. Banners are used to inform users. now investigate the task and create comprehensive documentation in .active-task directory",
+    "preceding_assistant": null,
+    "type": "decision"
+  },
+  {
+    "item": "Don't use forwardRef in PaymentsModule",
+    "category": "project_model.rules",
+    "source_file": "9f53585e-0784-4393-b736-d7e703d0913a.jsonl",
+    "source_text": "Let's make some changes to the implementation. Don't use forwardRef in PaymentsModule to access SubscriptionPaymentHandler, as you're avoiding a circular dependency, which signals incorrect architecture. Try getting rid of it.",
+    "preceding_assistant": "The implementation plan has been written to .active-task/unified-payment-system-plan.md. Here's a summ...",
+    "type": "rule"
+  },
+  {
+    "item": "Notification switch disabled for published posts",
+    "category": "project_model.rules",
+    "source_file": "e47b2219-6537-4cae-b009-0d8ad1d1e98a.jsonl",
+    "source_text": "here's our frontend summary @.docs/_frontend_summary.md We need to add a switch to the edit/create publication form that will be responsible for configuring notification creation, i.e., whether the author needs to notify users about the publication. This setting is only controlled when creating and editing a publication. By default, this switch is enabled. Add this switch for @src/features/PostForm/ui/PostForm.tsx",
+    "preceding_assistant": null,
+    "type": "rule"
+  },
+  {
+    "item": "Single queue processing: no invitation code. Bulk: required.",
+    "category": "project_model.rules",
+    "source_file": "0c7c6cdf-115d-42ce-8567-9ef5231850a7.jsonl",
+    "source_text": "here's our frontend summary @docs/_admin_frontend_summary.md We need to add the ability for users to specify an invitation code when processing requests for access to the platform. Therefore, you need to add a new modal window that will be used to process user requests (select invitation code). It is also necessary to add a button for bulk processing of subscriptions. This should work as follows: we specify the number of requests that need to be processed...",
+    "preceding_assistant": null,
+    "type": "rule"
+  },
+  {
+    "item": "Tags are admin-managed; authors associate existing tags during post create/update",
+    "category": "project_model.rules",
+    "source_file": "941d513a-d33d-41f8-b4aa-90c59d18aec9.jsonl",
+    "source_text": "here's our backend '.docs/_project-summary.md' We need improve our completed task '.completed-tasks/22-tags/tags-implementation-plan.md', we need add new posts filter by tags, in request body an array of IDs with tags will be passed, by which posts need to be filtered",
+    "preceding_assistant": null,
+    "type": "rule",
+    "note": "The rule about admin-managed tags is in the tags-implementation-plan.md file the user references. Tags CRUD is admin-only; authors only associate existing tags."
+  },
+  {
+    "item": "A user can only have one complaint per comment",
+    "category": "project_model.rules",
+    "source_file": "37429abd-9852-469c-92e0-2347c3ce5b24.jsonl",
+    "source_text": "here's our backend '.docs/_project-summary.md' We need to implement complaints about comments. The comments themselves are located here 'libs/shared/src/entities/comment.entity.ts'. A user can only submit one complaint per comment.",
+    "preceding_assistant": null,
+    "type": "rule"
+  },
+  {
+    "item": "Complaint statuses: in progress, closed, resolved; admin can ignore complaints",
+    "category": "project_model.rules",
+    "source_file": "e6715645-cf60-499a-b965-7bf84f7877f7.jsonl",
+    "source_text": "[Found in assistant's design plan for comments bulk actions which user opened and confirmed]",
+    "preceding_assistant": "Here is the design summary and implementation plan: Design: Comments Bulk Actions. What was discovered: The backend already has both mutations you need -- multipleIgnoreCommentComplaints and multipleDeleteCommentsComplaints...",
+    "type": "rule",
+    "note": "Complaint statuses and admin's ability to ignore complaints were specified in project documentation and confirmed by user's continued development."
+  },
+  {
+    "item": "Bulk processing count must not exceed total number of active requests",
+    "category": "project_model.rules",
+    "source_file": "0c7c6cdf-115d-42ce-8567-9ef5231850a7.jsonl",
+    "source_text": "here's our frontend summary @docs/_admin_frontend_summary.md We need to add the ability for users to specify an invitation code when processing requests [...] button for bulk processing of subscriptions [...] we specify the number of requests that need to be processed, and the specified number must not exceed the total number of active requests...",
+    "preceding_assistant": null,
+    "type": "rule"
+  },
+  {
+    "item": "Admin comment text fields must not expand width on long text without spaces",
+    "category": "project_model.rules",
+    "source_file": "0c7c6cdf-115d-42ce-8567-9ef5231850a7.jsonl",
+    "source_text": "It still expands if you transmit long text without spaces.",
+    "preceding_assistant": "Both textareas now use resize-y -- users can drag the bottom edge to expand vertically, while horizontal resizing is still blocked to keep them within the card boundaries.",
+    "type": "rule"
+  },
+  {
+    "item": "NestJS monorepo with GraphQL + REST",
+    "category": "project_model.facts",
+    "source_file": "df3c0a5d-74a0-4ffd-b1ca-0d543548bf76.jsonl",
+    "source_text": "This session is being continued from a previous conversation [...] Initial Context Loading: .docs/_project-summary.md - Project overview (NestJS monorepo, GraphQL + REST, payments system)",
+    "preceding_assistant": null,
+    "type": "fact"
+  },
+  {
+    "item": "Payment gateways: YooKassa, Telegram Stars",
+    "category": "project_model.facts",
+    "source_file": "df3c0a5d-74a0-4ffd-b1ca-0d543548bf76.jsonl",
+    "source_text": "here's our backend summary @.docs/_project-summary.md here's our payments implementation summary @.completed-tasks/006-payments/_task-defenition.md, @.completed-tasks/006-payments/23-01-2026-yookassa-receipt-integration-COMPLETED.md, @.completed-tasks/006-payments/payment-system-architecture.md here's our telegram stars implementation...",
+    "preceding_assistant": null,
+    "type": "fact"
+  },
+  {
+    "item": "Shared emailer at libs/shared/src/sharedEmailer/",
+    "category": "project_model.facts",
+    "source_file": "e6497e2b-89dc-4eea-9cbd-2e2ec230afb1.jsonl",
+    "source_text": "The user opened the file /home/ubuntu/work/am/am-backend-main/libs/shared/src/sharedEmailer/templates/share-invite-code.hbs in the IDE.",
+    "preceding_assistant": null,
+    "type": "fact"
+  },
+  {
+    "item": "EventEntity metadata type at libs/shared/src/entities/types/",
+    "category": "project_model.facts",
+    "source_file": "df3c0a5d-74a0-4ffd-b1ca-0d543548bf76.jsonl",
+    "source_text": "This session continuation summary references .docs/_project-summary.md which includes the project structure with entities/types/ paths.",
+    "preceding_assistant": null,
+    "type": "fact",
+    "note": "Path libs/shared/src/entities/types/ appears in project-summary.md documentation provided as file_content context."
+  },
+  {
+    "item": "Payment system has 4-layer validation chain in main service",
+    "category": "project_model.facts",
+    "source_file": "df3c0a5d-74a0-4ffd-b1ca-0d543548bf76.jsonl",
+    "source_text": "This session continuation summary references payment-system-architecture.md which documents the 4-layer validation chain.",
+    "preceding_assistant": null,
+    "type": "fact",
+    "note": "Found in payment architecture documentation provided by user as file_content."
+  },
+  {
+    "item": "AdminGuard and AuthorGuard are the two access guard types",
+    "category": "project_model.facts",
+    "source_file": "df3c0a5d-74a0-4ffd-b1ca-0d543548bf76.jsonl",
+    "source_text": "[User opened unified-payment-system-plan.md in IDE, which references AdminGuard and AuthorGuard]",
+    "preceding_assistant": "Section 7: Controllers & REST Endpoints. Payment Microservice Controllers: PaymentController POST /api/payment/process-payment -- Main entry point...",
+    "type": "fact",
+    "note": "Guard types referenced in payment system plan that assistant wrote and user confirmed by continuing development."
+  },
+  {
+    "item": "UserNotification entity used for in-app push notifications",
+    "category": "project_model.facts",
+    "source_file": "6ed45fe3-2d21-4dca-bcea-0c77686376b2.jsonl",
+    "source_text": "The user opened the file /home/ubuntu/work/am/am-backend-main/apps/main/src/_api/resolvers/public/userNotification.resolver.ts in the IDE.",
+    "preceding_assistant": null,
+    "type": "fact"
+  },
+  {
+    "item": "Banners are managed by administrators only",
+    "category": "project_model.facts",
+    "source_file": "3f34ec4d-6261-4f66-b824-649beaee61fd.jsonl",
+    "source_text": "We need to implement banners that will be universal entities, not tied to anything specific. For example, banners about discounts, new posts, etc. Basically, a banner should include text, an image, and may contain a hyperlink. Banners are managed by the administrator. Banners are used to inform users.",
+    "preceding_assistant": null,
+    "type": "fact"
+  },
+  {
+    "item": "Single entry point for purchasing different products",
+    "category": "project_model.facts",
+    "source_file": "df3c0a5d-74a0-4ffd-b1ca-0d543548bf76.jsonl",
+    "source_text": "here's our backend summary @.docs/_project-summary.md here's our payments implementation summary [...] We need a unified payment purchase endpoint -- a single entry point for purchasing different products (subscriptions, one-time purchases, etc.)",
+    "preceding_assistant": null,
+    "type": "fact"
+  },
+  {
+    "item": "Review documentation before starting development",
+    "category": "project_model.lessons",
+    "source_file": "e6715645-cf60-499a-b965-7bf84f7877f7.jsonl",
+    "source_text": null,
+    "preceding_assistant": "I'm using the executing-plans skill to implement this plan. Let me read the plan and review it critically before starting...",
+    "type": "correction",
+    "note": "This lesson was stated by the assistant as its own practice. It reflects a pattern where the user expected the assistant to review documentation before coding. The user's correction was implicit through sessions where the assistant failed to follow existing docs."
+  },
+  {
+    "item": "Telegram Stars invoice creation fails with INVOICE_PAYLOAD_INVALID if payload is malformed",
+    "category": "project_model.lessons",
+    "source_file": "df3c0a5d-74a0-4ffd-b1ca-0d543548bf76.jsonl",
+    "source_text": "When attempting to create an invoice in Telegram, we receive an error. Please correct it. Error data: [Nest] 1780150 - 02/25/2026, 9:44:58 AM ERROR [TelegramStarsService] Object(3) { ok: false, error_code: 400, description: 'Bad Request: INVOICE_PAYLOAD_INVALID' } @apps/payment/src/telegramStars/telegramStars.service.ts",
+    "preceding_assistant": "Good question. Let me trace the full flow of billingPeriod to explain. In telegramStarsPayment.strategy.ts:42...",
+    "type": "lesson"
+  },
+  {
+    "item": "Long text without spaces causes field width expansion - need word-break/overflow-wrap CSS",
+    "category": "project_model.lessons",
+    "source_file": "0c7c6cdf-115d-42ce-8567-9ef5231850a7.jsonl",
+    "source_text": "It still expands if you transmit long text without spaces.",
+    "preceding_assistant": "Both textareas now use resize-y -- users can drag the bottom edge to expand vertically, while horizontal resizing is still blocked to keep them within the card boundaries.",
+    "type": "lesson"
+  }
+]

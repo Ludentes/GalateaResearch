@@ -1,0 +1,158 @@
+[
+  {
+    "item": "Wants LSP for VS Code preparation steps",
+    "category": "user_model.preferences",
+    "source_file": "-home-qp-work-antonov-media-am-backend/434a0903-c043-48d1-bcaf-618daf524c8e.jsonl",
+    "source_text": "check is my typescript lsp is working?",
+    "preceding_assistant": null,
+    "type": "preference",
+    "note": "First message in session, no preceding assistant"
+  },
+  {
+    "item": "Wants copy project, fill env, run one command",
+    "category": "user_model.preferences",
+    "source_file": "-home-qp-temp-s3-example-python/183c7789-3487-43e4-a9b1-6b6bbc3bea78.jsonl",
+    "source_text": "nginx looks normal. pay attention that on the machine we will havw nginx and docker only. Also static files in docker should be in volumes, we shouldn't lose our db \\ uploads after images updated\nalso we need scripts to start the system. I want to copy this project, fill env and run one command. Everything sghould work out of the box - build , start docker (no registry)",
+    "preceding_assistant": "Presented Docker and nginx design section with docker-compose.yml layout and nginx configs",
+    "type": "preference"
+  },
+  {
+    "item": "Should update work with large files",
+    "category": "team_model.rules",
+    "source_file": "-home-qp-temp-s3-example-python/183c7789-3487-43e4-a9b1-6b6bbc3bea78.jsonl",
+    "source_text": "let's upgrade 2 things\n1) we should update work with large files. We should not wait s3 file save when we call POST complete. Instead of on the frontend we should poll state and diplay progress of s3 uploading if possible (if no just poll and show wait)\n2) we need to save large files locally and we should have dedicated frontend page where we will show list of non images file and ler user download them from s3 or locally",
+    "preceding_assistant": null,
+    "type": "rule",
+    "note": "Session resume, first message after SessionStart hook at line 488"
+  },
+  {
+    "item": "Should have toggle for sync upload option",
+    "category": "team_model.rules",
+    "source_file": "-home-qp-temp-s3-example-python/183c7789-3487-43e4-a9b1-6b6bbc3bea78.jsonl",
+    "source_text": "let's update single select also. We should have an option anf toggler on the frontend for this option: sync upload (where we call REST API and in the same thread uploads file to s3) and async, where we upload file and polling it's uploading state",
+    "preceding_assistant": null,
+    "type": "rule",
+    "note": "Session resume, first message after SessionStart hook at line 570"
+  },
+  {
+    "item": "Don't investigate code when limits are low",
+    "category": "team_model.rules",
+    "source_file": "-home-qp-work-antonov-media-am-author-ui/a8e04de1-bd41-4e56-be6e-c049ba14ddc5.jsonl",
+    "source_text": "implement this component\n'src/features/TagsSelector/ui/TagsSelector.tsx' (see below for file content)\ndon't investigate code, we don't have enough limits for it\nimplement part which commented\nshadcn components can be used",
+    "preceding_assistant": null,
+    "type": "rule",
+    "note": "First user message in session (line 2), wrapped in Cline <task> XML tag"
+  },
+  {
+    "item": "Analyze both Patreon and Nebula for competitive research",
+    "category": "project_model.decisions",
+    "source_file": "-home-qp-work-antonov-media-am-pm/885f0614-abb9-44e0-8f9a-b1ee26ff1cc2.jsonl",
+    "source_text": "1) let's have both - Patreon and Nebula\n2) we no need streams, text content is required, donations later\n3) ignore all focuments from 00 i didn't mention, they can be outdated",
+    "preceding_assistant": "Asked 3 questions: which 5th platform for market research (Patreon suggestion), live-streaming/articles scope, and how existing docs in 00-initial-docs relate to this work",
+    "type": "decision"
+  },
+  {
+    "item": "Free-form text badge for users (not enum)",
+    "category": "project_model.decisions",
+    "source_file": "-home-qp-work-antonov-media-am-backend/76685702-3e47-4692-8ea0-0813a0587f42.jsonl",
+    "source_text": "A) Free-form text badge for now",
+    "preceding_assistant": "Invoked brainstorming skill and asked about badge type: A) Free-form text, B) Enum/predefined, C) Something else",
+    "type": "decision"
+  },
+  {
+    "item": "50 char max, limit in DB layer, no extra code check",
+    "category": "project_model.decisions",
+    "source_file": "-home-qp-work-antonov-media-am-backend/76685702-3e47-4692-8ea0-0813a0587f42.jsonl",
+    "source_text": "A) 50 characters max\nlimit in DB layer, no need extra check in code",
+    "preceding_assistant": "Presented database schema design section and asked about character length limit and badge visibility (public vs private)",
+    "type": "decision"
+  },
+  {
+    "item": "Use null | string for nullable fields, not undefined",
+    "category": "project_model.rules",
+    "source_file": "-home-qp-work-antonov-media-am-backend/76685702-3e47-4692-8ea0-0813a0587f42.jsonl",
+    "source_text": "badge: undefined - no need. null or string",
+    "preceding_assistant": "Presented GraphQL API design section showing UpdateUserBadgeInput with badge?: string (using undefined for removal)",
+    "type": "correction"
+  },
+  {
+    "item": "Specify TypeORM column type explicitly for nullable union types",
+    "category": "project_model.rules",
+    "source_file": "-home-qp-work-antonov-media-am-backend/76685702-3e47-4692-8ea0-0813a0587f42.jsonl",
+    "source_text": "DataTypeNotSupportedError: Data type \"Object\" in \"UserEntity.badge\" is not supported by \"postgres\" database.\nwe need to specify type for entity if we are using  | null",
+    "preceding_assistant": null,
+    "type": "correction",
+    "note": "Session resume at line 212; user reported runtime error and stated the fix rule"
+  },
+  {
+    "item": "Old docs in 00-initial-docs may be outdated",
+    "category": "project_model.rules",
+    "source_file": "-home-qp-work-antonov-media-am-pm/885f0614-abb9-44e0-8f9a-b1ee26ff1cc2.jsonl",
+    "source_text": "1) let's have both - Patreon and Nebula\n2) we no need streams, text content is required, donations later\n3) ignore all focuments from 00 i didn't mention, they can be outdated",
+    "preceding_assistant": "Asked 3 questions: which 5th platform for market research, live-streaming/articles scope, and how existing docs in 00-initial-docs relate to this work",
+    "type": "rule",
+    "note": "Same message as item 6; rule is in point 3"
+  },
+  {
+    "item": "Author is a user with specific role in backend",
+    "category": "project_model.facts",
+    "source_file": "-home-qp-work-antonov-media-am-pm/885f0614-abb9-44e0-8f9a-b1ee26ff1cc2.jsonl",
+    "source_text": "we already have a platform where one author can create his publications in his own author pannel, publication contains description and 2 videos - preview and original one. We also going to work with authors with rich text content (articles). Each publication can have list of subscriptions. user with any subscription from this list can view full publication.",
+    "preceding_assistant": null,
+    "type": "fact",
+    "note": "First user message in session (line 4); the UserEntity code confirms UserRole enum with AUTHOR role"
+  },
+  {
+    "item": "Subscriptions are admin-moderated",
+    "category": "project_model.facts",
+    "source_file": "-home-qp-work-antonov-media-am-pm/885f0614-abb9-44e0-8f9a-b1ee26ff1cc2.jsonl",
+    "source_text": null,
+    "preceding_assistant": null,
+    "type": "fact",
+    "note": "Not found as direct user message. Appears in assistant-generated task definition doc (line 14) as assumption #3: 'Subscription tiers are configured by platform admins on behalf of authors (per stakeholder Q&A: Paid subscriptions are configured by admin at author request)'. The source is a stakeholder Q&A referenced by the assistant, not a user message in the transcript."
+  },
+  {
+    "item": "Bundle subscriptions planned",
+    "category": "project_model.facts",
+    "source_file": "-home-qp-work-antonov-media-am-pm/885f0614-abb9-44e0-8f9a-b1ee26ff1cc2.jsonl",
+    "source_text": null,
+    "preceding_assistant": null,
+    "type": "fact",
+    "note": "Not found as direct user message. Appears in assistant-generated task definition doc (line 14) in functional area #10: 'Admin: Subscription Management - Configure subscription tiers per author, collective subscriptions'. The term 'collective subscriptions' was synthesized by the assistant from stakeholder Q&A docs, not stated by user in transcript."
+  },
+  {
+    "item": "Platform has video publications with preview + original",
+    "category": "project_model.facts",
+    "source_file": "-home-qp-work-antonov-media-am-pm/885f0614-abb9-44e0-8f9a-b1ee26ff1cc2.jsonl",
+    "source_text": "we already have a platform where one author can create his publications in his own author pannel, publication contains description and 2 videos - preview and original one.",
+    "preceding_assistant": null,
+    "type": "fact",
+    "note": "First user message in session (line 4)"
+  },
+  {
+    "item": "TypeORM: set null explicitly for nullable field updates",
+    "category": "project_model.lessons",
+    "source_file": "-home-qp-work-antonov-media-am-backend/76685702-3e47-4692-8ea0-0813a0587f42.jsonl",
+    "source_text": "badge: undefined - no need. null or string",
+    "preceding_assistant": "Presented GraphQL API design section showing UpdateUserBadgeInput with badge?: string (using undefined for removal)",
+    "type": "lesson",
+    "note": "Same message as item 9. The lesson is that nullable fields should use explicit null, not undefined, for TypeORM updates"
+  },
+  {
+    "item": "GraphQL: nullable optional DTO fields need explicit @Field type",
+    "category": "project_model.lessons",
+    "source_file": "-home-qp-work-antonov-media-am-backend/76685702-3e47-4692-8ea0-0813a0587f42.jsonl",
+    "source_text": "now gql part\nUndefinedTypeError: Undefined type error. Make sure you are providing an explicit type for the \"badge\" of the \"UserDto\" class.",
+    "preceding_assistant": "Applied TypeORM fix with explicit type: 'varchar' for badge column; said server should start without errors",
+    "type": "correction"
+  },
+  {
+    "item": "Postgres rejects 'Object' type for union columns",
+    "category": "project_model.lessons",
+    "source_file": "-home-qp-work-antonov-media-am-backend/76685702-3e47-4692-8ea0-0813a0587f42.jsonl",
+    "source_text": "DataTypeNotSupportedError: Data type \"Object\" in \"UserEntity.badge\" is not supported by \"postgres\" database.\nwe need to specify type for entity if we are using  | null",
+    "preceding_assistant": null,
+    "type": "correction",
+    "note": "Same message as item 10. Session resume at line 212; user reported runtime error and stated the fix rule"
+  }
+]
