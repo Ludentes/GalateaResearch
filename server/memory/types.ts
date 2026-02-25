@@ -99,6 +99,47 @@ export interface KnowledgeEntry {
   // Channel routing
   enforcedBy?: "hook" | "ci" | "linter"
   targetChannel?: "claude-md" | "skill" | "hook" | "none"
+
+  // Decision traceability
+  decisions?: DecisionStep[]
+}
+
+// ============ Decision Traceability ============
+
+export type DecisionStage =
+  | "extraction"
+  | "novelty-gate"
+  | "dedup"
+  | "retrieval"
+  | "context-assembly"
+  | "router"
+  | "accumulation"
+  | "claude-md-gen"
+  | "skill-gen"
+  | "hook-gen"
+  | "decay"
+  | "feedback"
+
+export type DecisionAction =
+  | "pass"
+  | "drop"
+  | "cap"
+  | "auto-approve"
+  | "route"
+  | "skip"
+  | "decay"
+  | "archive"
+  | "defer"
+  | "reject"
+  | "record"
+
+export interface DecisionStep {
+  stage: DecisionStage
+  action: DecisionAction
+  reason: string
+  inputs?: Record<string, number | string | boolean>
+  timestamp: string
+  pipelineRunId: string
 }
 
 // ============ Transcript Reader ============
