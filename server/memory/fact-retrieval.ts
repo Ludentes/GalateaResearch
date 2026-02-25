@@ -71,10 +71,7 @@ export async function retrieveRelevantFacts(
   opts?: RetrievalOptions,
 ): Promise<RetrievalResult> {
   const config = getRetrievalConfig()
-  const useVector =
-    opts?.useVector ??
-    (config as Record<string, unknown>).use_vector ??
-    false
+  const useVector = opts?.useVector ?? config.use_vector ?? false
   const entries = await readEntries(storePath)
   const tracing = opts?.trace ?? false
   const steps: TraceStep[] = []
@@ -85,8 +82,7 @@ export async function retrieveRelevantFacts(
     const vectorResult = await retrieveVectorFacts(message, active, {
       maxEntries: opts?.maxEntries ?? config.max_entries,
       entityFilter: opts?.additionalEntities?.[0],
-      ollamaBaseUrl: (config as Record<string, unknown>)
-        .ollama_embed_url as string | undefined,
+      ollamaBaseUrl: config.ollama_embed_url,
     })
 
     if (vectorResult.method === "vector") {

@@ -21,8 +21,8 @@ vi.mock("../../engine/config", async (importOriginal) => {
 })
 
 import { retrieveRelevantFacts } from "../fact-retrieval"
-import { appendEntries, readEntries } from "../knowledge-store"
-import { mkdtempSync, rmSync } from "node:fs"
+import { appendEntries } from "../knowledge-store"
+import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 
