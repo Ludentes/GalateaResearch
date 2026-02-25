@@ -11,6 +11,7 @@
  * Falls back to keyword retrieval if Qdrant is unavailable.
  */
 
+import { addDecision, createPipelineRunId } from "./decision-trace"
 import { batchEmbed } from "./knowledge-store"
 import type { QdrantClient, QdrantSearchResult } from "./qdrant-client"
 import {
@@ -104,6 +105,7 @@ export async function retrieveVectorFacts(
   const weights = { ...DEFAULT_WEIGHTS, ...opts?.weights }
   const ollamaUrl = opts?.ollamaBaseUrl ?? "http://localhost:11434"
   const client = opts?.qdrantClient ?? createQdrantClient()
+  const runId = createPipelineRunId("retrieval")
 
   // Step 0: Collect hard rules (always included, never dropped)
   const hardRules = allEntries.filter(
@@ -115,7 +117,15 @@ export async function retrieveVectorFacts(
   if (!qdrantUp) {
     console.warn("[retrieval] Qdrant unavailable — falling back to keyword retrieval")
     return {
-      entries: hardRules.slice(0, maxEntries),
+      entries: hardRules.slice(0, maxEntries).map((e) =>
+        addDecision(e, {
+          stage: "retrieval",
+          action: "pass",
+          reason: "keyword fallback: Qdrant unavailable",
+          inputs: { method: "keyword_fallback" },
+          pipelineRunId: runId,
+        }),
+      ),
       method: "keyword_fallback",
     }
   }
@@ -125,7 +135,15 @@ export async function retrieveVectorFacts(
   if (!embeddings || embeddings.length === 0) {
     console.warn("[retrieval] Embedding failed — falling back to keyword retrieval")
     return {
-      entries: hardRules.slice(0, maxEntries),
+      entries: hardRules.slice(0, maxEntries).map((e) =>
+        addDecision(e, {
+          stage: "retrieval",
+          action: "pass",
+          reason: "keyword fallback: embedding failed",
+          inputs: { method: "keyword_fallback" },
+          pipelineRunId: runId,
+        }),
+      ),
       method: "keyword_fallback",
     }
   }
@@ -151,7 +169,15 @@ export async function retrieveVectorFacts(
   } catch (err) {
     console.warn("[retrieval] Qdrant search failed:", err)
     return {
-      entries: hardRules.slice(0, maxEntries),
+      entries: hardRules.slice(0, maxEntries).map((e) =>
+        addDecision(e, {
+          stage: "retrieval",
+          action: "pass",
+          reason: "keyword fallback: Qdrant search failed",
+          inputs: { method: "keyword_fallback" },
+          pipelineRunId: runId,
+        }),
+      ),
       method: "keyword_fallback",
     }
   }
@@ -177,7 +203,17 @@ export async function retrieveVectorFacts(
 
   // Step 6: Combine hard rules + scored entries, respecting budget
   const budgetForScored = maxEntries - hardRules.length
-  const topEntries = scoredEntries.slice(0, Math.max(0, budgetForScored)).map((s) => s.entry)
+  const topEntries = scoredEntries
+    .slice(0, Math.max(0, budgetForScored))
+    .map((s) =>
+      addDecision(s.entry, {
+        stage: "retrieval",
+        action: "pass",
+        reason: "vector search: composite score above threshold",
+        inputs: { compositeScore: s.score, method: "vector" },
+        pipelineRunId: runId,
+      }),
+    )
   const combined = [...hardRules, ...topEntries]
 
   return {

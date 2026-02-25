@@ -1,4 +1,5 @@
 import { type RetrievalConfig, getRetrievalConfig, getStopWords } from "../engine/config"
+import { addDecision, createPipelineRunId } from "./decision-trace"
 import { readEntries } from "./knowledge-store"
 import type { KnowledgeEntry } from "./types"
 import { retrieveVectorFacts } from "./vector-retrieval"
@@ -70,16 +71,22 @@ export async function retrieveRelevantFacts(
   opts?: RetrievalOptions,
 ): Promise<RetrievalResult> {
   const config = getRetrievalConfig()
+  const useVector =
+    opts?.useVector ??
+    (config as Record<string, unknown>).use_vector ??
+    false
   const entries = await readEntries(storePath)
   const tracing = opts?.trace ?? false
   const steps: TraceStep[] = []
 
   // Try vector retrieval if enabled
-  if (opts?.useVector) {
+  if (useVector) {
     const active = entries.filter((e) => !e.supersededBy)
     const vectorResult = await retrieveVectorFacts(message, active, {
       maxEntries: opts?.maxEntries ?? config.max_entries,
       entityFilter: opts?.additionalEntities?.[0],
+      ollamaBaseUrl: (config as Record<string, unknown>)
+        .ollama_embed_url as string | undefined,
     })
 
     if (vectorResult.method === "vector") {
@@ -260,8 +267,19 @@ export async function retrieveRelevantFacts(
     })
   }
 
+  const runId = createPipelineRunId("retrieval")
+  const withDecisions = limited.map((entry, idx) =>
+    addDecision(entry, {
+      stage: "retrieval",
+      action: "pass",
+      reason: "keyword retrieval: matched",
+      inputs: { method: "keyword", rank: idx + 1, maxEntries: max },
+      pipelineRunId: runId,
+    }),
+  )
+
   const result: RetrievalResult = {
-    entries: limited,
+    entries: withDecisions,
     matchedEntities: mentionedEntities,
   }
 
