@@ -246,6 +246,34 @@ describe("Signal Classifier", () => {
     })
   })
 
+  describe("preference precision", () => {
+    it("does NOT classify conditional 'If I want' question as preference", () => {
+      expect(
+        classifyTurn(
+          user(
+            "If I want to test this locally what is the recommended approach?",
+          ),
+        ).type,
+      ).not.toBe("preference")
+    })
+
+    it("does NOT classify incomplete 'I always scare of' as preference", () => {
+      expect(classifyTurn(user("I always scare of .")).type).not.toBe(
+        "preference",
+      )
+    })
+
+    it("DOES classify 'I prefer pnpm' as preference", () => {
+      expect(
+        classifyTurn(user("I prefer using pnpm for all projects")).type,
+      ).toBe("preference")
+    })
+
+    it("DOES classify 'I hate semicolons' as preference", () => {
+      expect(classifyTurn(user("I hate semicolons")).type).toBe("preference")
+    })
+  })
+
   describe("filterSignalTurns", () => {
     it("removes noise turns", () => {
       const turns = [

@@ -16,11 +16,23 @@ const NOISE_PATTERNS: Record<string, RegExp> = {
     /^(ok|okay|k|got it|sure|thanks|thank you|ty|great|yes|no|yep|nope|alright|understood|roger|ack|cool|nice)\s*[.!?]?$/i,
 }
 
+/** Messages ending with ? are likely questions, not statements */
+function isLikelyQuestion(text: string): boolean {
+  return /\?\s*$/.test(text.trim())
+}
+
+/**
+ * For "I always/never/usually X", verify X is a meaningful action verb.
+ * Rejects incomplete/nonsensical phrases like "I always scare of".
+ */
+const HABIT_VERB_RE =
+  /\bi\s+(always|never|usually)\s+(use|prefer|run|write|do|build|deploy|test|check|lint|commit|push|pull|start|want|make|put|set|add|avoid|skip|keep|install|create|go|have|try|work|format|review|require)\b/i
+
 const SIGNAL_PATTERNS: Record<string, RegExp> = {
   remember: /@remember\b/i,
   forget: /@forget\b/i,
   preference:
-    /\b(i (prefer|like|want|love|hate|dislike|always|never|usually))\b/i,
+    /(?<!\bif\s)\b(i (prefer|like|want|love|hate|dislike|always|never|usually))\b/i,
   correction:
     /\b(no,?\s+(that'?s|it'?s|i meant|actually)|not what i|i said)\b|\bincorrect,/i,
   policy:
@@ -56,6 +68,19 @@ export function classifyTurn(turn: TranscriptTurn): SignalClassification {
   for (const [type, regex] of Object.entries(SIGNAL_PATTERNS)) {
     const m = regex.exec(text)
     if (m) {
+      // Questions with signal patterns are usually asking, not stating
+      // Exception: @remember and @forget are always intentional
+      if (isLikelyQuestion(text) && type !== "remember" && type !== "forget") {
+        continue
+      }
+
+      // For "I always/never/usually X", require X to be a known action verb
+      if (type === "preference" && /\bi\s+(always|never|usually)\b/i.test(m[0])) {
+        if (!HABIT_VERB_RE.test(text)) {
+          continue
+        }
+      }
+
       return {
         type: type as SignalType,
         pattern: type,
