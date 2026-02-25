@@ -2,7 +2,7 @@
 /**
  * Evidence-Based Memory Lifecycle — Scenario Tests
  *
- * 10 full-pipeline scenarios from:
+ * 15 full-pipeline scenarios from:
  *   docs/plans/2026-02-24-evidence-based-memory-gherkin-scenarios.md
  *
  * Each scenario traces an entry through the complete pipeline,
@@ -56,6 +56,17 @@ vi.mock("../../engine/config", async (importOriginal) => {
       confidence_boost_amount: 0.05,
       regen_debounce_minutes: 60,
     }),
+    getRetrievalConfig: () => ({
+      max_entries: 20,
+      entity_name_min_length: 3,
+      keyword_min_length: 4,
+      keyword_overlap_threshold: 1,
+      use_vector: false,
+      qdrant_url: "http://localhost:6333",
+      ollama_embed_url: "http://localhost:11434",
+    }),
+    getStopWords: () =>
+      new Set(["the", "and", "for", "that", "this", "with"]),
   }
 })
 
@@ -415,5 +426,181 @@ describe("S10: Full lifecycle across multiple sessions", () => {
     expect(cleaned).toBe(1)
     const pending = await getPendingItems(QUEUE_PATH)
     expect(pending).toHaveLength(0)
+  })
+})
+
+// ── S11: Retrieval decisions traced on entries ────────────────────────
+describe("S11: Retrieval decisions are traced on entries", () => {
+  it("keyword retrieval records decisions via PipelineTrace", async () => {
+    const entry = makeEntry({
+      type: "fact",
+      content: "Project uses PostgreSQL 17 for data storage",
+      confidence: 0.95,
+      curationStatus: "approved",
+      entities: ["PostgreSQL"],
+    })
+    await appendEntries([entry], STORE_PATH)
+
+    const { retrieveRelevantFacts } = await import(
+      "../../memory/fact-retrieval"
+    )
+    const result = await retrieveRelevantFacts(
+      "PostgreSQL database",
+      STORE_PATH,
+      { trace: true },
+    )
+    expect(result.trace).toBeDefined()
+    expect(result.trace!.steps.length).toBeGreaterThan(0)
+
+    // Entries should have retrieval decisions
+    if (result.entries.length > 0) {
+      const decisions = result.entries[0].decisions?.filter(
+        (d) => d.stage === "retrieval",
+      )
+      expect(decisions?.length).toBeGreaterThan(0)
+    }
+  })
+})
+
+// ── S12: CLAUDE.md line budget overflow traced ────────────────────────
+describe("S12: CLAUDE.md truncation traced with budget info", () => {
+  it("entries exceeding line budget get skip decision with budget state", () => {
+    // Create 50 multi-line entries (4 lines each + 1 prefix = 5 lines, total 250 > budget 200)
+    const entries = Array.from({ length: 50 }, (_, i) =>
+      makeEntry({
+        type: "fact",
+        content: `Fact ${i}: important detail\nline2\nline3\nline4`,
+        confidence: 0.95 - i * 0.001,
+        curationStatus: "approved",
+        origin: "explicit-statement",
+      }),
+    )
+
+    const result = routeEntries(entries)
+
+    expect(result.claudeMd.entries.length).toBeGreaterThan(0)
+    expect(result.skipped.entries.length).toBeGreaterThan(0)
+
+    // Skipped entries should have router decisions with budget info
+    const budgetSkipped = result.skipped.entries.filter((e) =>
+      e.decisions?.some(
+        (d) =>
+          d.stage === "router" &&
+          d.reason.includes("line budget"),
+      ),
+    )
+    expect(budgetSkipped.length).toBeGreaterThan(0)
+
+    const decision = budgetSkipped[0].decisions!.find((d) =>
+      d.reason.includes("line budget"),
+    )!
+    expect(decision.inputs?.budget).toBe(200)
+    expect(decision.inputs?.entryLines).toBeDefined()
+  })
+})
+
+// ── S13: Full decision chain readable on entry ────────────────────────
+describe("S13: Full decision chain readable on entry", () => {
+  it("entry accumulates decisions across extraction and routing", () => {
+    const entry = makeEntry({
+      type: "preference",
+      content: "Use conventional commits",
+      confidence: 0.95,
+      novelty: "project-specific",
+      origin: "explicit-statement",
+      curationStatus: "approved",
+      decisions: [
+        {
+          stage: "novelty-gate" as const,
+          action: "pass" as const,
+          reason: "novelty accepted",
+          inputs: { novelty: "project-specific" },
+          timestamp: new Date().toISOString(),
+          pipelineRunId: "extraction:1234:abcd1234",
+        },
+        {
+          stage: "extraction" as const,
+          action: "auto-approve" as const,
+          reason:
+            "explicit-statement with confidence >= threshold",
+          inputs: { confidence: 0.95, threshold: 0.9 },
+          timestamp: new Date().toISOString(),
+          pipelineRunId: "extraction:1234:abcd1234",
+        },
+      ],
+    })
+
+    const result = routeEntries([entry])
+    const routed = result.claudeMd.entries[0]
+
+    // Now has 3+ decisions: novelty-gate, extraction, router
+    expect(routed.decisions!.length).toBeGreaterThanOrEqual(3)
+    const stages = routed.decisions!.map((d) => d.stage)
+    expect(stages).toContain("novelty-gate")
+    expect(stages).toContain("extraction")
+    expect(stages).toContain("router")
+
+    // Extraction decisions share a pipelineRunId
+    const extractionRuns = routed
+      .decisions!.filter((d) =>
+        d.pipelineRunId.startsWith("extraction:"),
+      )
+      .map((d) => d.pipelineRunId)
+    expect(new Set(extractionRuns).size).toBe(1)
+  })
+})
+
+// ── S14: Qdrant unavailable falls back to keyword ─────────────────────
+describe("S14: Qdrant unavailable falls back to keyword", () => {
+  it("retrieval succeeds when Qdrant is not running", async () => {
+    const entry = makeEntry({
+      content: "FalkorDB uses Cypher queries",
+      entities: ["FalkorDB", "Cypher"],
+    })
+    await appendEntries([entry], STORE_PATH)
+
+    const { retrieveRelevantFacts } = await import(
+      "../../memory/fact-retrieval"
+    )
+    const result = await retrieveRelevantFacts(
+      "FalkorDB Cypher query syntax",
+      STORE_PATH,
+      { useVector: true },
+    )
+
+    // Should still work via keyword fallback — no crash
+    expect(result).toBeDefined()
+    expect(result.entries).toBeDefined()
+  })
+})
+
+// ── S15: Decision array capped at max length ──────────────────────────
+describe("S15: Decision array capped at max length", () => {
+  it("entry with >50 decisions gets capped on decay", async () => {
+    const decisions = Array.from({ length: 48 }, (_, i) => ({
+      stage: "decay" as const,
+      action: "decay" as const,
+      reason: `historical run ${i}`,
+      timestamp: new Date(
+        Date.now() - i * 86400000,
+      ).toISOString(),
+      pipelineRunId: `decay:${i}:abcdef00`,
+    }))
+
+    const entry = makeEntry({
+      extractedAt: new Date(
+        Date.now() - 60 * 86400000,
+      ).toISOString(),
+      decisions,
+    })
+    await appendEntries([entry], STORE_PATH)
+
+    // Run decay 5 times — would push to 53 without cap
+    for (let i = 0; i < 5; i++) {
+      await runDecay(STORE_PATH)
+    }
+
+    const after = await readEntries(STORE_PATH)
+    expect(after[0].decisions!.length).toBeLessThanOrEqual(50)
   })
 })
