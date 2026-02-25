@@ -114,3 +114,50 @@ describe("outcome-weighted decay", () => {
     expect(after[0].confidence).toBe(0.9) // unchanged
   })
 })
+
+describe("decay decision tracing", () => {
+  it("records decay decisions on entries", async () => {
+    // 35 days old, past 30-day grace by 5 days → decays but stays above archive threshold
+    const thirtyFiveDaysAgo = new Date(
+      Date.now() - 35 * 86400000,
+    ).toISOString()
+    const entry = makeEntry({ extractedAt: thirtyFiveDaysAgo })
+    await appendEntries([entry], STORE_PATH)
+
+    await runDecay(STORE_PATH)
+
+    const after = await readEntries(STORE_PATH)
+    const updated = after.find((e) => e.id === entry.id)!
+    expect(updated.decisions).toBeDefined()
+    expect(updated.decisions!.length).toBeGreaterThanOrEqual(1)
+
+    const decayDecision = updated.decisions!.find(
+      (d) => d.stage === "decay" && d.action === "decay",
+    )
+    expect(decayDecision).toBeDefined()
+    expect(decayDecision!.reason).toBe("confidence reduced")
+    expect(decayDecision!.inputs).toBeDefined()
+    expect(decayDecision!.inputs!.from).toBeDefined()
+    expect(decayDecision!.inputs!.to).toBeDefined()
+  })
+
+  it("records grace period pass decisions", async () => {
+    // 5 days old — well within 30-day grace period
+    const fiveDaysAgo = new Date(Date.now() - 5 * 86400000).toISOString()
+    const entry = makeEntry({ extractedAt: fiveDaysAgo })
+    await appendEntries([entry], STORE_PATH)
+
+    await runDecay(STORE_PATH)
+
+    const after = await readEntries(STORE_PATH)
+    const updated = after.find((e) => e.id === entry.id)!
+    expect(updated.decisions).toBeDefined()
+    expect(updated.decisions!.length).toBeGreaterThanOrEqual(1)
+
+    const passDecision = updated.decisions!.find(
+      (d) => d.stage === "decay" && d.action === "pass",
+    )
+    expect(passDecision).toBeDefined()
+    expect(passDecision!.reason).toContain("grace period")
+  })
+})
