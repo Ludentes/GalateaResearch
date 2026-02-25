@@ -332,7 +332,6 @@ artifact_generation:
       - "meaningful.*(names?|variables?)"
       - "don'?t repeat yourself|DRY principle"
       - "single responsibility"
-      - "code review"
       - "document.*code|write.*docs"
       - "clean code|readable code"
       - "separation of concerns"
