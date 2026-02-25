@@ -86,20 +86,31 @@ function isInternalNoise(text: string): boolean {
  * Drops pure system events (<ide_opened_file>, <ide_selection>).
  */
 export function stripIdeWrappers(text: string): string {
-  const trimmed = text.trim()
+  let result = text.trim()
 
-  // Pure system events — return empty to filter as noise
-  if (/^<ide_opened_file>.*<\/ide_opened_file>$/s.test(trimmed)) return ""
-  if (/^<ide_selection>.*<\/ide_selection>$/s.test(trimmed)) return ""
+  // Strip IDE system event blocks (both whole-message and inline)
+  result = result.replace(/<ide_opened_file>[\s\S]*?<\/ide_opened_file>/gi, "")
+  result = result.replace(/<ide_selection>[\s\S]*?<\/ide_selection>/gi, "")
+
+  // Strip tool/completion wrapper blocks
+  result = result.replace(/<attempt_completion>[\s\S]*?<\/attempt_completion>/gi, "")
+  result = result.replace(/<result>[\s\S]*?<\/result>/gi, "")
 
   // Extract inner content from wrapper tags
-  let result = trimmed
   result = result.replace(/<feedback>\s*/gi, "").replace(/\s*<\/feedback>/gi, "")
   result = result.replace(/<task>\s*/gi, "").replace(/\s*<\/task>/gi, "")
   result = result
     .replace(/<command-message>[\s\S]*?<\/command-message>/gi, "")
     .replace(/<command-name>[\s\S]*?<\/command-name>/gi, "")
     .replace(/<command-args>[\s\S]*?<\/command-args>/gi, "")
+
+  // Clean up orphaned closing tags (from incomplete wrappers)
+  result = result.replace(/<\/ide_opened_file>/gi, "")
+  result = result.replace(/<\/ide_selection>/gi, "")
+  result = result.replace(/<\/attempt_completion>/gi, "")
+  result = result.replace(/<\/result>/gi, "")
+  result = result.replace(/<\/feedback>/gi, "")
+  result = result.replace(/<\/task>/gi, "")
 
   return result.trim()
 }
