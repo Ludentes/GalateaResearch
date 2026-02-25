@@ -22,7 +22,7 @@ const SIGNAL_PATTERNS: Record<string, RegExp> = {
   preference:
     /\b(i (prefer|like|want|love|hate|dislike|always|never|usually))\b/i,
   correction:
-    /\b(no,?\s+(that'?s|it'?s|i meant|actually)|wrong|incorrect|not what i|i said)\b/i,
+    /\b(no,?\s+(that'?s|it'?s|i meant|actually)|not what i|i said)\b|\bincorrect,/i,
   policy:
     /\b(we (always|never|should|must|don'?t)|our (standard|convention|policy|rule))\b/i,
   imperative_rule:

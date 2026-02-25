@@ -56,7 +56,9 @@ describe("Signal Classifier", () => {
       expect(classifyTurn(user("No, I meant the other file")).type).toBe(
         "correction",
       )
-      expect(classifyTurn(user("That's incorrect")).type).toBe("correction")
+      expect(classifyTurn(user("Incorrect, the port is 15432")).type).toBe(
+        "correction",
+      )
     })
 
     it("detects policies", () => {
@@ -182,7 +184,7 @@ describe("Signal Classifier", () => {
 
     it("extracts content from <feedback> wrapper", () => {
       const turn = user(
-        "<feedback>\ni don't like how it looks now, my suggestion was wrong\nrethink header components\n</feedback>",
+        "<feedback>\nNo, that's not what I wanted. Rethink header components\n</feedback>",
       )
       const c = classifyTurn(turn)
       expect(c.type).toBe("correction")
@@ -193,6 +195,54 @@ describe("Signal Classifier", () => {
       // Short task directives without signal patterns -> noise or factual
       const c = classifyTurn(turn)
       expect(c.type).not.toBe("imperative_rule")
+    })
+  })
+
+  describe("correction precision", () => {
+    it("does NOT classify questions with 'wrong' as correction", () => {
+      expect(
+        classifyTurn(user("Any ideas what we might be doing wrong?")).type,
+      ).not.toBe("correction")
+    })
+
+    it("does NOT classify 'What am I doing wrong?' as correction", () => {
+      expect(classifyTurn(user("What am I doing wrong?")).type).not.toBe(
+        "correction",
+      )
+    })
+
+    it("does NOT classify hypothesis with 'incorrect' as correction", () => {
+      expect(
+        classifyTurn(
+          user(
+            "I think the way we are using claude code is incorrect in compression.",
+          ),
+        ).type,
+      ).not.toBe("correction")
+    })
+
+    it("does NOT classify exploration with 'wrong' as correction", () => {
+      expect(
+        classifyTurn(user("graphql file to see what's wrong with it.")).type,
+      ).not.toBe("correction")
+    })
+
+    it("does NOT classify 'Am I using this wrong?' as correction", () => {
+      expect(classifyTurn(user("Am I using this wrong?")).type).not.toBe(
+        "correction",
+      )
+    })
+
+    it("DOES classify real correction", () => {
+      expect(
+        classifyTurn(user("No, that's wrong. Use the v2 API instead")).type,
+      ).toBe("correction")
+    })
+
+    it("DOES classify 'incorrect, the port should be' as correction", () => {
+      expect(
+        classifyTurn(user("Incorrect, the port should be 15432")).type,
+      ).toBe("correction")
     })
   })
 
