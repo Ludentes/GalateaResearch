@@ -98,6 +98,61 @@ describe("Signal Classifier", () => {
     })
   })
 
+  describe("new signal patterns", () => {
+    it("detects @remember marker", () => {
+      expect(classifyTurn(user("@remember use pnpm always")).type).toBe(
+        "remember",
+      )
+    })
+
+    it("detects @forget marker", () => {
+      expect(classifyTurn(user("@forget the old deploy process")).type).toBe(
+        "forget",
+      )
+    })
+
+    it("detects imperative rules without I/we prefix", () => {
+      expect(classifyTurn(user("Never push directly to main")).type).toBe(
+        "imperative_rule",
+      )
+      expect(
+        classifyTurn(user("Always run the linter before commit")).type,
+      ).toBe("imperative_rule")
+      expect(classifyTurn(user("Must not use any type")).type).toBe(
+        "imperative_rule",
+      )
+      expect(classifyTurn(user("Don't ever skip tests")).type).toBe(
+        "imperative_rule",
+      )
+    })
+
+    it("prefers policy over imperative_rule for we-prefixed statements", () => {
+      // "We never" matches policy first
+      expect(
+        classifyTurn(user("We never push to main directly")).type,
+      ).toBe("policy")
+    })
+
+    it("prefers preference over imperative_rule for I-prefixed statements", () => {
+      // "I never" matches preference first
+      expect(classifyTurn(user("I never use var declarations")).type).toBe(
+        "preference",
+      )
+    })
+
+    it("detects procedures (numbered lists)", () => {
+      const proc = "To deploy:\n1) Build the app\n2) Push to registry"
+      expect(classifyTurn(user(proc)).type).toBe("procedure")
+    })
+
+    it("captures match details", () => {
+      const result = classifyTurn(user("I prefer using pnpm"))
+      expect(result.match).toBeDefined()
+      expect(result.matchIndex).toBeDefined()
+      expect(typeof result.matchIndex).toBe("number")
+    })
+  })
+
   describe("filterSignalTurns", () => {
     it("removes noise turns", () => {
       const turns = [

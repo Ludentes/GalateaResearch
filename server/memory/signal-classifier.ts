@@ -16,14 +16,19 @@ const NOISE_PATTERNS: Record<string, RegExp> = {
 }
 
 const SIGNAL_PATTERNS: Record<string, RegExp> = {
+  remember: /@remember\b/i,
+  forget: /@forget\b/i,
   preference:
     /\b(i (prefer|like|want|love|hate|dislike|always|never|usually))\b/i,
   correction:
     /\b(no,?\s+(that'?s|it'?s|i meant|actually)|wrong|incorrect|not what i|i said)\b/i,
   policy:
-    /\b(we (always|never|should|must)|our (standard|convention|policy|rule)|don'?t (ever|use))\b/i,
+    /\b(we (always|never|should|must|don'?t)|our (standard|convention|policy|rule))\b/i,
+  imperative_rule:
+    /(?:^|[.!?]\s+)(never|always|don'?t|do not|must not|must)\b/i,
   decision:
     /\b(let'?s (go with|use|choose|pick)|i'?ve decided|we'?ll use|the decision is)\b/i,
+  procedure: /(?:^|\n)\s*1[.)]\s.+(?:\n\s*2[.)]\s)/i,
 }
 
 export function classifyTurn(turn: TranscriptTurn): SignalClassification {
@@ -46,10 +51,17 @@ export function classifyTurn(turn: TranscriptTurn): SignalClassification {
     return { type: "noise", pattern: "confirmation", confidence: cfg.noise_confidence }
   }
 
-  // Check signal patterns (order: preference > correction > policy > decision)
+  // Check signal patterns (first match wins, order matters)
   for (const [type, regex] of Object.entries(SIGNAL_PATTERNS)) {
-    if (regex.test(text)) {
-      return { type: type as SignalType, pattern: type, confidence: cfg.signal_confidence }
+    const m = regex.exec(text)
+    if (m) {
+      return {
+        type: type as SignalType,
+        pattern: type,
+        confidence: cfg.signal_confidence,
+        match: m[0],
+        matchIndex: m.index,
+      }
     }
   }
 
