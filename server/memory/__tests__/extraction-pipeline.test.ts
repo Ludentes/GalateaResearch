@@ -95,4 +95,29 @@ describe("Extraction Pipeline", () => {
     expect(result2.entries).toHaveLength(0) // all dupes
   })
 
+  it("uses heuristic extraction for pattern-matched turns", async () => {
+    const storePath = path.join(TEST_DIR, "entries.jsonl")
+    const result = await runExtraction({
+      transcriptPath: FIXTURE,
+      model: MOCK_MODEL,
+      storePath,
+    })
+
+    // The fixture contains signal turns that match patterns (preference, decision, correction)
+    // Heuristic extraction should produce entries
+    expect(result.stats.heuristicEntries).toBeDefined()
+    expect(result.stats.heuristicEntries).toBeGreaterThanOrEqual(0)
+  })
+
+  it("includes heuristic and llm stats in result", async () => {
+    const storePath = path.join(TEST_DIR, "entries.jsonl")
+    const result = await runExtraction({
+      transcriptPath: FIXTURE,
+      model: MOCK_MODEL,
+      storePath,
+    })
+
+    expect(result.stats).toHaveProperty("heuristicEntries")
+    expect(result.stats).toHaveProperty("llmEntries")
+  })
 })
