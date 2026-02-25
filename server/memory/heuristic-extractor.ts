@@ -1,6 +1,7 @@
 import { getArtifactConfig } from "../engine/config"
 import { addDecision, createPipelineRunId } from "./decision-trace"
 import { classifyTurn } from "./signal-classifier"
+import { stripIdeWrappers } from "./transcript-reader"
 import type {
   KnowledgeAbout,
   KnowledgeEntry,
@@ -125,7 +126,7 @@ export function extractHeuristic(
   }
 
   const runId = createPipelineRunId("heuristic")
-  const text = turn.content.trim()
+  const text = stripIdeWrappers(turn.content)
 
   // Gate: reject decisions that lack standalone context
   if (classification.type === "decision" && isContextFreeDecision(text)) {

@@ -96,6 +96,14 @@ export function stripIdeWrappers(text: string): string {
   result = result.replace(/<attempt_completion>[\s\S]*?<\/attempt_completion>/gi, "")
   result = result.replace(/<result>[\s\S]*?<\/result>/gi, "")
 
+  // Strip Cline/Roo Code wrapper blocks
+  result = result.replace(/<environment_details>[\s\S]*?<\/environment_details>/gi, "")
+  result = result.replace(/<todos>[\s\S]*?<\/todos>/gi, "")
+  result = result.replace(/<update_todo_list>[\s\S]*?<\/update_todo_list>/gi, "")
+  result = result.replace(/<question>[\s\S]*?<\/question>/gi, "")
+  result = result.replace(/<follow_up>[\s\S]*?<\/follow_up>/gi, "")
+  result = result.replace(/<suggest[^>]*>[\s\S]*?<\/suggest>/gi, "")
+
   // Extract inner content from wrapper tags
   result = result.replace(/<feedback>\s*/gi, "").replace(/\s*<\/feedback>/gi, "")
   result = result.replace(/<task>\s*/gi, "").replace(/\s*<\/task>/gi, "")
@@ -111,6 +119,12 @@ export function stripIdeWrappers(text: string): string {
   result = result.replace(/<\/result>/gi, "")
   result = result.replace(/<\/feedback>/gi, "")
   result = result.replace(/<\/task>/gi, "")
+  result = result.replace(/<\/environment_details>/gi, "")
+  result = result.replace(/<\/todos>/gi, "")
+  result = result.replace(/<\/update_todo_list>/gi, "")
+  result = result.replace(/<\/question>/gi, "")
+  result = result.replace(/<\/follow_up>/gi, "")
+  result = result.replace(/<\/suggest>/gi, "")
 
   return result.trim()
 }
