@@ -136,7 +136,9 @@ export function extractHeuristic(
   let knowledgeType = mapping.type
   let confidence = mapping.confidence
 
-  if (classification.type === "remember") {
+  if (classification.type === "procedure") {
+    content = extractProcedureSteps(text)
+  } else if (classification.type === "remember") {
     // Strip @remember prefix
     content = text.replace(/@remember\s*/i, "").trim()
 
@@ -224,6 +226,40 @@ function inferAbout(
 
   // Everything else: imperative_rule, decision, correction, procedure → project
   return { entity: "project", type: "project" }
+}
+
+/**
+ * Extract just the numbered steps from a procedure.
+ * Finds the numbered list and returns only those lines.
+ */
+function extractProcedureSteps(text: string): string {
+  const lines = text.split("\n")
+  const steps: string[] = []
+  let inList = false
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (/^\d+[.)]\s/.test(trimmed)) {
+      inList = true
+      steps.push(trimmed)
+    } else if (
+      inList &&
+      trimmed &&
+      !trimmed.startsWith("#") &&
+      !trimmed.startsWith("```")
+    ) {
+      // Continuation of a step (indented or wrapped)
+      steps.push(trimmed)
+    } else if (
+      inList &&
+      (!trimmed || trimmed.startsWith("#") || trimmed.startsWith("```"))
+    ) {
+      // End of list
+      break
+    }
+  }
+
+  return steps.length > 0 ? steps.join("\n") : text
 }
 
 /**

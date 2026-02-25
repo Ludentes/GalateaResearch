@@ -155,6 +155,17 @@ describe("extractHeuristic", () => {
     expect(result.entries[0].novelty).toBe("general-knowledge")
   })
 
+  it("extracts only numbered steps from procedure, not surrounding content", () => {
+    const turn = user(
+      "## Commit & Deploy\n\n```\nfeat(cms): add widget\n```\n\n## Verification\n1. Check dashboard loads\n2. Verify widget shows status",
+    )
+    const classification = classifyTurn(turn)
+    const result = extractHeuristic(turn, classification, "session:test")
+    expect(result.entries[0].content).not.toContain("Commit & Deploy")
+    expect(result.entries[0].content).toContain("1.")
+    expect(result.entries[0].content).toContain("2.")
+  })
+
   describe("context-free decision gate", () => {
     it("rejects 'Let's go with 1' as context-free", () => {
       const turn = user("Let's go with 1")
