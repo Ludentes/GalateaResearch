@@ -98,6 +98,17 @@ describe("extractHeuristic", () => {
     expect(result.entries[0].content).not.toContain("@remember")
   })
 
+  it("extracts @forget as forget type", () => {
+    const turn = user("@forget the old deploy process")
+    const classification = classifyTurn(turn)
+    const result = extractHeuristic(turn, classification, "session:test")
+    expect(result.handled).toBe(true)
+    expect(result.entries).toHaveLength(1)
+    expect(result.entries[0].type).toBe("forget")
+    expect(result.entries[0].content).toContain("old deploy process")
+    expect(result.entries[0].content).not.toContain("@forget")
+  })
+
   it("returns handled=false for factual classification", () => {
     const turn = user(
       "The project uses TanStack Start with PostgreSQL on port 15432 and FalkorDB for graph storage",

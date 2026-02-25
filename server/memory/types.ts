@@ -34,6 +34,7 @@ export type KnowledgeType =
   | "procedure"
   | "correction"
   | "decision"
+  | "forget"
 
 export type KnowledgeNovelty =
   | "project-specific"

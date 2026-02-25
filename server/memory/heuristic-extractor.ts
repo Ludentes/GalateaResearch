@@ -56,6 +56,7 @@ const SIGNAL_TO_KNOWLEDGE: Record<
     origin: "explicit-statement",
   },
   remember: { type: "fact", confidence: 1.0, origin: "explicit-statement" },
+  forget: { type: "forget", confidence: 1.0, origin: "explicit-statement" },
 }
 
 /** Words to exclude from entity extraction (common sentence starters, pronouns, etc.) */
@@ -147,6 +148,9 @@ export function extractHeuristic(
       knowledgeType = remapping.type
     }
     // Confidence stays 1.0 for @remember
+  } else if (classification.type === "forget") {
+    // Strip @forget prefix
+    content = text.replace(/@forget\s*/i, "").trim()
   } else {
     content = extractSentence(text, classification.matchIndex)
   }
