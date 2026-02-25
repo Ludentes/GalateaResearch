@@ -1,9 +1,247 @@
 import { mkdir, writeFile } from "node:fs/promises"
 import path from "node:path"
+import { getArtifactConfig } from "../engine/config"
+import { routeEntries } from "./channel-router"
+import { addDecision, createPipelineRunId } from "./decision-trace"
 import { readEntries } from "./knowledge-store"
-// KnowledgeEntry type flows through readEntries() return type
+import type { KnowledgeEntry, KnowledgeType } from "./types"
 
-const MIN_CONFIDENCE = 0.80
+// ============ New router-consuming API ============
+
+export interface SkillFileResult {
+  filename: string
+  title: string
+}
+
+export interface HookPattern {
+  id: string
+  content: string
+  type: string
+  confidence: number
+}
+
+export interface HookPatternResult {
+  written: boolean
+  count: number
+  patterns?: HookPattern[]
+}
+
+export interface GenerateAllResult {
+  claudeMd: { written: boolean; lines: number; entryCount: number }
+  skills: { files: SkillFileResult[]; count: number }
+  hooks: { written: boolean; count: number }
+  skipped: { count: number }
+}
+
+// Type ordering for CLAUDE.md sections (procedures excluded — they go to skills)
+const CLAUDE_MD_SECTION_ORDER: KnowledgeType[] = [
+  "rule",
+  "preference",
+  "correction",
+  "decision",
+  "fact",
+]
+
+const SECTION_HEADINGS: Record<string, string> = {
+  rule: "## Rules",
+  preference: "## Preferences",
+  correction: "## Corrections",
+  decision: "## Decisions",
+  fact: "## Facts",
+}
+
+/**
+ * Generate CLAUDE.md from already-routed entries.
+ * Entries should come from `routeEntries().claudeMd.entries`.
+ */
+export async function generateClaudeMdFromRouter(
+  entries: KnowledgeEntry[],
+  outputDir: string,
+): Promise<string> {
+  const cfg = getArtifactConfig()
+  const runId = createPipelineRunId("claude-md-gen")
+
+  const sections: string[] = []
+  sections.push(cfg.claude_md.architecture_preamble)
+  sections.push("")
+
+  // Filter out procedures (those go to skills)
+  const nonProcedures = entries.filter((e) => e.type !== "procedure")
+
+  for (const type of CLAUDE_MD_SECTION_ORDER) {
+    const group = nonProcedures.filter((e) => e.type === type)
+    if (group.length === 0) continue
+
+    sections.push(SECTION_HEADINGS[type])
+    sections.push("")
+    for (const entry of group) {
+      sections.push(`- ${entry.content}`)
+      addDecision(entry, {
+        stage: "claude-md-gen",
+        action: "record",
+        reason: "written to CLAUDE.md",
+        pipelineRunId: runId,
+      })
+    }
+    sections.push("")
+  }
+
+  const md = sections.join("\n")
+
+  await mkdir(outputDir, { recursive: true })
+  await writeFile(path.join(outputDir, "CLAUDE.md"), md)
+
+  return md
+}
+
+/**
+ * Generate skill files from already-routed entries.
+ * Entries should come from `routeEntries().skills.entries`.
+ */
+export async function generateSkillFilesFromRouter(
+  entries: KnowledgeEntry[],
+  outputDir: string,
+): Promise<SkillFileResult[]> {
+  if (entries.length === 0) return []
+
+  const cfg = getArtifactConfig()
+  const maxLines = cfg.skills.max_lines_per_skill
+  const runId = createPipelineRunId("skill-gen")
+
+  const skillsDir = path.join(outputDir, "skills")
+  await mkdir(skillsDir, { recursive: true })
+
+  const results: SkillFileResult[] = []
+
+  for (const entry of entries) {
+    const title = extractTitle(entry.content)
+    const slug = slugify(title)
+    const filename = `${slug}.md`
+
+    // Truncate content to max_lines_per_skill
+    const contentLines = entry.content.split("\n")
+    const truncated =
+      contentLines.length > maxLines
+        ? contentLines.slice(0, maxLines).join("\n")
+        : entry.content
+
+    const content = [
+      `# ${title}`,
+      "",
+      `> Auto-generated skill (confidence: ${entry.confidence.toFixed(2)})`,
+      "",
+      truncated,
+      "",
+    ].join("\n")
+
+    await writeFile(path.join(skillsDir, filename), content)
+    results.push({ filename, title })
+
+    addDecision(entry, {
+      stage: "skill-gen",
+      action: "record",
+      reason: "written to skill file",
+      pipelineRunId: runId,
+    })
+  }
+
+  return results
+}
+
+/**
+ * Generate hook patterns from already-routed entries.
+ * Entries should come from `routeEntries().hooks.entries`.
+ */
+export async function generateHookPatterns(
+  entries: KnowledgeEntry[],
+  outputDir: string,
+): Promise<HookPatternResult> {
+  if (entries.length === 0) {
+    return { written: false, count: 0 }
+  }
+
+  const cfg = getArtifactConfig()
+
+  // Guard: if auto_convert is off, only allow human-curated entries
+  if (!cfg.hooks.auto_convert) {
+    const hasNonHuman = entries.some((e) => e.curatedBy !== "human")
+    if (hasNonHuman) {
+      return { written: false, count: 0 }
+    }
+  }
+
+  const runId = createPipelineRunId("hook-gen")
+
+  const patterns: HookPattern[] = entries.map((entry) => {
+    addDecision(entry, {
+      stage: "hook-gen",
+      action: "record",
+      reason: "written to hook patterns",
+      pipelineRunId: runId,
+    })
+    return {
+      id: entry.id,
+      content: entry.content,
+      type: entry.type,
+      confidence: entry.confidence,
+    }
+  })
+
+  await mkdir(outputDir, { recursive: true })
+  await writeFile(
+    path.join(outputDir, cfg.hooks.learned_patterns_file),
+    JSON.stringify(patterns, null, 2),
+  )
+
+  return { written: true, count: patterns.length, patterns }
+}
+
+/**
+ * Orchestrator: read store → route → generate all artifacts.
+ */
+export async function generateAllArtifacts(
+  storePath: string,
+  outputDir: string,
+): Promise<GenerateAllResult> {
+  const allEntries = await readEntries(storePath)
+  const routed = routeEntries(allEntries)
+
+  const claudeMd = await generateClaudeMdFromRouter(
+    routed.claudeMd.entries,
+    outputDir,
+  )
+  const claudeMdLines = claudeMd.split("\n").length
+
+  const skillFiles = await generateSkillFilesFromRouter(
+    routed.skills.entries,
+    outputDir,
+  )
+
+  const hookResult = await generateHookPatterns(routed.hooks.entries, outputDir)
+
+  return {
+    claudeMd: {
+      written: true,
+      lines: claudeMdLines,
+      entryCount: routed.claudeMd.entries.length,
+    },
+    skills: {
+      files: skillFiles,
+      count: skillFiles.length,
+    },
+    hooks: {
+      written: hookResult.written,
+      count: hookResult.count,
+    },
+    skipped: {
+      count: routed.skipped.entries.length,
+    },
+  }
+}
+
+// ============ Deprecated legacy API ============
+
+const MIN_CONFIDENCE = 0.8
 
 interface GenerateOptions {
   storePath: string
@@ -12,11 +250,13 @@ interface GenerateOptions {
 }
 
 /**
- * Generate a CLAUDE.md file from the knowledge store.
- * This is the slow loop's primary output — learned knowledge becomes
- * a file consumed natively by Claude Code in future sessions.
+ * @deprecated Use `generateClaudeMdFromRouter` instead.
+ * This function reads from store and does its own filtering,
+ * bypassing the channel router.
  */
-export async function generateClaudeMd(options: GenerateOptions): Promise<string> {
+export async function generateClaudeMd(
+  options: GenerateOptions,
+): Promise<string> {
   const { storePath, outputDir, minConfidence = MIN_CONFIDENCE } = options
 
   const allEntries = await readEntries(storePath)
@@ -32,7 +272,9 @@ export async function generateClaudeMd(options: GenerateOptions): Promise<string
   const sections: string[] = []
   sections.push("# Project Knowledge (Auto-Generated by Galatea)")
   sections.push("")
-  sections.push("> This file is generated from learned knowledge. Do not edit manually.")
+  sections.push(
+    "> This file is generated from learned knowledge. Do not edit manually.",
+  )
   sections.push("")
 
   if (rules.length > 0) {
@@ -81,19 +323,24 @@ export async function generateClaudeMd(options: GenerateOptions): Promise<string
   return md
 }
 
-interface SkillFileResult {
-  filename: string
-  title: string
-}
-
 const SKILL_MIN_CONFIDENCE = 0.85
 
-export async function generateSkillFiles(options: GenerateOptions): Promise<SkillFileResult[]> {
+/**
+ * @deprecated Use `generateSkillFilesFromRouter` instead.
+ * This function reads from store and does its own filtering,
+ * bypassing the channel router.
+ */
+export async function generateSkillFiles(
+  options: GenerateOptions,
+): Promise<SkillFileResult[]> {
   const { storePath, outputDir, minConfidence = SKILL_MIN_CONFIDENCE } = options
 
   const allEntries = await readEntries(storePath)
   const procedures = allEntries.filter(
-    (e) => !e.supersededBy && e.type === "procedure" && e.confidence >= minConfidence,
+    (e) =>
+      !e.supersededBy &&
+      e.type === "procedure" &&
+      e.confidence >= minConfidence,
   )
 
   if (procedures.length === 0) return []
@@ -134,21 +381,36 @@ interface SubagentOptions extends GenerateOptions {
 }
 
 /**
+ * @deprecated Use hook patterns or skill files instead.
  * Generate subagent definitions from clusters of related procedures.
  * Groups procedures by common prefix (e.g., "Review PR: ..." -> code-reviewer agent).
  */
-export async function generateSubagentDefinitions(options: SubagentOptions): Promise<SubagentResult[]> {
-  const { storePath, outputDir, minProcedures = 3, minConfidence = SKILL_MIN_CONFIDENCE } = options
+export async function generateSubagentDefinitions(
+  options: SubagentOptions,
+): Promise<SubagentResult[]> {
+  const {
+    storePath,
+    outputDir,
+    minProcedures = 3,
+    minConfidence = SKILL_MIN_CONFIDENCE,
+  } = options
 
   const allEntries = await readEntries(storePath)
   const procedures = allEntries.filter(
-    (e) => !e.supersededBy && e.type === "procedure" && e.confidence >= minConfidence,
+    (e) =>
+      !e.supersededBy &&
+      e.type === "procedure" &&
+      e.confidence >= minConfidence,
   )
 
   // Group by common prefix (first 2 words)
   const groups = new Map<string, typeof procedures>()
   for (const proc of procedures) {
-    const prefix = proc.content.split(/[\s:]+/).slice(0, 2).join(" ").toLowerCase()
+    const prefix = proc.content
+      .split(/[\s:]+/)
+      .slice(0, 2)
+      .join(" ")
+      .toLowerCase()
     const existing = groups.get(prefix) ?? []
     existing.push(proc)
     groups.set(prefix, existing)
@@ -196,10 +458,12 @@ export async function generateSubagentDefinitions(options: SubagentOptions): Pro
   return results
 }
 
+// ============ Shared helpers ============
+
 function extractTitle(content: string): string {
   const firstSentence = content.split(/[.!?:]/)[0]?.trim()
   if (firstSentence && firstSentence.length <= 80) return firstSentence
-  return content.slice(0, 60) + "..."
+  return `${content.slice(0, 60)}...`
 }
 
 function slugify(text: string): string {
