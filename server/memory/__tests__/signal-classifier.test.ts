@@ -165,6 +165,37 @@ describe("Signal Classifier", () => {
     })
   })
 
+  describe("IDE wrapper preprocessing", () => {
+    it("classifies <ide_opened_file> as noise", () => {
+      const turn = user(
+        "<ide_opened_file>The user opened the file /home/qp/test.ts in the IDE. This may or may not be related.</ide_opened_file>",
+      )
+      expect(classifyTurn(turn).type).toBe("noise")
+    })
+
+    it("classifies <command-message> as noise", () => {
+      const turn = user(
+        "<command-message>superpowers:brainstorming</command-message>\n<command-name>/superpowers:brainstorming</command-name>",
+      )
+      expect(classifyTurn(turn).type).toBe("noise")
+    })
+
+    it("extracts content from <feedback> wrapper", () => {
+      const turn = user(
+        "<feedback>\ni don't like how it looks now, my suggestion was wrong\nrethink header components\n</feedback>",
+      )
+      const c = classifyTurn(turn)
+      expect(c.type).toBe("correction")
+    })
+
+    it("strips <task> wrapper and classifies inner content", () => {
+      const turn = user("<task>\nfix the routing bug in PostCard.tsx\n</task>")
+      // Short task directives without signal patterns -> noise or factual
+      const c = classifyTurn(turn)
+      expect(c.type).not.toBe("imperative_rule")
+    })
+  })
+
   describe("filterSignalTurns", () => {
     it("removes noise turns", () => {
       const turns = [

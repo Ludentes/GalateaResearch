@@ -80,6 +80,30 @@ function isInternalNoise(text: string): boolean {
   return false
 }
 
+/**
+ * Strip IDE-injected XML wrappers from user content.
+ * Extracts inner text from <feedback>, <task>, etc.
+ * Drops pure system events (<ide_opened_file>, <ide_selection>).
+ */
+export function stripIdeWrappers(text: string): string {
+  const trimmed = text.trim()
+
+  // Pure system events — return empty to filter as noise
+  if (/^<ide_opened_file>.*<\/ide_opened_file>$/s.test(trimmed)) return ""
+  if (/^<ide_selection>.*<\/ide_selection>$/s.test(trimmed)) return ""
+
+  // Extract inner content from wrapper tags
+  let result = trimmed
+  result = result.replace(/<feedback>\s*/gi, "").replace(/\s*<\/feedback>/gi, "")
+  result = result.replace(/<task>\s*/gi, "").replace(/\s*<\/task>/gi, "")
+  result = result
+    .replace(/<command-message>[\s\S]*?<\/command-message>/gi, "")
+    .replace(/<command-name>[\s\S]*?<\/command-name>/gi, "")
+    .replace(/<command-args>[\s\S]*?<\/command-args>/gi, "")
+
+  return result.trim()
+}
+
 function contentSignature(content: string | ContentBlock[]): string {
   if (typeof content === "string") return content.slice(0, 100)
   return content

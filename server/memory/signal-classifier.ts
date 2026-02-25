@@ -1,4 +1,5 @@
 import { getSignalConfig } from "../engine/config"
+import { stripIdeWrappers } from "./transcript-reader"
 import type { SignalClassification, SignalType, TranscriptTurn } from "./types"
 
 /**
@@ -38,9 +39,9 @@ export function classifyTurn(turn: TranscriptTurn): SignalClassification {
     return { type: "noise", confidence: 1.0 }
   }
 
-  const text = turn.content.trim()
+  const text = stripIdeWrappers(turn.content)
   if (!text) {
-    return { type: "noise", confidence: 1.0 }
+    return { type: "noise", pattern: "ide-empty", confidence: 1.0 }
   }
 
   // Check noise — only for short messages (greetings in long messages lose to signal)
