@@ -212,4 +212,6 @@ export interface AssembledContext {
     budgetUsedPercent?: number
   }
   exposedEntryIds?: string[]
+  /** Maps entry ID to context-assembly decision (included vs truncated) */
+  exposedEntryDecisions?: Record<string, DecisionStep>
 }

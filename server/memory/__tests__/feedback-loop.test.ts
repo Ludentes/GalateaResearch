@@ -126,4 +126,29 @@ describe("recordOutcome", () => {
     const after = await readEntries(STORE_PATH)
     expect(after[0].sessionsHarmful).toBe(1)
   })
+
+  it("records feedback decision on entries", async () => {
+    const entry = makeEntry({ sessionsExposed: 2, sessionsHelpful: 2 })
+    await appendEntries([entry], STORE_PATH)
+
+    await recordOutcome(
+      {
+        status: "completed",
+        text: "",
+        transcript: [],
+        durationMs: 1000,
+      },
+      [entry.id],
+      STORE_PATH,
+    )
+
+    const after = await readEntries(STORE_PATH)
+    expect(after[0].decisions).toBeDefined()
+    const fbDecisions = after[0].decisions!.filter(
+      (d) => d.stage === "feedback",
+    )
+    expect(fbDecisions).toHaveLength(1)
+    expect(fbDecisions[0].action).toBe("record")
+    expect(fbDecisions[0].inputs?.status).toBe("completed")
+  })
 })

@@ -170,6 +170,10 @@ export async function assembleContext(
     ...procedures.map((e) => e.id),
   ]
 
+  // TODO: Build exposedEntryDecisions map (entry ID → context-assembly decision)
+  // tracking which entries were included vs truncated. Requires correlating
+  // accounting truncation info with individual entry IDs.
+
   return {
     systemPrompt,
     sections,
