@@ -82,9 +82,9 @@ afterEach(() => {
 
 describe("generateClaudeMdFromRouter", () => {
   it("writes preamble from config", async () => {
-    const md = await generateClaudeMdFromRouter([], tmpDir)
-    expect(md).toContain("# Project Knowledge")
-    expect(md).toContain("Auto-generated. Do not edit.")
+    const { markdown } = await generateClaudeMdFromRouter([], tmpDir)
+    expect(markdown).toContain("# Project Knowledge")
+    expect(markdown).toContain("Auto-generated. Do not edit.")
   })
 
   it("groups entries by type into sections", async () => {
@@ -95,17 +95,17 @@ describe("generateClaudeMdFromRouter", () => {
       makeEntry({ type: "decision", content: "Chose Drizzle over Prisma" }),
       makeEntry({ type: "fact", content: "Server runs on port 13000" }),
     ]
-    const md = await generateClaudeMdFromRouter(entries, tmpDir)
-    expect(md).toContain("## Rules")
-    expect(md).toContain("Always lint before commit")
-    expect(md).toContain("## Preferences")
-    expect(md).toContain("Use pnpm not npm")
-    expect(md).toContain("## Corrections")
-    expect(md).toContain("Fix: use h3 v2 errors")
-    expect(md).toContain("## Decisions")
-    expect(md).toContain("Chose Drizzle over Prisma")
-    expect(md).toContain("## Facts")
-    expect(md).toContain("Server runs on port 13000")
+    const { markdown } = await generateClaudeMdFromRouter(entries, tmpDir)
+    expect(markdown).toContain("## Rules")
+    expect(markdown).toContain("Always lint before commit")
+    expect(markdown).toContain("## Preferences")
+    expect(markdown).toContain("Use pnpm not npm")
+    expect(markdown).toContain("## Corrections")
+    expect(markdown).toContain("Fix: use h3 v2 errors")
+    expect(markdown).toContain("## Decisions")
+    expect(markdown).toContain("Chose Drizzle over Prisma")
+    expect(markdown).toContain("## Facts")
+    expect(markdown).toContain("Server runs on port 13000")
   })
 
   it("writes CLAUDE.md file to outputDir", async () => {
@@ -120,11 +120,11 @@ describe("generateClaudeMdFromRouter", () => {
   })
 
   it("handles empty entries (writes preamble only)", async () => {
-    const md = await generateClaudeMdFromRouter([], tmpDir)
-    expect(md).toContain("# Project Knowledge")
-    expect(md).not.toContain("## Rules")
-    expect(md).not.toContain("## Preferences")
-    expect(md).not.toContain("## Facts")
+    const { markdown } = await generateClaudeMdFromRouter([], tmpDir)
+    expect(markdown).toContain("# Project Knowledge")
+    expect(markdown).not.toContain("## Rules")
+    expect(markdown).not.toContain("## Preferences")
+    expect(markdown).not.toContain("## Facts")
   })
 
   it("skips procedures (those go to skills)", async () => {
@@ -135,9 +135,27 @@ describe("generateClaudeMdFromRouter", () => {
       }),
       makeEntry({ type: "fact", content: "Port is 3000" }),
     ]
-    const md = await generateClaudeMdFromRouter(entries, tmpDir)
-    expect(md).not.toContain("Deploy by running")
-    expect(md).toContain("Port is 3000")
+    const { markdown } = await generateClaudeMdFromRouter(entries, tmpDir)
+    expect(markdown).not.toContain("Deploy by running")
+    expect(markdown).toContain("Port is 3000")
+  })
+
+  it("returns traced entries with claude-md-gen decisions", async () => {
+    const entries = [
+      makeEntry({ type: "rule", content: "Always lint" }),
+      makeEntry({ type: "preference", content: "Use pnpm" }),
+    ]
+    const { tracedEntries } = await generateClaudeMdFromRouter(entries, tmpDir)
+    expect(tracedEntries).toHaveLength(2)
+    for (const e of tracedEntries) {
+      expect(e.decisions).toBeDefined()
+      const genDecisions = e.decisions!.filter(
+        (d) => d.stage === "claude-md-gen",
+      )
+      expect(genDecisions).toHaveLength(1)
+      expect(genDecisions[0].action).toBe("record")
+      expect(genDecisions[0].reason).toBe("written to CLAUDE.md")
+    }
   })
 })
 
@@ -183,10 +201,10 @@ describe("generateSkillFilesFromRouter", () => {
     expect(results).toHaveLength(1)
     const filePath = path.join(tmpDir, "skills", results[0].filename)
     const content = readFileSync(filePath, "utf-8")
-    const _lines = content.split("\n")
-    // Header (# title, blank, > confidence line, blank) + max_lines_per_skill content lines + trailing newline
-    // The content itself should be truncated to 5 lines
+    // Content should be truncated to max_lines_per_skill (5) lines
     expect(content).toContain("Step 1")
+    expect(content).toContain("Step 5")
+    expect(content).not.toContain("Step 6")
     expect(content).not.toContain("Step 20")
   })
 

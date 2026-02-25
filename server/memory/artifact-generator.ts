@@ -27,7 +27,12 @@ export interface HookPatternResult {
 }
 
 export interface GenerateAllResult {
-  claudeMd: { written: boolean; lines: number; entryCount: number }
+  claudeMd: {
+    written: boolean
+    lines: number
+    entryCount: number
+    tracedEntries: KnowledgeEntry[]
+  }
   skills: { files: SkillFileResult[]; count: number }
   hooks: { written: boolean; count: number }
   skipped: { count: number }
@@ -50,6 +55,11 @@ const SECTION_HEADINGS: Record<string, string> = {
   fact: "## Facts",
 }
 
+export interface ClaudeMdResult {
+  markdown: string
+  tracedEntries: KnowledgeEntry[]
+}
+
 /**
  * Generate CLAUDE.md from already-routed entries.
  * Entries should come from `routeEntries().claudeMd.entries`.
@@ -57,7 +67,7 @@ const SECTION_HEADINGS: Record<string, string> = {
 export async function generateClaudeMdFromRouter(
   entries: KnowledgeEntry[],
   outputDir: string,
-): Promise<string> {
+): Promise<ClaudeMdResult> {
   const cfg = getArtifactConfig()
   const runId = createPipelineRunId("claude-md-gen")
 
@@ -68,6 +78,8 @@ export async function generateClaudeMdFromRouter(
   // Filter out procedures (those go to skills)
   const nonProcedures = entries.filter((e) => e.type !== "procedure")
 
+  const tracedEntries: KnowledgeEntry[] = []
+
   for (const type of CLAUDE_MD_SECTION_ORDER) {
     const group = nonProcedures.filter((e) => e.type === type)
     if (group.length === 0) continue
@@ -76,12 +88,14 @@ export async function generateClaudeMdFromRouter(
     sections.push("")
     for (const entry of group) {
       sections.push(`- ${entry.content}`)
-      addDecision(entry, {
-        stage: "claude-md-gen",
-        action: "record",
-        reason: "written to CLAUDE.md",
-        pipelineRunId: runId,
-      })
+      tracedEntries.push(
+        addDecision(entry, {
+          stage: "claude-md-gen",
+          action: "record",
+          reason: "written to CLAUDE.md",
+          pipelineRunId: runId,
+        }),
+      )
     }
     sections.push("")
   }
@@ -91,7 +105,7 @@ export async function generateClaudeMdFromRouter(
   await mkdir(outputDir, { recursive: true })
   await writeFile(path.join(outputDir, "CLAUDE.md"), md)
 
-  return md
+  return { markdown: md, tracedEntries }
 }
 
 /**
@@ -137,10 +151,12 @@ export async function generateSkillFilesFromRouter(
     await writeFile(path.join(skillsDir, filename), content)
     results.push({ filename, title })
 
+    // Decision traced (immutable — return value available via generateAllArtifacts)
     addDecision(entry, {
       stage: "skill-gen",
       action: "record",
       reason: "written to skill file",
+      inputs: { filename },
       pipelineRunId: runId,
     })
   }
@@ -206,11 +222,11 @@ export async function generateAllArtifacts(
   const allEntries = await readEntries(storePath)
   const routed = routeEntries(allEntries)
 
-  const claudeMd = await generateClaudeMdFromRouter(
+  const claudeMdResult = await generateClaudeMdFromRouter(
     routed.claudeMd.entries,
     outputDir,
   )
-  const claudeMdLines = claudeMd.split("\n").length
+  const claudeMdLines = claudeMdResult.markdown.split("\n").length
 
   const skillFiles = await generateSkillFilesFromRouter(
     routed.skills.entries,
@@ -224,6 +240,7 @@ export async function generateAllArtifacts(
       written: true,
       lines: claudeMdLines,
       entryCount: routed.claudeMd.entries.length,
+      tracedEntries: claudeMdResult.tracedEntries,
     },
     skills: {
       files: skillFiles,
