@@ -14,7 +14,7 @@ export function applyNoveltyGateAndApproval(
         stage: "novelty-gate",
         action: "pass",
         reason: `Passed novelty gate: ${e.novelty}`,
-        inputs: { novelty: e.novelty },
+        inputs: { novelty: e.novelty ?? "unknown" },
         pipelineRunId: runId,
       }),
     )
@@ -64,7 +64,7 @@ export function applyNoveltyGateAndApproval(
       stage: "extraction",
       action: "pass",
       reason: "Pending manual review",
-      inputs: { origin: e.origin, confidence: e.confidence },
+      inputs: { origin: e.origin ?? "unknown", confidence: e.confidence },
       pipelineRunId: runId,
     })
   })
