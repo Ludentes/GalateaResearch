@@ -275,6 +275,143 @@ describe("Novelty and Origin extraction", () => {
     expect(entries[0].confidence).toBe(0.70)
   })
 
+  it("records novelty-gate decisions on extracted entries", async () => {
+    mockGenerateObject.mockResolvedValueOnce({
+      object: {
+        items: [
+          {
+            type: "preference",
+            content: "Uses pnpm",
+            confidence: 0.95,
+            evidence: "User said: I always use pnpm",
+            entities: ["pnpm"],
+            novelty: "project-specific",
+            origin: "explicit-statement",
+          },
+        ],
+      },
+    })
+    const result = await extractKnowledge(
+      turns,
+      {} as unknown as LanguageModel,
+      "session:test",
+      { skipGuard: true },
+    )
+    for (const entry of result) {
+      expect(entry.decisions).toBeDefined()
+      expect(entry.decisions!.length).toBeGreaterThan(0)
+      const noveltyDecisions = entry.decisions!.filter(
+        (d) => d.stage === "novelty-gate",
+      )
+      expect(noveltyDecisions.length).toBeGreaterThan(0)
+    }
+  })
+
+  it("records cap decision on inferred entries with high confidence", async () => {
+    mockGenerateObject.mockResolvedValueOnce({
+      object: {
+        items: [
+          {
+            type: "fact",
+            content: "Team probably uses agile",
+            confidence: 0.90,
+            evidence: "Seems like agile from context",
+            entities: [],
+            novelty: "domain-specific",
+            origin: "inferred",
+          },
+        ],
+      },
+    })
+    const result = await extractKnowledge(
+      turns,
+      {} as unknown as LanguageModel,
+      "session:test",
+      { skipGuard: true },
+    )
+    const capDecisions = result[0].decisions!.filter(
+      (d) => d.action === "cap",
+    )
+    expect(capDecisions).toHaveLength(1)
+    expect(capDecisions[0].stage).toBe("novelty-gate")
+    expect(capDecisions[0].inputs).toEqual(
+      expect.objectContaining({
+        originalConfidence: 0.90,
+        cappedTo: 0.70,
+        origin: "inferred",
+      }),
+    )
+  })
+
+  it("records auto-approve decision on high-confidence explicit entries", async () => {
+    mockGenerateObject.mockResolvedValueOnce({
+      object: {
+        items: [
+          {
+            type: "preference",
+            content: "Always use pnpm",
+            confidence: 1.0,
+            evidence: "User said: I always use pnpm",
+            entities: ["pnpm"],
+            novelty: "project-specific",
+            origin: "explicit-statement",
+          },
+        ],
+      },
+    })
+    const result = await extractKnowledge(
+      turns,
+      {} as unknown as LanguageModel,
+      "session:test",
+      { skipGuard: true },
+    )
+    const approveDecisions = result[0].decisions!.filter(
+      (d) => d.action === "auto-approve",
+    )
+    expect(approveDecisions).toHaveLength(1)
+    expect(approveDecisions[0].stage).toBe("extraction")
+    expect(approveDecisions[0].inputs).toEqual(
+      expect.objectContaining({
+        confidence: 1.0,
+        threshold: 0.90,
+      }),
+    )
+  })
+
+  it("records pass decision on pending entries", async () => {
+    mockGenerateObject.mockResolvedValueOnce({
+      object: {
+        items: [
+          {
+            type: "fact",
+            content: "Project uses TypeScript",
+            confidence: 0.85,
+            evidence: "User requested TS setup",
+            entities: ["TypeScript"],
+            novelty: "project-specific",
+            origin: "observed-pattern",
+          },
+        ],
+      },
+    })
+    const result = await extractKnowledge(
+      turns,
+      {} as unknown as LanguageModel,
+      "session:test",
+      { skipGuard: true },
+    )
+    const passDecisions = result[0].decisions!.filter(
+      (d) => d.stage === "extraction" && d.action === "pass",
+    )
+    expect(passDecisions).toHaveLength(1)
+    expect(passDecisions[0].inputs).toEqual(
+      expect.objectContaining({
+        origin: "observed-pattern",
+        confidence: 0.85,
+      }),
+    )
+  })
+
   it("auto-approves explicit statements with confidence >= 0.90 (S1)", async () => {
     mockGenerateObject.mockResolvedValueOnce({
       object: {
