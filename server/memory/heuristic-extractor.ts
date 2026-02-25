@@ -77,6 +77,39 @@ const ENTITY_STOP_WORDS = new Set([
   "If",
 ])
 
+/**
+ * Check if a decision lacks standalone context (references prior turn).
+ * Returns true if the decision content is just a number, letter,
+ * pronoun, or anaphoric reference — meaning it can't be understood
+ * without seeing the preceding assistant message.
+ */
+function isContextFreeDecision(content: string): boolean {
+  const afterTrigger = content
+    .replace(/let'?s\s+(go with|use|choose|pick)\s*/i, "")
+    .replace(/i'?ve decided\s*/i, "")
+    .replace(/we'?ll use\s*/i, "")
+    .replace(/the decision is\s*/i, "")
+    .trim()
+    .replace(/\s*i\s+(think|guess|suppose)\s*$/i, "")
+    .trim()
+
+  // Too short — likely a reference to options in previous turn
+  if (afterTrigger.length < 4) return true
+
+  // Pure number/letter option selection
+  if (/^[a-z0-9][.)]?$/i.test(afterTrigger)) return true
+
+  // Anaphoric references
+  if (
+    /^(it|this|that|your suggestion|the same|option\s*\d|the\s+(first|second|third|fourth|fifth)\s*(one|option)?)\b/i.test(
+      afterTrigger,
+    )
+  )
+    return true
+
+  return false
+}
+
 const KEBAB_CASE_RE = /\b[a-z]+-[a-z]+(?:-[a-z]+)*\b/g
 const CAPITALIZED_WORD_RE = /\b[A-Z][a-zA-Z0-9]+\b/g
 
@@ -92,6 +125,11 @@ export function extractHeuristic(
 
   const runId = createPipelineRunId("heuristic")
   const text = turn.content.trim()
+
+  // Gate: reject decisions that lack standalone context
+  if (classification.type === "decision" && isContextFreeDecision(text)) {
+    return { entries: [], handled: true }
+  }
 
   let content: string
   let knowledgeType = mapping.type

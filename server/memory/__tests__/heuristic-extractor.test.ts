@@ -144,6 +144,52 @@ describe("extractHeuristic", () => {
     expect(result.entries[0].novelty).toBe("general-knowledge")
   })
 
+  describe("context-free decision gate", () => {
+    it("rejects 'Let's go with 1' as context-free", () => {
+      const turn = user("Let's go with 1")
+      const classification = classifyTurn(turn)
+      const result = extractHeuristic(turn, classification, "session:test")
+      expect(result.handled).toBe(true)
+      expect(result.entries).toHaveLength(0)
+    })
+
+    it("rejects 'Let's go with A' as context-free", () => {
+      const turn = user("Let's go with A")
+      const classification = classifyTurn(turn)
+      const result = extractHeuristic(turn, classification, "session:test")
+      expect(result.entries).toHaveLength(0)
+    })
+
+    it("rejects 'Let's go with your suggestion' as anaphoric", () => {
+      const turn = user("Let's go with your suggestion")
+      const classification = classifyTurn(turn)
+      const result = extractHeuristic(turn, classification, "session:test")
+      expect(result.entries).toHaveLength(0)
+    })
+
+    it("rejects 'Let's use it I think' as pronoun reference", () => {
+      const turn = user("Let's use it I think")
+      const classification = classifyTurn(turn)
+      const result = extractHeuristic(turn, classification, "session:test")
+      expect(result.entries).toHaveLength(0)
+    })
+
+    it("KEEPS 'Let's go with MQTT' (has named entity)", () => {
+      const turn = user("Let's go with MQTT")
+      const classification = classifyTurn(turn)
+      const result = extractHeuristic(turn, classification, "session:test")
+      expect(result.entries).toHaveLength(1)
+      expect(result.entries[0].content).toContain("MQTT")
+    })
+
+    it("KEEPS 'Let's use nonstandard port 40000+' (has specifics)", () => {
+      const turn = user("Let's use nonstandard port 40000+")
+      const classification = classifyTurn(turn)
+      const result = extractHeuristic(turn, classification, "session:test")
+      expect(result.entries).toHaveLength(1)
+    })
+  })
+
   describe("about inference", () => {
     it("maps 'I prefer' to user model", () => {
       const turn = user("I prefer using pnpm for all projects")
