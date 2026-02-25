@@ -117,4 +117,58 @@ describe("routeEntries", () => {
     const result = routeEntries([entry])
     expect(result.claudeMd.entries).toHaveLength(0)
   })
+
+  it("records router decisions on routed entries", () => {
+    const entry = makeEntry({
+      type: "preference",
+      content: "Uses pnpm not npm",
+      confidence: 0.95,
+      curationStatus: "approved",
+    })
+    const result = routeEntries([entry])
+    expect(result.claudeMd.entries).toHaveLength(1)
+    const routed = result.claudeMd.entries[0]
+    const decisions = routed.decisions ?? []
+    const routerDecisions = decisions.filter((d) => d.stage === "router")
+    expect(routerDecisions.length).toBeGreaterThanOrEqual(1)
+    const routeDecision = routerDecisions.find(
+      (d) => d.action === "route",
+    )
+    expect(routeDecision).toBeDefined()
+    expect(routeDecision!.inputs?.channel).toBe("claude-md")
+  })
+
+  it("records skip decisions with budget info (S12)", () => {
+    // 50 entries x 5 lines each = 300 lines > 200 line budget
+    const entries = Array.from({ length: 50 }, (_, i) =>
+      makeEntry({
+        type: "fact",
+        content: `Line 1\nLine 2\nLine 3\nLine 4\nLine 5`,
+        confidence: 0.95,
+        curationStatus: "approved",
+        impactScore: 0.5,
+      }),
+    )
+    const result = routeEntries(entries)
+    // Some should be skipped due to line budget
+    expect(result.skipped.entries.length).toBeGreaterThan(0)
+    const budgetSkipped = result.skipped.entries.filter((e) => {
+      const decisions = e.decisions ?? []
+      return decisions.some(
+        (d) =>
+          d.stage === "router" &&
+          d.action === "skip" &&
+          d.reason.includes("line budget"),
+      )
+    })
+    expect(budgetSkipped.length).toBeGreaterThan(0)
+    const firstSkipped = budgetSkipped[0]
+    const skipDecision = firstSkipped.decisions!.find(
+      (d) => d.stage === "router" && d.action === "skip",
+    )
+    expect(skipDecision).toBeDefined()
+    expect(skipDecision!.inputs).toHaveProperty("lineCount")
+    expect(skipDecision!.inputs).toHaveProperty("budget")
+    expect(skipDecision!.inputs).toHaveProperty("entryLines")
+  })
 })

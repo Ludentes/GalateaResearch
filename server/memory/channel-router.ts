@@ -1,4 +1,5 @@
 import { getArtifactConfig } from "../engine/config"
+import { addDecision, createPipelineRunId } from "./decision-trace"
 import type { KnowledgeEntry } from "./types"
 
 export interface RouterResult {
@@ -13,6 +14,7 @@ const TOOL_CONSTRAINT_PATTERN =
 
 export function routeEntries(allEntries: KnowledgeEntry[]): RouterResult {
   const cfg = getArtifactConfig()
+  const runId = createPipelineRunId("router")
 
   const claudeMd: KnowledgeEntry[] = []
   const skills: KnowledgeEntry[] = []
@@ -23,7 +25,20 @@ export function routeEntries(allEntries: KnowledgeEntry[]): RouterResult {
   // 1. Filter active only
   const active = allEntries.filter((e) => {
     if (e.supersededBy || e.archivedAt) {
-      skipped.push(e)
+      skipped.push(
+        addDecision(e, {
+          stage: "router",
+          action: "skip",
+          reason: "superseded or archived",
+          inputs: {
+            ...(e.supersededBy
+              ? { supersededBy: e.supersededBy }
+              : {}),
+            ...(e.archivedAt ? { archivedAt: e.archivedAt } : {}),
+          },
+          pipelineRunId: runId,
+        }),
+      )
       skipReasons.push("superseded or archived")
       return false
     }
@@ -36,7 +51,15 @@ export function routeEntries(allEntries: KnowledgeEntry[]): RouterResult {
       (entry.type === "rule" || entry.type === "correction") &&
       TOOL_CONSTRAINT_PATTERN.test(entry.content)
     ) {
-      hooks.push({ ...entry, targetChannel: "hook" })
+      hooks.push(
+        addDecision({ ...entry, targetChannel: "hook" }, {
+          stage: "router",
+          action: "route",
+          reason: "tool-constraint pattern \u2192 hooks",
+          inputs: { channel: "hook", patternMatched: true },
+          pipelineRunId: runId,
+        }),
+      )
       continue
     }
 
@@ -47,9 +70,28 @@ export function routeEntries(allEntries: KnowledgeEntry[]): RouterResult {
         entry.confidence >= cfg.skills.min_confidence &&
         entry.novelty !== "general-knowledge"
       ) {
-        skills.push({ ...entry, targetChannel: "skill" })
+        skills.push(
+          addDecision({ ...entry, targetChannel: "skill" }, {
+            stage: "router",
+            action: "route",
+            reason: "approved procedure \u2192 skills",
+            inputs: { channel: "skill" },
+            pipelineRunId: runId,
+          }),
+        )
       } else {
-        skipped.push(entry)
+        skipped.push(
+          addDecision(entry, {
+            stage: "router",
+            action: "skip",
+            reason: "procedure below threshold or uncurated",
+            inputs: {
+              confidence: entry.confidence,
+              curationStatus: entry.curationStatus ?? "pending",
+            },
+            pipelineRunId: runId,
+          }),
+        )
         skipReasons.push("procedure below threshold or uncurated")
       }
       continue
@@ -62,27 +104,60 @@ export function routeEntries(allEntries: KnowledgeEntry[]): RouterResult {
       entry.novelty !== "general-knowledge" &&
       !entry.enforcedBy
     ) {
-      claudeMd.push({ ...entry, targetChannel: "claude-md" })
+      claudeMd.push(
+        addDecision({ ...entry, targetChannel: "claude-md" }, {
+          stage: "router",
+          action: "route",
+          reason: "approved entry \u2192 CLAUDE.md",
+          inputs: { channel: "claude-md" },
+          pipelineRunId: runId,
+        }),
+      )
       continue
     }
 
     // 5. Skip everything else
-    skipped.push(entry)
+    skipped.push(
+      addDecision(entry, {
+        stage: "router",
+        action: "skip",
+        reason: "below threshold, uncurated, or enforced by hook",
+        inputs: {
+          confidence: entry.confidence,
+          curationStatus: entry.curationStatus ?? "pending",
+          enforcedBy: entry.enforcedBy ?? "",
+        },
+        pipelineRunId: runId,
+      }),
+    )
     skipReasons.push("below threshold, uncurated, or enforced by hook")
   }
 
   // Rank and cap skills at max_count
   const rankedSkills = skills
-    .map((e) => ({ entry: e, score: skillScore(e, cfg.prior_overlap.common_patterns) }))
+    .map((e) => ({
+      entry: e,
+      score: skillScore(e, cfg.prior_overlap.common_patterns),
+    }))
     .sort((a, b) => b.score - a.score)
     .slice(0, cfg.skills.max_count)
     .map((s) => s.entry)
 
   // Skills that didn't make the cut go to skipped
   const skillIds = new Set(rankedSkills.map((e) => e.id))
+  const maxCount = cfg.skills.max_count
   for (const s of skills) {
     if (!skillIds.has(s.id)) {
-      skipped.push(s)
+      const rank = skills.indexOf(s)
+      skipped.push(
+        addDecision(s, {
+          stage: "router",
+          action: "skip",
+          reason: "exceeded skill budget",
+          inputs: { rank, maxCount },
+          pipelineRunId: runId,
+        }),
+      )
       skipReasons.push("exceeded skill budget")
     }
   }
@@ -95,14 +170,34 @@ export function routeEntries(allEntries: KnowledgeEntry[]): RouterResult {
   })
 
   let lineCount = 0
+  const budget = cfg.claude_md.max_lines
   const budgetedClaudeMd: KnowledgeEntry[] = []
   for (const entry of rankedClaudeMd) {
-    const entryLines = entry.content.split("\n").length + 1 // +1 for "- " prefix
-    if (lineCount + entryLines <= cfg.claude_md.max_lines) {
-      budgetedClaudeMd.push(entry)
+    const entryLines = entry.content.split("\n").length + 1
+    if (lineCount + entryLines <= budget) {
+      budgetedClaudeMd.push(
+        addDecision(entry, {
+          stage: "router",
+          action: "route",
+          reason: "within CLAUDE.md line budget",
+          inputs: {
+            channel: "claude-md",
+            lineCount: lineCount + entryLines,
+          },
+          pipelineRunId: runId,
+        }),
+      )
       lineCount += entryLines
     } else {
-      skipped.push(entry)
+      skipped.push(
+        addDecision(entry, {
+          stage: "router",
+          action: "skip",
+          reason: "exceeded CLAUDE.md line budget",
+          inputs: { lineCount, budget, entryLines },
+          pipelineRunId: runId,
+        }),
+      )
       skipReasons.push("exceeded CLAUDE.md line budget")
     }
   }
