@@ -160,11 +160,17 @@ export type SignalType =
   | "decision"
   | "factual"
   | "noise"
+  | "imperative_rule" // "Never X", "Always X" without I/we prefix
+  | "remember" // @remember marker
+  | "forget" // @forget marker
+  | "procedure" // numbered lists, "To X: do Y"
 
 export interface SignalClassification {
   type: SignalType
   pattern?: string
   confidence: number
+  match?: string // the actual regex match text
+  matchIndex?: number // position of match in content
 }
 
 // ============ Extraction Pipeline ============
@@ -179,6 +185,9 @@ export interface ExtractionResult {
     duplicatesSkipped: number
     chunksFailed?: number
     skippedAlreadyExtracted?: boolean
+    heuristicEntries?: number
+    llmEntries?: number
+    llmSkipped?: boolean // true when LLM fallback disabled
   }
 }
 

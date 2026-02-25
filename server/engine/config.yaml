@@ -139,6 +139,17 @@ extraction:
   auto_approve_explicit_threshold: 0.90
 
 # -----------------------------------------------------------------------------
+# HYBRID EXTRACTION — heuristic-first with LLM fallback
+# See: docs/research/2026-02-24-extraction-heuristics-vs-llm.md
+# -----------------------------------------------------------------------------
+hybrid_extraction:
+  # Master switch. When false, all turns go through LLM (legacy behavior).
+  enabled: true
+  # When true, turns classified as "factual" (long messages, no pattern match)
+  # are still sent to the LLM for extraction.
+  llm_fallback_enabled: true
+
+# -----------------------------------------------------------------------------
 # CONTEXT ASSEMBLY — server/memory/context-assembler.ts
 # Builds the system prompt from preprompts + knowledge + homeostasis.
 # -----------------------------------------------------------------------------

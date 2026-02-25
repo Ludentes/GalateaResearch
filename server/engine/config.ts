@@ -164,6 +164,11 @@ export interface FeedbackConfig {
   regen_debounce_minutes: number
 }
 
+export interface HybridExtractionConfig {
+  enabled: boolean
+  llm_fallback_enabled: boolean
+}
+
 export interface PipelineConfig {
   retrieval: RetrievalConfig
   signal: SignalConfig
@@ -178,6 +183,7 @@ export interface PipelineConfig {
   artifact_generation: ArtifactGenerationConfig
   curation: CurationConfig
   feedback: FeedbackConfig
+  hybrid_extraction: HybridExtractionConfig
 }
 
 // ---- Loader ----
@@ -252,6 +258,10 @@ export function getCurationConfig(): CurationConfig {
 
 export function getFeedbackConfig(): FeedbackConfig {
   return loadConfig().feedback
+}
+
+export function getHybridExtractionConfig(): HybridExtractionConfig {
+  return loadConfig().hybrid_extraction
 }
 
 /**
