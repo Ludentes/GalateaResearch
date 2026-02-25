@@ -13,6 +13,9 @@ export interface RetrievalConfig {
   entity_name_min_length: number
   keyword_min_length: number
   keyword_overlap_threshold: number
+  use_vector: boolean
+  qdrant_url: string
+  ollama_embed_url: string
 }
 
 export interface SignalConfig {

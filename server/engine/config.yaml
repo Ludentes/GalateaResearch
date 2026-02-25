@@ -42,6 +42,16 @@ retrieval:
   # Lower: more matches but more noise.
   keyword_overlap_threshold: 1
 
+  # Whether to use Qdrant vector search in retrieval (Pass 3).
+  # When false, only keyword-based passes are used.
+  use_vector: false
+
+  # Qdrant vector database URL for embedding-based retrieval.
+  qdrant_url: "http://localhost:6333"
+
+  # Ollama URL for generating embeddings (nomic-embed-text).
+  ollama_embed_url: "http://localhost:11434"
+
 # -----------------------------------------------------------------------------
 # SIGNAL CLASSIFICATION — server/memory/signal-classifier.ts
 # Pre-filters transcript turns before LLM extraction.
