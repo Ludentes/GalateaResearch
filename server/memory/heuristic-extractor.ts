@@ -2,6 +2,7 @@ import { getArtifactConfig } from "../engine/config"
 import { addDecision, createPipelineRunId } from "./decision-trace"
 import { classifyTurn } from "./signal-classifier"
 import type {
+  KnowledgeAbout,
   KnowledgeEntry,
   KnowledgeNovelty,
   KnowledgeOrigin,
@@ -114,6 +115,7 @@ export function extractHeuristic(
 
   const entities = extractEntities(text)
   const novelty = determineNovelty(content)
+  const about = inferAbout(text, classification)
 
   let entry: KnowledgeEntry = {
     id: crypto.randomUUID(),
@@ -126,6 +128,7 @@ export function extractHeuristic(
     extractedAt: new Date().toISOString(),
     novelty,
     origin: mapping.origin,
+    about,
   }
 
   entry = addDecision(entry, {
@@ -141,6 +144,44 @@ export function extractHeuristic(
   })
 
   return { entries: [entry], handled: true }
+}
+
+/**
+ * Infer who/what the knowledge is about from the signal pattern and pronouns.
+ *
+ * "I prefer/always/never X" → user (personal preference/habit)
+ * "We always/never/should X" → team (shared convention)
+ * Bare imperative / decision / correction → project (codebase rule)
+ * @remember → infer from content pronouns, default to project
+ */
+function inferAbout(
+  text: string,
+  classification: SignalClassification,
+): KnowledgeAbout {
+  const signalType = classification.type
+
+  // "I ..." patterns → user model
+  if (signalType === "preference") {
+    return { entity: "user", type: "user" }
+  }
+
+  // "We ..." patterns → team model
+  if (signalType === "policy") {
+    return { entity: "team", type: "team" }
+  }
+
+  // @remember — check pronouns in content
+  if (signalType === "remember") {
+    if (/^i\b/i.test(text.replace(/@remember\s*/i, "").trim())) {
+      return { entity: "user", type: "user" }
+    }
+    if (/^we\b/i.test(text.replace(/@remember\s*/i, "").trim())) {
+      return { entity: "team", type: "team" }
+    }
+  }
+
+  // Everything else: imperative_rule, decision, correction, procedure → project
+  return { entity: "project", type: "project" }
 }
 
 /**

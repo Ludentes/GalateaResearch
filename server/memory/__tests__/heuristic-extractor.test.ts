@@ -143,4 +143,66 @@ describe("extractHeuristic", () => {
     const result = extractHeuristic(turn, classification, "session:test")
     expect(result.entries[0].novelty).toBe("general-knowledge")
   })
+
+  describe("about inference", () => {
+    it("maps 'I prefer' to user model", () => {
+      const turn = user("I prefer using pnpm for all projects")
+      const classification = classifyTurn(turn)
+      const result = extractHeuristic(turn, classification, "session:test")
+      expect(result.entries[0].about).toEqual({
+        entity: "user",
+        type: "user",
+      })
+    })
+
+    it("maps 'We always' to team model", () => {
+      const turn = user("We always run tests before pushing")
+      const classification = classifyTurn(turn)
+      const result = extractHeuristic(turn, classification, "session:test")
+      expect(result.entries[0].about).toEqual({
+        entity: "team",
+        type: "team",
+      })
+    })
+
+    it("maps imperative rule to project model", () => {
+      const turn = user("Never push directly to main")
+      const classification = classifyTurn(turn)
+      const result = extractHeuristic(turn, classification, "session:test")
+      expect(result.entries[0].about).toEqual({
+        entity: "project",
+        type: "project",
+      })
+    })
+
+    it("maps decision to project model", () => {
+      const turn = user("Let's go with Clerk for authentication")
+      const classification = classifyTurn(turn)
+      const result = extractHeuristic(turn, classification, "session:test")
+      expect(result.entries[0].about).toEqual({
+        entity: "project",
+        type: "project",
+      })
+    })
+
+    it("maps @remember with I-prefix to user model", () => {
+      const turn = user("@remember I always use conventional commits")
+      const classification = classifyTurn(turn)
+      const result = extractHeuristic(turn, classification, "session:test")
+      expect(result.entries[0].about).toEqual({
+        entity: "user",
+        type: "user",
+      })
+    })
+
+    it("maps @remember without pronoun to project model", () => {
+      const turn = user("@remember port 15432 for postgres")
+      const classification = classifyTurn(turn)
+      const result = extractHeuristic(turn, classification, "session:test")
+      expect(result.entries[0].about).toEqual({
+        entity: "project",
+        type: "project",
+      })
+    })
+  })
 })
