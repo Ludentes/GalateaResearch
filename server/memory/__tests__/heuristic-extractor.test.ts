@@ -212,6 +212,84 @@ describe("extractHeuristic", () => {
     })
   })
 
+  describe("context-free decision resolution via preceding turn", () => {
+    it("resolves 'Let's go with 1' using preceding assistant numbered list", () => {
+      const preceding: TranscriptTurn = {
+        role: "assistant",
+        content: "Here are the options:\n1. Use pnpm\n2. Use npm\n3. Use yarn",
+      }
+      const turn = user("Let's go with 1")
+      const classification = classifyTurn(turn)
+      const result = extractHeuristic(
+        turn,
+        classification,
+        "session:test",
+        preceding,
+      )
+      expect(result.entries).toHaveLength(1)
+      expect(result.entries[0].content).toContain("pnpm")
+      expect(result.entries[0].type).toBe("decision")
+    })
+
+    it("resolves 'Let's go with A' using lettered list", () => {
+      const preceding: TranscriptTurn = {
+        role: "assistant",
+        content: "Options:\nA) PostgreSQL\nB) MongoDB\nC) SQLite",
+      }
+      const turn = user("Let's go with A")
+      const classification = classifyTurn(turn)
+      const result = extractHeuristic(
+        turn,
+        classification,
+        "session:test",
+        preceding,
+      )
+      expect(result.entries).toHaveLength(1)
+      expect(result.entries[0].content).toContain("PostgreSQL")
+    })
+
+    it("resolves 'Let's use the second one' via ordinal", () => {
+      const preceding: TranscriptTurn = {
+        role: "assistant",
+        content:
+          "I suggest:\n1. EventEmitter2\n2. RxJS\n3. Custom events",
+      }
+      const turn = user("Let's use the second one")
+      const classification = classifyTurn(turn)
+      const result = extractHeuristic(
+        turn,
+        classification,
+        "session:test",
+        preceding,
+      )
+      expect(result.entries).toHaveLength(1)
+      expect(result.entries[0].content).toContain("RxJS")
+    })
+
+    it("still drops truly unresolvable decisions (no list in preceding)", () => {
+      const preceding: TranscriptTurn = {
+        role: "assistant",
+        content: "I think we should consider the tradeoffs carefully.",
+      }
+      const turn = user("Let's go with your suggestion")
+      const classification = classifyTurn(turn)
+      const result = extractHeuristic(
+        turn,
+        classification,
+        "session:test",
+        preceding,
+      )
+      expect(result.entries).toHaveLength(0)
+    })
+
+    it("still drops context-free decisions when no preceding turn provided", () => {
+      const turn = user("Let's go with 1")
+      const classification = classifyTurn(turn)
+      const result = extractHeuristic(turn, classification, "session:test")
+      expect(result.entries).toHaveLength(0)
+    })
+  })
+
   describe("about inference", () => {
     it("maps 'I prefer' to user model", () => {
       const turn = user("I prefer using pnpm for all projects")

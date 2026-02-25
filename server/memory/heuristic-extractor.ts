@@ -115,10 +115,72 @@ function isContextFreeDecision(content: string): boolean {
 const KEBAB_CASE_RE = /\b[a-z]+-[a-z]+(?:-[a-z]+)*\b/g
 const CAPITALIZED_WORD_RE = /\b[A-Z][a-zA-Z0-9]+\b/g
 
+/**
+ * Parse numbered/lettered list items from assistant text.
+ * Returns a map: identifier -> content (e.g., "1" -> "Use pnpm")
+ */
+function parseListOptions(text: string): Map<string, string> {
+  const options = new Map<string, string>()
+  const lines = text.split("\n")
+  for (const line of lines) {
+    const m = line.match(/^\s*([0-9]+|[a-zA-Z])[.)]\s*(.+)/)
+    if (m) {
+      options.set(m[1].toLowerCase(), m[2].trim())
+    }
+  }
+  return options
+}
+
+const ORDINALS: Record<string, string> = {
+  first: "1",
+  second: "2",
+  third: "3",
+  fourth: "4",
+  fifth: "5",
+}
+
+/**
+ * Resolve a context-free decision against the preceding assistant turn.
+ * Returns resolved content string, or null if unresolvable.
+ */
+function resolveContextFreeDecision(
+  userText: string,
+  precedingTurn?: TranscriptTurn,
+): string | null {
+  if (!precedingTurn) return null
+
+  const options = parseListOptions(precedingTurn.content)
+  if (options.size === 0) return null
+
+  // Extract the part after the decision trigger phrase
+  const afterTrigger = userText
+    .replace(/let'?s\s+(go with|use|choose|pick)\s*/i, "")
+    .replace(/i'?ve decided\s*/i, "")
+    .replace(/we'?ll use\s*/i, "")
+    .replace(/the decision is\s*/i, "")
+    .trim()
+    .replace(/\s*i\s+(think|guess|suppose)\s*$/i, "")
+    .trim()
+
+  // Direct number/letter: "1", "A", "2"
+  const directKey = afterTrigger.toLowerCase().replace(/[.)]/g, "").trim()
+  if (options.has(directKey)) return options.get(directKey)!
+
+  // Ordinal: "the first one", "second", "the third"
+  for (const [word, num] of Object.entries(ORDINALS)) {
+    if (afterTrigger.toLowerCase().includes(word) && options.has(num)) {
+      return options.get(num)!
+    }
+  }
+
+  return null
+}
+
 export function extractHeuristic(
   turn: TranscriptTurn,
   classification: SignalClassification,
   source: string,
+  precedingTurn?: TranscriptTurn,
 ): HeuristicExtractionResult {
   const mapping = SIGNAL_TO_KNOWLEDGE[classification.type]
   if (!mapping) {
@@ -128,9 +190,47 @@ export function extractHeuristic(
   const runId = createPipelineRunId("heuristic")
   const text = stripIdeWrappers(turn.content)
 
-  // Gate: reject decisions that lack standalone context
+  // Gate: reject decisions that lack standalone context,
+  // but first try to resolve against preceding assistant turn
   if (classification.type === "decision" && isContextFreeDecision(text)) {
-    return { entries: [], handled: true }
+    const resolved = resolveContextFreeDecision(text, precedingTurn)
+    if (!resolved) {
+      return { entries: [], handled: true }
+    }
+    // Use the resolved content from the preceding turn's list
+    const entities = extractEntities(resolved)
+    const novelty = determineNovelty(resolved)
+    const about = inferAbout(text, classification)
+    const resolvedRunId = createPipelineRunId("heuristic")
+
+    let entry: KnowledgeEntry = {
+      id: crypto.randomUUID(),
+      type: mapping.type,
+      content: resolved,
+      confidence: mapping.confidence,
+      entities,
+      evidence: text,
+      source,
+      extractedAt: new Date().toISOString(),
+      novelty,
+      origin: mapping.origin,
+      about,
+    }
+
+    entry = addDecision(entry, {
+      stage: "extraction",
+      action: "pass",
+      reason: "heuristic:context-free-resolved",
+      inputs: {
+        method: "heuristic",
+        pattern: classification.pattern ?? "unknown",
+        confidence: mapping.confidence,
+        resolvedFrom: "preceding-turn",
+      },
+      pipelineRunId: resolvedRunId,
+    })
+
+    return { entries: [entry], handled: true }
   }
 
   let content: string

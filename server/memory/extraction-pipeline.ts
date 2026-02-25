@@ -87,7 +87,12 @@ export async function runExtraction(
   const heuristicEntries: KnowledgeEntry[] = []
   if (hybridCfg.enabled) {
     for (const { turn, classification } of heuristicTurns) {
-      const result = extractHeuristic(turn, classification, source)
+      const idx = allTurns.indexOf(turn)
+      const preceding =
+        idx > 0 && allTurns[idx - 1].role === "assistant"
+          ? allTurns[idx - 1]
+          : undefined
+      const result = extractHeuristic(turn, classification, source, preceding)
       heuristicEntries.push(...result.entries)
     }
   }
