@@ -169,6 +169,13 @@ export interface HybridExtractionConfig {
   llm_fallback_enabled: boolean
 }
 
+export interface BatchDedupConfig {
+  enabled: boolean
+  minEntries: number
+  provider?: string
+  model?: string
+}
+
 export interface PipelineConfig {
   retrieval: RetrievalConfig
   signal: SignalConfig
@@ -184,6 +191,12 @@ export interface PipelineConfig {
   curation: CurationConfig
   feedback: FeedbackConfig
   hybrid_extraction: HybridExtractionConfig
+  batch_dedup: {
+    enabled: boolean
+    min_entries: number
+    provider: string | null
+    model: string | null
+  }
 }
 
 // ---- Loader ----
@@ -262,6 +275,16 @@ export function getFeedbackConfig(): FeedbackConfig {
 
 export function getHybridExtractionConfig(): HybridExtractionConfig {
   return loadConfig().hybrid_extraction
+}
+
+export function getBatchDedupConfig(): BatchDedupConfig {
+  const cfg = loadConfig()
+  return {
+    enabled: cfg.batch_dedup?.enabled ?? false,
+    minEntries: cfg.batch_dedup?.min_entries ?? 5,
+    provider: cfg.batch_dedup?.provider ?? undefined,
+    model: cfg.batch_dedup?.model ?? undefined,
+  }
 }
 
 /**

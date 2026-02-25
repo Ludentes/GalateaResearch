@@ -150,6 +150,21 @@ hybrid_extraction:
   llm_fallback_enabled: true
 
 # -----------------------------------------------------------------------------
+# BATCH DEDUP — server/memory/batch-dedup.ts
+# Post-extraction LLM step to merge semantically duplicate entries.
+# Runs once per developer, not per turn — bounded and cheap.
+# -----------------------------------------------------------------------------
+batch_dedup:
+  # Master switch. Off by default — enable for evaluation.
+  enabled: false
+  # Minimum entries before triggering batch dedup.
+  # Below this threshold, duplicates are unlikely worth an LLM call.
+  min_entries: 5
+  # LLM provider/model overrides (null = use default provider).
+  provider: null
+  model: null
+
+# -----------------------------------------------------------------------------
 # CONTEXT ASSEMBLY — server/memory/context-assembler.ts
 # Builds the system prompt from preprompts + knowledge + homeostasis.
 # -----------------------------------------------------------------------------
