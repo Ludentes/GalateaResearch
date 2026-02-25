@@ -259,6 +259,98 @@ Same as S7. **PASS**
 3. **No Ollama dependency** for core pipeline
 4. **Debuggable** (regex match, not LLM black box)
 
-### Recommendation
+### Recommendation: Hybrid approach
 
-**Go with heuristics for v1.** Fix the two missing patterns (imperative rules, procedure detection). Accept that observed-failure extraction requires the user to explicitly state the correction or use `@remember`. Keep the LLM path available as an optional enrichment for users who want deeper extraction, but don't make the core pipeline depend on it.
+**Heuristics as the fast path, LLM only where it uniquely adds value.**
+
+---
+
+## 4. Hybrid Architecture
+
+```
+User message → Signal classifier (heuristic, instant)
+  ├─ Pattern match? → Heuristic extraction (instant, 0ms)
+  │   └─ KnowledgeEntry with deterministic confidence
+  └─ No pattern match + high signal score? → LLM extraction (14-71s)
+      └─ Only for multi-turn synthesis and complex reformulation
+```
+
+### When to use heuristics (instant path)
+
+| Trigger | Example |
+|---------|---------|
+| Explicit preference patterns | "I prefer X", "I always X", "I never X" |
+| Policy/rule patterns | "We always X", "Never X", "Must not X" |
+| Correction patterns | "No, it should be X", "That's wrong" |
+| Decision patterns | "Let's go with X", "I've decided X" |
+| `@remember` marker | "@remember always use pnpm" |
+| `@forget` marker | "@forget the old deploy process" |
+
+These cover **~80% of extractable knowledge** (the explicit, single-turn cases).
+
+### When to use LLM (slow path)
+
+| Trigger | Example | Why heuristics can't |
+|---------|---------|---------------------|
+| Multi-turn observed failure | User: "button doesn't work" → Assistant: "z-index issue" → User: "yes, that fixed it" | Knowledge spans 3 turns |
+| Complex procedure extraction | User describes a multi-step workflow in natural prose | Need to restructure into steps |
+| Ambiguous high-signal message | Long message with no pattern match but clear signal (factual_min_length exceeded, technical entities detected) | Need reformulation to extract the core knowledge |
+
+These cover **~15% of extractable knowledge** — the cases where the LLM's synthesis ability actually matters.
+
+### What we skip entirely (~5%)
+
+- Assistant-inferred knowledge ("the team seems to use Scrum") — too unreliable
+- General knowledge ("always handle errors") — novelty gate drops it anyway
+- Short confirmations, greetings, noise
+
+### Implementation: two-tier extractor
+
+```typescript
+interface ExtractionResult {
+  entries: KnowledgeEntry[]
+  method: "heuristic" | "llm"
+  latencyMs: number
+}
+
+async function extract(turns: SignalTurn[]): Promise<ExtractionResult> {
+  const heuristicEntries = extractHeuristic(turns)  // instant
+
+  // Only call LLM for turns that:
+  // 1. Had high signal score but no heuristic pattern match
+  // 2. Are part of a multi-turn correction sequence
+  const llmCandidates = turns.filter(t =>
+    t.signalScore > SIGNAL_THRESHOLD &&
+    !heuristicEntries.some(e => e.evidence === t.text)
+  )
+
+  if (llmCandidates.length === 0) {
+    return { entries: heuristicEntries, method: "heuristic", latencyMs: 0 }
+  }
+
+  // LLM only processes the gap — not the entire chunk
+  const llmEntries = await extractWithLLM(llmCandidates)
+  return {
+    entries: [...heuristicEntries, ...llmEntries],
+    method: "llm",
+    latencyMs: /* measured */,
+  }
+}
+```
+
+### Cost model
+
+| Scenario | Heuristic-only | Hybrid | LLM-only (current) |
+|----------|---------------|--------|-------------------|
+| 10-turn session, 3 signal | 0ms | 0ms (all matched) | 14-71s |
+| 50-turn session, 8 signal | 0ms | ~15s (2 LLM candidates) | 30-140s |
+| Session with bug report + fix | 0ms (misses it) | ~15s (LLM catches multi-turn) | 14-71s |
+
+The hybrid approach means **most sessions never touch Ollama** — the LLM only fires when the heuristic extractor says "I found signal but couldn't extract it myself."
+
+### Ollama load reduction
+
+Current pipeline: every signal chunk goes to LLM → **100% Ollama usage**
+Hybrid pipeline: only unmatched high-signal turns go to LLM → **~15-20% Ollama usage**
+
+This makes Ollama viable even on modest hardware — it's not in the hot path anymore.
