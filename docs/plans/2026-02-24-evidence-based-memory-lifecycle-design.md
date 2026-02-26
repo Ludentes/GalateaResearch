@@ -226,7 +226,8 @@ interface KnowledgeEntry {
   // NEW: curation state
   curationStatus: "pending" | "approved" | "rejected"
   curatedAt?: string
-  curatedBy?: string  // "human" | "auto-approved"
+  curatedBy?: string  // developer identity (email/username) or "auto-approved"
+  contentOverride?: string  // developer-edited content (replaces original on export)
 
   // NEW: outcome tracking
   sessionsExposed: number     // default: 0
@@ -236,9 +237,14 @@ interface KnowledgeEntry {
 
   // NEW: channel routing
   enforcedBy?: "hook" | "ci" | "linter"
-  targetChannel?: "claude-md" | "skill" | "hook" | "none"
+  proposedTarget?: "claude-md" | "skill" | "hook" | "none"  // computed by router
+  targetOverride?: "claude-md" | "skill" | "hook" | "none"  // developer override, used on export
 }
 ```
+
+**New fields explained:**
+- `contentOverride`: When the developer edits an entry during audit, the original `content` is preserved in `evidence`, and the edited version is stored here. Export uses `contentOverride` if present, otherwise `content`.
+- `targetOverride`: Developer can change where an entry is exported (e.g., rule → hook). Takes precedence over router's `proposedTarget`.
 
 ### Auto-approval rule
 
@@ -489,81 +495,89 @@ This is a simple heuristic. It could be replaced with embedding-based similarity
 
 ---
 
-## Stage 8: Curation Queue (new)
+## Stage 8: Audit API + Web UI (new)
 
-**New file:** `server/memory/curation-queue.ts`
-**Storage:** `data/memory/curation-queue.json`
+**New file:** `server/memory/audit-api.ts` (HTTP handlers for audit operations)
+**Web UI:** Command Center audit page (entry listing, filtering, bulk actions, content editing)
+**Storage:** `data/memory/curation-queue.json` (legacy; now managed by audit UI)
 
-### Queue Structure
+### Audit Phase (Manual)
+
+When the developer opens the command center, they can browse, filter, and curate entries:
+
+**Entry List View:**
+- Filter by `curationStatus` (pending, approved, rejected)
+- Filter by `type` (preference, rule, decision, fact, correction, lesson)
+- Filter by `proposedTarget` (claude_md, skill, hook, none)
+- Bulk actions: approve selected, reject selected
+- Search by content
+
+**Entry Detail View:**
+- Display content, confidence, origin, novelty, evidence
+- Edit button: developer can reword the content before approving
+- Target override dropdown: change `proposedTarget` (e.g., rule → hook)
+- Approve / Reject / Defer buttons
+- Shows which entries are already used by context assembly (exposure tracking)
+
+**Replaced Chat-Based Curation:** Unlike Stage 7 proposals in the chat, audit is now in a dedicated web UI. The developer controls the timing (weekly, monthly, or never) rather than being prompted during idle homeostasis states.
+
+### Audit API Endpoints
 
 ```typescript
-interface CurationItem {
-  id: string
+// List entries with filters
+GET /api/memory/entries?status=pending&type=rule&target=hook
+
+// Get single entry detail
+GET /api/memory/entries/:entryId
+
+// Approve entry (with optional content edit)
+POST /api/memory/entries/:entryId/approve
+{ content?: string, targetOverride?: "claude_md" | "skill" | "hook" | "none", curatedBy: string }
+
+// Reject entry
+POST /api/memory/entries/:entryId/reject
+{ reason: string, curatedBy: string }
+
+// Defer entry (leave pending for later)
+POST /api/memory/entries/:entryId/defer
+
+// Bulk operations
+POST /api/memory/entries/bulk-approve
+{ entryIds: string[], curatedBy: string }
+
+POST /api/memory/entries/bulk-reject
+{ entryIds: string[], curatedBy: string }
+```
+
+### Audit Storage
+
+A simple audit log tracks who curated what and when:
+
+```typescript
+interface AuditLog {
   entryId: string
-  action: "approve-entry" | "reject-entry" | "review-impact" | "approve-hook"
-  reason: string
-  proposedAt: string
-  resolvedAt?: string
-  resolution?: "approved" | "rejected" | "deferred"
-
-  // Context for the reviewer
-  entry: KnowledgeEntry           // snapshot at proposal time
-  impactData?: {
-    exposed: number
-    helpful: number
-    harmful: number
-    score: number
+  action: "approved" | "rejected" | "deferred" | "edited"
+  curatedBy: string
+  timestamp: string
+  changes?: {
+    oldContent?: string
+    newContent?: string
+    targetOverride?: string
   }
-  hookProposal?: HookProposal    // for approve-hook items
-}
-
-interface CurationQueue {
-  items: CurationItem[]
 }
 ```
-
-### Queue Population
-
-Items are added to the queue when:
-
-| Trigger | Action | Reason |
-|---------|--------|--------|
-| New entry passes extraction + novelty filter, but `origin !== "explicit-statement"` or `confidence < 0.90` | `approve-entry` | "New knowledge extracted, needs human review" |
-| Entry reaches `sessionsExposed >= 3` | `review-impact` | "Entry has been tested in 3+ sessions, impact data available" |
-| Entry routed to hooks channel | `approve-hook` | "Rule can be enforced deterministically, approve hook conversion?" |
-| Approved entry's `impactScore` drops below 0 | `review-impact` | "This entry may be hurting performance" |
-
-### Queue Presentation
-
-When Galatea detects idle state (homeostasis `productive_engagement: LOW`), it can present pending curation items:
-
-```
-I have 3 knowledge entries that could improve future sessions.
-Would you like to review them?
-
-1. [APPROVE?] "This project uses h3 not express"
-   (extracted from session abc, confidence 0.88)
-
-2. [IMPACT REVIEW] "Always run pnpm tsc --noEmit before committing"
-   (exposed in 5 sessions, helped in 4, hurt in 0, impact: +0.80)
-
-3. [HOOK PROPOSAL] "Never overwrite engine/types.ts"
-   → Propose: block Write/Edit to engine/types.ts via PreToolUse hook
-```
-
-The user can approve, reject, or defer each item.
 
 ### Graceful Degradation
 
-**If the user never curates:** Only auto-approved entries (explicit statements with high confidence) reach artifacts. Everything else stays pending forever. The system generates minimal artifacts — only things the user explicitly said.
+**If the user never audits:** Only auto-approved entries (explicit statements with high confidence) reach artifacts. Everything else stays pending forever. The system generates minimal artifacts — only things the user explicitly said.
 
 **This is the safe default.** The research shows that uncurated self-generated guidance hurts performance. Doing nothing is better than generating bad artifacts.
 
-### Queue Limits
+### Audit Limits
 
-- Max 20 pending items. If queue is full, new items replace the oldest deferred items.
-- Items deferred 3 times are auto-rejected (the user doesn't care about this knowledge).
-- Items in queue > 30 days without resolution are auto-rejected.
+- No queue size limit. The audit page shows all pending entries with filtering.
+- Manual curation: developer controls frequency and pace.
+- Dashboard widget: "X pending entries awaiting review" (informational only)
 
 ---
 
@@ -638,10 +652,71 @@ When `impactScore` is recomputed:
 
 ### Artifact Re-generation Trigger
 
-When any entry's `targetChannel` changes (due to curation, impact, or decay), the affected channel is re-generated. This is debounced to avoid churning on every work arc:
+**CHANGED: Manual Export Only** — Artifacts are no longer auto-regenerated. Instead, the developer explicitly triggers export via the command center Export page.
 
-- Maximum 1 re-generation per channel per hour
-- Re-generation only if at least 1 entry changed its routing
+When the developer clicks "Export Artifacts":
+
+1. The export engine reads all `approved` entries
+2. Applies channel routing rules (CLAUDE.md, skills, hooks)
+3. Respects `targetOverride` if set (dev-curated target, overrides router logic)
+4. Generates preview diff (current artifacts on disk vs. new artifacts)
+5. Shows line-count summaries for budget compliance
+6. Developer reviews the diff, then confirms to write files
+
+**Rationale:** Auto-regeneration was brittle and required debouncing. Manual export gives developers full control over when artifacts are committed, preventing churn and enabling deliberate curation workflows (e.g., weekly audit, monthly export).
+
+---
+
+## Stage 10: Manual Export API (new)
+
+**New endpoint:** `POST /api/memory/export`
+**Web UI:** Command Center export page (preview diff, confirm/cancel)
+
+### Export Flow
+
+```typescript
+interface ExportRequest {
+  includeChannels: ("claude-md" | "skills" | "hooks")[]
+}
+
+interface ExportResponse {
+  artifacts: {
+    "claude-md"?: { filename: string, lines: string[], lineCount: number }
+    "skills"?: { files: { filename: string, lines: string[], lineCount: number }[] }
+    "hooks"?: { filename: string, lines: string[], lineCount: number }
+  }
+  diff?: {
+    added: number
+    removed: number
+    modified: number
+    currentFiles: Record<string, string>
+    newFiles: Record<string, string>
+  }
+  stats: {
+    entriesIncluded: number
+    entriesCut: number
+    reasons: string[]
+  }
+}
+```
+
+### Export Artifact Generation
+
+1. **Read approved entries** from knowledge store where `curationStatus === "approved"`
+2. **Apply routing:**
+   - If `targetOverride` is set, use it
+   - Otherwise, use router logic from Stage 7
+3. **Apply budgets:**
+   - CLAUDE.md: max 200 lines, rank by `impactScore × confidence × origin-weight`
+   - Skills: max 3 files, max 100 lines each, rank by `confidence × (1 - priorOverlap)`
+   - Hooks: all approved hook entries (no budget)
+4. **Generate files** — see Stage 7 for exact formatting
+5. **Compute diff** — compare against current `.claude/CLAUDE.md`, `skills/`, etc.
+6. **Return preview** to web UI
+
+### Context Assembly (unchanged)
+
+**IMPORTANT: Context assembly ignores `curationStatus` — all entries (pending, approved, rejected) are eligible for context inclusion.** This allows the system to use pending knowledge immediately while maintaining strict curation gates for exported artifacts only. See Scenario S5 in `docs/plans/2026-02-26-shadow-audit-export-scenarios.md`.
 
 ---
 
@@ -780,6 +855,40 @@ feedback:
 
 ---
 
+## Extraction Strategy Decision (A+C)
+
+**Decision:** Heuristics-only for artifact export + improved signal classifier for real-time context.
+
+**Rationale:** Extraction evaluation (2026-02-26) showed:
+- Heuristics-only: 37.8% recall, instant, zero cost
+- Heuristics + Cloud LLM: ~95% recall, 5-15 sec, ~$0.05/session
+- Heuristics + Ollama: 85.7% recall, 10-80 min, free
+
+**A+C Strategy:**
+- **Short-term (Artifact generation):** Use heuristics-only extraction for exported artifacts. High precision, low noise. Better to under-extract than to flood artifacts with LLM hallucinations.
+- **Long-term (Context assembly):** Invest in improving the signal classifier to reduce false negatives. A better classifier lifts heuristics recall from 37.8% → 50-60% before LLM involvement, making cloud-based extraction more efficient if needed later.
+
+**This trades completeness for safety:** Artifacts will be lean and precise. Context assembly will have more entries (including pending ones from heuristics) but won't export low-confidence items until human-approved.
+
+See `docs/research/2026-02-26-extraction-approach-evaluation.md` for detailed evaluation data.
+
+## Acceptance Criteria: Shadow → Audit → Export Scenarios
+
+Implementation must support all 10 scenarios in `docs/plans/2026-02-26-shadow-audit-export-scenarios.md`:
+
+- **[S1]** Basic shadow → audit → export cycle (entries flow from extraction through curation to artifacts)
+- **[S2]** Content editing during audit (developer rewords entries before approving)
+- **[S3]** Target override during audit (developer changes proposed artifact destination)
+- **[S4]** Budget enforcement on export (line counts, file limits)
+- **[S5]** Context assembly before curation (pending entries usable immediately, only export is gated)
+- **[S6]** Incremental audit over time (dev audits weekly, exports monthly)
+- **[S7]** Re-export after changes (additions, removals, rejections)
+- **[S8]** Non-blocking extraction (extraction doesn't freeze work)
+- **[S9]** Empty states and first-time experience (clean messaging)
+- **[S10]** Filtering and bulk actions (audit UI efficiency)
+
+---
+
 ## Success Criteria
 
 1. **CLAUDE.md is under 200 lines** and contains only curated, non-obvious knowledge
@@ -791,3 +900,5 @@ feedback:
 7. **Inferred knowledge** requires human curation or positive impact evidence before reaching artifacts
 8. **Enforceable rules** are proposed for hook conversion rather than CLAUDE.md inclusion
 9. **The system generates nothing** rather than generating harmful artifacts when curation is absent
+10. **Manual export only** — no auto-regeneration; developer controls when artifacts are committed
+11. **Context assembly ignores curationStatus** — all entries are eligible for context inclusion (even pending ones)
