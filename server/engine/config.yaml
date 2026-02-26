@@ -139,8 +139,9 @@ extraction:
   auto_approve_explicit_threshold: 0.90
 
 # -----------------------------------------------------------------------------
-# HYBRID EXTRACTION — heuristic-first with LLM fallback
-# See: docs/research/2026-02-24-extraction-heuristics-vs-llm.md
+# HYBRID EXTRACTION — DEPRECATED, use extraction_strategy above
+# Kept for backward compatibility. Will be removed in a future version.
+# See: docs/research/2026-02-26-extraction-approach-evaluation.md
 # -----------------------------------------------------------------------------
 hybrid_extraction:
   # Master switch. When false, all turns go through LLM (legacy behavior).

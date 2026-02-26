@@ -293,7 +293,16 @@ export function getFeedbackConfig(): FeedbackConfig {
   return loadConfig().feedback
 }
 
+let _hybridDeprecationWarned = false
+
 export function getHybridExtractionConfig(): HybridExtractionConfig {
+  if (!_hybridDeprecationWarned) {
+    console.warn(
+      "[config] DEPRECATED: hybrid_extraction config is deprecated. Use extraction_strategy instead. " +
+        "See docs/research/2026-02-26-extraction-approach-evaluation.md",
+    )
+    _hybridDeprecationWarned = true
+  }
   return loadConfig().hybrid_extraction
 }
 
