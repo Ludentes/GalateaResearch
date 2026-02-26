@@ -14,12 +14,27 @@ const SESSION_REF_RE =
   /\b(don't touch|this file|that function|full content|full file|COMPLETE file|exact content|see below)\b/i
 const MIN_CONTENT_LENGTH = 20
 
+/**
+ * Detect content that is primarily code (numbered lines from IDE views).
+ * Requires 4+ code line numbers to avoid false positives on entries that
+ * mention code context briefly.
+ */
+const CODE_LINE_NUMBER_RE = /\n\s*\d+\s*\|/g
+
+function isCodeDominatedContent(content: string): boolean {
+  const codeLineMatches = content.match(CODE_LINE_NUMBER_RE) ?? []
+  return codeLineMatches.length >= 4
+}
+
 function isLowQualityContent(content: string): boolean {
   // Too short
   if (content.trim().length < MIN_CONTENT_LENGTH) return true
 
   // Session-specific reference patterns
   if (SESSION_REF_RE.test(content)) return true
+
+  // Code-dominated content (IDE line numbers, JSX tags)
+  if (isCodeDominatedContent(content)) return true
 
   // File path dominance: count path characters vs total characters
   const pathMatches = content.match(ABSOLUTE_PATH_RE) ?? []

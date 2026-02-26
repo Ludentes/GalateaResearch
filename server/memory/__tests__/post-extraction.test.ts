@@ -92,6 +92,17 @@ describe("applyNoveltyGateAndApproval", () => {
     expect(result).toHaveLength(0)
   })
 
+  it("filters code-dominated content (IDE line numbers)", () => {
+    const entries = [
+      makeEntry({
+        content:
+          '(\n 53 |           <div className="flex min-h-[400px] items-center justify-center">\n 54 |             Loading...\n 55 |           </div>\n 56 |         );\n 57 |       }',
+      }),
+    ]
+    const result = applyNoveltyGateAndApproval(entries)
+    expect(result).toHaveLength(0)
+  })
+
   it("keeps entries with file paths if they contain substantial knowledge", () => {
     const entries = [
       makeEntry({
