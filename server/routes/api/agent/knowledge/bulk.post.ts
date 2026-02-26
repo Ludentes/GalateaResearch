@@ -3,16 +3,20 @@ import {
   readEntries,
   writeEntries,
 } from "../../../../memory/knowledge-store"
+import type { CurationStatus } from "../../../../memory/types"
 
 export default defineEventHandler(async (event) => {
-  const body = await readBody(event)
+  const body = await readBody<{
+    ids?: string[]
+    curationStatus?: CurationStatus
+  }>(event)
   const { ids, curationStatus } = body ?? {}
 
   if (!Array.isArray(ids) || ids.length === 0) {
     throw new HTTPError("ids must be a non-empty array", { status: 400 })
   }
 
-  if (!["approved", "rejected"].includes(curationStatus)) {
+  if (!curationStatus || !["approved", "rejected"].includes(curationStatus)) {
     throw new HTTPError("curationStatus must be approved or rejected", {
       status: 400,
     })

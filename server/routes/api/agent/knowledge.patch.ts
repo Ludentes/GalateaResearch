@@ -3,9 +3,15 @@ import {
   readEntries,
   writeEntries,
 } from "../../../memory/knowledge-store"
+import type { CurationStatus } from "../../../memory/types"
 
 export default defineEventHandler(async (event) => {
-  const body = await readBody(event)
+  const body = await readBody<{
+    id?: string
+    curationStatus?: CurationStatus
+    contentOverride?: string
+    targetOverride?: "claude-md" | "skill" | "hook" | "none"
+  }>(event)
   const { id, curationStatus, contentOverride, targetOverride } = body ?? {}
 
   if (!id) {
