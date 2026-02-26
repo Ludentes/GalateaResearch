@@ -180,3 +180,37 @@ UMKA and NEWUB are unique per session.
 
 v2 improvements (sentence-scoped question check, numbered list splitting, constraint
 patterns) contributed +1-2 items per dev on heuristics path.
+
+## Chain of Density (CoD) Consolidation Effectiveness
+
+Compared `compare-golden.ts` (direct extraction, no consolidation) vs
+`run-strategy-eval.ts` (full pipeline with consolidation stage).
+
+### Heuristics-only: CoD Impact
+
+| Dev | Entries (no CoD) | Entries (with CoD) | Reduction | Recall |
+|-----|-----|------|-------|--------|
+| QP | 27 | 25 | -2 (7%) | 11/18 (unchanged) |
+| UMKA | 34 | 34 | 0 | 8/13 (unchanged) |
+| NEWUB | 123 | 121 | -2 (2%) | 15/31 (unchanged) |
+
+**Result:** Consolidation provides minor entry reduction (0-7%) with zero recall loss on
+heuristics-only path. The Jaccard-based consolidation catches near-duplicates across sessions
+that dedup alone misses.
+
+### Cloud: CoD Impact (from previous QP results)
+
+| Metric | compare-golden-cloud (no pipeline CoD) | run-strategy-eval cloud |
+|--------|----------------------------------------|------------------------|
+| QP entries | 174 | *pending sandbox* |
+| QP recall | 16/18 (88.9%) | *pending sandbox* |
+
+Previous results (v1): QP cloud standalone = 386 entries → pipeline = 222 entries (43% reduction).
+CoD has much larger impact on cloud because the LLM produces more semantic variants of the
+same knowledge across sessions.
+
+### Conclusion
+
+- **Heuristics-only:** CoD consolidation is low-impact (already few entries per session)
+- **Cloud:** CoD consolidation is critical — reduces ~40% noise without recall loss
+- The current Jaccard-only implementation is effective; LLM-based "refine" pass not needed yet
