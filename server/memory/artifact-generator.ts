@@ -87,7 +87,7 @@ export async function generateClaudeMdFromRouter(
     sections.push(SECTION_HEADINGS[type])
     sections.push("")
     for (const entry of group) {
-      sections.push(`- ${entry.content}`)
+      sections.push(`- ${entry.contentOverride ?? entry.content}`)
       tracedEntries.push(
         addDecision(entry, {
           stage: "claude-md-gen",
@@ -128,16 +128,17 @@ export async function generateSkillFilesFromRouter(
   const results: SkillFileResult[] = []
 
   for (const entry of entries) {
-    const title = extractTitle(entry.content)
+    const displayContent = entry.contentOverride ?? entry.content
+    const title = extractTitle(displayContent)
     const slug = slugify(title)
     const filename = `${slug}.md`
 
     // Truncate content to max_lines_per_skill
-    const contentLines = entry.content.split("\n")
+    const contentLines = displayContent.split("\n")
     const truncated =
       contentLines.length > maxLines
         ? contentLines.slice(0, maxLines).join("\n")
-        : entry.content
+        : displayContent
 
     const content = [
       `# ${title}`,
@@ -197,7 +198,7 @@ export async function generateHookPatterns(
     })
     return {
       id: entry.id,
-      content: entry.content,
+      content: entry.contentOverride ?? entry.content,
       type: entry.type,
       confidence: entry.confidence,
     }

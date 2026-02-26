@@ -46,6 +46,54 @@ export function routeEntries(allEntries: KnowledgeEntry[]): RouterResult {
   })
 
   for (const entry of active) {
+    // 1.5. Developer override: targetOverride routes directly
+    if (entry.targetOverride) {
+      const target = entry.targetOverride
+      if (target === "none") {
+        skipped.push(
+          addDecision(entry, {
+            stage: "router",
+            action: "skip",
+            reason: "targetOverride → none (knowledge store only)",
+            inputs: { targetOverride: target },
+            pipelineRunId: runId,
+          }),
+        )
+        skipReasons.push("targetOverride → none")
+      } else if (target === "hook") {
+        hooks.push(
+          addDecision({ ...entry, targetChannel: "hook" }, {
+            stage: "router",
+            action: "route",
+            reason: "targetOverride → hook",
+            inputs: { channel: "hook", targetOverride: target },
+            pipelineRunId: runId,
+          }),
+        )
+      } else if (target === "skill") {
+        skills.push(
+          addDecision({ ...entry, targetChannel: "skill" }, {
+            stage: "router",
+            action: "route",
+            reason: "targetOverride → skill",
+            inputs: { channel: "skill", targetOverride: target },
+            pipelineRunId: runId,
+          }),
+        )
+      } else if (target === "claude-md") {
+        claudeMd.push(
+          addDecision({ ...entry, targetChannel: "claude-md" }, {
+            stage: "router",
+            action: "route",
+            reason: "targetOverride → claude-md",
+            inputs: { channel: "claude-md", targetOverride: target },
+            pipelineRunId: runId,
+          }),
+        )
+      }
+      continue
+    }
+
     // 2. Route tool-constraint rules to hooks
     if (
       (entry.type === "rule" || entry.type === "correction") &&
