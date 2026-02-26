@@ -101,6 +101,10 @@ export interface KnowledgeEntry {
   enforcedBy?: "hook" | "ci" | "linter"
   targetChannel?: "claude-md" | "skill" | "hook" | "none"
 
+  // Developer overrides (set during audit)
+  contentOverride?: string // Developer-edited version of content
+  targetOverride?: "claude-md" | "skill" | "hook" | "none" // Override computed target
+
   // Decision traceability
   decisions?: DecisionStep[]
 }

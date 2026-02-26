@@ -82,10 +82,10 @@ describe("applyNoveltyGateAndApproval", () => {
     expect(result).toHaveLength(0)
   })
 
-  it("filters entries too short to be meaningful (<30 chars)", () => {
+  it("filters entries too short to be meaningful (<20 chars)", () => {
     const entries = [
       makeEntry({
-        content: "Let's use 8941 for example.",
+        content: "Use port 8941.",
       }),
     ]
     const result = applyNoveltyGateAndApproval(entries)

@@ -16,11 +16,6 @@ const NOISE_PATTERNS: Record<string, RegExp> = {
     /^(ok|okay|k|got it|sure|thanks|thank you|ty|great|yes|no|yep|nope|alright|understood|roger|ack|cool|nice)\s*[.!?]?$/i,
 }
 
-/** Messages ending with ? are likely questions, not statements */
-function isLikelyQuestion(text: string): boolean {
-  return /\?\s*$/.test(text.trim())
-}
-
 /**
  * For "I always/never/usually X", verify X is a meaningful action verb.
  * Rejects incomplete/nonsensical phrases like "I always scare of".

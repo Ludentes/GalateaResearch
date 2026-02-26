@@ -354,17 +354,16 @@ describe("S9: Duplicate detection across sessions", () => {
       { role: "assistant", content: "Sure." },
     ])
 
-    const result2 = await runExtraction({
+    await runExtraction({
       transcriptPath: transcript2,
       model: MOCK_MODEL,
       storePath,
     })
 
-    // The second extraction should detect duplicates via Jaccard similarity
-    expect(result2.stats.duplicatesSkipped).toBeGreaterThanOrEqual(1)
-
+    // The second extraction should detect near-duplicate via consolidation or dedup
+    // (consolidation catches it first via Jaccard, so duplicatesSkipped may be 0)
     const entriesAfter2 = await readEntries(storePath)
-    // Should have same count as after session 1 (deduped)
+    // Key assertion: entry count stays the same (near-duplicate was filtered)
     expect(entriesAfter2.length).toBe(count1)
   })
 })

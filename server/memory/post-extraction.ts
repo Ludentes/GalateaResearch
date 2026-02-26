@@ -12,7 +12,7 @@ const ABSOLUTE_PATH_RE = /(?:\/[\w.-]+){2,}/g
 const BACKTICK_FILE_RE = /`[^`]*\.[a-z]{1,4}`/g
 const SESSION_REF_RE =
   /\b(don't touch|this file|that function|full content|full file|COMPLETE file|exact content|see below)\b/i
-const MIN_CONTENT_LENGTH = 30
+const MIN_CONTENT_LENGTH = 20
 
 function isLowQualityContent(content: string): boolean {
   // Too short
