@@ -208,6 +208,41 @@ function resolveContextFreeDecision(
   return null
 }
 
+/**
+ * Split a numbered list into individual items.
+ * Handles: "1) text", "1. text", "1- text"
+ */
+function splitNumberedItems(
+  text: string,
+): { index: number; content: string }[] {
+  const lines = text.split("\n")
+  const items: { index: number; content: string }[] = []
+  let current: { index: number; lines: string[] } | null = null
+
+  for (const line of lines) {
+    const m = line.match(/^\s*(\d+)[.)]\s*(.*)/)
+    if (m) {
+      if (current) {
+        items.push({
+          index: current.index,
+          content: current.lines.join("\n").trim(),
+        })
+      }
+      current = { index: Number(m[1]), lines: [m[2]] }
+    } else if (current && line.trim()) {
+      current.lines.push(line.trim())
+    }
+  }
+  if (current) {
+    items.push({
+      index: current.index,
+      content: current.lines.join("\n").trim(),
+    })
+  }
+
+  return items
+}
+
 export function extractHeuristic(
   turn: TranscriptTurn,
   classification: SignalClassification,
@@ -270,6 +305,35 @@ export function extractHeuristic(
   let confidence = mapping.confidence
 
   if (classification.type === "procedure") {
+    // Try splitting numbered list items and re-classifying each
+    const items = splitNumberedItems(text)
+    if (items.length >= 2) {
+      const subEntries: KnowledgeEntry[] = []
+      for (const item of items) {
+        const subTurn: TranscriptTurn = {
+          role: "user",
+          content: item.content,
+        }
+        const subClass = classifyTurn(subTurn)
+        if (
+          subClass.type !== "noise" &&
+          subClass.type !== "factual" &&
+          subClass.type !== "procedure"
+        ) {
+          const subResult = extractHeuristic(
+            subTurn,
+            subClass,
+            source,
+            precedingTurn,
+          )
+          subEntries.push(...subResult.entries)
+        }
+      }
+      if (subEntries.length > 0) {
+        return { entries: subEntries, handled: true }
+      }
+    }
+    // Fall through to normal procedure extraction
     content = extractProcedureSteps(text)
     if (isSessionSpecificProcedure(content)) {
       return { entries: [], handled: true }

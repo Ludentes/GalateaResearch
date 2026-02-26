@@ -352,6 +352,34 @@ describe("extractHeuristic", () => {
     })
   })
 
+  describe("numbered list splitting", () => {
+    it("splits numbered list into individual items and re-classifies each", () => {
+      const turn = user(
+        "1) set up the CI pipeline first\n2) always run tests before merging\n3) never deploy on Fridays",
+      )
+      const classification = classifyTurn(turn)
+      expect(classification.type).toBe("procedure")
+
+      const result = extractHeuristic(turn, classification, "session:test")
+      // Items 2 and 3 match imperative_rule when isolated ("always...", "never...")
+      // but not in the full text (where they're preceded by "2) " / "3) ")
+      expect(result.entries.length).toBeGreaterThanOrEqual(2)
+      const types = result.entries.map((e) => e.type)
+      expect(types).toContain("rule")
+    })
+
+    it("keeps genuine multi-step procedures intact", () => {
+      const turn = user(
+        "1) Run the linter\n2) Fix any issues\n3) Run the test suite\n4) Push to feature branch",
+      )
+      const classification = classifyTurn(turn)
+      const result = extractHeuristic(turn, classification, "session:test")
+      // No sub-items match signal patterns, so stays as procedure
+      expect(result.entries).toHaveLength(1)
+      expect(result.entries[0].type).toBe("procedure")
+    })
+  })
+
   describe("procedure noise filtering", () => {
     it("rejects session-specific task instructions (create/commit/review)", () => {
       const turn = user(
