@@ -150,6 +150,40 @@ hybrid_extraction:
   llm_fallback_enabled: true
 
 # -----------------------------------------------------------------------------
+# EXTRACTION STRATEGY — server/memory/extraction-pipeline.ts
+# User-selectable extraction approach. Replaces hybrid_extraction flags.
+# See: docs/research/2026-02-26-extraction-approach-evaluation.md
+# -----------------------------------------------------------------------------
+extraction_strategy:
+  # Which extraction approach to use:
+  #   heuristics-only: Pattern-based, instant, free. ~38% recall.
+  #   cloud: Heuristics + cloud LLM for factual turns. ~95% recall, ~$0.05/session.
+  #   hybrid: Heuristics + user's configured LLM (Ollama or cloud).
+  strategy: hybrid
+
+  # Cloud LLM settings (used by 'cloud' and 'hybrid' strategies).
+  # Provider/model from here override LLM_PROVIDER/LLM_MODEL env vars for extraction.
+  cloud:
+    provider: openrouter
+    model: anthropic/claude-haiku-4.5
+
+  # Chain of Density consolidation — runs AFTER any strategy.
+  # Merges raw entries with existing knowledge store.
+  # Outputs only genuinely new items. Dramatically reduces noise.
+  consolidation:
+    enabled: true
+    # Maximum new entries per extraction run.
+    # Higher: more items for audit. Lower: tighter filter.
+    max_new_entries: 20
+    # Provider/model for consolidation pass. null = use same as extraction.
+    provider: null
+    model: null
+
+  # Use optimized extraction prompt (tuned from golden dataset).
+  # When false, uses the default prompt from knowledge-extractor.ts.
+  optimized_prompt: true
+
+# -----------------------------------------------------------------------------
 # BATCH DEDUP — server/memory/batch-dedup.ts
 # Post-extraction LLM step to merge semantically duplicate entries.
 # Runs once per developer, not per turn — bounded and cheap.

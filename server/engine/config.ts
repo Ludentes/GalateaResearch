@@ -169,6 +169,25 @@ export interface HybridExtractionConfig {
   llm_fallback_enabled: boolean
 }
 
+export type ExtractionStrategy = "heuristics-only" | "cloud" | "hybrid"
+
+export interface ExtractionConsolidationConfig {
+  enabled: boolean
+  max_new_entries: number
+  provider: string | null
+  model: string | null
+}
+
+export interface ExtractionStrategyConfig {
+  strategy: ExtractionStrategy
+  cloud: {
+    provider: string
+    model: string
+  }
+  consolidation: ExtractionConsolidationConfig
+  optimized_prompt: boolean
+}
+
 export interface BatchDedupConfig {
   enabled: boolean
   minEntries: number
@@ -191,6 +210,7 @@ export interface PipelineConfig {
   curation: CurationConfig
   feedback: FeedbackConfig
   hybrid_extraction: HybridExtractionConfig
+  extraction_strategy: ExtractionStrategyConfig
   batch_dedup: {
     enabled: boolean
     min_entries: number
@@ -275,6 +295,23 @@ export function getFeedbackConfig(): FeedbackConfig {
 
 export function getHybridExtractionConfig(): HybridExtractionConfig {
   return loadConfig().hybrid_extraction
+}
+
+export function getExtractionStrategyConfig(): ExtractionStrategyConfig {
+  const cfg = loadConfig()
+  return (
+    cfg.extraction_strategy ?? {
+      strategy: "hybrid",
+      cloud: { provider: "openrouter", model: "anthropic/claude-haiku-4.5" },
+      consolidation: {
+        enabled: true,
+        max_new_entries: 20,
+        provider: null,
+        model: null,
+      },
+      optimized_prompt: true,
+    }
+  )
 }
 
 export function getBatchDedupConfig(): BatchDedupConfig {
