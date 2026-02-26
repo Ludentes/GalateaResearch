@@ -8,7 +8,7 @@ const mockGenerateObject = vi.fn().mockResolvedValue({
     items: [
       {
         type: "preference",
-        content: "User prefers pnpm over npm",
+        content: "User prefers pnpm over npm for all projects",
         confidence: 0.95,
         evidence: "User said: I prefer using pnpm",
         entities: ["pnpm", "npm"],
@@ -193,7 +193,7 @@ describe("extractWithRetry", () => {
           items: [
             {
               type: "fact",
-              content: "Recovered",
+              content: "Recovered preference for pnpm package manager",
               confidence: 0.8,
               evidence: "test",
               entities: [],
@@ -212,7 +212,7 @@ describe("extractWithRetry", () => {
     )
 
     expect(entries).toHaveLength(1)
-    expect(entries[0].content).toBe("Recovered")
+    expect(entries[0].content).toBe("Recovered preference for pnpm package manager")
     expect(mockGenerateObject).toHaveBeenCalledTimes(3)
     expect(mockGenerateObject).toHaveBeenNthCalledWith(
       1,
@@ -261,7 +261,7 @@ describe("Novelty and Origin extraction", () => {
         items: [
           {
             type: "preference",
-            content: "Uses pnpm",
+            content: "Uses pnpm as the default package manager",
             confidence: 0.95,
             evidence: "User said: I always use pnpm",
             entities: ["pnpm"],
@@ -298,7 +298,7 @@ describe("Novelty and Origin extraction", () => {
         items: [
           {
             type: "fact",
-            content: "Team probably uses agile",
+            content: "Team probably uses agile methodology for sprints",
             confidence: 0.90,
             evidence: "Seems like agile from context",
             entities: [],
@@ -323,7 +323,7 @@ describe("Novelty and Origin extraction", () => {
         items: [
           {
             type: "preference",
-            content: "Uses pnpm",
+            content: "Uses pnpm as the default package manager",
             confidence: 0.95,
             evidence: "User said: I always use pnpm",
             entities: ["pnpm"],
@@ -355,7 +355,7 @@ describe("Novelty and Origin extraction", () => {
         items: [
           {
             type: "fact",
-            content: "Team probably uses agile",
+            content: "Team probably uses agile methodology for sprints",
             confidence: 0.90,
             evidence: "Seems like agile from context",
             entities: [],
@@ -391,7 +391,7 @@ describe("Novelty and Origin extraction", () => {
         items: [
           {
             type: "preference",
-            content: "Always use pnpm",
+            content: "Always use pnpm for package management tasks",
             confidence: 1.0,
             evidence: "User said: I always use pnpm",
             entities: ["pnpm"],
@@ -426,7 +426,7 @@ describe("Novelty and Origin extraction", () => {
         items: [
           {
             type: "fact",
-            content: "Project uses TypeScript",
+            content: "Project uses TypeScript with strict mode enabled",
             confidence: 0.85,
             evidence: "User requested TS setup",
             entities: ["TypeScript"],
@@ -460,7 +460,7 @@ describe("Novelty and Origin extraction", () => {
         items: [
           {
             type: "preference",
-            content: "Always use pnpm",
+            content: "Always use pnpm for package management tasks",
             confidence: 1.0,
             evidence: "User said: I always use pnpm",
             entities: ["pnpm"],
