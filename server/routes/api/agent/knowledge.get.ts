@@ -34,6 +34,22 @@ export default defineEventHandler(async (event) => {
     )
   }
 
+  // Filter by curation status
+  if (query.curationStatus) {
+    filtered = filtered.filter(
+      (e) => e.curationStatus === query.curationStatus,
+    )
+  }
+
+  // Filter by target channel
+  if (query.targetChannel) {
+    filtered = filtered.filter(
+      (e) =>
+        e.targetOverride === query.targetChannel ||
+        e.targetChannel === query.targetChannel,
+    )
+  }
+
   // Hide superseded by default
   if (query.showSuperseded !== "true") {
     filtered = filtered.filter((e) => !e.supersededBy)
@@ -52,6 +68,12 @@ export default defineEventHandler(async (event) => {
           entries.filter((e) => e.type === t && !e.supersededBy).length,
         ],
       ),
+    ),
+    byCuration: Object.fromEntries(
+      ["pending", "approved", "rejected"].map((s) => [
+        s,
+        entries.filter((e) => e.curationStatus === s && !e.supersededBy).length,
+      ]),
     ),
     entities: allEntities,
   }
