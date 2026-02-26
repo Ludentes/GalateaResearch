@@ -117,11 +117,14 @@ export async function runExtraction(
   const llmExtracted: KnowledgeEntry[] = []
 
   let signalTurnsForLLM: TranscriptTurn[]
-  if (strategyCfg.strategy === "heuristics-only" || !strategyModel) {
+  if (!strategyModel || strategyCfg.strategy === "heuristics-only") {
     signalTurnsForLLM = []
   } else {
     signalTurnsForLLM = llmCandidates
   }
+
+  // Narrow model type for LLM path (guard above ensures non-null when signalTurnsForLLM is non-empty)
+  const llmModel = strategyModel as NonNullable<typeof strategyModel>
 
   // Get the right prompt based on strategy config
   const extractionPrompt = getExtractionPrompt(strategyCfg.optimized_prompt)
@@ -136,7 +139,7 @@ export async function runExtraction(
     const t0 = Date.now()
     const extracted = await extractWithRetry(
       withContext,
-      strategyModel,
+      llmModel,
       source,
       [0, 0.3, 0.7],
       {

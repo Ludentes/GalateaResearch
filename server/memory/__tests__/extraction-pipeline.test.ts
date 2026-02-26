@@ -23,6 +23,9 @@ import { runExtraction } from "../extraction-pipeline"
 import { extractWithRetry } from "../knowledge-extractor"
 import { readEntries } from "../knowledge-store"
 
+// Silence unused import warning — extractWithRetry is used via vi.mocked() in heuristics-only test
+void extractWithRetry
+
 const TEST_DIR = path.join(__dirname, "fixtures", "test-pipeline")
 const FIXTURE = path.join(__dirname, "fixtures", "sample-session.jsonl")
 const MOCK_MODEL = {} as unknown as LanguageModel
