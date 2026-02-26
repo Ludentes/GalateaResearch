@@ -102,7 +102,7 @@ dedup:
   # that Jaccard misses (different words, same meaning).
   # Raise: only near-identical embeddings are dupes.
   # Lower: more aggressive semantic dedup.
-  embedding_cosine_threshold: 0.85
+  embedding_cosine_threshold: 0.90
 
   # Minimum word length for Jaccard tokenization.
   # Raise: ignore more short words in similarity calculation.
@@ -160,7 +160,7 @@ extraction_strategy:
   #   heuristics-only: Pattern-based, instant, free. ~38% recall.
   #   cloud: Heuristics + cloud LLM for factual turns. ~95% recall, ~$0.05/session.
   #   hybrid: Heuristics + user's configured LLM (Ollama or cloud).
-  strategy: hybrid
+  strategy: heuristics-only
 
   # Cloud LLM settings (used by 'cloud' and 'hybrid' strategies).
   # Provider/model from here override LLM_PROVIDER/LLM_MODEL env vars for extraction.
