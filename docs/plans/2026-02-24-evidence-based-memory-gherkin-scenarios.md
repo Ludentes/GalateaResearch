@@ -703,3 +703,36 @@ FINAL: CLAUDE.md has 1 validated entry. Inferred junk auto-rejected.
 - All feedback outcomes: helpful, harmful, neutral (no exposure)
 - All decay paths: normal, accelerated (harmful), slowed (helpful), exempt (hook)
 - Edge cases: dedup, confidence cap, stale auto-reject
+
+---
+
+## Scenarios 16-24: Audit → Export Lifecycle (added 2026-02-26)
+
+**Covers:** `docs/plans/2026-02-26-shadow-audit-export-scenarios.md`
+
+| Scenario | Feature | Maps to Shadow/Audit/Export |
+|----------|---------|---------------------------|
+| S16 | targetOverride routes to dev-chosen channel | S3: Target override |
+| S17 | contentOverride appears in generated artifacts | S2: Content editing |
+| S18 | Bulk approve/reject updates store | S10: Bulk actions |
+| S19 | Export only includes approved entries | S1: Basic cycle |
+| S20 | Sentence-scoped isLikelyQuestion | Signal classifier fix |
+| S21 | Numbered list per-item re-classification | Signal classifier fix |
+| S22 | Constraint/option answer detection | Signal classifier fix |
+| S23 | Re-export removes rejected entry | S7: Re-export |
+| S24 | Empty store produces no artifacts | S9: Empty states |
+
+### Coverage of Shadow/Audit/Export Scenarios
+
+| Shadow/Audit/Export Scenario | Covered By |
+|------------------------------|-----------|
+| S1: Basic shadow → audit → export | S19 (export), S1 (pipeline) |
+| S2: Content editing | S17 |
+| S3: Target override | S16 |
+| S4: Budget enforcement | S12 (existing) |
+| S5: Context assembly before curation | S10 (existing, implicit) |
+| S6: Incremental audit | S18 (bulk actions) |
+| S7: Re-export after changes | S23 |
+| S8: Non-blocking extraction | Architectural (SessionEnd hook) |
+| S9: Empty states | S24 |
+| S10: Filtering and bulk actions | S18, S16 |
