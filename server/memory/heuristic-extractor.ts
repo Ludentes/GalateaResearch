@@ -112,6 +112,38 @@ function isContextFreeDecision(content: string): boolean {
   return false
 }
 
+/**
+ * Check if a procedure is session-specific (one-time task instruction).
+ * Returns true if the numbered steps are mostly about:
+ * - Creating/reading/modifying specific files
+ * - Git operations (commit, push, review)
+ * - URLs or file path listings
+ */
+const SESSION_PROCEDURE_RE =
+  /\b(create|read|commit|push|self-review|report back|check out|open|modify|replace|full content|full file|exact content)\b/i
+const FILE_PATH_RE =
+  /(?:\/[\w.-]+){2,}|`[^`]*\.[a-z]{1,4}`|\b\w+\.\w+\.[a-z]{2,4}\b/
+const URL_RE = /https?:\/\//
+
+function isSessionSpecificProcedure(steps: string): boolean {
+  const lines = steps.split("\n").filter((l) => l.trim())
+  if (lines.length === 0) return true
+
+  let sessionSpecificCount = 0
+  for (const line of lines) {
+    if (
+      SESSION_PROCEDURE_RE.test(line) ||
+      FILE_PATH_RE.test(line) ||
+      URL_RE.test(line)
+    ) {
+      sessionSpecificCount++
+    }
+  }
+
+  // If majority of steps are session-specific, reject
+  return sessionSpecificCount / lines.length > 0.5
+}
+
 const KEBAB_CASE_RE = /\b[a-z]+-[a-z]+(?:-[a-z]+)*\b/g
 const CAPITALIZED_WORD_RE = /\b[A-Z][a-zA-Z0-9]+\b/g
 
@@ -239,6 +271,9 @@ export function extractHeuristic(
 
   if (classification.type === "procedure") {
     content = extractProcedureSteps(text)
+    if (isSessionSpecificProcedure(content)) {
+      return { entries: [], handled: true }
+    }
   } else if (classification.type === "remember") {
     // Strip @remember prefix
     content = text.replace(/@remember\s*/i, "").trim()
