@@ -22,10 +22,8 @@ export const ExtractionSchema = z.object({
         .describe("Concise, actionable statement of the knowledge"),
       confidence: z
         .number()
-        .min(0)
-        .max(1)
         .describe(
-          "1.0 for explicit user statements, 0.7-0.9 for strong implications, 0.5-0.7 for weak signals",
+          "0.0 to 1.0. 1.0 for explicit user statements, 0.7-0.9 for strong implications, 0.5-0.7 for weak signals",
         ),
       evidence: z
         .string()
