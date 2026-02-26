@@ -351,4 +351,56 @@ describe("extractHeuristic", () => {
       })
     })
   })
+
+  describe("procedure noise filtering", () => {
+    it("rejects session-specific task instructions (create/commit/review)", () => {
+      const turn = user(
+        "1. Create the file with exact content specified\n2. Commit\n3. Self-review and report back",
+      )
+      const classification = classifyTurn(turn)
+      const result = extractHeuristic(turn, classification, "session:test")
+      expect(result.entries).toHaveLength(0)
+      expect(result.handled).toBe(true)
+    })
+
+    it("rejects file-path-heavy procedures", () => {
+      const turn = user(
+        "1. apps/transcoder/src/video/services/ffmpeg.service.ts\n2. apps/transcoder/src/video/services/hlsConverter.service.ts\n3. apps/transcoder/src/video/video.module.ts",
+      )
+      const classification = classifyTurn(turn)
+      const result = extractHeuristic(turn, classification, "session:test")
+      expect(result.entries).toHaveLength(0)
+      expect(result.handled).toBe(true)
+    })
+
+    it("rejects 'read these files' procedures", () => {
+      const turn = user(
+        "1. Read `libs/shared/src/entities/event.entity.ts` — full contents\n2. Read `libs/shared/src/entities/payment.entity.ts` — full contents",
+      )
+      const classification = classifyTurn(turn)
+      const result = extractHeuristic(turn, classification, "session:test")
+      expect(result.entries).toHaveLength(0)
+      expect(result.handled).toBe(true)
+    })
+
+    it("keeps genuinely reusable procedures", () => {
+      const turn = user(
+        "1. Run the linter to check formatting\n2. Fix any issues found\n3. Run the test suite\n4. Push to feature branch",
+      )
+      const classification = classifyTurn(turn)
+      const result = extractHeuristic(turn, classification, "session:test")
+      expect(result.entries).toHaveLength(1)
+      expect(result.entries[0].type).toBe("procedure")
+    })
+
+    it("rejects URL-listing procedures", () => {
+      const turn = user(
+        "1. https://github.com/rjs/shaping-skills\n2. https://github.com/anthropics/knowledge-work-plugins\n3. https://github.com/dmarx/bench-warmers",
+      )
+      const classification = classifyTurn(turn)
+      const result = extractHeuristic(turn, classification, "session:test")
+      expect(result.entries).toHaveLength(0)
+      expect(result.handled).toBe(true)
+    })
+  })
 })
