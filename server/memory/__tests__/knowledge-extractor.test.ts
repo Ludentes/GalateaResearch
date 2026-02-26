@@ -105,6 +105,48 @@ describe("Knowledge Extractor", () => {
     )
   })
 
+  it("uses custom prompt when provided via options", async () => {
+    mockGenerateObject.mockClear()
+    const customPrompt = "You are a custom extractor. Extract preferences only."
+    await extractKnowledge(
+      turns,
+      {} as unknown as LanguageModel,
+      "session:test",
+      { prompt: customPrompt },
+    )
+    const callArgs = mockGenerateObject.mock.calls[0][0]
+    expect(callArgs.prompt).toContain(customPrompt)
+    expect(callArgs.prompt).not.toContain(
+      "You are a knowledge extraction system",
+    )
+  })
+
+  it("uses default EXTRACTION_PROMPT when no custom prompt given", async () => {
+    mockGenerateObject.mockClear()
+    await extractKnowledge(
+      turns,
+      {} as unknown as LanguageModel,
+      "session:test",
+    )
+    const callArgs = mockGenerateObject.mock.calls[0][0]
+    expect(callArgs.prompt).toContain(
+      "You are a knowledge extraction system",
+    )
+  })
+
+  it("bypasses ollamaQueue when useQueue is false", async () => {
+    // The mock already bypasses the queue, but we verify the option is accepted
+    mockGenerateObject.mockClear()
+    const entries = await extractKnowledge(
+      turns,
+      {} as unknown as LanguageModel,
+      "session:test",
+      { useQueue: false },
+    )
+    expect(entries).toHaveLength(2)
+    expect(mockGenerateObject).toHaveBeenCalledTimes(1)
+  })
+
   it("defaults to temperature 0", async () => {
     mockGenerateObject.mockClear()
     await extractKnowledge(

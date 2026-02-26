@@ -116,6 +116,8 @@ interface ExtractionOptions {
   temperature?: number
   knownPeople?: string[]
   skipGuard?: boolean
+  prompt?: string
+  useQueue?: boolean
 }
 
 export async function extractKnowledge(
@@ -143,24 +145,27 @@ export async function extractKnowledge(
     })
     .join("\n\n")
 
-  const promptText = `${EXTRACTION_PROMPT}\n\n---\n\nTRANSCRIPT:\n${transcript}`
+  const basePrompt = opts.prompt ?? EXTRACTION_PROMPT
+  const promptText = `${basePrompt}\n\n---\n\nTRANSCRIPT:\n${transcript}`
   console.log(
     `[extraction] generateObject start: ${turns.length} turns, ${transcript.length} chars, temp=${temperature}`,
   )
   const t0 = Date.now()
 
-  const { object } = await ollamaQueue.enqueue(
-    () =>
-      generateObject({
-        model,
-        schema: ExtractionSchema,
-        prompt: promptText,
-        temperature,
-        maxRetries: 0,
-        abortSignal: AbortSignal.timeout(60_000),
-      }),
-    "batch",
-  )
+  const doExtract = () =>
+    generateObject({
+      model,
+      schema: ExtractionSchema,
+      prompt: promptText,
+      temperature,
+      maxRetries: 0,
+      abortSignal: AbortSignal.timeout(60_000),
+    })
+
+  const { object } =
+    opts.useQueue === false
+      ? await doExtract()
+      : await ollamaQueue.enqueue(doExtract, "batch")
 
   console.log(
     `[extraction] generateObject done: ${object.items.length} items in ${Date.now() - t0}ms`,
@@ -205,10 +210,15 @@ export async function extractWithRetry(
   model: LanguageModel,
   source: string,
   temperatures = [0, 0.3, 0.7],
+  opts?: { prompt?: string; useQueue?: boolean },
 ): Promise<KnowledgeEntry[]> {
   for (let i = 0; i < temperatures.length; i++) {
     try {
-      return await extractKnowledge(turns, model, source, temperatures[i])
+      return await extractKnowledge(turns, model, source, {
+        temperature: temperatures[i],
+        prompt: opts?.prompt,
+        useQueue: opts?.useQueue,
+      })
     } catch (error) {
       const isLast = i === temperatures.length - 1
       const errMsg = error instanceof Error ? error.message : String(error)
