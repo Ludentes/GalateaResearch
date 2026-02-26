@@ -274,6 +274,38 @@ describe("Signal Classifier", () => {
     })
   })
 
+  describe("sentence-scoped question check", () => {
+    it("classifies declarative statement in message ending with question", () => {
+      const turn: TranscriptTurn = {
+        role: "user",
+        content:
+          "For forseeable future the kiosks are WIndows based, but we should support Linux as well. Do we need explicit modelling like availableCommands or do we just hard code this in our software?",
+      }
+      const result = classifyTurn(turn)
+      expect(result.type).toBe("policy")
+      expect(result.match).toContain("we should")
+    })
+
+    it("still rejects pure questions with signal words", () => {
+      const turn: TranscriptTurn = {
+        role: "user",
+        content: "Should we always use pnpm instead of npm?",
+      }
+      const result = classifyTurn(turn)
+      expect(result.type).not.toBe("policy")
+    })
+
+    it("catches imperative rule in mixed message", () => {
+      const turn: TranscriptTurn = {
+        role: "user",
+        content:
+          "Never push directly to main. What do you think about branch protection?",
+      }
+      const result = classifyTurn(turn)
+      expect(result.type).toBe("imperative_rule")
+    })
+  })
+
   describe("filterSignalTurns", () => {
     it("removes noise turns", () => {
       const turns = [

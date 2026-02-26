@@ -70,8 +70,27 @@ export function classifyTurn(turn: TranscriptTurn): SignalClassification {
     if (m) {
       // Questions with signal patterns are usually asking, not stating
       // Exception: @remember and @forget are always intentional
-      if (isLikelyQuestion(text) && type !== "remember" && type !== "forget") {
-        continue
+      // Scope check to the sentence containing the match, not the full text
+      if (type !== "remember" && type !== "forget") {
+        const matchStart = m.index ?? 0
+        const matchEnd = matchStart + m[0].length
+
+        // Find the sentence boundary after the match
+        const afterMatch = text.slice(matchEnd)
+        const sentenceEndMatch = afterMatch.match(/[.!?]/)
+        const sentenceEnd = sentenceEndMatch
+          ? matchEnd + (sentenceEndMatch.index ?? 0) + 1
+          : text.length
+
+        // Extract the sentence containing the match
+        const sentenceBeforeStart = text.lastIndexOf(".", matchStart - 1)
+        const sentenceStart =
+          sentenceBeforeStart >= 0 ? sentenceBeforeStart + 1 : 0
+        const matchedSentence = text.slice(sentenceStart, sentenceEnd).trim()
+
+        if (/\?\s*$/.test(matchedSentence)) {
+          continue
+        }
       }
 
       // For "I always/never/usually X", require X to be a known action verb
