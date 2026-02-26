@@ -4,7 +4,7 @@ import type { ExtractionStrategyConfig } from "../../engine/config"
 
 vi.mock("../../providers/index", () => ({
   getModel: vi.fn(
-    (provider?: string, model?: string) =>
+    (_provider?: string, model?: string) =>
       ({
         model: { modelId: model ?? "default-model" },
         modelName: model ?? "default-model",

@@ -140,11 +140,16 @@ async function main() {
     try {
       const turns = await readTranscript(file)
       totalTurns += turns.length
-      for (const turn of turns) {
+      for (let i = 0; i < turns.length; i++) {
+        const turn = turns[i]
         const classification = classifyTurn(turn)
         if (classification.type === "noise" || classification.type === "factual")
           continue
-        const result = extractHeuristic(turn, classification, `session:${developer}`)
+        const preceding =
+          i > 0 && turns[i - 1].role === "assistant"
+            ? turns[i - 1]
+            : undefined
+        const result = extractHeuristic(turn, classification, `session:${developer}`, preceding)
         allEntries.push(...result.entries)
       }
     } catch {

@@ -48,7 +48,7 @@ export async function consolidateExtraction(
   candidates: KnowledgeEntry[],
   existingEntries: KnowledgeEntry[],
   config: ExtractionConsolidationConfig,
-  model?: LanguageModel,
+  _model?: LanguageModel,
 ): Promise<KnowledgeEntry[]> {
   if (candidates.length === 0) return []
   if (!config.enabled) return candidates

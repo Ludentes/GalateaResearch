@@ -77,3 +77,14 @@ coverage/
 
 # Runtime data (agent state, memory, observations, test output)
 data/
+
+# Private data — developer transcripts, golden datasets, extraction results
+# These contain personal knowledge extracted from real developer sessions.
+# NEVER commit these. Use galatea-data repo or local storage only.
+experiments/extraction/results/
+experiments/extraction/expected-models.yaml
+experiments/extraction/annotations/
+experiments/extraction/evaluation-results.md
+experiments/extraction/.tmp-eval-*
+*.jsonl
+!server/memory/__tests__/fixtures/*.jsonl
