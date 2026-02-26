@@ -1,17 +1,18 @@
 /**
  * Run extraction pipeline with different strategies and compare against golden dataset.
  *
- * Usage: pnpm tsx experiments/extraction/run-strategy-eval.ts <developer>
- * Example: pnpm tsx experiments/extraction/run-strategy-eval.ts qp
+ * Usage: pnpm tsx experiments/extraction/run-strategy-eval.ts <developer> [strategy] <session-files...>
+ * Example: pnpm tsx experiments/extraction/run-strategy-eval.ts qp heuristics-only ~/data/qp/*.jsonl
+ *          pnpm tsx experiments/extraction/run-strategy-eval.ts qp cloud ~/data/qp/*.jsonl
  *
  * Requires:
  * - Golden dataset: experiments/extraction/expected-models.yaml
- * - Session files: ~/w/galatea-data/transcripts/<developer>/*.jsonl
  * - For cloud strategy: OPENROUTER_API_KEY env var
  */
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync } from "node:fs"
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { parse as parseYaml } from "yaml"
+import { resetConfigCache } from "../../server/engine/config"
 import { runExtraction } from "../../server/memory/extraction-pipeline"
 import { readEntries } from "../../server/memory/knowledge-store"
 import type { KnowledgeEntry } from "../../server/memory/types"
@@ -68,9 +69,12 @@ function checkRecall(
 
 async function main() {
   const developer = process.argv[2]
-  if (!developer) {
+  if (!developer || process.argv.length < 4) {
     console.error(
-      "Usage: pnpm tsx experiments/extraction/run-strategy-eval.ts <developer>",
+      "Usage: pnpm tsx experiments/extraction/run-strategy-eval.ts <developer> [strategy] <session-files...>",
+    )
+    console.error(
+      "  strategy: heuristics-only | cloud (default: both)",
     )
     process.exit(1)
   }
@@ -85,21 +89,20 @@ async function main() {
     process.exit(1)
   }
 
-  // Find session files
-  const dataDir = path.join(
-    process.env.HOME!,
-    "w/galatea-data/transcripts",
-    developer,
+  // Parse args: [developer] [strategy?] [files...]
+  const validStrategies = ["heuristics-only", "cloud", "hybrid"]
+  const maybeStrategy = process.argv[3]
+  const hasExplicitStrategy = validStrategies.includes(maybeStrategy)
+
+  // Get session files from remaining args
+  const fileArgs = process.argv.slice(hasExplicitStrategy ? 4 : 3)
+  const jsonlFiles = fileArgs.filter(
+    (f) => f.endsWith(".jsonl") && !path.basename(f).includes("_"),
   )
-  if (!existsSync(dataDir)) {
-    console.error(`No transcript dir: ${dataDir}`)
+  if (jsonlFiles.length === 0) {
+    console.error("No .jsonl session files provided")
     process.exit(1)
   }
-
-  // Get .jsonl files (skip files with _ in name — those are metadata)
-  const jsonlFiles = readdirSync(dataDir)
-    .filter((f) => f.endsWith(".jsonl") && !f.includes("_"))
-    .map((f) => path.join(dataDir, f))
 
   console.log(`\n=== Strategy Evaluation: ${developer} ===`)
   console.log(`Sessions: ${jsonlFiles.length}`)
@@ -116,10 +119,31 @@ async function main() {
   const allExpected = categories.flatMap((c) => c.items ?? [])
   console.log(`Golden items: ${allExpected.length}`)
 
-  // Only heuristics-only for now — cloud/hybrid need live LLM
-  const strategies = ["heuristics-only"] as const
+  // Determine which strategies to run
+  const strategies: string[] = hasExplicitStrategy
+    ? [maybeStrategy]
+    : ["heuristics-only", "cloud"]
+
+  // Cloud needs OPENROUTER_API_KEY
+  if (strategies.includes("cloud") && !process.env.OPENROUTER_API_KEY) {
+    console.warn("OPENROUTER_API_KEY not set — skipping cloud strategy")
+    const idx = strategies.indexOf("cloud")
+    if (idx >= 0) strategies.splice(idx, 1)
+  }
+
+  // Override strategy by temporarily patching config.yaml, then restoring
+  const configPath = path.join(import.meta.dirname, "../../server/engine/config.yaml")
+  const originalConfig = readFileSync(configPath, "utf-8")
 
   for (const strategy of strategies) {
+    // Patch config.yaml with the target strategy
+    const patchedConfig = originalConfig.replace(
+      /^(\s+strategy:\s*).+$/m,
+      `$1${strategy}`,
+    )
+    writeFileSync(configPath, patchedConfig)
+    resetConfigCache()
+
     const tempDir = path.join(import.meta.dirname, `.tmp-eval-${strategy}`)
     if (existsSync(tempDir)) rmSync(tempDir, { recursive: true })
     mkdirSync(tempDir, { recursive: true })
@@ -127,6 +151,7 @@ async function main() {
 
     console.log(`\n--- Strategy: ${strategy} ---`)
     const t0 = Date.now()
+    let sessionErrors = 0
 
     for (let i = 0; i < jsonlFiles.length; i++) {
       process.stdout.write(`\r  Session ${i + 1}/${jsonlFiles.length}...`)
@@ -137,7 +162,7 @@ async function main() {
           force: true,
         })
       } catch {
-        // Skip failed sessions
+        sessionErrors++
       }
     }
     console.log()
@@ -166,15 +191,15 @@ async function main() {
       `  Recall: ${totalFound}/${allExpected.length} (${recallPct}%)`,
     )
     console.log(`  Time: ${elapsed}s`)
+    if (sessionErrors > 0) console.log(`  Errors: ${sessionErrors} sessions failed`)
 
     // Cleanup
     rmSync(tempDir, { recursive: true })
   }
 
-  console.log(
-    "\nNote: cloud and hybrid strategies require live LLM.",
-    "Run compare-golden-cloud.ts or compare-golden-hybrid.ts for those.",
-  )
+  // Restore original config
+  writeFileSync(configPath, originalConfig)
+  resetConfigCache()
 }
 
 main()
