@@ -41,6 +41,10 @@ const SIGNAL_PATTERNS: Record<string, RegExp> = {
     /(?:^|[.!?,;:]\s+)(never|always|don'?t|do not|must not|must)\b/i,
   decision:
     /\b(let'?s (go with|use|choose|pick)|i'?ve decided|we'?ll use|the decision is)\b/i,
+  // Lettered option selection (answering assistant's structured question)
+  option_selection: /^\s*[a-dA-D][.)]\s+\S/m,
+  // Constraint specification (limits, caps, thresholds with numbers)
+  constraint: /\b(max|min|limit|cap|threshold|maximum|minimum)\b.*\d+/i,
   procedure: /(?:^|\n)\s*1[.)]\s.+(?:\n\s*2[.)]\s)/i,
 }
 
@@ -100,8 +104,14 @@ export function classifyTurn(turn: TranscriptTurn): SignalClassification {
         }
       }
 
+      // Map option_selection and constraint to decision type
+      const effectiveType =
+        type === "option_selection" || type === "constraint"
+          ? "decision"
+          : type
+
       return {
-        type: type as SignalType,
+        type: effectiveType as SignalType,
         pattern: type,
         confidence: cfg.signal_confidence,
         match: m[0],

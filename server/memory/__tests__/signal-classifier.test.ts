@@ -306,6 +306,27 @@ describe("Signal Classifier", () => {
     })
   })
 
+  describe("constraint answer detection", () => {
+    it("detects lettered option selection as decision", () => {
+      const turn: TranscriptTurn = {
+        role: "user",
+        content:
+          "A) 50 characters max\nlimit in DB layer, no need extra check in code",
+      }
+      const result = classifyTurn(turn)
+      expect(result.type).toBe("decision")
+    })
+
+    it("detects numeric constraint specification as decision", () => {
+      const turn: TranscriptTurn = {
+        role: "user",
+        content: "max 100 characters for the title field",
+      }
+      const result = classifyTurn(turn)
+      expect(result.type).toBe("decision")
+    })
+  })
+
   describe("filterSignalTurns", () => {
     it("removes noise turns", () => {
       const turns = [
