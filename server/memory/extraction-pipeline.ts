@@ -1,7 +1,9 @@
 import path from "node:path"
 import type { LanguageModel } from "ai"
-import { getExtractionConfig, getHybridExtractionConfig } from "../engine/config"
+import { getExtractionConfig, getExtractionStrategyConfig } from "../engine/config"
 import { getLLMConfig } from "../providers/config"
+import { consolidateExtraction } from "./extraction-consolidation"
+import { getExtractionPrompt } from "./extraction-prompts"
 import { extractHeuristic } from "./heuristic-extractor"
 import { extractWithRetry } from "./knowledge-extractor"
 import {
@@ -11,6 +13,7 @@ import {
 } from "./knowledge-store"
 import { applyNoveltyGateAndApproval } from "./post-extraction"
 import { classifyTurn } from "./signal-classifier"
+import { getStrategyModel } from "./strategy-model"
 import { readTranscript } from "./transcript-reader"
 import { emitEvent } from "../observation/emit"
 import { consolidateToClaudeMd } from "./consolidation"
@@ -18,7 +21,7 @@ import type { ExtractionResult, KnowledgeEntry, TranscriptTurn } from "./types"
 
 export interface ExtractionOptions {
   transcriptPath: string
-  model: LanguageModel
+  model?: LanguageModel
   storePath: string
   chunkSize?: number
   force?: boolean
@@ -30,10 +33,9 @@ export async function runExtraction(
   options: ExtractionOptions,
 ): Promise<ExtractionResult> {
   const extractionCfg = getExtractionConfig()
-  const hybridCfg = getHybridExtractionConfig()
+  const strategyCfg = getExtractionStrategyConfig()
   const {
     transcriptPath,
-    model,
     storePath,
     chunkSize = extractionCfg.chunk_size,
     force = false,
@@ -83,18 +85,16 @@ export async function runExtraction(
   const allExtracted: KnowledgeEntry[] = []
   let chunksFailed = 0
 
-  // 1. Heuristic extraction (instant)
+  // 1. Heuristic extraction (instant, always runs)
   const heuristicEntries: KnowledgeEntry[] = []
-  if (hybridCfg.enabled) {
-    for (const { turn, classification } of heuristicTurns) {
-      const idx = allTurns.indexOf(turn)
-      const preceding =
-        idx > 0 && allTurns[idx - 1].role === "assistant"
-          ? allTurns[idx - 1]
-          : undefined
-      const result = extractHeuristic(turn, classification, source, preceding)
-      heuristicEntries.push(...result.entries)
-    }
+  for (const { turn, classification } of heuristicTurns) {
+    const idx = allTurns.indexOf(turn)
+    const preceding =
+      idx > 0 && allTurns[idx - 1].role === "assistant"
+        ? allTurns[idx - 1]
+        : undefined
+    const result = extractHeuristic(turn, classification, source, preceding)
+    heuristicEntries.push(...result.entries)
   }
 
   // Apply novelty gate + auto-approval to heuristic entries
@@ -111,21 +111,20 @@ export async function runExtraction(
   }
 
   // 2. LLM extraction (slow path)
-  // When hybrid is disabled, ALL signal turns go to LLM (legacy behavior)
-  // When hybrid is enabled, only factual turns go to LLM (if llm_fallback_enabled)
+  // Determine LLM model from strategy (options.model overrides for backward compat)
+  const strategyModel = options.model ?? getStrategyModel(strategyCfg)
+  const isCloud = strategyCfg.strategy === "cloud"
   const llmExtracted: KnowledgeEntry[] = []
 
   let signalTurnsForLLM: TranscriptTurn[]
-  if (!hybridCfg.enabled) {
-    // Legacy: all classified signal turns go to LLM
-    signalTurnsForLLM = classified.map((c) => c.turn)
-  } else if (hybridCfg.llm_fallback_enabled) {
-    // Hybrid + LLM fallback: only factual turns
-    signalTurnsForLLM = llmCandidates
-  } else {
-    // Hybrid + no LLM: skip entirely
+  if (strategyCfg.strategy === "heuristics-only" || !strategyModel) {
     signalTurnsForLLM = []
+  } else {
+    signalTurnsForLLM = llmCandidates
   }
+
+  // Get the right prompt based on strategy config
+  const extractionPrompt = getExtractionPrompt(strategyCfg.optimized_prompt)
 
   for (let i = 0; i < signalTurnsForLLM.length; i += chunkSize) {
     const chunk = signalTurnsForLLM.slice(i, i + chunkSize)
@@ -135,7 +134,16 @@ export async function runExtraction(
       `[pipeline] chunk ${chunkNum}: ${chunk.length} signal + ${withContext.length - chunk.length} context = ${withContext.length} turns`,
     )
     const t0 = Date.now()
-    const extracted = await extractWithRetry(withContext, model, source)
+    const extracted = await extractWithRetry(
+      withContext,
+      strategyModel,
+      source,
+      [0, 0.3, 0.7],
+      {
+        prompt: extractionPrompt,
+        useQueue: !isCloud,
+      },
+    )
     console.log(
       `[pipeline] chunk ${chunkNum}: extracted ${extracted.length} entries in ${Date.now() - t0}ms`,
     )
@@ -146,12 +154,23 @@ export async function runExtraction(
   }
   allExtracted.push(...llmExtracted)
 
+  // Consolidation stage (Chain of Density) — filter near-dupes before dedup
+  const consolidated = await consolidateExtraction(
+    allExtracted,
+    existing,
+    strategyCfg.consolidation,
+  )
+
   console.log(
-    `[pipeline] dedup start: ${allExtracted.length} candidates vs ${existing.length} existing`,
+    `[pipeline] consolidation: ${allExtracted.length} → ${consolidated.length} entries`,
+  )
+
+  console.log(
+    `[pipeline] dedup start: ${consolidated.length} candidates vs ${existing.length} existing`,
   )
   const t1 = Date.now()
   const { unique: newEntries, duplicatesSkipped } = await deduplicateEntries(
-    allExtracted,
+    consolidated,
     existing,
     getLLMConfig().ollamaBaseUrl,
   )
@@ -162,7 +181,7 @@ export async function runExtraction(
   if (newEntries.length > 0) {
     await appendEntries(newEntries, storePath)
 
-    // Run consolidation if claudeMdPath configured
+    // Run consolidation to CLAUDE.md if claudeMdPath configured
     if (claudeMdPath) {
       consolidateToClaudeMd(storePath, claudeMdPath).catch((err) => {
         emitEvent({
@@ -194,7 +213,7 @@ export async function runExtraction(
       },
     },
     observationStorePath,
-  ).catch(() => {}) // emitEvent logs to console internally
+  ).catch(() => {})
 
   return {
     entries: newEntries,
@@ -207,7 +226,7 @@ export async function runExtraction(
       chunksFailed: chunksFailed > 0 ? chunksFailed : undefined,
       heuristicEntries: gatedHeuristic.length,
       llmEntries: llmExtracted.length,
-      llmSkipped: hybridCfg.enabled && !hybridCfg.llm_fallback_enabled,
+      llmSkipped: strategyCfg.strategy === "heuristics-only",
     },
   }
 }

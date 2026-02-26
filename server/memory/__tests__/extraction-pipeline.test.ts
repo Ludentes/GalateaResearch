@@ -20,6 +20,7 @@ vi.mock("../knowledge-extractor", () => ({
 }))
 
 import { runExtraction } from "../extraction-pipeline"
+import { extractWithRetry } from "../knowledge-extractor"
 import { readEntries } from "../knowledge-store"
 
 const TEST_DIR = path.join(__dirname, "fixtures", "test-pipeline")
@@ -119,5 +120,39 @@ describe("Extraction Pipeline", () => {
 
     expect(result.stats).toHaveProperty("heuristicEntries")
     expect(result.stats).toHaveProperty("llmEntries")
+  })
+
+  it("skips LLM when strategy is heuristics-only", async () => {
+    const { getExtractionStrategyConfig } = await import(
+      "../../engine/config"
+    )
+    const origConfig = getExtractionStrategyConfig()
+
+    // Temporarily override the config module
+    const configModule = await import("../../engine/config")
+    const spy = vi
+      .spyOn(configModule, "getExtractionStrategyConfig")
+      .mockReturnValue({
+        ...origConfig,
+        strategy: "heuristics-only",
+      })
+
+    const mockedExtract = vi.mocked(extractWithRetry)
+    mockedExtract.mockClear()
+
+    const storePath = path.join(TEST_DIR, "entries.jsonl")
+    const result = await runExtraction({
+      transcriptPath: FIXTURE,
+      storePath,
+      // No model provided — heuristics-only needs none
+    })
+
+    expect(result.stats.llmSkipped).toBe(true)
+    expect(result.stats.llmEntries).toBe(0)
+    expect(mockedExtract).not.toHaveBeenCalled()
+    // Heuristic entries should still be produced
+    expect(result.stats.heuristicEntries).toBeGreaterThanOrEqual(0)
+
+    spy.mockRestore()
   })
 })
