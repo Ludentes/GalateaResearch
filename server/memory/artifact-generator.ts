@@ -67,10 +67,40 @@ export async function generateClaudeMd(options: GenerateOptions): Promise<string
   if (facts.length > 0) {
     sections.push("## Facts")
     sections.push("")
+
+    // Group by about.entity, ungrouped last
+    const grouped = new Map<string, typeof facts>()
+    const ungrouped: typeof facts = []
     for (const fact of facts) {
-      sections.push(`- ${fact.content}`)
+      if (fact.about?.entity) {
+        const key = fact.about.entity
+        const bucket = grouped.get(key) ?? []
+        bucket.push(fact)
+        grouped.set(key, bucket)
+      } else {
+        ungrouped.push(fact)
+      }
     }
-    sections.push("")
+
+    for (const [entity, bucket] of grouped) {
+      sections.push(`### ${entity.charAt(0).toUpperCase() + entity.slice(1)}`)
+      sections.push("")
+      for (const fact of bucket) {
+        sections.push(`- ${fact.content}`)
+      }
+      sections.push("")
+    }
+
+    if (ungrouped.length > 0) {
+      if (grouped.size > 0) {
+        sections.push("### General")
+        sections.push("")
+      }
+      for (const fact of ungrouped) {
+        sections.push(`- ${fact.content}`)
+      }
+      sections.push("")
+    }
   }
 
   const md = sections.join("\n")
@@ -197,9 +227,15 @@ export async function generateSubagentDefinitions(options: SubagentOptions): Pro
 }
 
 function extractTitle(content: string): string {
-  const firstSentence = content.split(/[.!?:]/)[0]?.trim()
-  if (firstSentence && firstSentence.length <= 80) return firstSentence
-  return content.slice(0, 60) + "..."
+  // Match sentence-ending punctuation: period followed by space+uppercase (not abbreviations like e.g.)
+  const sentenceEnd = content.search(/[!?]|(?<=[a-z\d])\.\s+[A-Z]/)
+  const firstSentence =
+    sentenceEnd > 0 ? content.slice(0, sentenceEnd).trim() : content.trim()
+  if (firstSentence.length <= 80) return firstSentence
+  // Fallback: truncate at word boundary
+  const truncated = content.slice(0, 80)
+  const lastSpace = truncated.lastIndexOf(" ")
+  return (lastSpace > 40 ? truncated.slice(0, lastSpace) : truncated) + "…"
 }
 
 function slugify(text: string): string {
