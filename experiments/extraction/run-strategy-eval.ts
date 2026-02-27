@@ -193,6 +193,14 @@ async function main() {
     console.log(`  Time: ${elapsed}s`)
     if (sessionErrors > 0) console.log(`  Errors: ${sessionErrors} sessions failed`)
 
+    // Dump entries for analysis
+    const resultsDir = path.join(import.meta.dirname, "results")
+    mkdirSync(resultsDir, { recursive: true })
+    const dumpPath = path.join(resultsDir, `${developer}-${strategy}-entries.jsonl`)
+    const { writeFileSync: wfs } = await import("node:fs")
+    wfs(dumpPath, entries.map((e) => JSON.stringify(e)).join("\n") + "\n")
+    console.log(`  Entries saved: ${dumpPath}`)
+
     // Cleanup
     rmSync(tempDir, { recursive: true })
   }
