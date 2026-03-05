@@ -23,7 +23,7 @@ export const ExtractionSchema = z.object({
       confidence: z
         .number()
         .describe(
-          "0.0 to 1.0. 1.0 for explicit user statements, 0.7-0.9 for strong implications, 0.5-0.7 for weak signals",
+          "Float 0-1: 1.0 for explicit user statements, 0.7-0.9 for strong implications, 0.5-0.7 for weak signals",
         ),
       evidence: z
         .string()
@@ -150,7 +150,7 @@ export async function extractKnowledge(
   )
   const t0 = Date.now()
 
-  const doExtract = () =>
+  const doGenerate = () =>
     generateObject({
       model,
       schema: ExtractionSchema,
@@ -160,10 +160,10 @@ export async function extractKnowledge(
       abortSignal: AbortSignal.timeout(60_000),
     })
 
-  const { object } =
-    opts.useQueue === false
-      ? await doExtract()
-      : await ollamaQueue.enqueue(doExtract, "batch")
+  const isOllama = (model as { provider?: string }).provider === "ollama"
+  const { object } = isOllama
+    ? await ollamaQueue.enqueue(doGenerate, "batch")
+    : await doGenerate()
 
   console.log(
     `[extraction] generateObject done: ${object.items.length} items in ${Date.now() - t0}ms`,
