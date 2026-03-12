@@ -51,6 +51,13 @@ function extractEntities(task: TaskState): string[] {
   // Extract MR references (!NNN)
   const mrRefs = task.description.match(/!\d+/g)
   if (mrRefs) entities.push(...mrRefs)
+  // Extract from progress steps
+  for (const step of task.progress) {
+    const stepIssues = step.match(/#\d+/g)
+    if (stepIssues) entities.push(...stepIssues)
+    const stepMrs = step.match(/!\d+/g)
+    if (stepMrs) entities.push(...stepMrs)
+  }
   // Extract from artifacts
   for (const a of task.artifacts) {
     const artifactMrs = a.description.match(/!\d+/g)

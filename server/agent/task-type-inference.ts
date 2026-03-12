@@ -48,7 +48,7 @@ function hasTaskSignal(lower: string): boolean {
   const taskPatterns = [
     /(?:implement|build|create|add|fix|refactor)\s+.*#\d+/,
     /(?:implement|build|create|add|fix|refactor)\s+.*!\d+/,
-    /(?:research|investigate|compare|evaluate)\s+/,
+    /(?:research|investigate|compare|evaluate|find out|look into)\s+/,
     /(?:review|check)\s+(?:mr|merge request|pull request|!\d+|code)/,
     /(?:create|assign|plan)\s+(?:task|issue|sprint|ticket)/,
     /(?:implement|build|create|add)\s+.*(?:screen|page|component|feature|module)/,
