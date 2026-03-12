@@ -7,6 +7,7 @@ Step-by-step guide for validating the Beki/Besa agent system end-to-end.
 - Docker running (FalkorDB, Qdrant containers)
 - Discord bot token configured in `.env`
 - Claude Code CLI installed and authenticated
+- Claude Code API key set in `.env` (`ANTHROPIC_API_KEY`)
 - glab CLI authenticated with GitLab
 
 ## Environment Setup
@@ -23,11 +24,57 @@ redis-cli -p 16379 PING                              # FalkorDB
 pnpm dev
 ```
 
-## Verify Fleet Dashboard
+## Step 1: Agent Spec Loading
+
+Verify that agent specs parse correctly and appear in the fleet API.
+
+```bash
+# Confirm spec files exist and are valid YAML
+cat data/agents/beki/spec.yaml | head -5
+cat data/agents/besa/spec.yaml | head -5
+
+# Verify fleet API returns both agents with correct identity from specs
+curl -s http://localhost:13000/api/agent/fleet | jq '.agents[] | {id, name, role, domain}'
+```
+
+**Expected:**
+- Beki: role = "developer", domain = "frontend"
+- Besa: role = "project-manager", domain = "process"
+- Both agents have `tools_context` loaded (visible in spec YAML)
+
+**Edge case — unknown agent:**
+```bash
+# Should return 404
+curl -s -o /dev/null -w "%{http_code}" http://localhost:13000/api/agent/fleet/nonexistent
+```
+
+## Step 2: Verify Fleet Dashboard
 
 1. Open `http://localhost:13000/agent/fleet`
 2. Both Beki and Besa should appear as cards
 3. Health status shows "unknown" (no ticks yet)
+
+## Step 3: Heartbeat Tick Validation
+
+Verify that agents produce ticks autonomously via heartbeat (no message required).
+
+**Action:** Do NOT send any messages. Wait 60 seconds (2x heartbeat interval from `server/engine/config.yaml`).
+
+**Verify:**
+```bash
+# At least one heartbeat tick should exist
+cat data/observations/ticks/beki.jsonl | jq 'select(.trigger.type == "heartbeat")'
+cat data/observations/ticks/besa.jsonl | jq 'select(.trigger.type == "heartbeat")'
+```
+
+**Expected:**
+- At least one tick per agent with `trigger.type == "heartbeat"`
+- Outcome action is `"idle"` (no pending messages)
+- Homeostasis dimensions are assessed
+
+**Edge case — idle heartbeat:**
+- With no pending messages, the tick should complete without delegating to Claude Code
+- `execution.adapter` should be `"none"` for idle heartbeats
 
 ## Trace 12: PM Assigns Research Task to Besa
 
@@ -95,8 +142,14 @@ cat data/observations/ticks/besa.jsonl | jq 'select(.routing.level == "interacti
 
 **Verify:**
 ```bash
-# Check operational context for session clear
+# Check that session resume worked during initial implementation
+cat data/observations/ticks/beki.jsonl | jq 'select(.execution.sessionResumed == true)'
+
+# Check that session was cleared after scope change
 cat data/agents/beki/context.jsonl | jq '.tasks[] | select(.status != "done")'
+
+# Verify new session started (sessionResumed should be false on next tick after scope change)
+cat data/observations/ticks/beki.jsonl | jq -s 'last | .execution.sessionResumed'
 ```
 
 ## Trace 16: Besa Reviews Beki's MR
@@ -115,6 +168,22 @@ cat data/agents/beki/context.jsonl | jq '.tasks[] | select(.status != "done")'
 glab mr view 42 --comments
 cat data/observations/ticks/besa.jsonl | jq 'select(.routing.taskType == "review")'
 ```
+
+## Work-to-Knowledge Verification
+
+After at least one task completes (Trace 12 or later):
+
+```bash
+# Check that completed tasks generated knowledge entries
+cat data/observations/ticks/besa.jsonl | jq 'select(.outcome.knowledgeEntriesCreated > 0)'
+
+# Verify knowledge entries exist with task source
+ls data/agents/besa/knowledge/ 2>/dev/null
+```
+
+**Expected:**
+- At least one tick shows `outcome.knowledgeEntriesCreated > 0`
+- Knowledge entries reference the completed task
 
 ## Fleet Dashboard Verification
 
@@ -147,3 +216,16 @@ After running all traces:
 - Verify `data/agents/beki/spec.yaml` and `data/agents/besa/spec.yaml` exist
 - Check browser console for API errors
 - Try `curl http://localhost:13000/api/agent/fleet` directly
+
+## Validation Passed If
+
+- [ ] Agent specs load correctly and appear in fleet API with correct role/domain
+- [ ] Heartbeat produces at least one idle tick per agent (no message required)
+- [ ] Trace 12: Research task routed as `task` with type `research`
+- [ ] Trace 13: Admin task creates GitLab issues via glab
+- [ ] Trace 14: Quick question routed as `interaction` (no TaskState)
+- [ ] Trace 15: Session resume observed (`sessionResumed: true`), then cleared on scope change
+- [ ] Trace 16: Review task reads MR diff and posts comment
+- [ ] Work-to-knowledge entries created for at least one completed task
+- [ ] Fleet dashboard shows both agents with recent ticks and correct health
+- [ ] Tick detail view shows full causal chain (trigger → homeostasis → routing → outcome)
