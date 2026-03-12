@@ -1,0 +1,14 @@
+scenario: "MR review correctly classified"
+source_gherkin: "Trace 16 (adapted for solo agent)"
+agent: besa
+setup:
+  clear_ticks: true
+steps:
+  - send: "review Beki's MR !42"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: review
+      outcome.action: respond
+      outcome.response: exists

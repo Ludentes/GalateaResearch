@@ -74,6 +74,18 @@ describe("inferRouting", () => {
       expect(result.taskType).toBe("review")
     })
 
+    it("review with words before MR ref → review", () => {
+      const result = inferRouting("review Beki's MR !42")
+      expect(result.level).toBe("task")
+      expect(result.taskType).toBe("review")
+    })
+
+    it("check the pull request → review", () => {
+      const result = inferRouting("check the pull request for auth changes")
+      expect(result.level).toBe("task")
+      expect(result.taskType).toBe("review")
+    })
+
     it("assign tasks → admin", () => {
       const result = inferRouting("assign tasks to the team")
       expect(result.level).toBe("task")

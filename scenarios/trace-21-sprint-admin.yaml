@@ -1,0 +1,14 @@
+scenario: "Sprint task creation routed as admin"
+source_gherkin: "Trace 13 (adapted for solo agent)"
+agent: besa
+setup:
+  clear_ticks: true
+steps:
+  - send: "create tasks for sprint 12 based on the roadmap"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: admin
+      outcome.action: respond
+      outcome.response: exists

@@ -1,0 +1,13 @@
+scenario: "Status question stays interaction-level"
+source_gherkin: "Trace 14 (unchanged)"
+agent: besa
+setup:
+  clear_ticks: true
+steps:
+  - send: "what's the status on the auth module?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      routing.level: interaction
+      outcome.action: respond
+      outcome.response: exists

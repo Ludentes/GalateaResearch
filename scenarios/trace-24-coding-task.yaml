@@ -1,0 +1,14 @@
+scenario: "Coding task from issue reference"
+agent: besa
+setup:
+  clear_ticks: true
+steps:
+  - send: "implement the settings screen #101"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: respond
+      outcome.response: exists
+      execution.adapter: "not: none"

@@ -1,0 +1,15 @@
+scenario: "Solo agent handles research task"
+source_gherkin: "Trace 12 (adapted for solo agent)"
+agent: besa
+setup:
+  clear_ticks: true
+steps:
+  - send: "research auth options for the mobile app"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: research
+      outcome.action: respond
+      outcome.response: exists
+      execution.adapter: "not: none"

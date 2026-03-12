@@ -1,0 +1,21 @@
+scenario: "Two-step conversation with scope change"
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "implement the login page for the app"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: respond
+  - send: "actually, scratch that — research SSO providers first"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: research
+      outcome.action: respond
+      outcome.response: exists

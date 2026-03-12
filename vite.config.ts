@@ -8,6 +8,14 @@ import tsConfigPaths from "vite-tsconfig-paths"
 export default defineConfig({
   server: {
     port: 13000,
+    watch: {
+      ignored: [
+        "**/data/**",
+        "**/graphiti/**",
+        "**/node_modules/**",
+        "**/.git/**",
+      ],
+    },
   },
   plugins: [
     tsConfigPaths({

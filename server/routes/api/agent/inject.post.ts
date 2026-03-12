@@ -50,10 +50,18 @@ export default defineEventHandler(async (event) => {
   }
 
   const msg = buildChannelMessage(body)
+  const tickPath = getTickRecordPath(body.agentId!)
+  const beforeTick = await readLastTickRecord(tickPath)
+
   await addMessage(msg)
   await tick("webhook", { agentId: body.agentId })
 
-  const record = await readLastTickRecord(getTickRecordPath(body.agentId!))
+  // appendTickRecord in tick() is fire-and-forget — poll until new record appears
+  let record = await readLastTickRecord(tickPath)
+  for (let i = 0; i < 10 && record?.tickId === beforeTick?.tickId; i++) {
+    await new Promise((r) => setTimeout(r, 50))
+    record = await readLastTickRecord(tickPath)
+  }
 
   return { tick: record }
 })

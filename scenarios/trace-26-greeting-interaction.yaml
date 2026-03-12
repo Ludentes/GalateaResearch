@@ -1,0 +1,12 @@
+scenario: "Greeting stays interaction-level"
+agent: besa
+setup:
+  clear_ticks: true
+steps:
+  - send: "hey besa, how are things going?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      routing.level: interaction
+      outcome.action: respond
+      outcome.response: exists

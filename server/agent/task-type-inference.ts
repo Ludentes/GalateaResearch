@@ -49,7 +49,7 @@ function hasTaskSignal(lower: string): boolean {
     /(?:implement|build|create|add|fix|refactor)\s+.*#\d+/,
     /(?:implement|build|create|add|fix|refactor)\s+.*!\d+/,
     /(?:research|investigate|compare|evaluate|find out|look into)\s+/,
-    /(?:review|check)\s+(?:mr|merge request|pull request|!\d+|code)/,
+    /(?:review|check)\s+(?:.*?\s)?(?:mr|merge request|pull request|!\d+|code)/,
     /(?:create|assign|plan)\s+(?:task|issue|sprint|ticket)/,
     /(?:implement|build|create|add)\s+.*(?:screen|page|component|feature|module)/,
   ]
@@ -64,7 +64,7 @@ function inferTaskType(lower: string): TaskType {
   }
 
   if (
-    /(?:review|check)\s+(?:mr|merge request|pull request|!\d+|code)/.test(
+    /(?:review|check)\s+(?:.*?\s)?(?:mr|merge request|pull request|!\d+|code)/.test(
       lower,
     )
   ) {
