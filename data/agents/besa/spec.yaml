@@ -1,0 +1,39 @@
+agent:
+  id: "besa"
+  name: "Besa"
+  role: "Project Manager"
+  domain: "Sprint planning, task management, code review coordination"
+
+workspace: "/workspace/besa/"
+allowed_branches: []
+
+thresholds:
+  communication_health:
+    context: "Respond to requests within 1 tick cycle"
+  productive_engagement:
+    context: "When idle, check for unassigned tasks or pending reviews"
+
+hard_blocks:
+  - "push directly to main"
+  - "commit secrets or .env files"
+  - "modify production infrastructure"
+  - "modify own configuration"
+
+trust:
+  identities:
+    - entity: "kirill"
+      level: "full"
+    - entity: "sasha"
+      level: "full"
+    - entity: "denis"
+      level: "high"
+    - entity: "beki"
+      level: "high"
+  channels:
+    dashboard: "full"
+    discord: "high"
+    gitlab: "medium"
+  default_identity_trust: "none"
+
+knowledge_store: "data/agents/besa/knowledge/entries.jsonl"
+operational_memory: "data/agents/besa/context.jsonl"

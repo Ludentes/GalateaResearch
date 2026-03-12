@@ -76,7 +76,16 @@ coverage/
 .worktrees/
 
 # Runtime data (agent state, memory, observations, test output)
-data/
+# Use data/* (not data/) so negation patterns below work
+data/*
+# Agent specs are config, not runtime data — track them
+!data/agents/
+data/agents/*
+!data/agents/beki/
+!data/agents/besa/
+data/agents/beki/*
+data/agents/besa/*
+!data/agents/*/spec.yaml
 
 # Private data — developer transcripts, golden datasets, extraction results
 # These contain personal knowledge extracted from real developer sessions.
