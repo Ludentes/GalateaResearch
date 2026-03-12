@@ -51,11 +51,14 @@ function checkValue(
 
   // Numeric comparison matchers
   if (typeof expected === "string") {
-    const numMatch = expected.match(/^([<>]=?)\s*(.+)$/)
+    const numMatch = expected.match(/^([<>]=?)\s*(\d+(?:\.\d+)?)$/)
     if (numMatch) {
       const op = numMatch[1]
       const threshold = Number(numMatch[2])
       const actualNum = Number(actual)
+      if (Number.isNaN(actualNum)) {
+        return { field, expected, actual: String(actual), pass: false }
+      }
       let pass = false
       switch (op) {
         case "<":
