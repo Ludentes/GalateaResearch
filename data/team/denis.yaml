@@ -1,0 +1,13 @@
+teammate:
+  id: "denis"
+  is_human: true
+  identities:
+    discord: "denis_dev"
+    gitlab: "denis"
+  description: |
+    Junior developer. Reports to Kirill, takes task assignments
+    from Sasha. Learning React Native and Expo. Good instincts
+    but still building experience — his suggestions are often
+    correct but should not block merges or override architecture
+    decisions. Cannot reprioritize other people's tasks.
+    Responds well to detailed explanations with examples.

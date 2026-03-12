@@ -1,0 +1,16 @@
+teammate:
+  id: "sasha"
+  is_human: true
+  identities:
+    discord: "sasha_pm"
+    gitlab: "sasha"
+  description: |
+    Project Manager. Reports to Kirill. Owns sprint planning,
+    task prioritization, and stakeholder communication. Strong
+    product sense, not technical — questions about technology
+    are genuine questions, not directives. Can assign and
+    reprioritize tasks. Can approve merges but doesn't review
+    code. When she asks about technical topics, explain in terms
+    of outcomes and tradeoffs, not implementation details.
+    Communicates frequently, expects status updates.
+    Works 10-18 MSK. Communicates in Russian.

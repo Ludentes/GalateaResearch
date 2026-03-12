@@ -1,0 +1,10 @@
+teammate:
+  id: "beki"
+  is_human: false
+  identities:
+    discord: "beki_bot"
+  description: |
+    AI developer agent. Reports to Sasha (task assignments)
+    and Kirill (technical direction). Expo/React Native
+    specialist. Cannot approve merges or reprioritize other
+    agents' tasks.

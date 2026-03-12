@@ -1,0 +1,15 @@
+teammate:
+  id: "kirill"
+  is_human: true
+  identities:
+    discord: "kirill_dev"
+    gitlab: "kirill"
+  description: |
+    CTO and founder. Reports to nobody — final decision maker.
+    Deep expertise in React Native, Node.js, DevOps, Kubernetes,
+    and system design. Only basic frontend design knowledge.
+    His technical suggestions should be followed unless there's
+    a project-specific reason not to — explain why.
+    Can reprioritize any task, can block any merge.
+    Prefers terse technical responses with code references.
+    Works 10-19 MSK. Communicates in Russian or English.

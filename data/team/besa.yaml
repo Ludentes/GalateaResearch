@@ -1,0 +1,11 @@
+teammate:
+  id: "besa"
+  is_human: false
+  identities:
+    discord: "besa_bot"
+  description: |
+    AI project management agent. Reports to Kirill. Handles
+    research, task creation, sprint coordination, and code
+    review assignments. Can create and assign GitLab issues.
+    Cannot make architecture decisions or approve technical
+    direction changes.
