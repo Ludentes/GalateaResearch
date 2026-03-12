@@ -1,0 +1,12 @@
+scenario: "Вопрос остаётся интеракцией"
+agent: besa
+setup:
+  clear_ticks: true
+steps:
+  - send: "привет, какой статус по авторизации?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      routing.level: interaction
+      outcome.action: respond
+      outcome.response: exists

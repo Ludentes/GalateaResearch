@@ -12,6 +12,8 @@ export interface RoutingDecision {
  *
  * This is a heuristic — the LLM + homeostasis provide the final decision.
  * This function provides the initial signal for routing.
+ *
+ * Supports both English and Russian input.
  */
 export function inferRouting(
   content: string,
@@ -44,37 +46,84 @@ export function inferRouting(
   }
 }
 
+// -- English patterns --
+
+const EN_CODING_VERBS = /(?:implement|build|create|add|fix|refactor)/
+const EN_RESEARCH_VERBS =
+  /(?:research|investigate|compare|evaluate|find out|look into)/
+const EN_REVIEW_VERBS = /(?:review|check)/
+const EN_REVIEW_TARGETS =
+  /(?:mr|merge request|pull request|!\d+|code|код|мр)/
+const EN_ADMIN_VERBS = /(?:create|assign|plan)/
+const EN_ADMIN_TARGETS = /(?:task|issue|sprint|ticket|milestone)/
+const EN_UI_TARGETS = /(?:screen|page|component|feature|module)/
+
+// -- Russian patterns --
+
+const RU_CODING_VERBS =
+  /(?:реализуй|сделай|добавь|исправь|пофикси|рефактори|напиши|собери|построй|создай)/
+const RU_RESEARCH_VERBS =
+  /(?:исследуй|изучи|сравни|оцени|найди|посмотри|разберись|проанализируй)/
+const RU_REVIEW_VERBS = /(?:проверь|ревьюни|посмотри|проревьюй|глянь)/
+const RU_REVIEW_TARGETS = /(?:мр|мерж|пулл?\s*реквест|!\d+|код|code|mr)/
+const RU_ADMIN_VERBS = /(?:создай|назначь|спланируй|заведи|распредели)/
+const RU_ADMIN_TARGETS =
+  /(?:задач[уи]?|тикет|спринт|issue|milestone|майлстоун)/
+const RU_UI_TARGETS =
+  /(?:экран|страниц[уы]?|компонент|фич[уа]?|модул[ья])/
+
 function hasTaskSignal(lower: string): boolean {
   const taskPatterns = [
-    /(?:implement|build|create|add|fix|refactor)\s+.*#\d+/,
-    /(?:implement|build|create|add|fix|refactor)\s+.*!\d+/,
-    /(?:research|investigate|compare|evaluate|find out|look into)\s+/,
-    /(?:review|check)\s+(?:.*?\s)?(?:mr|merge request|pull request|!\d+|code)/,
-    /(?:create|assign|plan)\s+(?:task|issue|sprint|ticket)/,
-    /(?:implement|build|create|add)\s+.*(?:screen|page|component|feature|module)/,
+    // English
+    new RegExp(`${EN_CODING_VERBS.source}\\s+.*#\\d+`),
+    new RegExp(`${EN_CODING_VERBS.source}\\s+.*!\\d+`),
+    new RegExp(`${EN_RESEARCH_VERBS.source}\\s+`),
+    new RegExp(
+      `${EN_REVIEW_VERBS.source}\\s+(?:.*?\\s)?${EN_REVIEW_TARGETS.source}`,
+    ),
+    new RegExp(`${EN_ADMIN_VERBS.source}\\s+${EN_ADMIN_TARGETS.source}`),
+    new RegExp(
+      `${EN_CODING_VERBS.source}\\s+.*${EN_UI_TARGETS.source}`,
+    ),
+    // Russian
+    new RegExp(`${RU_CODING_VERBS.source}\\s+.*#\\d+`),
+    new RegExp(`${RU_CODING_VERBS.source}\\s+.*!\\d+`),
+    new RegExp(`${RU_RESEARCH_VERBS.source}\\s+`),
+    new RegExp(
+      `${RU_REVIEW_VERBS.source}\\s+(?:.*?\\s)?${RU_REVIEW_TARGETS.source}`,
+    ),
+    new RegExp(`${RU_ADMIN_VERBS.source}\\s+${RU_ADMIN_TARGETS.source}`),
+    new RegExp(
+      `${RU_CODING_VERBS.source}\\s+.*${RU_UI_TARGETS.source}`,
+    ),
   ]
   return taskPatterns.some((p) => p.test(lower))
 }
 
 function inferTaskType(lower: string): TaskType {
+  // Research (EN + RU)
   if (
-    /(?:research|investigate|compare|evaluate|find out|look into)/.test(lower)
+    new RegExp(
+      `${EN_RESEARCH_VERBS.source}|${RU_RESEARCH_VERBS.source}`,
+    ).test(lower)
   ) {
     return "research"
   }
 
+  // Review (EN + RU)
   if (
-    /(?:review|check)\s+(?:.*?\s)?(?:mr|merge request|pull request|!\d+|code)/.test(
-      lower,
-    )
+    new RegExp(
+      `(?:${EN_REVIEW_VERBS.source}|${RU_REVIEW_VERBS.source})\\s+(?:.*?\\s)?(?:${EN_REVIEW_TARGETS.source}|${RU_REVIEW_TARGETS.source})`,
+    ).test(lower)
   ) {
     return "review"
   }
 
+  // Admin (EN + RU)
   if (
-    /(?:create|assign|plan)\s+(?:task|issue|sprint|ticket|milestone)/.test(
-      lower,
-    )
+    new RegExp(
+      `(?:${EN_ADMIN_VERBS.source}|${RU_ADMIN_VERBS.source})\\s+(?:${EN_ADMIN_TARGETS.source}|${RU_ADMIN_TARGETS.source})`,
+    ).test(lower)
   ) {
     return "admin"
   }

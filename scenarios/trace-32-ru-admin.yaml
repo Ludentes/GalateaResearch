@@ -1,0 +1,13 @@
+scenario: "Создание задач — русский язык"
+agent: besa
+setup:
+  clear_ticks: true
+steps:
+  - send: "создай задачи на спринт 12"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: admin
+      outcome.action: respond
+      outcome.response: exists

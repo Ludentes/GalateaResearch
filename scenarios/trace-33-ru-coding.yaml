@@ -1,0 +1,13 @@
+scenario: "Задача на код — русский язык"
+agent: beki
+setup:
+  clear_ticks: true
+steps:
+  - send: "реализуй экран настроек #101"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: respond
+      outcome.response: exists

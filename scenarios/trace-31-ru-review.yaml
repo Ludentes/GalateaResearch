@@ -1,0 +1,13 @@
+scenario: "Ревью МР — русский язык"
+agent: besa
+setup:
+  clear_ticks: true
+steps:
+  - send: "проверь МР !42 по авторизации"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: review
+      outcome.action: respond
+      outcome.response: exists

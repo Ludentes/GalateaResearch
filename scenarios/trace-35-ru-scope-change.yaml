@@ -1,0 +1,21 @@
+scenario: "Смена контекста — код на исследование"
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "сделай страницу логина"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: respond
+  - send: "стоп, сначала изучи варианты SSO"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: research
+      outcome.action: respond
+      outcome.response: exists

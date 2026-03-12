@@ -1,0 +1,13 @@
+scenario: "Исследование — русский язык"
+agent: besa
+setup:
+  clear_ticks: true
+steps:
+  - send: "исследуй варианты авторизации для мобильного приложения"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: research
+      outcome.action: respond
+      outcome.response: exists
