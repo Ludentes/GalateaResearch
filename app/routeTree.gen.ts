@@ -14,10 +14,12 @@ import { Route as AgentIndexRouteImport } from './routes/agent/index'
 import { Route as ChatSessionIdRouteImport } from './routes/chat/$sessionId'
 import { Route as AgentTraceRouteImport } from './routes/agent/trace'
 import { Route as AgentKnowledgeRouteImport } from './routes/agent/knowledge'
+import { Route as AgentExportRouteImport } from './routes/agent/export'
 import { Route as AgentConfigRouteImport } from './routes/agent/config'
 import { Route as AgentChatRouteImport } from './routes/agent/chat'
 import { Route as AgentAuditRouteImport } from './routes/agent/audit'
-import { Route as AgentExportRouteImport } from './routes/agent/export'
+import { Route as AgentFleetIndexRouteImport } from './routes/agent/fleet/index'
+import { Route as AgentFleetAgentIdRouteImport } from './routes/agent/fleet/$agentId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -44,6 +46,11 @@ const AgentKnowledgeRoute = AgentKnowledgeRouteImport.update({
   path: '/agent/knowledge',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AgentExportRoute = AgentExportRouteImport.update({
+  id: '/agent/export',
+  path: '/agent/export',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AgentConfigRoute = AgentConfigRouteImport.update({
   id: '/agent/config',
   path: '/agent/config',
@@ -59,9 +66,14 @@ const AgentAuditRoute = AgentAuditRouteImport.update({
   path: '/agent/audit',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AgentExportRoute = AgentExportRouteImport.update({
-  id: '/agent/export',
-  path: '/agent/export',
+const AgentFleetIndexRoute = AgentFleetIndexRouteImport.update({
+  id: '/agent/fleet/',
+  path: '/agent/fleet/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentFleetAgentIdRoute = AgentFleetAgentIdRouteImport.update({
+  id: '/agent/fleet/$agentId',
+  path: '/agent/fleet/$agentId',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -75,6 +87,8 @@ export interface FileRoutesByFullPath {
   '/agent/trace': typeof AgentTraceRoute
   '/chat/$sessionId': typeof ChatSessionIdRoute
   '/agent/': typeof AgentIndexRoute
+  '/agent/fleet/$agentId': typeof AgentFleetAgentIdRoute
+  '/agent/fleet/': typeof AgentFleetIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -86,6 +100,8 @@ export interface FileRoutesByTo {
   '/agent/trace': typeof AgentTraceRoute
   '/chat/$sessionId': typeof ChatSessionIdRoute
   '/agent': typeof AgentIndexRoute
+  '/agent/fleet/$agentId': typeof AgentFleetAgentIdRoute
+  '/agent/fleet': typeof AgentFleetIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -98,6 +114,8 @@ export interface FileRoutesById {
   '/agent/trace': typeof AgentTraceRoute
   '/chat/$sessionId': typeof ChatSessionIdRoute
   '/agent/': typeof AgentIndexRoute
+  '/agent/fleet/$agentId': typeof AgentFleetAgentIdRoute
+  '/agent/fleet/': typeof AgentFleetIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -111,6 +129,8 @@ export interface FileRouteTypes {
     | '/agent/trace'
     | '/chat/$sessionId'
     | '/agent/'
+    | '/agent/fleet/$agentId'
+    | '/agent/fleet/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -122,6 +142,8 @@ export interface FileRouteTypes {
     | '/agent/trace'
     | '/chat/$sessionId'
     | '/agent'
+    | '/agent/fleet/$agentId'
+    | '/agent/fleet'
   id:
     | '__root__'
     | '/'
@@ -133,6 +155,8 @@ export interface FileRouteTypes {
     | '/agent/trace'
     | '/chat/$sessionId'
     | '/agent/'
+    | '/agent/fleet/$agentId'
+    | '/agent/fleet/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -145,6 +169,8 @@ export interface RootRouteChildren {
   AgentTraceRoute: typeof AgentTraceRoute
   ChatSessionIdRoute: typeof ChatSessionIdRoute
   AgentIndexRoute: typeof AgentIndexRoute
+  AgentFleetAgentIdRoute: typeof AgentFleetAgentIdRoute
+  AgentFleetIndexRoute: typeof AgentFleetIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -184,18 +210,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgentKnowledgeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/agent/export': {
+      id: '/agent/export'
+      path: '/agent/export'
+      fullPath: '/agent/export'
+      preLoaderRoute: typeof AgentExportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/agent/config': {
       id: '/agent/config'
       path: '/agent/config'
       fullPath: '/agent/config'
       preLoaderRoute: typeof AgentConfigRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/agent/audit': {
-      id: '/agent/audit'
-      path: '/agent/audit'
-      fullPath: '/agent/audit'
-      preLoaderRoute: typeof AgentAuditRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agent/chat': {
@@ -205,11 +231,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgentChatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/agent/export': {
-      id: '/agent/export'
-      path: '/agent/export'
-      fullPath: '/agent/export'
-      preLoaderRoute: typeof AgentExportRouteImport
+    '/agent/audit': {
+      id: '/agent/audit'
+      path: '/agent/audit'
+      fullPath: '/agent/audit'
+      preLoaderRoute: typeof AgentAuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent/fleet/': {
+      id: '/agent/fleet/'
+      path: '/agent/fleet'
+      fullPath: '/agent/fleet/'
+      preLoaderRoute: typeof AgentFleetIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent/fleet/$agentId': {
+      id: '/agent/fleet/$agentId'
+      path: '/agent/fleet/$agentId'
+      fullPath: '/agent/fleet/$agentId'
+      preLoaderRoute: typeof AgentFleetAgentIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -225,6 +265,8 @@ const rootRouteChildren: RootRouteChildren = {
   AgentTraceRoute: AgentTraceRoute,
   ChatSessionIdRoute: ChatSessionIdRoute,
   AgentIndexRoute: AgentIndexRoute,
+  AgentFleetAgentIdRoute: AgentFleetAgentIdRoute,
+  AgentFleetIndexRoute: AgentFleetIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
