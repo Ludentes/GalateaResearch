@@ -296,11 +296,33 @@ Kirill: "What's the status of auth?"
 
 ---
 
+## Relationship to Cognitive Models Design
+
+The cognitive models design (`docs/plans/2026-02-12-cognitive-models-design.md`) established that models are **views over the knowledge store**, not separate structures. The `about` field on `KnowledgeEntry` tags knowledge by subject (`{entity: "alina", type: "user"}`).
+
+The teammate profile is **not a replacement** — it's a **declared baseline** that the emergent knowledge entries refine:
+
+| Layer | Source | Example |
+|-------|--------|---------|
+| **Baseline** (static) | Teammate YAML `description` | "Kirill is CTO, deep expertise in DevOps" |
+| **Learned** (emergent) | Knowledge entries where `about.entity = "kirill"` | "Kirill switched team from npm to pnpm" |
+
+Both are injected into the LLM context when a message arrives from that person. The static profile provides what the agent needs on day 1; the knowledge entries add what it learns over time.
+
+**Key connection**: `teammate.id` must match the `entity` string used in knowledge entries. `teammate.id: "kirill"` links to entries with `about: {entity: "kirill", type: "user"}`. No new wiring — the shared entity name is the join key.
+
+**What the old design anticipated but we simplified:**
+- `MaterializedUserModel` with structured `expertise: Record<string, number>` — replaced by freeform description
+- `RelationshipModel` with trust levels and phases — replaced by description text ("can block merges", "reports to Kirill") + LLM common sense for delegation
+- Separate `model:self`, `model:user`, `model:relationship` node types — unnecessary when `about.type` already classifies entries
+
+---
+
 ## What This Doesn't Do
 
 - **No delegation logic** — LLM infers from role descriptions and common sense
 - **No expertise scoring** — freeform "deep expertise in X, basic knowledge of Y" is sufficient
-- **No interaction history** — knowledge store entries with `about.entity` handle this (approach B)
+- **No interaction history** — knowledge store entries with `about.entity` handle this
 - **No dynamic discovery** — small team, profiles declared by hand
 - **No structured timezone/language** — lives in description until a non-LLM component needs it
 
@@ -308,4 +330,4 @@ Kirill: "What's the status of auth?"
 
 *Created: 2026-03-11*
 *Context: Brainstorming session — scenario-driven design for teammate representation*
-*Builds on: Beta simulation design, existing KnowledgeAbout type, reference scenarios*
+*Builds on: Beta simulation design, cognitive models design (2026-02-12), existing KnowledgeAbout type, reference scenarios*
