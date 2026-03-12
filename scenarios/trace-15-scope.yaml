@@ -1,0 +1,18 @@
+scenario: "Mid-task scope change clears session"
+source_gherkin: "Trace 15"
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "implement user settings screen for #101"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: delegate
+  - send: "also needs dark mode toggle"
+    from: { platform: discord, user: sasha }
+    expect:
+      execution.sessionResumed: false

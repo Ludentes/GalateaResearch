@@ -1,0 +1,15 @@
+scenario: "PM assigns research task to Besa"
+source_gherkin: "Trace 12"
+agent: besa
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "research auth options for the mobile app"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: research
+      outcome.action: delegate
+      execution.adapter: "not: none"

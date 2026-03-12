@@ -1,0 +1,15 @@
+scenario: "PM creates sprint tasks via Besa"
+source_gherkin: "Trace 13"
+agent: besa
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "create tasks for sprint 12: settings, notifications, dark mode. Assign to Beki."
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: admin
+      outcome.action: delegate
+      execution.adapter: "not: none"

@@ -1,0 +1,13 @@
+scenario: "Quick status check — interaction, not task"
+source_gherkin: "Trace 14"
+agent: besa
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "is MR !42 merged?"
+    from: { platform: discord, user: sasha }
+    expect:
+      routing.level: interaction
+      outcome.action: respond
+      outcome.response: exists
