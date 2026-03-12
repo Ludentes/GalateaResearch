@@ -164,8 +164,9 @@ export async function runExtraction(
     strategyCfg.consolidation,
   )
 
+  const consolidationFiltered = allExtracted.length - consolidated.length
   console.log(
-    `[pipeline] consolidation: ${allExtracted.length} → ${consolidated.length} entries`,
+    `[pipeline] consolidation: ${allExtracted.length} → ${consolidated.length} entries (${consolidationFiltered} filtered)`,
   )
 
   console.log(
@@ -226,6 +227,8 @@ export async function runExtraction(
       noiseTurns: noiseCount,
       entriesExtracted: allExtracted.length,
       duplicatesSkipped,
+      consolidationFiltered:
+        consolidationFiltered > 0 ? consolidationFiltered : undefined,
       chunksFailed: chunksFailed > 0 ? chunksFailed : undefined,
       heuristicEntries: gatedHeuristic.length,
       llmEntries: llmExtracted.length,

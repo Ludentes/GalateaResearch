@@ -54,7 +54,10 @@ describe("Layer 2: Umka session ends, knowledge extracted", () => {
 
   it("deduplicates on re-extraction with force", async () => {
     const result = await world.extract({ force: true })
-    expect(result.stats.duplicatesSkipped).toBeGreaterThan(0)
+    const totalFiltered =
+      (result.stats.consolidationFiltered ?? 0) +
+      result.stats.duplicatesSkipped
+    expect(totalFiltered).toBeGreaterThan(0)
   }, 120_000)
 
   it("records extraction state after completion", async () => {

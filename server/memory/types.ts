@@ -188,6 +188,7 @@ export interface ExtractionResult {
     noiseTurns: number
     entriesExtracted: number
     duplicatesSkipped: number
+    consolidationFiltered?: number
     chunksFailed?: number
     skippedAlreadyExtracted?: boolean
     heuristicEntries?: number

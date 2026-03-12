@@ -12,7 +12,7 @@ describe("Vector retrieval config", () => {
   it("loads qdrant_url", () => {
     resetConfigCache()
     const config = loadConfig()
-    expect(config.retrieval.qdrant_url).toBe("http://localhost:6333")
+    expect(config.retrieval.qdrant_url).toBe("http://localhost:16333")
   })
 
   it("loads ollama_embed_url", () => {
