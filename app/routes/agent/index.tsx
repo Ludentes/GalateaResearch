@@ -57,6 +57,12 @@ function AgentStatusPage() {
             >
               Chat
             </Link>
+            <Link
+              to="/agent/fleet/"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Fleet
+            </Link>
           </nav>
         </div>
 

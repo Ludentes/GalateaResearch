@@ -46,9 +46,13 @@ export function AgentCard({
         <div>
           <span className="font-medium">Health:</span> {health}
         </div>
-        {lastTick && (
+        {lastTick ? (
           <div className="text-xs">
             Last tick: {new Date(lastTick).toLocaleString()}
+          </div>
+        ) : (
+          <div className="text-xs text-muted-foreground">
+            No activity yet
           </div>
         )}
       </div>
