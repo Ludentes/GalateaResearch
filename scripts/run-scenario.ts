@@ -71,6 +71,7 @@ async function executeStep(
   }
 
   if (!res.ok) {
+    const errText = await res.text()
     return {
       step: stepIndex,
       send: step.send,
@@ -79,7 +80,7 @@ async function executeStep(
         {
           field: "http",
           expected: "200",
-          actual: String(res.status),
+          actual: `${res.status}: ${errText}`,
           pass: false,
         },
       ],
@@ -197,4 +198,7 @@ async function main(): Promise<void> {
   process.exit(allPass ? 0 : 1)
 }
 
-main()
+main().catch((err) => {
+  console.error("Runner failed:", err)
+  process.exit(2)
+})
