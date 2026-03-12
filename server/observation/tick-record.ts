@@ -67,7 +67,13 @@ export async function readTickRecords(
   let records = content
     .split("\n")
     .filter((line) => line.trim() !== "")
-    .map((line) => JSON.parse(line) as TickDecisionRecord)
+    .flatMap((line) => {
+      try {
+        return [JSON.parse(line) as TickDecisionRecord]
+      } catch {
+        return []
+      }
+    })
 
   const offset = options?.offset ?? 0
   if (offset > 0) {
