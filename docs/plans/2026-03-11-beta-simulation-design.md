@@ -716,6 +716,7 @@ TIER 3: Complete Phase G gaps + Observability
   W.10 Work-to-knowledge pipeline
   W.11 GitLab via glab CLI (system prompt context)
   W.12 Fleet control dashboard & homeostasis observability
+  W.13 Teammate ontology (team directory + context injection)
 
 VALIDATION:
   Deploy Beki + Besa on test project
@@ -733,6 +734,7 @@ W.5 ──► W.6 (model before types)
 W.6 ──► W.7 (types before artifacts)
 W.8 ──► W.9 (spec before session management)
 W.12 depends on W.8 (agent IDs from spec) + tick loop (W.1/W.2)
+W.13 depends on W.1 (identity resolution needs inbound messages)
 
 W.1+W.2 ──► VALIDATION (wiring must work)
 W.5-W.9 ──► VALIDATION (model must exist)
@@ -740,9 +742,11 @@ W.10+W.11 ──► VALIDATION (nice to have, can validate without)
 W.12 ──► VALIDATION (essential for debugging — build before validation)
 ```
 
-**Parallelizable**: W.1+W.2 (wiring) || W.5-W.7 (model) || W.3+W.4 (fixes) || W.8 (spec)
+**Parallelizable**: W.1+W.2 (wiring) || W.5-W.7 (model) || W.3+W.4 (fixes) || W.8 (spec) || W.13 (team directory)
 
 **Note on W.12 priority**: W.12 is in Tier 3 by scope but should be built *before* validation starts. The tick decision record (backend) can ship with Tier 1 wiring. The dashboard UI can follow in Tier 3. Without observability, validating Beki/Besa means reading JSONL files by hand.
+
+**Note on W.13 priority**: W.13 is lightweight (YAML files + identity resolver + context injection) and should be ready before validation. The team directory is prerequisite for realistic Beki/Besa scenarios — without it, the agent can't distinguish Sasha's questions from Kirill's directives.
 
 ---
 
