@@ -2,8 +2,10 @@
 import { existsSync, rmSync } from "node:fs"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
+import type { Artifact } from "../artifact"
 import type { ChannelMessage } from "../types"
 import {
+  addArtifact,
   addTask,
   completeTask,
   getActiveTask,
@@ -170,14 +172,18 @@ describe("Operational Memory", () => {
       const ctx = await loadOperationalContext(CTX_PATH)
       const task = addTask(ctx, "Build profile", makeMsg())
       task.status = "in_progress"
-      task.artifacts.push("app/screens/Profile.tsx")
+      addArtifact(ctx, task.id, {
+        type: "document",
+        path: "app/screens/Profile.tsx",
+        description: "Profile screen component",
+      })
 
       const completed = completeTask(ctx, task.id)
 
       expect(completed?.status).toBe("done")
       expect(ctx.carryover).toHaveLength(1)
       expect(ctx.carryover[0]).toContain("Build profile")
-      expect(ctx.carryover[0]).toContain("Profile.tsx")
+      expect(ctx.carryover[0]).toContain("Profile screen component")
     })
   })
 
@@ -198,6 +204,72 @@ describe("Operational Memory", () => {
       expect(ctx.recentHistory).toHaveLength(10)
       expect(ctx.recentHistory[0].content).toBe("message 2") // oldest kept
       expect(ctx.recentHistory[9].content).toBe("message 11") // newest
+    })
+  })
+
+  describe("structured artifacts", () => {
+    it("records structured MR artifact on task", async () => {
+      const ctx = await loadOperationalContext(CTX_PATH)
+      const task = addTask(ctx, "Implement settings", makeMsg(), "coding")
+      const artifact: Artifact = {
+        type: "mr",
+        url: "https://gitlab.example.com/project/-/merge_requests/42",
+        description: "Settings screen MR",
+      }
+      addArtifact(ctx, task.id, artifact)
+      expect(task.artifacts).toHaveLength(1)
+      expect(task.artifacts[0].type).toBe("mr")
+      expect(task.artifacts[0].url).toContain("42")
+    })
+
+    it("records document artifact with path", async () => {
+      const ctx = await loadOperationalContext(CTX_PATH)
+      const task = addTask(
+        ctx,
+        "Research auth options",
+        makeMsg(),
+        "research",
+      )
+      addArtifact(ctx, task.id, {
+        type: "document",
+        path: "docs/research/auth-options.md",
+        description: "Auth options research",
+      })
+      expect(task.artifacts).toHaveLength(1)
+      expect(task.artifacts[0].type).toBe("document")
+      expect(task.artifacts[0].path).toBe("docs/research/auth-options.md")
+    })
+
+    it("supports multiple artifact types on one task", async () => {
+      const ctx = await loadOperationalContext(CTX_PATH)
+      const task = addTask(ctx, "Implement feature", makeMsg(), "coding")
+      addArtifact(ctx, task.id, {
+        type: "branch",
+        description: "feature/settings",
+      })
+      addArtifact(ctx, task.id, {
+        type: "commit",
+        url: "https://gitlab.example.com/project/-/commit/abc123",
+        description: "Initial commit",
+      })
+      addArtifact(ctx, task.id, {
+        type: "mr",
+        url: "https://gitlab.example.com/project/-/merge_requests/42",
+        description: "Settings MR",
+      })
+      expect(task.artifacts).toHaveLength(3)
+      expect(task.artifacts[0].type).toBe("branch")
+      expect(task.artifacts[1].type).toBe("commit")
+      expect(task.artifacts[2].type).toBe("mr")
+    })
+
+    it("ignores addArtifact for unknown task id", async () => {
+      const ctx = await loadOperationalContext(CTX_PATH)
+      addArtifact(ctx, "nonexistent", {
+        type: "branch",
+        description: "orphan",
+      })
+      expect(ctx.tasks).toHaveLength(0)
     })
   })
 

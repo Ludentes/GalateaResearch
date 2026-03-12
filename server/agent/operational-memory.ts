@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs"
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
+import type { Artifact } from "./artifact"
 import type { ChannelMessage } from "./types"
 
 // ---------------------------------------------------------------------------
@@ -15,7 +16,7 @@ export interface TaskState {
   status: "assigned" | "in_progress" | "blocked" | "done"
   phase: "exploring" | "deciding" | "implementing" | "verifying"
   progress: string[]
-  artifacts: string[]
+  artifacts: Artifact[]
   phaseStartedAt: string
   toolCallCount: number
 }
@@ -117,6 +118,16 @@ export function addTask(
   return task
 }
 
+export function addArtifact(
+  ctx: OperationalContext,
+  taskId: string,
+  artifact: Artifact,
+): void {
+  const task = ctx.tasks.find((t) => t.id === taskId)
+  if (!task) return
+  task.artifacts.push(artifact)
+}
+
 export function getActiveTask(ctx: OperationalContext): TaskState | undefined {
   // Priority: in_progress > assigned > blocked
   return (
@@ -142,7 +153,7 @@ export function completeTask(
   task.status = "done"
   // Add summary to carryover
   ctx.carryover.push(
-    `Completed: ${task.description}. Artifacts: ${task.artifacts.join(", ") || "none"}.`,
+    `Completed: ${task.description}. Artifacts: ${task.artifacts.length ? task.artifacts.map((a) => a.description).join(", ") : "none"}.`,
   )
   return task
 }
