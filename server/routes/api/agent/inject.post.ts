@@ -1,4 +1,4 @@
-import { defineEventHandler, readBody } from "h3"
+import { HTTPError, defineEventHandler, readBody } from "h3"
 import { addMessage } from "../../../agent/agent-state"
 import { tick } from "../../../agent/tick"
 import type { ChannelMessage } from "../../../agent/types"
@@ -20,6 +20,10 @@ export function validateInjectBody(body: InjectBody): string | null {
   if (!body.content) return "Missing required field: content"
   if (!body.from) return "Missing required field: from"
   if (!body.channel) return "Missing required field: channel"
+  const validChannels = ["discord", "dashboard", "gitlab", "internal"]
+  if (!validChannels.includes(body.channel)) {
+    return `Invalid channel: ${body.channel}. Must be one of: ${validChannels.join(", ")}`
+  }
   return null
 }
 
@@ -42,7 +46,7 @@ export default defineEventHandler(async (event) => {
 
   const error = validateInjectBody(body)
   if (error) {
-    throw new (await import("h3")).HTTPError(error, { status: 400 })
+    throw new HTTPError(error, { status: 400 })
   }
 
   const msg = buildChannelMessage(body)
