@@ -19,6 +19,7 @@ export interface TaskState {
   artifacts: Artifact[]
   phaseStartedAt: string
   toolCallCount: number
+  claudeSessionId?: string
 }
 
 export type TaskType = TaskState["type"]
@@ -142,6 +143,17 @@ export function updateTaskPhase(
 ): void {
   task.phase = phase
   task.phaseStartedAt = new Date().toISOString()
+  task.claudeSessionId = undefined
+}
+
+export function updateTaskSessionId(
+  ctx: OperationalContext,
+  taskId: string,
+  sessionId: string,
+): void {
+  const task = ctx.tasks.find((t) => t.id === taskId)
+  if (!task) return
+  task.claudeSessionId = sessionId
 }
 
 export function completeTask(

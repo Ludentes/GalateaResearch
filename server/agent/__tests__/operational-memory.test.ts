@@ -16,6 +16,7 @@ import {
   saveOperationalContext,
   timeSinceLastOutboundMs,
   updateTaskPhase,
+  updateTaskSessionId,
 } from "../operational-memory"
 
 const TEST_DIR = path.join(__dirname, "fixtures", "test-op-mem")
@@ -269,6 +270,39 @@ describe("Operational Memory", () => {
         type: "branch",
         description: "orphan",
       })
+      expect(ctx.tasks).toHaveLength(0)
+    })
+  })
+
+  describe("session resume", () => {
+    it("stores Claude Code session ID on task", async () => {
+      const ctx = await loadOperationalContext(CTX_PATH)
+      const task = addTask(ctx, "Implement settings", makeMsg())
+      updateTaskSessionId(ctx, task.id, "session-abc-123")
+      expect(task.claudeSessionId).toBe("session-abc-123")
+    })
+
+    it("clears session ID on phase change", async () => {
+      const ctx = await loadOperationalContext(CTX_PATH)
+      const task = addTask(ctx, "Implement settings", makeMsg())
+      updateTaskSessionId(ctx, task.id, "session-abc-123")
+      updateTaskPhase(task, "implementing")
+      expect(task.claudeSessionId).toBeUndefined()
+    })
+
+    it("persists session ID across save/load", async () => {
+      const ctx = await loadOperationalContext(CTX_PATH)
+      const task = addTask(ctx, "Implement settings", makeMsg())
+      updateTaskSessionId(ctx, task.id, "session-xyz-789")
+      await saveOperationalContext(ctx, CTX_PATH)
+
+      const restored = await loadOperationalContext(CTX_PATH)
+      expect(restored.tasks[0].claudeSessionId).toBe("session-xyz-789")
+    })
+
+    it("ignores updateTaskSessionId for unknown task", async () => {
+      const ctx = await loadOperationalContext(CTX_PATH)
+      updateTaskSessionId(ctx, "nonexistent", "session-abc")
       expect(ctx.tasks).toHaveLength(0)
     })
   })
