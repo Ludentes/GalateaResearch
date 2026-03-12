@@ -79,7 +79,7 @@ Psychology has formalized human cognition for centuries. We apply these models t
 │  │                                                                         │ │
 │  │  ┌──────────────────────────┐  ┌────────────────────────────────────┐  │ │
 │  │  │  Homeostasis Engine      │  │  Knowledge Store                   │  │ │
-│  │  │  6 dimensions, L0-L2     │  │  entries.jsonl (structured)        │  │ │
+│  │  │  7 dimensions, L0-L2     │  │  entries.jsonl (structured)        │  │ │
 │  │  │                          │  │  Qdrant (vector retrieval)         │  │ │
 │  │  │  L0: Cache               │  │                                    │  │ │
 │  │  │  L1: Heuristic           │  │  Lifecycle:                        │  │ │
@@ -558,7 +558,7 @@ This layer classifies both inbound messages (before the agent sees them) and out
 
 **Layer 1: Homeostasis (soft safety — the "immune system")**
 
-The `self_preservation` dimension is the agent's internal sense of safety. It fires when actions feel wrong — destructive tool calls, instruction conflicts, trust violations, social engineering. Because it works alongside the other 6 dimensions, multiple dimensions fire together for dangerous situations, creating emergent resistance that's much harder to bypass than a regex filter.
+The `self_preservation` dimension is the agent's internal sense of safety. It fires when actions feel wrong — destructive tool calls, instruction conflicts, trust violations, social engineering. Because it works alongside the other 6 homeostasis dimensions, multiple dimensions fire together for dangerous situations, creating emergent resistance that's much harder to bypass than a regex filter.
 
 This layer handles:
 - Social engineering ("do this NOW, the PM said skip tests")
@@ -782,6 +782,7 @@ core_dimensions:
   - communication_health
   - productive_engagement
   - knowledge_application
+  - self_preservation
 
 # Persona-specific tuning
 thresholds:
@@ -823,13 +824,13 @@ learned:
   procedures: [...]
 ```
 
-**Persona universality:** Same 6 dimensions for any persona:
+**Persona universality:** Same 7 dimensions for any persona:
 
 | Persona | Same Dimensions | Different Thresholds |
 |---------|-----------------|---------------------|
-| Coder | all 6 | certainty: 0.7, communicate: ~2 hours |
-| Lawyer | all 6 | certainty: 0.95, communicate: ~1 day |
-| Buddy | all 6 | certainty: 0.5, communicate: immediately |
+| Coder | all 7 | certainty: 0.7, communicate: ~2 hours |
+| Lawyer | all 7 | certainty: 0.95, communicate: ~1 day |
+| Buddy | all 7 | certainty: 0.5, communicate: immediately |
 
 ---
 
@@ -954,39 +955,48 @@ Inner loop continues from where it left off (using recentHistory + task.progress
 
 ## Implementation Status
 
-| Component | Status | Location |
-|-----------|--------|----------|
-| Homeostasis Engine (L0-L2) | Done | `server/engine/homeostasis-engine.ts` |
-| Knowledge Store (JSONL) | Done | `server/memory/knowledge-store.ts` |
-| Knowledge Types | Done | `server/memory/types.ts` |
-| Fact Retrieval (keyword + entity) | Done | `server/memory/fact-retrieval.ts` |
-| Shadow Learning Pipeline | Done | `server/memory/extraction-pipeline.ts` |
-| Signal Classifier | Done | `server/memory/signal-classifier.ts` |
-| Knowledge Extractor | Done | `server/memory/knowledge-extractor.ts` |
-| Context Assembler | Done | `server/memory/context-assembler.ts` |
-| Memory Lifecycle (decay, archival) | Done | `server/memory/memory-lifecycle.ts` |
-| Tick Loop (v1, single-call) | Done | `server/agent/tick.ts` |
-| Agent State (basic) | Done | `server/agent/agent-state.ts` |
-| Heartbeat Scheduler | Done | `server/agent/heartbeat.ts` |
-| Preprompts (DB) | Done | `server/engine/preprompts.ts` |
-| Command Center (API + UI) | Done | `server/api/`, `app/` |
-| OTEL Events | Done | `server/observation/` |
-| Discord Connector | Done (unwired) | `server/channels/discord.ts` |
-| Extraction Eval | Done | `experiments/extraction/` |
-| Channel Abstraction | **Phase F** | — |
-| Agent Loop v2 (ReAct) | **Phase F** | — |
-| Operational Memory | **Phase F** | — |
-| Qdrant Retrieval | **Phase F** | — |
-| Confabulation Guards | **Phase F** | — |
-| Safety Design | **Phase F** | — |
-| MCP Tools | **Phase G** | — |
-| Safety Implementation | **Phase G** | — |
-| GitLab Integration | **Phase G** | — |
-| Work-to-Knowledge | **Phase G** | — |
-| Task Routing | **Phase G** | — |
-| Multi-Agent State | **Phase H** | — |
-| Persona Export/Import | **Phase H** | — |
-| Agent Registry | **Phase H** | — |
+Last updated: 2026-03-12
+
+### Production-Ready (tested, 76 test files, 7 integration suites)
+
+| Layer | Component | Location |
+|-------|-----------|----------|
+| Brain | Homeostasis L0-L1 (7 dimensions, heuristics, caching) | `server/engine/homeostasis-engine.ts` |
+| Brain | Homeostasis L2 (LLM semantic, optional) | `server/engine/homeostasis-engine.ts` |
+| Memory | Full extraction pipeline (signal → heuristic → cloud LLM → consolidate) | `server/memory/` |
+| Memory | Knowledge store (JSONL + dedup + decay + archival) | `server/memory/knowledge-store.ts` |
+| Memory | Fact retrieval (3-pass: entity → keyword → vector stub) | `server/memory/fact-retrieval.ts` |
+| Memory | Context assembler (priority truncation + guidance injection) | `server/memory/context-assembler.ts` |
+| Memory | Curation queue, feedback loop, decision trace | `server/memory/` |
+| Memory | Consolidation to CLAUDE.md + skill generation | `server/memory/artifact-generator.ts` |
+| Runtime | Tick loop + heartbeat (30s configurable) | `server/agent/tick.ts`, `heartbeat.ts` |
+| Runtime | Agent loop (ReAct, budget-controlled, max steps) | `server/agent/agent-loop.ts` |
+| Runtime | Operational memory (tasks, phases, history, blockers) | `server/agent/operational-memory.ts` |
+| Runtime | Coding adapter (Claude Code SDK delegation + work arc) | `server/agent/coding-adapter/` |
+| Safety | Tool-call safety (workspace, branch, destructive patterns) | `server/engine/homeostasis-engine.ts` |
+| Infra | Multi-provider (Ollama + OpenRouter + Claude Code, with fallback) | `server/providers/` |
+| Infra | Ollama queue with circuit breaker | `server/providers/ollama-queue.ts` |
+| Infra | Discord bot + dispatcher + mention parsing | `server/discord/` |
+| Infra | API routes (14 endpoints) | `server/routes/` |
+| Infra | OTEL event store + Langfuse plugin | `server/observation/` |
+| Eval | Golden dataset (4 devs, 98 items), 3 strategy comparisons | `experiments/extraction/` |
+
+### Scaffolding / Disabled
+
+| Component | State |
+|-----------|-------|
+| Confabulation guard | Stub (1 function) |
+| Vector retrieval (Qdrant) | Implemented, disabled (`use_vector: false`) |
+| Batch dedup (LLM) | Implemented, disabled (`enabled: false`) |
+| Homeostasis L3-L4 | Stubs only |
+
+### Not Yet Built
+
+| Component | Phase |
+|-----------|-------|
+| Multi-Agent State | Phase H |
+| Persona Export/Import | Phase H |
+| Agent Registry | Phase H |
 
 ---
 
@@ -1008,4 +1018,4 @@ Inner loop continues from where it left off (using recentHistory + task.progress
 
 *Created: 2026-02-21*
 *Synthesized from: Psychological Architecture, Phases A-E implementation, OpenClaw research, 3-agent adversarial review, Reference Scenarios audit*
-*Foundation: Homeostasis-based architecture with 6 universal dimensions (unchanged since Phase C)*
+*Foundation: Homeostasis-based architecture with 7 universal dimensions (self_preservation added in Phase G)*
