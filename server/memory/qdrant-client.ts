@@ -3,7 +3,7 @@
  * Uses fetch() against the Qdrant HTTP API.
  */
 
-const DEFAULT_URL = "http://localhost:6333"
+const DEFAULT_URL = "http://localhost:16333"
 const COLLECTION_NAME = "galatea-knowledge"
 const VECTOR_DIM = 768 // nomic-embed-text
 

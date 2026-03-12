@@ -47,7 +47,7 @@ retrieval:
   use_vector: false
 
   # Qdrant vector database URL for embedding-based retrieval.
-  qdrant_url: "http://localhost:6333"
+  qdrant_url: "http://localhost:16333"
 
   # Ollama URL for generating embeddings (nomic-embed-text).
   ollama_embed_url: "http://localhost:11434"
