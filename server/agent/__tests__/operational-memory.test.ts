@@ -72,6 +72,45 @@ describe("Operational Memory", () => {
     })
   })
 
+  describe("task type", () => {
+    it("creates task with explicit type", async () => {
+      const ctx = await loadOperationalContext(CTX_PATH)
+      const task = addTask(
+        ctx,
+        "Research auth options",
+        makeMsg({ content: "research auth options" }),
+        "research",
+      )
+      expect(task.type).toBe("research")
+    })
+
+    it("defaults task type to coding", async () => {
+      const ctx = await loadOperationalContext(CTX_PATH)
+      const task = addTask(
+        ctx,
+        "Implement settings",
+        makeMsg({ content: "implement settings" }),
+      )
+      expect(task.type).toBe("coding")
+    })
+
+    it("accepts all five task types", async () => {
+      const ctx = await loadOperationalContext(CTX_PATH)
+      const types = [
+        "coding",
+        "research",
+        "review",
+        "admin",
+        "communication",
+      ] as const
+      for (const t of types) {
+        const task = addTask(ctx, `Task ${t}`, makeMsg(), t)
+        expect(task.type).toBe(t)
+      }
+      expect(ctx.tasks).toHaveLength(5)
+    })
+  })
+
   describe("task management", () => {
     // Scenario: Task assignment creates TaskState
     it("creates a task from a channel message", async () => {

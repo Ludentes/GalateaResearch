@@ -11,6 +11,7 @@ export interface TaskState {
   id: string
   description: string
   source: ChannelMessage
+  type: "coding" | "research" | "review" | "admin" | "communication"
   status: "assigned" | "in_progress" | "blocked" | "done"
   phase: "exploring" | "deciding" | "implementing" | "verifying"
   progress: string[]
@@ -18,6 +19,8 @@ export interface TaskState {
   phaseStartedAt: string
   toolCallCount: number
 }
+
+export type TaskType = TaskState["type"]
 
 export type WorkPhase =
   | "idle"
@@ -96,11 +99,13 @@ export function addTask(
   ctx: OperationalContext,
   description: string,
   source: ChannelMessage,
+  type: TaskType = "coding",
 ): TaskState {
   const task: TaskState = {
     id: `task-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     description,
     source,
+    type,
     status: "assigned",
     phase: "exploring",
     progress: [],
