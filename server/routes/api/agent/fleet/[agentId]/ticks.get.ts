@@ -1,4 +1,5 @@
 import { defineEventHandler, getQuery, getRouterParam, HTTPError } from "h3"
+import { loadAgentSpec } from "../../../../../agent/agent-spec"
 import {
   getTickRecordPath,
   readTickRecords,
@@ -8,6 +9,12 @@ export default defineEventHandler(async (event) => {
   const agentId = getRouterParam(event, "agentId")
   if (!agentId) {
     throw new HTTPError("Missing agentId", { status: 400 })
+  }
+
+  try {
+    await loadAgentSpec(agentId)
+  } catch {
+    throw new HTTPError("Agent not found", { status: 404 })
   }
 
   const query = getQuery(event)
