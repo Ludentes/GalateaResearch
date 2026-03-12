@@ -64,14 +64,14 @@ export function validateExtraction(
       changed = true
     }
 
-    // Check about.entity against source text + entry content + known people
+    // Check about.entity against source text + known people
+    // Note: we do NOT check entry.content — it's LLM-generated and not evidence
     if (entry.about?.entity) {
       const aboutLower = entry.about.entity.toLowerCase()
       const inSource = sourceLower.includes(aboutLower)
-      const inContent = entry.content.toLowerCase().includes(aboutLower)
       const isKnown = knownPeople.some((p) => p.toLowerCase() === aboutLower)
 
-      if (!inSource && !inContent && !isKnown) {
+      if (!inSource && !isKnown) {
         warnings.push(
           `Cleared about.entity="${entry.about.entity}" from "${entry.content.slice(0, 60)}": not in source text`,
         )
