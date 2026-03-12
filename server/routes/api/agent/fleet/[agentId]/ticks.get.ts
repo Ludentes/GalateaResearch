@@ -18,8 +18,10 @@ export default defineEventHandler(async (event) => {
   }
 
   const query = getQuery(event)
-  const limit = Number(query.limit) || 50
-  const offset = Number(query.offset) || 0
+  const rawLimit = Number(query.limit) || 50
+  const rawOffset = Number(query.offset) || 0
+  const limit = Math.min(Math.max(rawLimit, 1), 200)
+  const offset = Math.max(rawOffset, 0)
 
   const ticks = await readTickRecords(getTickRecordPath(agentId), {
     limit,

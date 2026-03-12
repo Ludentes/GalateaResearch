@@ -1,38 +1,42 @@
 import { assessDimensions } from "../engine/homeostasis-engine"
-import type { AgentContext, HomeostasisState } from "../engine/types"
+import type {
+  AgentContext,
+  HomeostasisState,
+  TrustLevel,
+} from "../engine/types"
 import { assembleContext } from "../memory/context-assembler"
 import { retrieveRelevantFacts } from "../memory/fact-retrieval"
+import { appendEntries } from "../memory/knowledge-store"
+import { createWorkKnowledge } from "../memory/work-to-knowledge"
+import { emitEvent } from "../observation/emit"
+import type { TickDecisionRecord } from "../observation/tick-record"
+import { appendTickRecord, getTickRecordPath } from "../observation/tick-record"
 import { getModelWithFallback } from "../providers"
 import {
   OllamaBackpressureError,
   OllamaCircuitOpenError,
 } from "../providers/ollama-queue"
-import { emitEvent } from "../observation/emit"
-import {
-  appendTickRecord,
-  getTickRecordPath,
-} from "../observation/tick-record"
-import type { TickDecisionRecord } from "../observation/tick-record"
+import type { AgentTool } from "./agent-loop"
+import { runAgentLoop } from "./agent-loop"
+import { loadAgentSpec } from "./agent-spec"
 import {
   appendActivityLog,
   getAgentState,
   removeMessage,
   updateAgentState,
 } from "./agent-state"
-import { runAgentLoop } from "./agent-loop"
-import type { AgentTool } from "./agent-loop"
+import type { CodingToolAdapter } from "./coding-adapter/types"
+import { executeWorkArc } from "./coding-adapter/work-arc"
 import { dispatchMessage } from "./dispatcher"
 import {
+  addTask,
   loadOperationalContext,
   pushHistoryEntry,
   recordOutbound,
   saveOperationalContext,
 } from "./operational-memory"
+import { inferRouting } from "./task-type-inference"
 import type { ChannelMessage, SelfModel, TickResult } from "./types"
-import type { CodingToolAdapter } from "./coding-adapter/types"
-import { executeWorkArc } from "./coding-adapter/work-arc"
-import { addTask } from "./operational-memory"
-import type { TrustLevel } from "../engine/types"
 
 // ---------------------------------------------------------------------------
 // Tool registry — stub tools for F.2 scaffolding
@@ -102,6 +106,7 @@ function buildTickRecord(params: {
 // ---------------------------------------------------------------------------
 
 interface TickOptions {
+  agentId?: string
   statePath?: string
   storePath?: string
   opContextPath?: string
@@ -114,6 +119,7 @@ export async function tick(
   const tickId = crypto.randomUUID()
   const tickStart = Date.now()
 
+  const agentId = opts?.agentId ?? "galatea"
   const statePath = opts?.statePath
   const storePath = opts?.storePath ?? "data/memory/entries.jsonl"
   const opContextPath = opts?.opContextPath
@@ -121,6 +127,17 @@ export async function tick(
   // Stage 1: Load operational context + self-model
   const selfModel = await checkSelfModel()
   const opCtx = await loadOperationalContext(opContextPath)
+
+  // Load agent spec for tools_context injection
+  let toolsContext: string | undefined
+  if (agentId !== "galatea") {
+    try {
+      const spec = await loadAgentSpec(agentId)
+      toolsContext = spec.tools_context
+    } catch {
+      // Agent spec not found — not critical
+    }
+  }
 
   // Stage 2: Read state
   const state = await getAgentState(statePath)
@@ -173,43 +190,63 @@ export async function tick(
       task.status = "in_progress"
 
       const workDir = (msg.metadata?.workspace as string) ?? process.cwd()
+      const workContext = toolsContext
+        ? {
+            ...context,
+            systemPrompt: `${context.systemPrompt}\n\n## Available CLI Tools\n${toolsContext}`,
+          }
+        : context
       const arcResult = await executeWorkArc({
         adapter: codingAdapter,
         task: { id: task.id, description: task.description },
-        context,
+        context: workContext,
         workingDirectory: workDir,
         trustLevel: (agentContext.sourceTrustLevel ?? "MEDIUM") as TrustLevel,
       })
 
       // Update task status based on result
+      let knowledgeCount = 0
       if (arcResult.status === "completed") {
         task.status = "done"
         task.progress.push(arcResult.text)
+        // Extract knowledge from completed work
+        const knowledgeEntries = createWorkKnowledge(task, agentId)
+        knowledgeCount = knowledgeEntries.length
+        if (knowledgeCount > 0) {
+          appendEntries(knowledgeEntries, storePath).catch(() => {})
+        }
       } else if (arcResult.status === "blocked") {
         task.status = "blocked"
         opCtx.blockers.push(arcResult.text)
       } else {
         task.status = "in_progress"
-        opCtx.carryover.push(`SDK session ${arcResult.status}: ${arcResult.text}`)
+        opCtx.carryover.push(
+          `SDK session ${arcResult.status}: ${arcResult.text}`,
+        )
       }
 
-      const statusText = arcResult.status === "completed"
-        ? `Task completed: ${arcResult.text}`
-        : `Task ${arcResult.status}: ${arcResult.text}`
+      const statusText =
+        arcResult.status === "completed"
+          ? `Task completed: ${arcResult.text}`
+          : `Task ${arcResult.status}: ${arcResult.text}`
 
       const outbound: ChannelMessage = {
         id: `delegate-${msg.id}`,
         channel: msg.channel,
         direction: "outbound",
         routing: { ...msg.routing, replyToId: msg.id },
-        from: "galatea",
+        from: agentId,
         content: statusText,
         messageType: "status_update",
         receivedAt: new Date().toISOString(),
         metadata: {},
       }
 
-      try { await dispatchMessage(outbound) } catch { /* logged */ }
+      try {
+        await dispatchMessage(outbound)
+      } catch {
+        /* logged */
+      }
 
       recordOutbound(opCtx)
       await saveOperationalContext(opCtx, opContextPath)
@@ -227,9 +264,16 @@ export async function tick(
         delegation: {
           adapter: codingAdapter.name,
           taskId: task.id,
-          status: arcResult.status === "completed" ? "completed"
-            : arcResult.status === "blocked" ? "failed"
-            : arcResult.status as "started" | "completed" | "failed" | "timeout",
+          status:
+            arcResult.status === "completed"
+              ? "completed"
+              : arcResult.status === "blocked"
+                ? "failed"
+                : (arcResult.status as
+                    | "started"
+                    | "completed"
+                    | "failed"
+                    | "timeout"),
           transcript: arcResult.transcript,
           costUsd: arcResult.costUsd,
         },
@@ -240,17 +284,13 @@ export async function tick(
       // Fire-and-forget — never block tick on persistence failure
       const delegateRecord = buildTickRecord({
         tickId,
-        agentId: "galatea",
+        agentId,
         trigger: {
           type: _trigger === "heartbeat" ? "heartbeat" : "message",
           source: `${msg.channel}:${msg.from}`,
         },
         homeostasis,
-        routing: {
-          level: "task",
-          taskType: "coding",
-          reasoning: "task_assignment",
-        },
+        routing: inferRouting(msg.content, msg.messageType),
         execution: {
           adapter: "claude-code",
           sessionResumed: false,
@@ -260,14 +300,13 @@ export async function tick(
           action: "delegate",
           response: statusText,
           artifactsCreated: [],
-          knowledgeEntriesCreated: 0,
+          knowledgeEntriesCreated: knowledgeCount,
         },
         durationMs: Date.now() - tickStart,
       })
-      appendTickRecord(
-        delegateRecord,
-        getTickRecordPath("galatea"),
-      ).catch(() => {})
+      appendTickRecord(delegateRecord, getTickRecordPath(agentId)).catch(
+        () => {},
+      )
 
       return tickResult
     }
@@ -285,13 +324,18 @@ export async function tick(
           .slice(0, -1)
           .map((h) => ({ role: h.role, content: h.content }))
 
+        const systemPrompt = toolsContext
+          ? `${context.systemPrompt}\n\n## Available CLI Tools\n${toolsContext}`
+          : context.systemPrompt
+
         const loopResult = await runAgentLoop({
           model,
-          system: context.systemPrompt,
+          system: systemPrompt,
           messages: [{ role: "user", content: msg.content }],
-          tools: Object.keys(registeredTools).length > 0
-            ? registeredTools
-            : undefined,
+          tools:
+            Object.keys(registeredTools).length > 0
+              ? registeredTools
+              : undefined,
           history,
           config: { maxSteps: 5, timeoutMs: 60_000 },
         })
@@ -339,7 +383,7 @@ export async function tick(
           ...msg.routing,
           replyToId: msg.id,
         },
-        from: "galatea",
+        from: agentId,
         content: llmResult,
         messageType: msg.messageType,
         receivedAt: new Date().toISOString(),
@@ -391,13 +435,13 @@ export async function tick(
       // Fire-and-forget — never block tick on persistence failure
       const respondRecord = buildTickRecord({
         tickId,
-        agentId: "galatea",
+        agentId,
         trigger: {
           type: _trigger === "heartbeat" ? "heartbeat" : "message",
           source: `${msg.channel}:${msg.from}`,
         },
         homeostasis,
-        routing: { level: "interaction" },
+        routing: inferRouting(msg.content, msg.messageType),
         execution: { adapter: "direct-response", toolCalls: 0 },
         outcome: {
           action: "respond",
@@ -407,10 +451,9 @@ export async function tick(
         },
         durationMs: Date.now() - tickStart,
       })
-      appendTickRecord(
-        respondRecord,
-        getTickRecordPath("galatea"),
-      ).catch(() => {})
+      appendTickRecord(respondRecord, getTickRecordPath(agentId)).catch(
+        () => {},
+      )
 
       return tickResult
     }
@@ -427,7 +470,7 @@ export async function tick(
         ...msg.routing,
         replyToId: msg.id,
       },
-      from: "galatea",
+      from: agentId,
       content: templateText,
       messageType: msg.messageType,
       receivedAt: new Date().toISOString(),
@@ -471,13 +514,13 @@ export async function tick(
     // Fire-and-forget — never block tick on persistence failure
     const templateRecord = buildTickRecord({
       tickId,
-      agentId: "galatea",
+      agentId,
       trigger: {
         type: _trigger === "heartbeat" ? "heartbeat" : "message",
         source: `${msg.channel}:${msg.from}`,
       },
       homeostasis,
-      routing: { level: "interaction" },
+      routing: inferRouting(msg.content, msg.messageType),
       execution: { adapter: "none" },
       outcome: {
         action: "respond",
@@ -487,10 +530,7 @@ export async function tick(
       },
       durationMs: Date.now() - tickStart,
     })
-    appendTickRecord(
-      templateRecord,
-      getTickRecordPath("galatea"),
-    ).catch(() => {})
+    appendTickRecord(templateRecord, getTickRecordPath(agentId)).catch(() => {})
 
     return templateResult
   }
@@ -527,7 +567,7 @@ export async function tick(
   // Fire-and-forget — never block tick on persistence failure
   const idleRecord = buildTickRecord({
     tickId,
-    agentId: "galatea",
+    agentId,
     trigger: {
       type: _trigger === "heartbeat" ? "heartbeat" : "internal",
     },
@@ -541,10 +581,7 @@ export async function tick(
     },
     durationMs: Date.now() - tickStart,
   })
-  appendTickRecord(
-    idleRecord,
-    getTickRecordPath("galatea"),
-  ).catch(() => {})
+  appendTickRecord(idleRecord, getTickRecordPath(agentId)).catch(() => {})
 
   return tickResult
 }

@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs"
 import { readdir, readFile } from "node:fs/promises"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
 import YAML from "yaml"
 
 export interface Teammate {
@@ -10,7 +11,8 @@ export interface Teammate {
   description: string
 }
 
-const DEFAULT_TEAM_DIR = "data/team"
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const DEFAULT_TEAM_DIR = join(__dirname, "../../data/team")
 
 export async function loadTeamDirectory(
   dirPath = DEFAULT_TEAM_DIR,

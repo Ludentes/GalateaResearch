@@ -1,5 +1,6 @@
 import { readdir, readFile } from "node:fs/promises"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
 import YAML from "yaml"
 
 export interface AgentSpec {
@@ -26,7 +27,8 @@ export interface AgentSpec {
   tools_context?: string
 }
 
-const AGENTS_DIR = "data/agents"
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const AGENTS_DIR = join(__dirname, "../../data/agents")
 
 export async function loadAgentSpec(
   agentId: string,
