@@ -56,6 +56,12 @@ vi.mock("../operational-memory", () => ({
   recordOutbound: vi.fn(),
 }))
 
+// Mock tick-record persistence
+vi.mock("../../observation/tick-record", () => ({
+  appendTickRecord: vi.fn().mockResolvedValue(undefined),
+  getTickRecordPath: vi.fn().mockReturnValue("/tmp/test-ticks.jsonl"),
+}))
+
 // Mock the DB-dependent assembleContext
 vi.mock("../../memory/context-assembler", () => ({
   assembleContext: vi.fn().mockResolvedValue({
@@ -234,5 +240,55 @@ describe("tick()", () => {
 
     expect(result.selfModel).toBeDefined()
     expect(Array.isArray(result.selfModel.availableProviders)).toBe(true)
+  })
+
+  it("appends TickDecisionRecord on message tick", async () => {
+    const { appendTickRecord } = await import(
+      "../../observation/tick-record"
+    )
+    vi.mocked(appendTickRecord).mockClear()
+    await updateAgentState(
+      {
+        lastActivity: new Date().toISOString(),
+        pendingMessages: [makeMessage({ content: "Status?" })],
+      },
+      STATE_PATH,
+    )
+
+    await tick("manual", {
+      statePath: STATE_PATH,
+      storePath: STORE_PATH,
+    })
+
+    expect(appendTickRecord).toHaveBeenCalledOnce()
+    const record = (appendTickRecord as ReturnType<typeof vi.fn>).mock
+      .calls[0][0]
+    expect(record.tickId).toBeTruthy()
+    expect(record.trigger.type).toBe("message")
+    expect(record.outcome.action).toBe("respond")
+  })
+
+  it("appends TickDecisionRecord on idle tick", async () => {
+    const { appendTickRecord } = await import(
+      "../../observation/tick-record"
+    )
+    vi.mocked(appendTickRecord).mockClear()
+    await updateAgentState(
+      {
+        lastActivity: new Date().toISOString(),
+        pendingMessages: [],
+      },
+      STATE_PATH,
+    )
+
+    await tick("manual", {
+      statePath: STATE_PATH,
+      storePath: STORE_PATH,
+    })
+
+    expect(appendTickRecord).toHaveBeenCalled()
+    const record = (appendTickRecord as ReturnType<typeof vi.fn>).mock
+      .calls[0][0]
+    expect(record.outcome.action).toBe("idle")
   })
 })

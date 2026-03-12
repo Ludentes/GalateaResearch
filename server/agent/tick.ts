@@ -9,6 +9,11 @@ import {
 } from "../providers/ollama-queue"
 import { emitEvent } from "../observation/emit"
 import {
+  appendTickRecord,
+  getTickRecordPath,
+} from "../observation/tick-record"
+import type { TickDecisionRecord } from "../observation/tick-record"
+import {
   appendActivityLog,
   getAgentState,
   removeMessage,
@@ -60,6 +65,39 @@ export function getAdapter(): CodingToolAdapter | undefined {
 }
 
 // ---------------------------------------------------------------------------
+// Tick decision record helper
+// ---------------------------------------------------------------------------
+
+function buildTickRecord(params: {
+  tickId: string
+  agentId: string
+  trigger: TickDecisionRecord["trigger"]
+  homeostasis: Record<string, unknown>
+  routing: TickDecisionRecord["routing"]
+  execution: Partial<TickDecisionRecord["execution"]>
+  outcome: TickDecisionRecord["outcome"]
+  durationMs: number
+}): TickDecisionRecord {
+  return {
+    tickId: params.tickId,
+    agentId: params.agentId,
+    timestamp: new Date().toISOString(),
+    trigger: params.trigger,
+    homeostasis: params.homeostasis as TickDecisionRecord["homeostasis"],
+    guidance: [],
+    routing: params.routing,
+    execution: {
+      adapter: params.execution.adapter ?? "none",
+      sessionResumed: params.execution.sessionResumed ?? false,
+      toolCalls: params.execution.toolCalls ?? 0,
+      durationMs: params.durationMs,
+    },
+    resources: {},
+    outcome: params.outcome,
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Tick
 // ---------------------------------------------------------------------------
 
@@ -73,6 +111,9 @@ export async function tick(
   _trigger: "manual" | "heartbeat" | "webhook",
   opts?: TickOptions,
 ): Promise<TickResult> {
+  const tickId = `tick-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+  const tickStart = Date.now()
+
   const statePath = opts?.statePath
   const storePath = opts?.storePath ?? "data/memory/entries.jsonl"
   const opContextPath = opts?.opContextPath
@@ -195,6 +236,39 @@ export async function tick(
         timestamp: new Date().toISOString(),
       }
       await appendActivityLog(tickResult, statePath)
+
+      // Fire-and-forget — never block tick on persistence failure
+      const delegateRecord = buildTickRecord({
+        tickId,
+        agentId: "galatea",
+        trigger: {
+          type: _trigger === "heartbeat" ? "heartbeat" : "message",
+          source: `${msg.channel}:${msg.from}`,
+        },
+        homeostasis,
+        routing: {
+          level: "task",
+          taskType: "coding",
+          reasoning: "task_assignment",
+        },
+        execution: {
+          adapter: "claude-code",
+          sessionResumed: false,
+          toolCalls: 0,
+        },
+        outcome: {
+          action: "delegate",
+          response: statusText,
+          artifactsCreated: [],
+          knowledgeEntriesCreated: 0,
+        },
+        durationMs: Date.now() - tickStart,
+      })
+      appendTickRecord(
+        delegateRecord,
+        getTickRecordPath("galatea"),
+      ).catch(() => {})
+
       return tickResult
     }
 
@@ -313,6 +387,31 @@ export async function tick(
         timestamp: new Date().toISOString(),
       }
       await appendActivityLog(tickResult, statePath)
+
+      // Fire-and-forget — never block tick on persistence failure
+      const respondRecord = buildTickRecord({
+        tickId,
+        agentId: "galatea",
+        trigger: {
+          type: _trigger === "heartbeat" ? "heartbeat" : "message",
+          source: `${msg.channel}:${msg.from}`,
+        },
+        homeostasis,
+        routing: { level: "interaction" },
+        execution: { adapter: "direct-response", toolCalls: 0 },
+        outcome: {
+          action: "respond",
+          response: llmResult,
+          artifactsCreated: [],
+          knowledgeEntriesCreated: 0,
+        },
+        durationMs: Date.now() - tickStart,
+      })
+      appendTickRecord(
+        respondRecord,
+        getTickRecordPath("galatea"),
+      ).catch(() => {})
+
       return tickResult
     }
 
@@ -368,6 +467,31 @@ export async function tick(
       timestamp: new Date().toISOString(),
     }
     await appendActivityLog(templateResult, statePath)
+
+    // Fire-and-forget — never block tick on persistence failure
+    const templateRecord = buildTickRecord({
+      tickId,
+      agentId: "galatea",
+      trigger: {
+        type: _trigger === "heartbeat" ? "heartbeat" : "message",
+        source: `${msg.channel}:${msg.from}`,
+      },
+      homeostasis,
+      routing: { level: "interaction" },
+      execution: { adapter: "none" },
+      outcome: {
+        action: "respond",
+        response: templateText,
+        artifactsCreated: [],
+        knowledgeEntriesCreated: 0,
+      },
+      durationMs: Date.now() - tickStart,
+    })
+    appendTickRecord(
+      templateRecord,
+      getTickRecordPath("galatea"),
+    ).catch(() => {})
+
     return templateResult
   }
 
@@ -387,8 +511,10 @@ export async function tick(
 
   await saveOperationalContext(opCtx, opContextPath)
 
+  const idleHomeostasis = assessDimensions(agentContext)
+
   const tickResult: TickResult = {
-    homeostasis: assessDimensions(agentContext),
+    homeostasis: idleHomeostasis,
     retrievedFacts: [],
     context: await assembleContext({ storePath, agentContext }),
     selfModel,
@@ -397,6 +523,29 @@ export async function tick(
     timestamp: new Date().toISOString(),
   }
   await appendActivityLog(tickResult, statePath)
+
+  // Fire-and-forget — never block tick on persistence failure
+  const idleRecord = buildTickRecord({
+    tickId,
+    agentId: "galatea",
+    trigger: {
+      type: _trigger === "heartbeat" ? "heartbeat" : "internal",
+    },
+    homeostasis: idleHomeostasis,
+    routing: { level: "interaction" },
+    execution: { adapter: "none" },
+    outcome: {
+      action: "idle",
+      artifactsCreated: [],
+      knowledgeEntriesCreated: 0,
+    },
+    durationMs: Date.now() - tickStart,
+  })
+  appendTickRecord(
+    idleRecord,
+    getTickRecordPath("galatea"),
+  ).catch(() => {})
+
   return tickResult
 }
 
