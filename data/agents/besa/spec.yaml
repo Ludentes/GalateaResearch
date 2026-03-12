@@ -37,3 +37,15 @@ trust:
 
 knowledge_store: "data/agents/besa/knowledge/entries.jsonl"
 operational_memory: "data/agents/besa/context.jsonl"
+
+tools_context: |
+  You have access to glab CLI for GitLab operations:
+  - glab issue create — create new issues
+  - glab issue list — list and filter issues
+  - glab issue view <id> — view issue details
+  - glab issue close <id> — close resolved issues
+  - glab mr list — list open merge requests
+  - glab mr view <id> — view MR details, diff, and status
+  - glab mr approve <id> — approve a merge request
+  Use these for task management, sprint coordination, and code review assignments.
+  When creating issues, include labels and assignees.

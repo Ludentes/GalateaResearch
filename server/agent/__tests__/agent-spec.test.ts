@@ -32,6 +32,16 @@ describe("loadAgentSpec", () => {
     expect(spec.trust.channels.discord).toBe("high")
   })
 
+  it("loads tools_context from agent specs", async () => {
+    const beki = await loadAgentSpec("beki")
+    expect(beki.tools_context).toContain("glab")
+    expect(beki.tools_context).toContain("mr create")
+
+    const besa = await loadAgentSpec("besa")
+    expect(besa.tools_context).toContain("glab")
+    expect(besa.tools_context).toContain("issue create")
+  })
+
   it("throws on missing spec file", async () => {
     await expect(loadAgentSpec("nonexistent")).rejects.toThrow()
   })
