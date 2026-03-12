@@ -77,6 +77,53 @@ A real PM will interact with Beki/Besa via Discord to validate the architecture.
 
 ---
 
+## Knowledge Architecture Decision
+
+### Problem: MD→struct→MD is lossy
+
+The extraction pipeline (heuristics: 37.8% recall, cloud LLM: ~95% recall) degrades human-curated knowledge. A precise note like "Alex over-engineers abstractions, tends to add 'just in case' props" gets split into fragments that lose nuance and connection. The human-curated MD file is the highest quality artifact — running it through extraction makes it worse.
+
+### Decision: Two-layer knowledge, human MD is source of truth
+
+```
+LAYER 1: Human-curated MD files (source of truth)
+  patterns/*.md    — domain rules, preferences, procedures
+  entities/*.md    — people, services, state
+  team/*.yaml      — teammate profiles (W.13)
+  ↓
+  Read directly by agent context assembly
+  Never round-tripped through extraction pipeline
+
+LAYER 2: Structured store (staging + processing)
+  entries.jsonl    — fed by extraction pipeline from transcripts
+  ↓
+  Extraction → dedup → consolidation → suggestions
+  ↓
+  Human promotes good suggestions to Layer 1 MD files
+  Does NOT overwrite human-curated files
+```
+
+### What this means
+
+- **Agent reads MD files directly** — same as Claude Code reads CLAUDE.md. Shadow-learn's `patterns/` + `entities/` format adopted.
+- **Structured store handles new knowledge from transcripts** — extraction pipeline produces candidates, human reviews and promotes.
+- **Nothing is lost** — human-curated content is never degraded by LLM extraction.
+- **Existing infrastructure is preserved** — extraction pipeline, dedup, consolidation, decay all still work on Layer 2. They become the "suggestion engine" rather than the source of truth.
+- **Shadow-learn output format is the interface** — multi-file (`patterns/*.md`, `entities/*.md`) rather than single `CLAUDE.md`. Team already uses this.
+
+### What we keep from the structured store
+
+| Feature | Status | Role |
+|---------|--------|------|
+| Extraction pipeline | Keep | Processes transcripts → suggests new entries |
+| Dedup / consolidation | Keep | Filters suggestions before human review |
+| Decay | Keep | Ages out stale suggestions |
+| Feedback tracking | Keep | Tracks which entries help/harm (future) |
+| Fact retrieval | **Defer** | Not needed while MD files fit in context |
+| Artifact generator | **Adapt** | Output shadow-learn format instead of single CLAUDE.md |
+
+---
+
 ## What's Missing: Three Tiers
 
 ### Tier 1: Wire What Exists
