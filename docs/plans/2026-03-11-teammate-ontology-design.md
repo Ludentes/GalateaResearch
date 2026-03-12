@@ -2,7 +2,7 @@
 
 **Date**: 2026-03-11
 **Status**: Design — validated through scenario analysis
-**Related**: Beta simulation design (W.13)
+**Related**: Beta simulation design (W.13), Knowledge architecture decision (beta-simulation-design.md)
 
 ---
 
@@ -170,13 +170,13 @@ Teammate: Kirill (id: kirill, human)
 CTO and founder. Reports to nobody — final decision maker...
 [full description from YAML]
 
-=== Also known about Kirill (from knowledge store) ===
+=== Also known about Kirill (from entity files) ===
 - Kirill switched the team from npm to pnpm last month
 - Kirill prefers Drizzle over Prisma for new projects
-[retrieved entries where about.entity = "kirill"]
+[from entities/kirill.md — human-curated]
 ```
 
-Static profile gives the baseline. Knowledge entries add what the agent has learned. Both go to the LLM as natural language.
+The teammate YAML description is Layer 1 (human-curated, read directly). Entity files in `entities/*.md` extend it with learned-then-promoted observations. Both go to the LLM as natural language — no extraction pipeline in the read path.
 
 ### 3. Unknown Sender Gate
 
@@ -296,20 +296,35 @@ Kirill: "What's the status of auth?"
 
 ---
 
-## Relationship to Cognitive Models Design
+## Relationship to Knowledge Architecture
+
+### Two-Layer Architecture (decided 2026-03-11)
+
+Teammate YAML files are **Layer 1** — human-curated, read directly by the agent context assembler. They are never round-tripped through the extraction pipeline.
+
+| Layer | Files | Role | Who writes |
+|-------|-------|------|------------|
+| **Layer 1** (source of truth) | `data/team/*.yaml`, `entities/*.md`, `patterns/*.md` | Read directly by agent | Human |
+| **Layer 2** (staging) | `entries.jsonl` | Extraction pipeline → suggestions | Pipeline, human promotes |
+
+The extraction pipeline (Layer 2) may surface new observations about teammates from transcripts — e.g., "Kirill mentioned he's switching to Bun". These appear as suggestions. A human reviews and promotes good ones by editing the teammate YAML description or the corresponding `entities/*.md` file. The pipeline never overwrites Layer 1.
+
+See: Knowledge Architecture Decision in `docs/plans/2026-03-11-beta-simulation-design.md`.
+
+### Cognitive Models Lineage
 
 The cognitive models design (`docs/plans/2026-02-12-cognitive-models-design.md`) established that models are **views over the knowledge store**, not separate structures. The `about` field on `KnowledgeEntry` tags knowledge by subject (`{entity: "alina", type: "user"}`).
 
-The teammate profile is **not a replacement** — it's a **declared baseline** that the emergent knowledge entries refine:
+The teammate profile is the **declared baseline** that the entity files refine:
 
 | Layer | Source | Example |
 |-------|--------|---------|
 | **Baseline** (static) | Teammate YAML `description` | "Kirill is CTO, deep expertise in DevOps" |
-| **Learned** (emergent) | Knowledge entries where `about.entity = "kirill"` | "Kirill switched team from npm to pnpm" |
+| **Observed** (promoted from pipeline) | `entities/kirill.md` | "Kirill switched team from npm to pnpm" |
 
-Both are injected into the LLM context when a message arrives from that person. The static profile provides what the agent needs on day 1; the knowledge entries add what it learns over time.
+Both are injected into the LLM context when a message arrives from that person. The static profile provides what the agent needs on day 1; the entity file adds what has been learned and promoted over time.
 
-**Key connection**: `teammate.id` must match the `entity` string used in knowledge entries. `teammate.id: "kirill"` links to entries with `about: {entity: "kirill", type: "user"}`. No new wiring — the shared entity name is the join key.
+**Key connection**: `teammate.id` must match the entity file name and the `entity` string used in knowledge entries. `teammate.id: "kirill"` links to `entities/kirill.md` and to pipeline entries with `about: {entity: "kirill", type: "user"}`.
 
 **What the old design anticipated but we simplified:**
 - `MaterializedUserModel` with structured `expertise: Record<string, number>` — replaced by freeform description
@@ -329,5 +344,6 @@ Both are injected into the LLM context when a message arrives from that person. 
 ---
 
 *Created: 2026-03-11*
+*Updated: 2026-03-12 — aligned with two-layer knowledge architecture decision*
 *Context: Brainstorming session — scenario-driven design for teammate representation*
-*Builds on: Beta simulation design, cognitive models design (2026-02-12), existing KnowledgeAbout type, reference scenarios*
+*Builds on: Beta simulation design, cognitive models design (2026-02-12), knowledge architecture decision, existing KnowledgeAbout type, reference scenarios*
