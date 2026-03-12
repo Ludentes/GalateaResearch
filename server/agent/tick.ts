@@ -1,5 +1,5 @@
 import { assessDimensions } from "../engine/homeostasis-engine"
-import type { AgentContext } from "../engine/types"
+import type { AgentContext, HomeostasisState } from "../engine/types"
 import { assembleContext } from "../memory/context-assembler"
 import { retrieveRelevantFacts } from "../memory/fact-retrieval"
 import { getModelWithFallback } from "../providers"
@@ -72,7 +72,7 @@ function buildTickRecord(params: {
   tickId: string
   agentId: string
   trigger: TickDecisionRecord["trigger"]
-  homeostasis: Record<string, unknown>
+  homeostasis: HomeostasisState
   routing: TickDecisionRecord["routing"]
   execution: Partial<TickDecisionRecord["execution"]>
   outcome: TickDecisionRecord["outcome"]
@@ -83,7 +83,7 @@ function buildTickRecord(params: {
     agentId: params.agentId,
     timestamp: new Date().toISOString(),
     trigger: params.trigger,
-    homeostasis: params.homeostasis as TickDecisionRecord["homeostasis"],
+    homeostasis: params.homeostasis,
     guidance: [],
     routing: params.routing,
     execution: {
@@ -111,7 +111,7 @@ export async function tick(
   _trigger: "manual" | "heartbeat" | "webhook",
   opts?: TickOptions,
 ): Promise<TickResult> {
-  const tickId = `tick-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+  const tickId = crypto.randomUUID()
   const tickStart = Date.now()
 
   const statePath = opts?.statePath

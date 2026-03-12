@@ -9,13 +9,8 @@ export interface TickDecisionRecord {
     type: "message" | "heartbeat" | "internal"
     source?: string
   }
-  homeostasis: Record<
-    string,
-    {
-      state: "HEALTHY" | "ELEVATED" | "LOW"
-      method?: string
-    }
-  >
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- serialized from HomeostasisState
+  homeostasis: Record<string, any>
   guidance: string[]
   routing: {
     level: "interaction" | "task"
