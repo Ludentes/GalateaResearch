@@ -81,3 +81,24 @@ export async function readTickRecords(
 
   return records
 }
+
+export async function readLastTickRecord(
+  filePath: string,
+): Promise<TickDecisionRecord | null> {
+  let content: string
+  try {
+    content = await readFile(filePath, "utf-8")
+  } catch {
+    return null
+  }
+
+  const lines = content.split("\n").filter((line) => line.trim() !== "")
+  for (let i = lines.length - 1; i >= 0; i--) {
+    try {
+      return JSON.parse(lines[i]) as TickDecisionRecord
+    } catch {
+      continue
+    }
+  }
+  return null
+}

@@ -2,7 +2,7 @@ import { defineEventHandler } from "h3"
 import { listAgentIds, loadAgentSpec } from "../../../agent/agent-spec"
 import {
   getTickRecordPath,
-  readTickRecords,
+  readLastTickRecord,
 } from "../../../observation/tick-record"
 
 export default defineEventHandler(async () => {
@@ -10,8 +10,7 @@ export default defineEventHandler(async () => {
   const agents = await Promise.all(
     agentIds.map(async (id) => {
       const spec = await loadAgentSpec(id)
-      const ticks = await readTickRecords(getTickRecordPath(id))
-      const lastTick = ticks.length > 0 ? ticks[ticks.length - 1] : null
+      const lastTick = await readLastTickRecord(getTickRecordPath(id))
       return {
         id: spec.agent.id,
         name: spec.agent.name,

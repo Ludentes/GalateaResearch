@@ -130,13 +130,11 @@ export async function tick(
 
   // Load agent spec for tools_context injection
   let toolsContext: string | undefined
-  if (agentId !== "galatea") {
-    try {
-      const spec = await loadAgentSpec(agentId)
-      toolsContext = spec.tools_context
-    } catch {
-      // Agent spec not found — not critical
-    }
+  try {
+    const spec = await loadAgentSpec(agentId)
+    toolsContext = spec.tools_context
+  } catch {
+    // Agent spec not found — not critical, skip tools_context
   }
 
   // Stage 2: Read state
@@ -349,7 +347,7 @@ export async function tick(
         if (loopResult.totalSteps > 1 || loopResult.finishReason !== "text") {
           emitEvent({
             type: "log",
-            source: "galatea-api",
+            source: `${agentId}-api`,
             body: "agent_loop.completed",
             attributes: {
               "event.name": "agent_loop.completed",
@@ -396,7 +394,7 @@ export async function tick(
       } catch (err) {
         emitEvent({
           type: "log",
-          source: "galatea-api",
+          source: `${agentId}-api`,
           body: "tick.dispatch_failed",
           attributes: {
             "event.name": "tick.dispatch_failed",
@@ -482,7 +480,7 @@ export async function tick(
     } catch (err) {
       emitEvent({
         type: "log",
-        source: "galatea-api",
+        source: `${agentId}-api`,
         body: "tick.dispatch_failed",
         attributes: {
           "event.name": "tick.dispatch_failed",
@@ -572,7 +570,7 @@ export async function tick(
       type: _trigger === "heartbeat" ? "heartbeat" : "internal",
     },
     homeostasis: idleHomeostasis,
-    routing: { level: "interaction" },
+    routing: { level: "interaction", reasoning: "no_pending_messages" },
     execution: { adapter: "none" },
     outcome: {
       action: "idle",
