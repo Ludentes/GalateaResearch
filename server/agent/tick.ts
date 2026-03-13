@@ -37,7 +37,7 @@ import {
   recordOutbound,
   saveOperationalContext,
 } from "./operational-memory"
-import { inferRouting } from "./task-type-inference"
+import { classifyWithLLM, inferRouting } from "./task-type-inference"
 import { createAllTools } from "./tools"
 import type { ChannelMessage, SelfModel, TickResult } from "./types"
 
@@ -192,6 +192,15 @@ export async function tick(
       retrievedEntries: facts.entries,
     })
 
+    // Smart routing: heuristic first, LLM fallback for low-confidence
+    let routing = inferRouting(msg.content, msg.messageType)
+    if (routing.confidence === "low" && selfModel.availableProviders.length > 0) {
+      const llmRouting = await classifyWithLLM(msg.content)
+      if (llmRouting) {
+        routing = llmRouting
+      }
+    }
+
     // Stage 3b: Delegate to coding adapter for task_assignment messages
     if (msg.messageType === "task_assignment" && codingAdapter) {
       const task = addTask(opCtx, msg.content, msg)
@@ -298,7 +307,7 @@ export async function tick(
           source: `${msg.channel}:${msg.from}`,
         },
         homeostasis,
-        routing: inferRouting(msg.content, msg.messageType),
+        routing,
         execution: {
           adapter: "claude-code",
           sessionResumed: false,
@@ -523,7 +532,7 @@ export async function tick(
           source: `${msg.channel}:${msg.from}`,
         },
         homeostasis,
-        routing: inferRouting(msg.content, msg.messageType),
+        routing,
         execution: {
           adapter: executionAdapter,
           toolCalls: loopToolCalls,
@@ -607,7 +616,7 @@ export async function tick(
         source: `${msg.channel}:${msg.from}`,
       },
       homeostasis,
-      routing: inferRouting(msg.content, msg.messageType),
+      routing,
       execution: { adapter: "none" },
       outcome: {
         action: "respond",

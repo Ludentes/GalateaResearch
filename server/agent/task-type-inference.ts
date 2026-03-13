@@ -4,6 +4,7 @@ export interface RoutingDecision {
   level: "interaction" | "task"
   taskType?: TaskType
   reasoning: string
+  confidence: "high" | "low"
 }
 
 /**
@@ -27,6 +28,7 @@ export function inferRouting(
       level: "task",
       taskType: inferTaskType(lower),
       reasoning: "Message type is task_assignment",
+      confidence: "high",
     }
   }
 
@@ -36,13 +38,15 @@ export function inferRouting(
       level: "task",
       taskType: inferTaskType(lower),
       reasoning: "Contains task signal (action verb + reference)",
+      confidence: "high",
     }
   }
 
-  // Default: interaction
+  // No pattern match — low confidence, may need LLM classification
   return {
     level: "interaction",
     reasoning: "No task signal detected — treating as interaction",
+    confidence: "low",
   }
 }
 
@@ -129,4 +133,98 @@ function inferTaskType(lower: string): TaskType {
   }
 
   return "coding"
+}
+
+// ---------------------------------------------------------------------------
+// LLM-based classification fallback for low-confidence heuristic results
+// ---------------------------------------------------------------------------
+
+const CLASSIFY_PROMPT = `Classify this message as either a task or a quick interaction.
+
+Rules:
+- "task" = requires work: coding, research, review, file operations, analysis, creating something
+- "interaction" = quick reply: greetings, status questions, opinions, clarifications, thank you
+
+If task, also classify the type:
+- research: investigate, compare, evaluate, find information
+- review: review code, MR, pull request
+- admin: create tasks, plan sprints, assign work
+- coding: implement, fix, build, modify files (default for ambiguous tasks)
+
+Reply with EXACTLY one line in this format:
+task:<type>
+OR
+interaction
+
+Message: "{message}"`.trim()
+
+export async function classifyWithLLM(
+  content: string,
+): Promise<RoutingDecision | null> {
+  try {
+    const { query } = await import("@anthropic-ai/claude-agent-sdk")
+
+    const prompt = CLASSIFY_PROMPT.replace("{message}", content.slice(0, 500))
+
+    let result = ""
+    const queryOptions: Record<string, unknown> = {
+      systemPrompt:
+        "You are a message classifier. Reply with exactly one line, nothing else.",
+      model: "haiku",
+      permissionMode: "bypassPermissions",
+      allowDangerouslySkipPermissions: true,
+      maxTurns: 1,
+      abortController: new AbortController(),
+    }
+
+    const stream = query({
+      prompt,
+      options: queryOptions,
+    } as Parameters<typeof query>[0])
+
+    for await (const msg of stream) {
+      if (msg.type === "assistant") {
+        for (const block of msg.message.content) {
+          if (block.type === "text") result += block.text
+        }
+      }
+    }
+
+    const line = result.trim().toLowerCase()
+
+    if (line === "interaction") {
+      return {
+        level: "interaction",
+        reasoning: "LLM classified as interaction",
+        confidence: "high",
+      }
+    }
+
+    const taskMatch = line.match(/^task:(\w+)$/)
+    if (taskMatch) {
+      const typeStr = taskMatch[1]
+      const validTypes: TaskType[] = [
+        "research",
+        "review",
+        "admin",
+        "coding",
+        "communication",
+      ]
+      const taskType: TaskType = validTypes.includes(typeStr as TaskType)
+        ? (typeStr as TaskType)
+        : "coding"
+      return {
+        level: "task",
+        taskType,
+        reasoning: `LLM classified as task:${taskType}`,
+        confidence: "high",
+      }
+    }
+
+    // Unparseable response — can't classify
+    return null
+  } catch {
+    // LLM unavailable — can't classify
+    return null
+  }
 }
