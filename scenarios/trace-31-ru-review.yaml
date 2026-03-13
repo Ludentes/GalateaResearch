@@ -9,5 +9,4 @@ steps:
     expect:
       routing.level: task
       routing.taskType: review
-      outcome.action: respond
-      outcome.response: exists
+      outcome.action: delegate

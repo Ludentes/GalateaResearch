@@ -10,6 +10,5 @@ steps:
     expect:
       routing.level: task
       routing.taskType: research
-      outcome.action: respond
-      outcome.response: exists
+      outcome.action: delegate
       execution.adapter: "not: none"

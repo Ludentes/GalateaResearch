@@ -8,6 +8,5 @@ steps:
     messageType: task_assignment
     expect:
       routing.level: task
-      outcome.action: respond
-      outcome.response: exists
-      execution.toolCalls: ">= 1"
+      outcome.action: delegate
+      execution.adapter: "not: none"

@@ -67,13 +67,30 @@ function getAgentTools(_agentId: string, workspace?: string): Record<string, Age
 // ---------------------------------------------------------------------------
 
 let codingAdapter: CodingToolAdapter | undefined
+let adapterInitialized = false
+
+async function ensureAdapter(): Promise<CodingToolAdapter | undefined> {
+  if (!adapterInitialized) {
+    adapterInitialized = true
+    try {
+      const { ClaudeCodeAdapter } = await import(
+        "./coding-adapter/claude-code-adapter"
+      )
+      codingAdapter = new ClaudeCodeAdapter()
+    } catch {
+      // Adapter unavailable — SDK not installed
+    }
+  }
+  return codingAdapter
+}
 
 export function setAdapter(adapter: CodingToolAdapter | undefined): void {
   codingAdapter = adapter
+  adapterInitialized = true
 }
 
-export function getAdapter(): CodingToolAdapter | undefined {
-  return codingAdapter
+export async function getAdapter(): Promise<CodingToolAdapter | undefined> {
+  return ensureAdapter()
 }
 
 // ---------------------------------------------------------------------------
@@ -201,8 +218,9 @@ export async function tick(
       }
     }
 
-    // Stage 3b: Delegate to coding adapter for task_assignment messages
-    if (msg.messageType === "task_assignment" && codingAdapter) {
+    // Stage 3b: Delegate to coding adapter for explicit task assignments
+    const adapter = await ensureAdapter()
+    if (msg.messageType === "task_assignment" && adapter) {
       const task = addTask(opCtx, msg.content, msg)
       task.status = "in_progress"
 
@@ -214,7 +232,7 @@ export async function tick(
           }
         : context
       const arcResult = await executeWorkArc({
-        adapter: codingAdapter,
+        adapter,
         task: { id: task.id, description: task.description },
         context: workContext,
         workingDirectory: workDir,
@@ -279,7 +297,7 @@ export async function tick(
         action_target: { channel: msg.channel, to: msg.from },
         response: { text: statusText },
         delegation: {
-          adapter: codingAdapter.name,
+          adapter: adapter.name,
           taskId: task.id,
           status:
             arcResult.status === "completed"

@@ -10,12 +10,11 @@ steps:
     expect:
       routing.level: task
       routing.taskType: coding
-      outcome.action: respond
+      outcome.action: delegate
   - send: "actually, scratch that — research SSO providers first"
     from: { platform: discord, user: sasha }
     messageType: task_assignment
     expect:
       routing.level: task
       routing.taskType: research
-      outcome.action: respond
-      outcome.response: exists
+      outcome.action: delegate

@@ -9,6 +9,5 @@ steps:
     expect:
       routing.level: task
       routing.taskType: coding
-      outcome.action: respond
-      outcome.response: exists
+      outcome.action: delegate
       execution.adapter: "not: none"
