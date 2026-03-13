@@ -49,6 +49,18 @@ function checkValue(
     }
   }
 
+  // "contains: substring" matcher — case-insensitive substring check
+  if (typeof expected === "string" && expected.startsWith("contains: ")) {
+    const needle = expected.slice(10).toLowerCase()
+    const actualStr = String(actual).toLowerCase()
+    return {
+      field,
+      expected,
+      actual: String(actual),
+      pass: actualStr.includes(needle),
+    }
+  }
+
   // Numeric comparison matchers
   if (typeof expected === "string") {
     const numMatch = expected.match(/^([<>]=?)\s*(\d+(?:\.\d+)?)$/)
