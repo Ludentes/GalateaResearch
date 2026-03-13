@@ -21,6 +21,7 @@ export interface TickDecisionRecord {
     adapter: "claude-code" | "direct-response" | "none"
     sessionResumed: boolean
     toolCalls: number
+    toolNames?: string[]
     durationMs: number
   }
   resources: {

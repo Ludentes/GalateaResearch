@@ -1,0 +1,19 @@
+scenario: "L9: Two-step conversation with context retention"
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "Read the file server/providers/config.ts and tell me what LLM providers are supported"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: "contains: ollama"
+      execution.toolCalls: ">= 1"
+  - send: "Which one is the default? And what model does it use?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: exists

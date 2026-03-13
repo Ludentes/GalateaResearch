@@ -1,0 +1,12 @@
+scenario: "L5: Run a bash command and report results"
+agent: beki
+setup:
+  clear_ticks: true
+steps:
+  - send: "How many TypeScript files are in the server/ directory? Use find to count them."
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: exists
+      execution.toolCalls: ">= 1"

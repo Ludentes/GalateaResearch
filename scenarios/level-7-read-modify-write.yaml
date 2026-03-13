@@ -1,0 +1,12 @@
+scenario: "L7: Read existing file, modify, write back"
+agent: beki
+setup:
+  clear_ticks: true
+steps:
+  - send: "Read the file at /tmp/galatea-test-workspace/package.json and add a 'test' script that runs 'vitest'. Write the updated file back."
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      outcome.action: respond
+      execution.toolCalls: ">= 2"

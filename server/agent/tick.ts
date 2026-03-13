@@ -317,6 +317,8 @@ export async function tick(
 
     // Stage 4: Agent loop (ReAct pattern with budget controls)
     let llmResult: string | undefined
+    let loopToolCalls = 0
+    let loopToolNames: string[] = []
     if (selfModel.availableProviders.length > 0) {
       const { model } = getModelWithFallback()
       try {
@@ -342,6 +344,11 @@ export async function tick(
         })
 
         llmResult = loopResult.text
+        const toolSteps = loopResult.steps.filter((s) => s.type === "tool_call")
+        loopToolCalls = toolSteps.length
+        loopToolNames = toolSteps
+          .map((s) => s.toolName)
+          .filter((n): n is string => !!n)
 
         // Record assistant response in operational history
         pushHistoryEntry(opCtx, "assistant", llmResult)
@@ -443,7 +450,11 @@ export async function tick(
         },
         homeostasis,
         routing: inferRouting(msg.content, msg.messageType),
-        execution: { adapter: "direct-response", toolCalls: 0 },
+        execution: {
+          adapter: "direct-response",
+          toolCalls: loopToolCalls,
+          toolNames: loopToolNames.length > 0 ? loopToolNames : undefined,
+        },
         outcome: {
           action: "respond",
           response: llmResult,

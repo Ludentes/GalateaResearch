@@ -1,0 +1,13 @@
+scenario: "L6: Create a new file from instructions"
+agent: beki
+setup:
+  clear_ticks: true
+steps:
+  - send: "Create a file at /tmp/galatea-test-workspace/src/utils.ts with a function called 'capitalize' that takes a string and returns it capitalized"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: respond
+      execution.toolCalls: ">= 1"

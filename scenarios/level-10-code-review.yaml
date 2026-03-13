@@ -1,0 +1,13 @@
+scenario: "L10: Review code and identify issues"
+agent: besa
+setup:
+  clear_ticks: true
+steps:
+  - send: "Review the file server/agent/task-type-inference.ts. Are there any edge cases the Russian patterns might miss? Give specific examples."
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      outcome.action: respond
+      outcome.response: exists
+      execution.toolCalls: ">= 1"

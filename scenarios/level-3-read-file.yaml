@@ -1,0 +1,12 @@
+scenario: "L3: Read and summarize a source file"
+agent: beki
+setup:
+  clear_ticks: true
+steps:
+  - send: "Read the file vite.config.ts and tell me what plugins are configured"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: "contains: plugins"
+      execution.toolCalls: ">= 1"

@@ -1,0 +1,12 @@
+scenario: "L1: Answer a simple technical question"
+agent: besa
+setup:
+  clear_ticks: true
+steps:
+  - send: "What is the difference between REST and GraphQL?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      routing.level: interaction
+      outcome.action: respond
+      outcome.response: exists

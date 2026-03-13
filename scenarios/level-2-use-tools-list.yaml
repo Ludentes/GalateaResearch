@@ -1,0 +1,12 @@
+scenario: "L2: Use list_files tool to explore project"
+agent: beki
+setup:
+  clear_ticks: true
+steps:
+  - send: "List the files in the project root directory"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: exists
+      execution.toolCalls: ">= 1"

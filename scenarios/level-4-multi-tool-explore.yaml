@@ -1,0 +1,12 @@
+scenario: "L4: Multi-tool exploration — list then read"
+agent: beki
+setup:
+  clear_ticks: true
+steps:
+  - send: "What test framework does this project use? Check the config files."
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: "contains: vitest"
+      execution.toolCalls: ">= 2"

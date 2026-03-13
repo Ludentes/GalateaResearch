@@ -1,0 +1,14 @@
+scenario: "L8: Multi-step task — explore, plan, implement"
+agent: beki
+setup:
+  clear_ticks: true
+steps:
+  - send: "Look at /tmp/galatea-test-workspace/src/app.ts, then add a /health endpoint that returns JSON { status: 'ok' }. Show me what you changed."
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: respond
+      outcome.response: "contains: health"
+      execution.toolCalls: ">= 3"
