@@ -1,0 +1,27 @@
+scenario: "L24: Agent handles rate limit gracefully"
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  # Rapid-fire messages — system should handle each one without crashing
+  - send: "What is 2 + 2?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: exists
+
+  - send: "And what is 3 + 3?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: exists
+
+  - send: "One more: 4 + 4?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: exists

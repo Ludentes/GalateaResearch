@@ -323,7 +323,14 @@ export async function tick(
     let loopToolNames: string[] = []
     let executionAdapter: "claude-code" | "direct-response" = "direct-response"
 
-    if (selfModel.availableProviders.length > 0) {
+    const providerOverride = msg.metadata?.providerOverride as
+      | string
+      | undefined
+    const llmAvailable =
+      providerOverride !== "none" &&
+      selfModel.availableProviders.length > 0
+
+    if (llmAvailable) {
       const config = getLLMConfig()
 
       // Record inbound in operational history

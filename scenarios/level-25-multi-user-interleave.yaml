@@ -1,0 +1,19 @@
+scenario: "L25: Agent handles messages from multiple users"
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "Hey Beki, what language is this project written in?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: "contains: TypeScript"
+
+  - send: "Beki, can you list the files in the server/providers directory?"
+    from: { platform: discord, user: denis }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      execution.toolCalls: ">= 1"

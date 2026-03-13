@@ -1,0 +1,14 @@
+scenario: "L21: Agent acknowledges message when LLM is unavailable"
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "Hey, can you read the README for me?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    provider: none
+    expect:
+      outcome.action: respond
+      outcome.response: "contains: unable"
+      execution.adapter: none

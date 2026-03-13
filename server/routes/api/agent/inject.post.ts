@@ -13,6 +13,8 @@ interface InjectBody {
   from?: string
   channel?: string
   messageType?: string
+  /** Override LLM provider for this message (e.g. "none" to simulate outage) */
+  provider?: string
 }
 
 export function validateInjectBody(body: InjectBody): string | null {
@@ -48,7 +50,9 @@ export function buildChannelMessage(body: InjectBody): ChannelMessage {
     content: body.content!,
     messageType: (body.messageType ?? "chat") as ChannelMessage["messageType"],
     receivedAt: new Date().toISOString(),
-    metadata: {},
+    metadata: {
+      ...(body.provider ? { providerOverride: body.provider } : {}),
+    },
   }
 }
 

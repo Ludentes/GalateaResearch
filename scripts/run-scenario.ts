@@ -51,6 +51,7 @@ async function executeStep(
         from: step.from.user,
         channel: step.from.platform,
         messageType: step.messageType,
+        ...(step.provider ? { provider: step.provider } : {}),
       }),
     })
   } catch (err) {

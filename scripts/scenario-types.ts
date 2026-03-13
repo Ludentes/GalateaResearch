@@ -2,6 +2,8 @@ export interface ScenarioStep {
   send: string
   from: { platform: string; user: string }
   messageType?: string
+  /** Override LLM provider for this step (e.g. "none" to simulate outage) */
+  provider?: string
   expect: Record<string, unknown>
 }
 

@@ -38,6 +38,14 @@ vi.mock("../../providers/ollama-queue", () => ({
   OllamaBackpressureError: class extends Error {},
 }))
 
+vi.mock("../../providers/config", () => ({
+  getLLMConfig: vi.fn().mockReturnValue({
+    provider: "ollama",
+    model: "test-model",
+    ollamaBaseUrl: "http://localhost:11434",
+  }),
+}))
+
 // Mock operational memory
 vi.mock("../operational-memory", () => ({
   loadOperationalContext: vi.fn().mockResolvedValue({
@@ -266,6 +274,29 @@ describe("tick()", () => {
     expect(record.tickId).toBeTruthy()
     expect(record.trigger.type).toBe("message")
     expect(record.outcome.action).toBe("respond")
+  })
+
+  it("uses powered-down template when providerOverride is 'none'", async () => {
+    await updateAgentState(
+      {
+        lastActivity: new Date().toISOString(),
+        pendingMessages: [
+          makeMessage({
+            content: "Read a file",
+            metadata: { providerOverride: "none" },
+          }),
+        ],
+      },
+      STATE_PATH,
+    )
+
+    const result = await tick("manual", {
+      statePath: STATE_PATH,
+      storePath: STORE_PATH,
+    })
+
+    expect(result.action).toBe("respond")
+    expect(result.response?.text).toContain("unable")
   })
 
   it("appends TickDecisionRecord on idle tick", async () => {

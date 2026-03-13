@@ -1,0 +1,23 @@
+scenario: "L22: Agent responds normally after LLM outage"
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  # Step 1: LLM is down — agent acknowledges with template
+  - send: "Read vite.config.ts and tell me what plugins are configured."
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    provider: none
+    expect:
+      outcome.action: respond
+      outcome.response: "contains: unable"
+      execution.adapter: none
+
+  # Step 2: LLM is back — agent processes normally
+  - send: "What testing framework does this project use?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: "contains: vitest"

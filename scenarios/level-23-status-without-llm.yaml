@@ -1,0 +1,22 @@
+scenario: "L23: Agent reports status without needing LLM"
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  # Step 1: Assign a task to build operational context
+  - send: "Read the file server/agent/tick.ts and summarize the main function."
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: exists
+
+  # Step 2: Ask for status — even if LLM degrades, agent should report
+  # what it knows from operational memory
+  - send: "What's your current status? What are you working on?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: exists
