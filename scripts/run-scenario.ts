@@ -1,4 +1,4 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
+import { readFile } from "node:fs/promises"
 import path from "node:path"
 import YAML from "yaml"
 import { assertStep } from "./scenario-assert"
@@ -19,19 +19,19 @@ async function loadScenario(filePath: string): Promise<Scenario> {
 }
 
 async function handleSetup(scenario: Scenario): Promise<void> {
-  if (scenario.setup?.clear_ticks) {
-    const tickPath = `data/observations/ticks/${scenario.agent}.jsonl`
-    await rm(tickPath, { force: true })
-  }
-  if (scenario.setup?.clear_state) {
-    await mkdir("data/agent", { recursive: true })
-    await writeFile(
-      "data/agent/state.json",
-      JSON.stringify({
-        lastActivity: new Date().toISOString(),
-        pendingMessages: [],
+  if (scenario.setup?.clear_state || scenario.setup?.clear_ticks) {
+    const res = await fetch(`${BASE_URL}/api/agent/reset`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        agentId: scenario.agent,
+        clearTicks: scenario.setup?.clear_ticks ?? false,
       }),
-    )
+    })
+    if (!res.ok) {
+      const err = await res.text()
+      console.error(`Reset failed for ${scenario.agent}: ${err}`)
+    }
   }
 }
 
@@ -40,6 +40,7 @@ async function executeStep(
   step: Scenario["steps"][number],
   stepIndex: number,
 ): Promise<StepVerdict> {
+  const stepStart = Date.now()
   let res: Response
   try {
     res = await fetch(`${BASE_URL}/api/agent/inject`, {
@@ -68,6 +69,8 @@ async function executeStep(
         },
       ],
       tickId: "",
+      durationMs: Date.now() - stepStart,
+      costUsd: 0,
     }
   }
 
@@ -86,6 +89,8 @@ async function executeStep(
         },
       ],
       tickId: "",
+      durationMs: Date.now() - stepStart,
+      costUsd: 0,
     }
   }
 
@@ -105,14 +110,20 @@ async function executeStep(
         },
       ],
       tickId: "",
+      durationMs: Date.now() - stepStart,
+      costUsd: 0,
     }
   }
 
-  return assertStep(body.tick, step.expect, stepIndex, step.send)
+  const verdict = assertStep(body.tick, step.expect, stepIndex, step.send)
+  verdict.durationMs = Date.now() - stepStart
+  verdict.costUsd = body.tick.execution?.costUsd ?? 0
+  return verdict
 }
 
 async function runScenario(filePath: string): Promise<ScenarioVerdict> {
   const scenario = await loadScenario(filePath)
+  const scenarioStart = Date.now()
   await handleSetup(scenario)
 
   const steps: StepVerdict[] = []
@@ -126,29 +137,48 @@ async function runScenario(filePath: string): Promise<ScenarioVerdict> {
     agent: scenario.agent,
     pass: steps.every((s) => s.pass),
     steps,
+    durationMs: Date.now() - scenarioStart,
+    totalCostUsd: steps.reduce((sum, s) => sum + s.costUsd, 0),
   }
+}
+
+function formatDuration(ms: number): string {
+  if (ms < 1000) return `${ms}ms`
+  return `${(ms / 1000).toFixed(1)}s`
+}
+
+function formatCost(usd: number): string {
+  if (usd === 0) return ""
+  return ` $${usd.toFixed(4)}`
 }
 
 function printReport(verdicts: ScenarioVerdict[]): void {
   const total = verdicts.length
   const passed = verdicts.filter((v) => v.pass).length
   const failed = total - passed
+  const totalDuration = verdicts.reduce((sum, v) => sum + v.durationMs, 0)
+  const totalCost = verdicts.reduce((sum, v) => sum + v.totalCostUsd, 0)
 
   const now = new Date()
   const ts = now.toISOString().replace("T", " ").slice(0, 16)
 
   console.log(`\n${BOLD}=== Scenario Run: ${ts} ===${RESET}`)
   console.log(
-    `Scenarios: ${total} run, ${GREEN}${passed} passed${RESET}, ${failed > 0 ? RED : ""}${failed} failed${RESET}\n`,
+    `Scenarios: ${total} run, ${GREEN}${passed} passed${RESET}, ${failed > 0 ? RED : ""}${failed} failed${RESET}`,
+  )
+  console.log(
+    `Duration: ${formatDuration(totalDuration)}${totalCost > 0 ? ` | Cost: $${totalCost.toFixed(4)}` : ""}\n`,
   )
 
   for (const v of verdicts) {
     const tag = v.pass ? `${GREEN}PASS${RESET}` : `${RED}FAIL${RESET}`
-    console.log(`${tag}: ${v.scenario} (${v.agent})`)
+    const timing = `${DIM}${formatDuration(v.durationMs)}${formatCost(v.totalCostUsd)}${RESET}`
+    console.log(`${tag}: ${v.scenario} (${v.agent}) ${timing}`)
 
     for (const s of v.steps) {
       const stepTag = s.pass ? `${GREEN}PASS${RESET}` : `${RED}FAIL${RESET}`
-      console.log(`  Step ${s.step}: ${stepTag}`)
+      const stepTiming = `${DIM}${formatDuration(s.durationMs)}${formatCost(s.costUsd)}${RESET}`
+      console.log(`  Step ${s.step}: ${stepTag} ${stepTiming}`)
 
       if (!s.pass) {
         for (const c of s.checks) {
@@ -189,6 +219,8 @@ async function main(): Promise<void> {
         agent: "unknown",
         pass: false,
         steps: [],
+        durationMs: 0,
+        totalCostUsd: 0,
       })
     }
   }

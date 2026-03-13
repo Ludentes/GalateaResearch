@@ -73,8 +73,8 @@ export default defineEventHandler(async (event) => {
 
   // appendTickRecord in tick() is fire-and-forget — poll until new record appears
   let record = await readLastTickRecord(tickPath)
-  for (let i = 0; i < 10 && record?.tickId === beforeTick?.tickId; i++) {
-    await new Promise((r) => setTimeout(r, 50))
+  for (let i = 0; i < 30 && record?.tickId === beforeTick?.tickId; i++) {
+    await new Promise((r) => setTimeout(r, 100))
     record = await readLastTickRecord(tickPath)
   }
 

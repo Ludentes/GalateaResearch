@@ -57,7 +57,7 @@ export interface OperationalContext {
 const DEFAULT_CONTEXT_PATH = "data/agent/operational-context.json"
 const MAX_HISTORY_ENTRIES = 10 // 5 exchanges = 10 messages
 
-function emptyContext(): OperationalContext {
+export function emptyContext(): OperationalContext {
   const now = new Date().toISOString()
   return {
     tasks: [],

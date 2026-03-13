@@ -170,5 +170,7 @@ export function assertStep(
     pass: checks.every((c) => c.pass),
     checks,
     tickId: tick.tickId,
+    durationMs: 0,
+    costUsd: 0,
   }
 }

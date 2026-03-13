@@ -23,6 +23,7 @@ export interface TickDecisionRecord {
     toolCalls: number
     toolNames?: string[]
     durationMs: number
+    costUsd?: number
   }
   resources: {
     inputTokens?: number

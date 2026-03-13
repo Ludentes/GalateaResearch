@@ -9,7 +9,7 @@ export const VALID_PROVIDERS: readonly string[] = [
 export const DEFAULT_MODELS: Record<LLMProvider, string> = {
   ollama: "glm-4.7-flash:latest",
   openrouter: "anthropic/claude-haiku-4.5",
-  "claude-code": "sonnet",
+  "claude-code": "haiku",
 }
 
 export interface LLMConfig {

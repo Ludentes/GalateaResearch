@@ -129,6 +129,69 @@ describe("assertStep", () => {
     expect(v.pass).toBe(false)
   })
 
+  it("handles 'contains:' substring matcher", () => {
+    const v = assertStep(
+      baseTick,
+      { "outcome.response": "contains: research" },
+      0,
+      "test",
+    )
+    expect(v.pass).toBe(true)
+  })
+
+  it("'contains:' is case-insensitive", () => {
+    const v = assertStep(
+      baseTick,
+      { "outcome.response": "contains: RESEARCH" },
+      0,
+      "test",
+    )
+    expect(v.pass).toBe(true)
+  })
+
+  it("fails 'contains:' when substring not found", () => {
+    const v = assertStep(
+      baseTick,
+      { "outcome.response": "contains: nonexistent" },
+      0,
+      "test",
+    )
+    expect(v.pass).toBe(false)
+  })
+
+  it("handles 'matches:' regex matcher", () => {
+    const v = assertStep(
+      baseTick,
+      { "outcome.response": "matches: ^Here.*research$" },
+      0,
+      "test",
+    )
+    expect(v.pass).toBe(true)
+    expect(v.checks[0].pass).toBe(true)
+  })
+
+  it("fails 'matches:' when regex does not match", () => {
+    const v = assertStep(
+      baseTick,
+      { "outcome.response": "matches: ^Goodbye" },
+      0,
+      "test",
+    )
+    expect(v.pass).toBe(false)
+    expect(v.checks[0].pass).toBe(false)
+  })
+
+  it("fails 'matches:' gracefully on invalid regex", () => {
+    const v = assertStep(
+      baseTick,
+      { "outcome.response": "matches: [invalid(" },
+      0,
+      "test",
+    )
+    expect(v.pass).toBe(false)
+    expect(v.checks[0].pass).toBe(false)
+  })
+
   it("handles contains matcher", () => {
     const v = assertStep(
       baseTick,

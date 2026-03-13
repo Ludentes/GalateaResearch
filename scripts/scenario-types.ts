@@ -33,6 +33,8 @@ export interface StepVerdict {
   pass: boolean
   checks: CheckResult[]
   tickId: string
+  durationMs: number
+  costUsd: number
 }
 
 export interface ScenarioVerdict {
@@ -40,4 +42,6 @@ export interface ScenarioVerdict {
   agent: string
   pass: boolean
   steps: StepVerdict[]
+  durationMs: number
+  totalCostUsd: number
 }

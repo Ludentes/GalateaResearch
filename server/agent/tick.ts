@@ -57,7 +57,7 @@ export function clearTools(): void {
   }
 }
 
-function getAgentTools(agentId: string, workspace?: string): Record<string, AgentTool> {
+function getAgentTools(_agentId: string, workspace?: string): Record<string, AgentTool> {
   const workspaceRoot = workspace || process.cwd()
   return createAllTools(workspaceRoot)
 }
@@ -102,7 +102,9 @@ function buildTickRecord(params: {
       adapter: params.execution.adapter ?? "none",
       sessionResumed: params.execution.sessionResumed ?? false,
       toolCalls: params.execution.toolCalls ?? 0,
+      toolNames: params.execution.toolNames,
       durationMs: params.durationMs,
+      costUsd: params.execution.costUsd,
     },
     resources: {},
     outcome: params.outcome,
@@ -321,6 +323,7 @@ export async function tick(
     let llmResult: string | undefined
     let loopToolCalls = 0
     let loopToolNames: string[] = []
+    let loopCostUsd: number | undefined
     let executionAdapter: "claude-code" | "direct-response" = "direct-response"
 
     const providerOverride = msg.metadata?.providerOverride as
@@ -357,13 +360,14 @@ export async function tick(
             workingDirectory:
               (msg.metadata?.workspace as string) ?? process.cwd(),
             timeoutMs: 120_000,
-            model: config.model !== "sonnet" ? config.model : undefined,
+            model: config.model,
           })
 
           if (result.ok) {
             llmResult = result.text
             loopToolCalls = result.toolCalls
             loopToolNames = result.toolNames
+            loopCostUsd = result.costUsd
 
             // Record assistant response in operational history
             pushHistoryEntry(opCtx, "assistant", llmResult)
@@ -524,6 +528,7 @@ export async function tick(
           adapter: executionAdapter,
           toolCalls: loopToolCalls,
           toolNames: loopToolNames.length > 0 ? loopToolNames : undefined,
+          costUsd: loopCostUsd,
         },
         outcome: {
           action: "respond",
@@ -668,7 +673,25 @@ export async function tick(
   return tickResult
 }
 
+// ---------------------------------------------------------------------------
+// Provider availability cache — avoids spawning subprocesses on every tick
+// ---------------------------------------------------------------------------
+
+let cachedSelfModel: SelfModel | null = null
+let selfModelCachedAt = 0
+const SELF_MODEL_TTL_MS = 60_000 // re-check every 60s
+
+export function invalidateProviderCache(): void {
+  cachedSelfModel = null
+  selfModelCachedAt = 0
+}
+
 async function checkSelfModel(): Promise<SelfModel> {
+  const now = Date.now()
+  if (cachedSelfModel && now - selfModelCachedAt < SELF_MODEL_TTL_MS) {
+    return cachedSelfModel
+  }
+
   const providers: string[] = []
 
   // Check Ollama
@@ -688,13 +711,16 @@ async function checkSelfModel(): Promise<SelfModel> {
   }
 
   // Check Claude Code (uses CLI auth, not API key)
+  // Use `which` first (fast), then verify with --version only if needed
   try {
     const { execSync } = await import("node:child_process")
-    execSync("claude --version", { timeout: 3000, stdio: "pipe" })
+    execSync("which claude", { timeout: 2000, stdio: "pipe" })
     providers.push("claude-code")
   } catch {
     // Expected: Claude CLI not installed — not an error
   }
 
-  return { availableProviders: providers }
+  cachedSelfModel = { availableProviders: providers }
+  selfModelCachedAt = now
+  return cachedSelfModel
 }
