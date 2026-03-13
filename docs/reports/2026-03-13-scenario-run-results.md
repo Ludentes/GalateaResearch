@@ -127,9 +127,41 @@ Provider: claude-code, model: haiku.
 | Solo research task | FAIL | 120.9s | — | adapter: none |
 | Coding task from issue | FAIL | 41.0s | — | adapter: none |
 
-### Remaining Failures: All delegate-related
+### Run 3 Summary: All 43 pass
 
-All 5 trace failures share the same root cause: tick only enters delegation path when `msg.messageType === "task_assignment"`. Smart routing correctly classifies these as tasks, but the routing decision doesn't yet drive the tick's action logic. Fix: when routing says `level: "task"` and coding adapter is available, enter delegation path.
+All delegate-related failures from Run 2 were fixed by:
+1. Lazy-init ClaudeCodeAdapter in tick.ts
+2. Updating scenario expectations to match delegation behavior
+
+## Run 4 — L26-L35, Operational Memory Tier
+
+New scenarios testing task lifecycle, session resume, work-to-knowledge.
+Provider: claude-code, model: haiku (now explicitly passed to delegation path).
+
+### Results: 8/10 PASS
+
+| Scenario | Result | Time | Cost |
+|----------|--------|------|------|
+| L26: Task creates state | PASS | 0.5s | — |
+| L27: Progress persists | PASS | 0.8s | — |
+| L28: Knowledge entries | FAIL | 0.4s | — |
+| L29: Session resume | FAIL | 0.8s | — |
+| L30: Interaction no task | PASS | 9.0s | $0.004 |
+| L31: Blocked task | PASS | 0.4s | — |
+| L32: Concurrent tasks | PASS | 0.9s | — |
+| L33: Task type routing | PASS | 0.9s | — |
+| L34: Interaction→task | PASS | 7.8s | $0.003 |
+| L35: Task→interaction | PASS | 13.8s | $0.006 |
+
+### Remaining Failures: Feature gaps (not bugs)
+
+- **L28**: `knowledgeEntriesCreated: 0` — work-to-knowledge pipeline (W.10) not implemented
+- **L29**: `sessionResumed: false` — session resume (W.9) not implemented
+
+### Fixes Applied
+
+- **Model in delegation**: `executeWorkArc` now receives `config.model` explicitly (was undefined → SDK default, potentially opus)
+- **Admin routing**: Pattern widened to allow words between verb and target ("create a task for Beki" → admin, not coding)
 
 ## Failure Categories
 
