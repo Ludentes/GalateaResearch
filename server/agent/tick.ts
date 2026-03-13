@@ -231,12 +231,14 @@ export async function tick(
             systemPrompt: `${context.systemPrompt}\n\n## Available CLI Tools\n${toolsContext}`,
           }
         : context
+      const config = getLLMConfig()
       const arcResult = await executeWorkArc({
         adapter,
         task: { id: task.id, description: task.description },
         context: workContext,
         workingDirectory: workDir,
         trustLevel: (agentContext.sourceTrustLevel ?? "MEDIUM") as TrustLevel,
+        model: config.model,
       })
 
       // Update task status based on result

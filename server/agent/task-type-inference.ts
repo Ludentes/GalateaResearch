@@ -85,7 +85,7 @@ function hasTaskSignal(lower: string): boolean {
     new RegExp(
       `${EN_REVIEW_VERBS.source}\\s+(?:.*?\\s)?${EN_REVIEW_TARGETS.source}`,
     ),
-    new RegExp(`${EN_ADMIN_VERBS.source}\\s+${EN_ADMIN_TARGETS.source}`),
+    new RegExp(`${EN_ADMIN_VERBS.source}\\s+(?:.*?\\s)?${EN_ADMIN_TARGETS.source}`),
     new RegExp(
       `${EN_CODING_VERBS.source}\\s+.*${EN_UI_TARGETS.source}`,
     ),
@@ -96,7 +96,7 @@ function hasTaskSignal(lower: string): boolean {
     new RegExp(
       `${RU_REVIEW_VERBS.source}\\s+(?:.*?\\s)?${RU_REVIEW_TARGETS.source}`,
     ),
-    new RegExp(`${RU_ADMIN_VERBS.source}\\s+${RU_ADMIN_TARGETS.source}`),
+    new RegExp(`${RU_ADMIN_VERBS.source}\\s+(?:.*?\\s)?${RU_ADMIN_TARGETS.source}`),
     new RegExp(
       `${RU_CODING_VERBS.source}\\s+.*${RU_UI_TARGETS.source}`,
     ),
@@ -123,10 +123,10 @@ function inferTaskType(lower: string): TaskType {
     return "review"
   }
 
-  // Admin (EN + RU)
+  // Admin (EN + RU) — allow optional words between verb and target
   if (
     new RegExp(
-      `(?:${EN_ADMIN_VERBS.source}|${RU_ADMIN_VERBS.source})\\s+(?:${EN_ADMIN_TARGETS.source}|${RU_ADMIN_TARGETS.source})`,
+      `(?:${EN_ADMIN_VERBS.source}|${RU_ADMIN_VERBS.source})\\s+(?:.*?\\s)?(?:${EN_ADMIN_TARGETS.source}|${RU_ADMIN_TARGETS.source})`,
     ).test(lower)
   ) {
     return "admin"
