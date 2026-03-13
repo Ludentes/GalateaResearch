@@ -1,0 +1,16 @@
+scenario: "L31: Blocked task reports blockers"
+description: >
+  When a task cannot proceed (e.g. missing dependency, unclear requirements),
+  the agent should report the blocker rather than producing garbage output.
+  This tests the agent's ability to recognize and communicate limitations.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "deploy the app to production using our CI/CD pipeline"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      outcome.action: delegate
+      outcome.response: exists

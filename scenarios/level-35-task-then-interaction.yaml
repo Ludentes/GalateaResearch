@@ -1,0 +1,22 @@
+scenario: "L35: Task followed by status check — routing switches correctly"
+description: >
+  First message is a task assignment (delegation), second is a quick
+  status check (interaction). Validates that the agent correctly
+  switches back from task mode to interaction mode.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "add a health check endpoint that returns server uptime"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      outcome.action: delegate
+  - send: "thanks, what did you do?"
+    from: { platform: discord, user: sasha }
+    expect:
+      routing.level: interaction
+      outcome.action: respond
+      outcome.response: exists

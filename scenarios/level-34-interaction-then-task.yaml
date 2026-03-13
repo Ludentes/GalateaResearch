@@ -1,0 +1,24 @@
+scenario: "L34: Interaction followed by task — correct routing for each"
+description: >
+  First message is a quick question (interaction level), second is a
+  task assignment (task level). Each should be routed correctly,
+  validating that the two-level model works within a single conversation.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "hey, are you available?"
+    from: { platform: discord, user: sasha }
+    expect:
+      routing.level: interaction
+      outcome.action: respond
+      outcome.response: exists
+  - send: "great, implement a retry wrapper that retries a function up to 3 times with exponential backoff"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: delegate
+      execution.adapter: "not: none"

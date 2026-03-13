@@ -1,0 +1,22 @@
+scenario: "L32: Multiple task assignments are tracked separately"
+description: >
+  Two different task assignments should be handled independently.
+  Each should produce its own delegation result. The agent should not
+  confuse the two tasks.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "create a file /tmp/galatea-test-workspace/add.ts with a function that adds two numbers"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      outcome.action: delegate
+      execution.adapter: "not: none"
+  - send: "create a file /tmp/galatea-test-workspace/multiply.ts with a function that multiplies two numbers"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      outcome.action: delegate
+      execution.adapter: "not: none"

@@ -1,0 +1,24 @@
+scenario: "L33: Task type drives adapter behavior"
+description: >
+  A research task should produce a research-oriented response (information,
+  analysis, comparisons), while a coding task should produce code artifacts.
+  Both go through delegation but the routing.taskType should differ.
+agent: besa
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "research the differences between JWT and session-based authentication"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: research
+      outcome.action: delegate
+  - send: "create a task for Beki to implement JWT auth in the mobile app"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: admin
+      outcome.action: delegate

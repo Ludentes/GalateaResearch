@@ -1,0 +1,22 @@
+scenario: "L27: Task progress persists across ticks"
+description: >
+  Two messages about the same task should show the agent building on
+  previous work. The second tick should resume the session (cheaper)
+  rather than starting fresh.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "implement a utility function that validates email addresses"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      outcome.action: delegate
+      execution.adapter: "not: none"
+  - send: "also add phone number validation to the same file"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      outcome.action: delegate
+      execution.adapter: "not: none"

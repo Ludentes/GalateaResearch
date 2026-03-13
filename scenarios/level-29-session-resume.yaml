@@ -1,0 +1,22 @@
+scenario: "L29: Session resumes on continuation message"
+description: >
+  When a second message arrives for an agent with an active task,
+  the coding adapter should resume the existing session rather than
+  starting a fresh one. This is critical for cost efficiency.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "read the file server/agent/tick.ts and summarize the main flow"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      outcome.action: delegate
+      execution.sessionResumed: false
+  - send: "now also check server/agent/operational-memory.ts and compare the two"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      outcome.action: delegate
+      execution.sessionResumed: true

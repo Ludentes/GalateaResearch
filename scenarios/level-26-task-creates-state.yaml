@@ -1,0 +1,18 @@
+scenario: "L26: Task assignment creates operational task state"
+description: >
+  When a task_assignment message is delegated, the operational context
+  should record a TaskState with the correct type derived from routing.
+  Validates that delegation actually tracks work, not just fires-and-forgets.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "implement a dark mode toggle for the settings page"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: delegate
+      execution.adapter: "not: none"
