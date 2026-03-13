@@ -1,0 +1,18 @@
+scenario: "L11: Follow-up question using conversation context"
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "What testing framework does this project use?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: "contains: vitest"
+  - send: "How do I run the tests?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: exists

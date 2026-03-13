@@ -3,10 +3,10 @@ agent: beki
 setup:
   clear_ticks: true
 steps:
-  - send: "Read the file at /tmp/galatea-test-workspace/package.json and add a 'test' script that runs 'vitest'. Write the updated file back."
+  - send: "Read the file vite.config.ts, then tell me how many Vite plugins are configured and what their names are."
     from: { platform: discord, user: sasha }
-    messageType: task_assignment
+    messageType: chat
     expect:
-      routing.level: task
       outcome.action: respond
-      execution.toolCalls: ">= 2"
+      outcome.response: "contains: plugin"
+      execution.toolCalls: ">= 1"

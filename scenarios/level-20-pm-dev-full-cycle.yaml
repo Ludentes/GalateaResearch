@@ -1,0 +1,40 @@
+scenario: "L20: Full PM-developer cycle — research, implement, requirements change, verify"
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  # Step 1: PM gives context
+  - send: "We need to add a new assertion matcher to the scenario runner. Read scripts/scenario-assert.ts and tell me what matchers already exist."
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: "contains: exists"
+      execution.toolCalls: ">= 1"
+
+  # Step 2: PM assigns the task
+  - send: "Good. Add a new 'matches: <regex>' matcher that tests the actual value against a regex pattern. Put it after the 'contains' matcher."
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: "contains: match"
+      execution.toolCalls: ">= 1"
+
+  # Step 3: PM changes requirements
+  - send: "Actually, make it case-insensitive by default. The matcher should be 'matches: <regex>' and it should use the 'i' flag."
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: exists
+
+  # Step 4: PM asks for verification
+  - send: "Read back the file and show me just the new matcher code. Does it handle invalid regex gracefully?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: exists
+      execution.toolCalls: ">= 1"

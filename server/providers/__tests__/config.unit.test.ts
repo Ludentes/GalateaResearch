@@ -65,7 +65,7 @@ describe("LLM Provider Config", () => {
     const { getLLMConfig } = await import("../config")
     const config = getLLMConfig()
     expect(config.provider).toBe("openrouter")
-    expect(config.model).toBe("z-ai/glm-4.5-air:free")
+    expect(config.model).toBe("anthropic/claude-haiku-4.5")
     expect(config.openrouterApiKey).toBe("sk-or-test-key")
   })
 

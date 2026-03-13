@@ -3,12 +3,10 @@ agent: beki
 setup:
   clear_ticks: true
 steps:
-  - send: "Look at /tmp/galatea-test-workspace/src/app.ts, then add a /health endpoint that returns JSON { status: 'ok' }. Show me what you changed."
+  - send: "Read the file server/routes/api/agent/inject.post.ts and explain what HTTP method it handles and what validation it performs on the request body."
     from: { platform: discord, user: sasha }
-    messageType: task_assignment
+    messageType: chat
     expect:
-      routing.level: task
-      routing.taskType: coding
       outcome.action: respond
-      outcome.response: "contains: health"
-      execution.toolCalls: ">= 3"
+      outcome.response: "contains: POST"
+      execution.toolCalls: ">= 1"

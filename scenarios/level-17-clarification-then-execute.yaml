@@ -1,0 +1,19 @@
+scenario: "L17: Ambiguous task → agent asks for clarification context"
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "The scenario runner has a bug with the assertions. Can you look at it?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: exists
+  - send: "The file is scripts/scenario-assert.ts. Check if the numeric comparison matcher handles negative numbers correctly."
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: exists
+      execution.toolCalls: ">= 1"

@@ -1,0 +1,20 @@
+scenario: "L16: Feature request with acceptance criteria check"
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "I need a utility function that validates email addresses. Write it to server/utils/validate-email.ts. Requirements: (1) export a function validateEmail(email: string): boolean, (2) check for @ symbol and domain part, (3) return false for empty strings."
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: "contains: email"
+      execution.toolCalls: ">= 1"
+  - send: "Now read back the file you just created and confirm it meets all 3 requirements I listed."
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: "contains: validateEmail"
+      execution.toolCalls: ">= 1"

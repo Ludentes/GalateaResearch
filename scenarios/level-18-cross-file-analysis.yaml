@@ -1,0 +1,27 @@
+scenario: "L18: Cross-file analysis — trace a dependency chain"
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "I need to understand the provider system. Start with server/providers/index.ts — what does getModel() return and where does it get its config from?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: "contains: config"
+      execution.toolCalls: ">= 1"
+  - send: "Now trace how that model gets used. Read server/agent/agent-loop.ts and tell me how getModel's result flows into the LLM call."
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: "contains: generateText"
+      execution.toolCalls: ">= 1"
+  - send: "And for the claude-code provider specifically — does it go through agent-loop or a different path? Check server/agent/tick.ts."
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: "contains: claude"
+      execution.toolCalls: ">= 1"

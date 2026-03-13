@@ -49,6 +49,47 @@ describe("inject endpoint helpers", () => {
       })
       expect(result).toBe("Missing required field: channel")
     })
+
+    it("returns error for invalid messageType", () => {
+      const result = validateInjectBody({
+        agentId: "agent-1",
+        content: "hello",
+        from: "user-1",
+        channel: "discord",
+        messageType: "review_comment",
+      })
+      expect(result).toBe(
+        "Invalid messageType: review_comment. Must be one of: chat, task_assignment, status_update, greeting",
+      )
+    })
+
+    it("accepts valid messageType values", () => {
+      for (const messageType of [
+        "chat",
+        "task_assignment",
+        "status_update",
+        "greeting",
+      ]) {
+        const result = validateInjectBody({
+          agentId: "agent-1",
+          content: "hello",
+          from: "user-1",
+          channel: "discord",
+          messageType,
+        })
+        expect(result).toBeNull()
+      }
+    })
+
+    it("allows omitted messageType (defaults to chat)", () => {
+      const result = validateInjectBody({
+        agentId: "agent-1",
+        content: "hello",
+        from: "user-1",
+        channel: "discord",
+      })
+      expect(result).toBeNull()
+    })
   })
 
   describe("buildChannelMessage", () => {

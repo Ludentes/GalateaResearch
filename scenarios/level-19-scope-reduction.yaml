@@ -1,0 +1,18 @@
+scenario: "L19: PM reduces scope mid-task"
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "I need you to add input validation to the inject endpoint. Check server/routes/api/agent/inject.post.ts — add validation for messageType field to only allow 'chat', 'task_assignment', 'status_update', and 'greeting'."
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      execution.toolCalls: ">= 1"
+  - send: "Wait, actually don't change the code. Just tell me what messageType values are currently accepted — is there any validation at all? I want to decide before we change anything."
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: exists

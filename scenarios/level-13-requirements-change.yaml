@@ -1,0 +1,19 @@
+scenario: "L13: PM changes requirements mid-conversation"
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "Read server/agent/task-type-inference.ts and tell me what task types are supported."
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: "contains: coding"
+      execution.toolCalls: ">= 1"
+  - send: "Actually, forget the task types. I need you to check if that file handles Russian language input. Does it have any Russian regex patterns?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: "contains: Russian"

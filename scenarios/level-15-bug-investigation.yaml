@@ -1,0 +1,18 @@
+scenario: "L15: Bug report → investigate → explain root cause"
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "We have a bug: when LLM_PROVIDER is set to an invalid value, the error message doesn't list all valid providers. Can you check server/providers/config.ts and confirm whether this is true?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      execution.toolCalls: ">= 1"
+  - send: "OK so does the error message actually include the list of valid providers or not? Give me the exact error string."
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: "contains: Valid"

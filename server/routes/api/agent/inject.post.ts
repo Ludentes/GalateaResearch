@@ -24,6 +24,17 @@ export function validateInjectBody(body: InjectBody): string | null {
   if (!validChannels.includes(body.channel)) {
     return `Invalid channel: ${body.channel}. Must be one of: ${validChannels.join(", ")}`
   }
+  if (body.messageType !== undefined) {
+    const validMessageTypes = [
+      "chat",
+      "task_assignment",
+      "status_update",
+      "greeting",
+    ]
+    if (!validMessageTypes.includes(body.messageType)) {
+      return `Invalid messageType: ${body.messageType}. Must be one of: ${validMessageTypes.join(", ")}`
+    }
+  }
   return null
 }
 

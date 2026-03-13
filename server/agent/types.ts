@@ -12,6 +12,7 @@ export type MessageType =
   | "task_assignment"
   | "review_comment"
   | "status_update"
+  | "greeting"
 
 export interface MessageRouting {
   threadId?: string // Discord thread, GitLab MR discussion

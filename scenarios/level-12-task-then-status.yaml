@@ -1,0 +1,19 @@
+scenario: "L12: PM assigns task, then asks for status"
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "Read the file server/providers/config.ts and list all supported LLM providers with their default models."
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: "contains: ollama"
+      execution.toolCalls: ">= 1"
+  - send: "Which of those providers requires an API key?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: "contains: openrouter"

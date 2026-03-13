@@ -61,9 +61,27 @@ function checkValue(
     }
   }
 
+  // "matches: <regex>" matcher — test actual value against a regex pattern
+  if (typeof expected === "string" && expected.startsWith("matches: ")) {
+    const pattern = expected.slice(9)
+    let pass = false
+    try {
+      const regex = new RegExp(pattern, "i")
+      pass = regex.test(String(actual))
+    } catch {
+      pass = false
+    }
+    return {
+      field,
+      expected,
+      actual: String(actual),
+      pass,
+    }
+  }
+
   // Numeric comparison matchers
   if (typeof expected === "string") {
-    const numMatch = expected.match(/^([<>]=?)\s*(\d+(?:\.\d+)?)$/)
+    const numMatch = expected.match(/^([<>]=?)\s*(-?\d+(?:\.\d+)?)$/)
     if (numMatch) {
       const op = numMatch[1]
       const threshold = Number(numMatch[2])

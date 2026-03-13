@@ -11,6 +11,7 @@ import { createWorkKnowledge } from "../memory/work-to-knowledge"
 import { emitEvent } from "../observation/emit"
 import type { TickDecisionRecord } from "../observation/tick-record"
 import { appendTickRecord, getTickRecordPath } from "../observation/tick-record"
+import { getLLMConfig } from "../providers/config"
 import { getModelWithFallback } from "../providers"
 import {
   OllamaBackpressureError,
@@ -18,6 +19,7 @@ import {
 } from "../providers/ollama-queue"
 import type { AgentTool } from "./agent-loop"
 import { runAgentLoop } from "./agent-loop"
+import { runClaudeCodeRespond } from "./claude-code-respond"
 import { loadAgentSpec } from "./agent-spec"
 import {
   appendActivityLog,
@@ -315,68 +317,129 @@ export async function tick(
       return tickResult
     }
 
-    // Stage 4: Agent loop (ReAct pattern with budget controls)
+    // Stage 4: Generate response — Agent SDK direct or AI SDK agent loop
     let llmResult: string | undefined
     let loopToolCalls = 0
     let loopToolNames: string[] = []
+    let executionAdapter: "claude-code" | "direct-response" = "direct-response"
+
     if (selfModel.availableProviders.length > 0) {
-      const { model } = getModelWithFallback()
-      try {
-        // Record inbound in operational history
-        pushHistoryEntry(opCtx, "user", msg.content)
+      const config = getLLMConfig()
 
-        // Build history from operational context (exclude the message we just added)
-        const history = opCtx.recentHistory
-          .slice(0, -1)
-          .map((h) => ({ role: h.role, content: h.content }))
+      // Record inbound in operational history
+      pushHistoryEntry(opCtx, "user", msg.content)
 
-        const systemPrompt = toolsContext
-          ? `${context.systemPrompt}\n\n## Available CLI Tools\n${toolsContext}`
-          : context.systemPrompt
+      const systemPrompt = toolsContext
+        ? `${context.systemPrompt}\n\n## Available CLI Tools\n${toolsContext}`
+        : context.systemPrompt
 
-        const loopResult = await runAgentLoop({
-          model,
-          system: systemPrompt,
-          messages: [{ role: "user", content: msg.content }],
-          tools: getAgentTools(agentId, msg.metadata?.workspace as string),
-          history,
-          config: { maxSteps: 8, timeoutMs: 120_000 },
-        })
+      if (config.provider === "claude-code") {
+        // Agent SDK direct path — uses built-in tools, session persistence
+        executionAdapter = "claude-code"
+        try {
+          // Build conversation history from operational context
+          const ccHistory = opCtx.recentHistory
+            .slice(0, -1)
+            .map((h) => ({ role: h.role, content: h.content }))
 
-        llmResult = loopResult.text
-        const toolSteps = loopResult.steps.filter((s) => s.type === "tool_call")
-        loopToolCalls = toolSteps.length
-        loopToolNames = toolSteps
-          .map((s) => s.toolName)
-          .filter((n): n is string => !!n)
+          const result = await runClaudeCodeRespond({
+            agentId,
+            systemPrompt,
+            userMessage: msg.content,
+            history: ccHistory,
+            workingDirectory:
+              (msg.metadata?.workspace as string) ?? process.cwd(),
+            timeoutMs: 120_000,
+            model: config.model !== "sonnet" ? config.model : undefined,
+          })
 
-        // Record assistant response in operational history
-        pushHistoryEntry(opCtx, "assistant", llmResult)
+          if (result.ok) {
+            llmResult = result.text
+            loopToolCalls = result.toolCalls
+            loopToolNames = result.toolNames
 
-        // Log loop metadata
-        if (loopResult.totalSteps > 1 || loopResult.finishReason !== "text") {
+            // Record assistant response in operational history
+            pushHistoryEntry(opCtx, "assistant", llmResult)
+          }
+          // else: ok=false → llmResult stays undefined → powered-down template
+        } catch (err) {
+          const errorMsg =
+            err instanceof Error ? err.message : String(err)
           emitEvent({
             type: "log",
             source: `${agentId}-api`,
-            body: "agent_loop.completed",
+            body: "claude_code_respond.error",
             attributes: {
-              "event.name": "agent_loop.completed",
-              finishReason: loopResult.finishReason,
-              totalSteps: String(loopResult.totalSteps),
-              toolCalls: String(
-                loopResult.steps.filter((s) => s.type === "tool_call").length,
-              ),
+              "event.name": "claude_code_respond.error",
+              error: errorMsg,
             },
           }).catch(() => {})
+          // Fall through to powered-down template response
         }
-      } catch (err) {
-        if (
-          err instanceof OllamaCircuitOpenError ||
-          err instanceof OllamaBackpressureError
-        ) {
-          // Fall through to powered-down template response below
-        } else {
-          throw err
+      } else {
+        // AI SDK agent loop — for ollama, openrouter, etc.
+        try {
+          const { model } = getModelWithFallback()
+
+          // Build history from operational context (exclude the message we just added)
+          const history = opCtx.recentHistory
+            .slice(0, -1)
+            .map((h) => ({ role: h.role, content: h.content }))
+
+          const loopResult = await runAgentLoop({
+            model,
+            system: systemPrompt,
+            messages: [{ role: "user", content: msg.content }],
+            tools: getAgentTools(
+              agentId,
+              msg.metadata?.workspace as string,
+            ),
+            history,
+            config: { maxSteps: 8, timeoutMs: 120_000 },
+          })
+
+          llmResult = loopResult.text
+          const toolSteps = loopResult.steps.filter(
+            (s) => s.type === "tool_call",
+          )
+          loopToolCalls = toolSteps.length
+          loopToolNames = toolSteps
+            .map((s) => s.toolName)
+            .filter((n): n is string => !!n)
+
+          // Record assistant response in operational history
+          pushHistoryEntry(opCtx, "assistant", llmResult)
+
+          // Log loop metadata
+          if (
+            loopResult.totalSteps > 1 ||
+            loopResult.finishReason !== "text"
+          ) {
+            emitEvent({
+              type: "log",
+              source: `${agentId}-api`,
+              body: "agent_loop.completed",
+              attributes: {
+                "event.name": "agent_loop.completed",
+                finishReason: loopResult.finishReason,
+                totalSteps: String(loopResult.totalSteps),
+                toolCalls: String(
+                  loopResult.steps.filter(
+                    (s) => s.type === "tool_call",
+                  ).length,
+                ),
+              },
+            }).catch(() => {})
+          }
+        } catch (err) {
+          if (
+            err instanceof OllamaCircuitOpenError ||
+            err instanceof OllamaBackpressureError
+          ) {
+            // Fall through to powered-down template response below
+          } else {
+            throw err
+          }
         }
       }
     }
@@ -451,7 +514,7 @@ export async function tick(
         homeostasis,
         routing: inferRouting(msg.content, msg.messageType),
         execution: {
-          adapter: "direct-response",
+          adapter: executionAdapter,
           toolCalls: loopToolCalls,
           toolNames: loopToolNames.length > 0 ? loopToolNames : undefined,
         },

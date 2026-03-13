@@ -1,0 +1,20 @@
+scenario: "L14: Code review with specific criteria"
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "Review server/agent/claude-code-respond.ts. Check: (1) does it handle errors gracefully? (2) does it clean up resources in finally blocks? (3) are there any potential memory leaks?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: "contains: error"
+      execution.toolCalls: ">= 1"
+  - send: "Good. Now compare it to server/agent/coding-adapter/claude-code-adapter.ts — do they handle the Agent SDK stream the same way? What are the differences?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: exists
+      execution.toolCalls: ">= 1"
