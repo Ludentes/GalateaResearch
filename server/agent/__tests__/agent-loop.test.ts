@@ -57,7 +57,7 @@ describe("Agent Loop", () => {
 
   // Scenario: Tool call iteration (stub tool)
   it("executes tool call and feeds result back to LLM", async () => {
-    // Step 1: LLM returns tool call
+    // Step 1: LLM returns tool call — SDK auto-executes and returns toolResults
     mockGenerateText.mockResolvedValueOnce({
       text: "",
       toolCalls: [
@@ -67,6 +67,35 @@ describe("Agent Loop", () => {
           args: { message: "hello" },
         },
       ],
+      toolResults: [
+        { result: "echo: hello" },
+      ],
+      response: {
+        messages: [
+          {
+            role: "assistant",
+            content: [
+              {
+                type: "tool-call",
+                toolCallId: "call-1",
+                toolName: "echo",
+                args: { message: "hello" },
+              },
+            ],
+          },
+          {
+            role: "tool",
+            content: [
+              {
+                type: "tool-result",
+                toolCallId: "call-1",
+                toolName: "echo",
+                output: "echo: hello",
+              },
+            ],
+          },
+        ],
+      },
     })
     // Step 2: LLM returns final text
     mockGenerateText.mockResolvedValueOnce({
@@ -109,6 +138,33 @@ describe("Agent Loop", () => {
           args: { message: "loop" },
         },
       ],
+      toolResults: [{ result: "looping" }],
+      response: {
+        messages: [
+          {
+            role: "assistant",
+            content: [
+              {
+                type: "tool-call",
+                toolCallId: "call-loop",
+                toolName: "echo",
+                args: { message: "loop" },
+              },
+            ],
+          },
+          {
+            role: "tool",
+            content: [
+              {
+                type: "tool-result",
+                toolCallId: "call-loop",
+                toolName: "echo",
+                output: "looping",
+              },
+            ],
+          },
+        ],
+      },
     })
 
     const echoTool: AgentTool = {
@@ -185,7 +241,7 @@ describe("Agent Loop", () => {
   // Scenario: History is bounded (tested at the caller level, not inside loop)
   // The loop itself accepts whatever history is passed — bounding is done by the caller
 
-  // Tool error handling
+  // Tool error handling — SDK execute catches errors and returns error string
   it("handles tool execution errors gracefully", async () => {
     mockGenerateText.mockResolvedValueOnce({
       text: "",
@@ -196,6 +252,35 @@ describe("Agent Loop", () => {
           args: {},
         },
       ],
+      toolResults: [
+        { result: "Tool error: Error: connection refused" },
+      ],
+      response: {
+        messages: [
+          {
+            role: "assistant",
+            content: [
+              {
+                type: "tool-call",
+                toolCallId: "call-err",
+                toolName: "failing",
+                args: {},
+              },
+            ],
+          },
+          {
+            role: "tool",
+            content: [
+              {
+                type: "tool-result",
+                toolCallId: "call-err",
+                toolName: "failing",
+                output: "Tool error: Error: connection refused",
+              },
+            ],
+          },
+        ],
+      },
     })
     mockGenerateText.mockResolvedValueOnce({
       text: "The tool failed, but I can still respond.",

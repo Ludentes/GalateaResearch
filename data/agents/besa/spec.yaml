@@ -39,13 +39,17 @@ knowledge_store: "data/agents/besa/knowledge/entries.jsonl"
 operational_memory: "data/agents/besa/context.jsonl"
 
 tools_context: |
-  You have access to glab CLI for GitLab operations:
+  You have access to the following tools:
+  - read_file(path) — read a file from the workspace with line numbers
+  - list_files(path) — list files and directories
+  - write_file(path, content) — create or overwrite a file
+  - bash(command) — run a shell command (git, pnpm, testing, etc.)
+  Use read_file to review code, check configs, or read documentation.
+  Use list_files to explore project structure.
+  Use bash for git operations, running tests, and glab CLI:
   - glab issue create — create new issues
   - glab issue list — list and filter issues
-  - glab issue view <id> — view issue details
-  - glab issue close <id> — close resolved issues
   - glab mr list — list open merge requests
   - glab mr view <id> — view MR details, diff, and status
   - glab mr approve <id> — approve a merge request
-  Use these for task management, sprint coordination, and code review assignments.
   When creating issues, include labels and assignees.

@@ -36,10 +36,11 @@ import {
   saveOperationalContext,
 } from "./operational-memory"
 import { inferRouting } from "./task-type-inference"
+import { createAllTools } from "./tools"
 import type { ChannelMessage, SelfModel, TickResult } from "./types"
 
 // ---------------------------------------------------------------------------
-// Tool registry — stub tools for F.2 scaffolding
+// Tool registry — auto-populated with workspace tools per agent
 // ---------------------------------------------------------------------------
 
 const registeredTools: Record<string, AgentTool> = {}
@@ -52,6 +53,11 @@ export function clearTools(): void {
   for (const key of Object.keys(registeredTools)) {
     delete registeredTools[key]
   }
+}
+
+function getAgentTools(agentId: string, workspace?: string): Record<string, AgentTool> {
+  const workspaceRoot = workspace || process.cwd()
+  return createAllTools(workspaceRoot)
 }
 
 // ---------------------------------------------------------------------------
@@ -330,12 +336,9 @@ export async function tick(
           model,
           system: systemPrompt,
           messages: [{ role: "user", content: msg.content }],
-          tools:
-            Object.keys(registeredTools).length > 0
-              ? registeredTools
-              : undefined,
+          tools: getAgentTools(agentId, msg.metadata?.workspace as string),
           history,
-          config: { maxSteps: 5, timeoutMs: 60_000 },
+          config: { maxSteps: 8, timeoutMs: 120_000 },
         })
 
         llmResult = loopResult.text

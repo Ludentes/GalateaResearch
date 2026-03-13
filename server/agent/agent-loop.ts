@@ -1,5 +1,5 @@
 import { generateText, zodSchema } from "ai"
-import type { LanguageModel } from "ai"
+import type { LanguageModel, ModelMessage } from "ai"
 import { z } from "zod"
 import { ollamaQueue } from "../providers/ollama-queue"
 import { emitEvent } from "../observation/emit"
@@ -63,20 +63,31 @@ export async function runAgentLoop(opts: {
   const steps: LoopStep[] = []
   const startTime = Date.now()
 
-  // Build message array — mutable, appended with tool results during loop
-  const sdkMessages: Array<Record<string, unknown>> = [
-    ...(opts.history ?? []).map((m) => ({ role: m.role, content: m.content })),
-    ...opts.messages.map((m) => ({ role: m.role, content: m.content })),
+  // Build initial messages as proper ModelMessage types
+  const seedMessages: ModelMessage[] = [
+    ...(opts.history ?? []).map(
+      (m) => ({ role: m.role, content: m.content }) as ModelMessage,
+    ),
+    ...opts.messages.map(
+      (m) => ({ role: m.role, content: m.content }) as ModelMessage,
+    ),
   ]
 
-  // Build tools in AI SDK format
+  // Accumulated messages — grows with tool call/result pairs
+  let conversationMessages: ModelMessage[] = [...seedMessages]
+
+  // Build tools in AI SDK format with execute functions
   const hasTools = Object.keys(agentTools).length > 0
-  const sdkTools: Record<string, unknown> = {}
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sdkTools: Record<string, any> = {}
   if (hasTools) {
     for (const [name, agentTool] of Object.entries(agentTools)) {
       sdkTools[name] = {
         description: agentTool.description,
         parameters: zodSchema(agentTool.parameters),
+        execute: async (args: Record<string, unknown>) => {
+          return agentTool.execute(args)
+        },
       }
     }
   }
@@ -103,7 +114,7 @@ export async function runAgentLoop(opts: {
     const generateOpts: any = {
       model: opts.model,
       system: opts.system,
-      messages: sdkMessages,
+      messages: conversationMessages,
       abortSignal: AbortSignal.timeout(remainingMs),
     }
     if (hasTools) {
@@ -118,6 +129,8 @@ export async function runAgentLoop(opts: {
     // Check if LLM returned tool calls
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const toolCalls: any[] = (result as any).toolCalls ?? []
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const toolResults: any[] = (result as any).toolResults ?? []
 
     if (toolCalls.length === 0 || !hasTools) {
       // Final text response — done
@@ -134,19 +147,18 @@ export async function runAgentLoop(opts: {
       }
     }
 
-    // Process tool calls
-    for (const tc of toolCalls) {
-      const toolName: string = tc.toolName
-      const toolCallId: string = tc.toolCallId
-      const toolArgs: Record<string, unknown> = tc.args ?? {}
+    // Record tool calls as steps
+    for (let i = 0; i < toolCalls.length; i++) {
+      const tc = toolCalls[i]
+      const tr = toolResults[i]
+      const tool = agentTools[tc.toolName]
 
-      const tool = agentTools[toolName]
       if (!tool) {
-        const fallbackText = result.text || `Unknown tool: ${toolName}`
+        const fallbackText = result.text || `Unknown tool: ${tc.toolName}`
         steps.push({
           type: "tool_call",
-          toolName,
-          toolArgs,
+          toolName: tc.toolName,
+          toolArgs: tc.args,
           durationMs: Date.now() - stepStart,
         })
         return {
@@ -157,57 +169,35 @@ export async function runAgentLoop(opts: {
         }
       }
 
-      // Execute tool
-      let toolResult: string
-      try {
-        toolResult = await tool.execute(toolArgs)
-      } catch (err) {
-        toolResult = `Tool error: ${String(err)}`
-        emitEvent({
-          type: "log",
-          source: "galatea-api",
-          body: "agent_loop.tool_error",
-          attributes: {
-            "event.name": "agent_loop.tool_error",
-            severity: "warning",
-            tool: toolName,
-            error: String(err),
-          },
-        }).catch(() => {})
-      }
+      // Tool was already executed by the SDK via the execute function
+      const toolResultStr =
+        typeof tr?.result === "string" ? tr.result : JSON.stringify(tr?.result)
 
       steps.push({
         type: "tool_call",
-        toolName,
-        toolArgs,
-        toolResult,
+        toolName: tc.toolName,
+        toolArgs: tc.args,
+        toolResult: toolResultStr,
         durationMs: Date.now() - stepStart,
       })
 
-      // Feed tool result back into conversation for next iteration
-      sdkMessages.push({
-        role: "assistant",
-        content: [
-          {
-            type: "tool-call",
-            toolCallId,
-            toolName,
-            args: toolArgs,
-          },
-        ],
-      })
-      sdkMessages.push({
-        role: "tool",
-        content: [
-          {
-            type: "tool-result",
-            toolCallId,
-            toolName,
-            result: toolResult,
-          },
-        ],
-      })
+      emitEvent({
+        type: "log",
+        source: "galatea-api",
+        body: "agent_loop.tool_call",
+        attributes: {
+          "event.name": "agent_loop.tool_call",
+          tool: tc.toolName,
+          step: step + 1,
+        },
+      }).catch(() => {})
     }
+
+    // Use the SDK's response.messages for proper message typing
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const responseMessages: ModelMessage[] =
+      (result as any).response?.messages ?? []
+    conversationMessages = [...conversationMessages, ...responseMessages]
   }
 
   // Budget exhausted — force a text response

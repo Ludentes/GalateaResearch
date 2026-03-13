@@ -34,11 +34,13 @@ describe("loadAgentSpec", () => {
 
   it("loads tools_context from agent specs", async () => {
     const beki = await loadAgentSpec("beki")
-    expect(beki.tools_context).toContain("glab")
-    expect(beki.tools_context).toContain("mr create")
+    expect(beki.tools_context).toContain("read_file")
+    expect(beki.tools_context).toContain("write_file")
+    expect(beki.tools_context).toContain("bash")
 
     const besa = await loadAgentSpec("besa")
-    expect(besa.tools_context).toContain("glab")
+    expect(besa.tools_context).toContain("read_file")
+    expect(besa.tools_context).toContain("bash")
     expect(besa.tools_context).toContain("issue create")
   })
 

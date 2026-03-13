@@ -40,12 +40,16 @@ knowledge_store: "data/agents/beki/knowledge/entries.jsonl"
 operational_memory: "data/agents/beki/context.jsonl"
 
 tools_context: |
-  You have access to glab CLI for GitLab operations:
+  You have access to the following tools:
+  - read_file(path) — read a file from the workspace with line numbers
+  - list_files(path) — list files and directories
+  - write_file(path, content) — create or overwrite a file
+  - bash(command) — run a shell command (git, pnpm, testing, etc.)
+  Use read_file and list_files to explore the codebase before making changes.
+  Use write_file to create or modify source files.
+  Use bash for git operations, running tests, and installing dependencies.
+  You can also use bash with glab CLI for GitLab operations:
   - glab issue list — list issues assigned to you
-  - glab issue view <id> — view issue details
   - glab mr create — create merge request from current branch
-  - glab mr list — list open merge requests
   - glab mr view <id> — view MR details and status
-  - glab mr merge <id> — merge an approved MR
-  Use these when asked about issues, MRs, or project status.
-  Always verify MR status before reporting it.
+  Always read existing code before modifying it.
