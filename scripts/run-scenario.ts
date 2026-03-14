@@ -41,6 +41,7 @@ async function executeStep(
   stepIndex: number,
 ): Promise<StepVerdict> {
   const stepStart = Date.now()
+  const sendLabel = step.send ?? "(heartbeat)"
 
   // Handle per-step setup (pre-condition operational context)
   if (step.setup) {
@@ -59,35 +60,64 @@ async function executeStep(
   }
 
   let res: Response
-  try {
-    res = await fetch(`${BASE_URL}/api/agent/inject`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        agentId: scenario.agent,
-        content: step.send,
-        from: step.from.user,
-        channel: step.from.platform,
-        messageType: step.messageType,
-        ...(step.provider ? { provider: step.provider } : {}),
-      }),
-    })
-  } catch (err) {
-    return {
-      step: stepIndex,
-      send: step.send,
-      pass: false,
-      checks: [
-        {
-          field: "http",
-          expected: "200",
-          actual: `connection error: ${(err as Error).message}`,
-          pass: false,
-        },
-      ],
-      tickId: "",
-      durationMs: Date.now() - stepStart,
-      costUsd: 0,
+
+  // Handle heartbeat trigger (no message injection)
+  if (step.trigger === "heartbeat") {
+    try {
+      res = await fetch(`${BASE_URL}/api/agent/heartbeat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agentId: scenario.agent }),
+      })
+    } catch (err) {
+      return {
+        step: stepIndex,
+        send: sendLabel,
+        pass: false,
+        checks: [
+          {
+            field: "http",
+            expected: "200",
+            actual: `connection error: ${(err as Error).message}`,
+            pass: false,
+          },
+        ],
+        tickId: "",
+        durationMs: Date.now() - stepStart,
+        costUsd: 0,
+      }
+    }
+  } else {
+    try {
+      res = await fetch(`${BASE_URL}/api/agent/inject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agentId: scenario.agent,
+          content: step.send,
+          from: step.from!.user,
+          channel: step.from!.platform,
+          messageType: step.messageType,
+          ...(step.provider ? { provider: step.provider } : {}),
+        }),
+      })
+    } catch (err) {
+      return {
+        step: stepIndex,
+        send: sendLabel,
+        pass: false,
+        checks: [
+          {
+            field: "http",
+            expected: "200",
+            actual: `connection error: ${(err as Error).message}`,
+            pass: false,
+          },
+        ],
+        tickId: "",
+        durationMs: Date.now() - stepStart,
+        costUsd: 0,
+      }
     }
   }
 
@@ -95,7 +125,7 @@ async function executeStep(
     const errText = await res.text()
     return {
       step: stepIndex,
-      send: step.send,
+      send: sendLabel,
       pass: false,
       checks: [
         {
@@ -116,7 +146,7 @@ async function executeStep(
   if (!body.tick) {
     return {
       step: stepIndex,
-      send: step.send,
+      send: sendLabel,
       pass: false,
       checks: [
         {
@@ -132,7 +162,12 @@ async function executeStep(
     }
   }
 
-  const verdict = assertStep(body.tick, step.expect, stepIndex, step.send)
+  const verdict = assertStep(
+    body.tick,
+    step.expect,
+    stepIndex,
+    sendLabel,
+  )
   verdict.durationMs = Date.now() - stepStart
   verdict.costUsd = body.tick.execution?.costUsd ?? 0
   return verdict

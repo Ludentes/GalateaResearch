@@ -1,6 +1,7 @@
 export interface ScenarioStep {
-  send: string
-  from: { platform: string; user: string }
+  /** Message to send (required unless trigger is set) */
+  send?: string
+  from?: { platform: string; user: string }
   messageType?: string
   /** Override LLM provider for this step (e.g. "none" to simulate outage) */
   provider?: string
@@ -16,6 +17,8 @@ export interface ScenarioStep {
     }
     addHistory?: Array<{ role: string; content: string }>
   }
+  /** Trigger a heartbeat tick instead of sending a message */
+  trigger?: "heartbeat"
 }
 
 export interface ScenarioSetup {
