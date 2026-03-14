@@ -1,0 +1,21 @@
+scenario: "L40: Communication gap detected during active work"
+description: >
+  When agent has an active task but hasn't communicated for 3+ hours,
+  communication_health drops to LOW with guidance to send an update.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "what's the current status of the project?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    setup:
+      lastOutboundMinutesAgo: 200
+      createTask:
+        description: "Implement user profile feature"
+        phase: implementing
+        status: in_progress
+    expect:
+      homeostasis.communication_health: LOW
+      outcome.action: respond

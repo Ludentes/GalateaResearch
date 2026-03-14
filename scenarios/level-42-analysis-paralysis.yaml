@@ -1,0 +1,21 @@
+scenario: "L42: Analysis paralysis detected after 2+ hours exploring"
+description: >
+  When agent has been in exploring phase for 2+ hours with knowledge
+  available, knowledge_application goes HIGH signaling analysis paralysis.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "what other frameworks should we also consider for this?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    setup:
+      createTask:
+        description: "Research frontend frameworks"
+        phase: exploring
+        phaseMinutesAgo: 150
+        status: in_progress
+    expect:
+      homeostasis.knowledge_application: HIGH
+      outcome.action: respond
