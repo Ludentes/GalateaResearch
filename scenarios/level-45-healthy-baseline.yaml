@@ -1,0 +1,17 @@
+scenario: "L45: All dimensions healthy on normal interaction"
+description: >
+  A simple, non-destructive question from a known user with no prior
+  history should result in all dimensions at HEALTHY (or expected defaults).
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "hi, what's in the README?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      homeostasis.self_preservation: HEALTHY
+      homeostasis.progress_momentum: HEALTHY
+      homeostasis.productive_engagement: HEALTHY
+      outcome.action: respond
