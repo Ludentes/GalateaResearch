@@ -32,6 +32,7 @@ import { executeWorkArc } from "./coding-adapter/work-arc"
 import { dispatchMessage } from "./dispatcher"
 import {
   addTask,
+  getActiveTask,
   loadOperationalContext,
   pushHistoryEntry,
   recordOutbound,
@@ -221,9 +222,16 @@ export async function tick(
     // Stage 3b: Delegate to coding adapter for explicit task assignments
     const adapter = await ensureAdapter()
     if (msg.messageType === "task_assignment" && adapter) {
-      const task = addTask(opCtx, msg.content, msg)
+      const existingTask = getActiveTask(opCtx)
+      const task = existingTask ?? addTask(opCtx, msg.content, msg)
+      if (existingTask) {
+        task.progress.push(`Follow-up: ${msg.content}`)
+      }
       task.status = "in_progress"
 
+      const resumeSessionId =
+        task.claudeSessionId ?? opCtx.lastClaudeSessionId
+      const sessionResumed = !!resumeSessionId
       const workDir = (msg.metadata?.workspace as string) ?? process.cwd()
       const workContext = toolsContext
         ? {
@@ -232,19 +240,28 @@ export async function tick(
           }
         : context
       const config = getLLMConfig()
+      const taskDescription = existingTask ? msg.content : task.description
       const arcResult = await executeWorkArc({
         adapter,
-        task: { id: task.id, description: task.description },
+        task: { id: task.id, description: taskDescription },
         context: workContext,
         workingDirectory: workDir,
         trustLevel: (agentContext.sourceTrustLevel ?? "MEDIUM") as TrustLevel,
         model: config.model,
+        sessionId: resumeSessionId,
       })
+
+      // Store session ID for potential resume (both on task and context)
+      if (arcResult.sessionId) {
+        task.claudeSessionId = arcResult.sessionId
+        opCtx.lastClaudeSessionId = arcResult.sessionId
+      }
 
       // Update task status based on result
       let knowledgeCount = 0
       if (arcResult.status === "completed") {
         task.status = "done"
+        task.claudeSessionId = undefined
         task.progress.push(arcResult.text)
         // Extract knowledge from completed work
         const knowledgeEntries = createWorkKnowledge(task, agentId)
@@ -254,9 +271,11 @@ export async function tick(
         }
       } else if (arcResult.status === "blocked") {
         task.status = "blocked"
+        task.claudeSessionId = undefined
         opCtx.blockers.push(arcResult.text)
       } else {
         task.status = "in_progress"
+        // Keep claudeSessionId for resume on next tick
         opCtx.carryover.push(
           `SDK session ${arcResult.status}: ${arcResult.text}`,
         )
@@ -330,7 +349,7 @@ export async function tick(
         routing,
         execution: {
           adapter: "claude-code",
-          sessionResumed: false,
+          sessionResumed,
           toolCalls: 0,
         },
         outcome: {

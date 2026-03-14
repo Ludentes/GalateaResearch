@@ -48,6 +48,7 @@ export interface OperationalContext {
   phaseEnteredAt: string
   lastOutboundAt: string
   lastUpdated: string
+  lastClaudeSessionId?: string
 }
 
 // ---------------------------------------------------------------------------

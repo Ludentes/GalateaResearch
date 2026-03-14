@@ -102,14 +102,14 @@ describe("tick with task delegation", () => {
     expect(result.delegation?.status).toBe("completed")
   })
 
-  it("resumes session on second task_assignment when task is in-progress", async () => {
+  it("resumes session on second task_assignment via opCtx.lastClaudeSessionId", async () => {
     const receivedResume: (string | undefined)[] = []
     const mockQuery = vi.fn().mockImplementation(async function* (opts: Record<string, unknown>) {
       receivedResume.push(opts.resume as string | undefined)
       yield {
         type: "result",
         subtype: "success",
-        text: "in progress",
+        text: "Done",
         durationMs: 100,
         costUsd: 0.01,
         numTurns: 1,
@@ -123,41 +123,7 @@ describe("tick with task delegation", () => {
       query: mockQuery,
     })
 
-    // First tick — creates new task, no resume
-    await updateAgentState(
-      {
-        pendingMessages: [makeTaskMessage("implement feature A")],
-        lastActivity: new Date().toISOString(),
-      },
-      STATE_PATH,
-    )
-    const result1 = await tick("webhook", {
-      statePath: STATE_PATH,
-      storePath: STORE_PATH,
-      opContextPath: OP_PATH,
-    })
-    // First tick completes the task (status "completed" → task.status = "done")
-    // so the session is cleared. We need the task to stay in_progress.
-    // Let's use a "timeout" subtype so task stays in_progress with sessionId preserved.
-    expect(result1.action).toBe("delegate")
-
-    // Reset mock to return timeout (keeps task in_progress)
-    mockQuery.mockImplementation(async function* (opts: Record<string, unknown>) {
-      receivedResume.push(opts.resume as string | undefined)
-      yield {
-        type: "result",
-        subtype: "error_max_turns",
-        text: "Max turns exceeded",
-        durationMs: 100,
-        costUsd: 0.01,
-        numTurns: 5,
-        transcript: [],
-        sessionId: "session-abc-123",
-      }
-    })
-
-    // Re-run first tick with timeout result so task stays in_progress
-    receivedResume.length = 0
+    // First tick — completes task, stores sessionId on opCtx
     await updateAgentState(
       {
         pendingMessages: [makeTaskMessage("implement feature A")],
@@ -171,7 +137,7 @@ describe("tick with task delegation", () => {
       opContextPath: OP_PATH,
     })
 
-    // Second tick — should find in_progress task and resume session
+    // Second tick — new task, but resumes session from opCtx.lastClaudeSessionId
     await updateAgentState(
       {
         pendingMessages: [makeTaskMessage("also add tests for feature A")],
@@ -187,7 +153,7 @@ describe("tick with task delegation", () => {
 
     expect(receivedResume).toHaveLength(2)
     expect(receivedResume[0]).toBeUndefined()         // first call: no resume
-    expect(receivedResume[1]).toBe("session-abc-123")  // second call: resumes
+    expect(receivedResume[1]).toBe("session-abc-123")  // second call: resumes via opCtx
   })
 
   it("falls back to respond when no adapter set", async () => {
