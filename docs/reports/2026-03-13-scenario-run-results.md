@@ -190,16 +190,22 @@ Session resume implemented across the coding adapter stack:
 - `work-arc.ts`: `sessionId` threaded through input/output, passed as `resume` to adapter
 - `tick.ts`: `getActiveTask()` reuses in-progress tasks on continuation, `claudeSessionId` stored/cleared per task lifecycle
 
-### Unit Test Results
+### Scenario Results
 
-| Suite | Tests | Status |
-|-------|-------|--------|
-| agent/**tests** (10 files) | 107/107 | PASS |
-| tick-delegation (session resume) | 3/3 | PASS |
+| Tier | Pass | Fail | Notes |
+|------|------|------|-------|
+| L1-L25 | 25/25 | 0 | All previous tiers hold |
+| L26-L35 | 10/10 | 0 | All operational memory + L28 knowledge + **L29 session resume** pass |
+| trace-12-16 | 5/5 | 0 | |
+| trace-20-26 | 6/7 | 1 | trace-20: HTTP 500 (Nitro fetch failed — infra, not code) |
+| trace-30-35 | 5/6 | 1 | trace-21: routing flake (admin vs research classification) |
+| **Total** | **51/53** | **2** | Both failures are pre-existing, unrelated to W.9 |
 
-### L29 Scenario
+Duration: 2278s (~38min), Cost: $0.87
 
-L29 requires running dev server — not validated offline. Unit test covers the same logic: first tick creates task with no resume, second tick (after timeout/in-progress) resumes with captured `sessionId`.
+### Key Fix During Run
+
+Initial L29 failed because `claudeSessionId` was cleared on task completion. Fix: store `lastClaudeSessionId` on `OperationalContext` so consecutive tasks can reuse the SDK session even after the prior task completes.
 
 ### Expected Cost Impact
 
