@@ -49,7 +49,8 @@ describe("Provider Factory (getModel)", () => {
     process.env.ANTHROPIC_API_KEY = "sk-ant-test"
     const { getModel } = await import("../index")
     const result = getModel()
-    expect(result.modelName).toBe("sonnet")
+    const { DEFAULT_MODELS } = await import("../config")
+    expect(result.modelName).toBe(DEFAULT_MODELS["claude-code"])
     expect(result.model).toEqual({ provider: "mock-claude-code" })
   })
 

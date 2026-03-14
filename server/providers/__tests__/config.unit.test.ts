@@ -53,10 +53,10 @@ describe("LLM Provider Config", () => {
   it("accepts claude-code without API key (uses CLI auth)", async () => {
     process.env.LLM_PROVIDER = "claude-code"
     delete process.env.ANTHROPIC_API_KEY
-    const { getLLMConfig } = await import("../config")
+    const { getLLMConfig, DEFAULT_MODELS } = await import("../config")
     const config = getLLMConfig()
     expect(config.provider).toBe("claude-code")
-    expect(config.model).toBe("sonnet")
+    expect(config.model).toBe(DEFAULT_MODELS["claude-code"])
   })
 
   it("returns openrouter config when API key is set", async () => {
@@ -72,10 +72,10 @@ describe("LLM Provider Config", () => {
   it("returns claude-code config when API key is set", async () => {
     process.env.LLM_PROVIDER = "claude-code"
     process.env.ANTHROPIC_API_KEY = "sk-ant-test-key"
-    const { getLLMConfig } = await import("../config")
+    const { getLLMConfig, DEFAULT_MODELS } = await import("../config")
     const config = getLLMConfig()
     expect(config.provider).toBe("claude-code")
-    expect(config.model).toBe("sonnet")
+    expect(config.model).toBe(DEFAULT_MODELS["claude-code"])
     expect(config.anthropicApiKey).toBe("sk-ant-test-key")
   })
 })
