@@ -8,6 +8,7 @@ export interface TickDecisionRecord {
   trigger: {
     type: "message" | "heartbeat" | "internal"
     source?: string
+    trustLevel?: string
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- serialized from HomeostasisState
   homeostasis: Record<string, any>
@@ -98,9 +99,7 @@ export async function readLastTickRecord(
   for (let i = lines.length - 1; i >= 0; i--) {
     try {
       return JSON.parse(lines[i]) as TickDecisionRecord
-    } catch {
-      continue
-    }
+    } catch {}
   }
   return null
 }
