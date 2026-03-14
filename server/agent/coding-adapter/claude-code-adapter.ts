@@ -6,6 +6,34 @@ import type {
   CodingTranscriptEntry,
 } from "./types"
 
+// ---------------------------------------------------------------------------
+// Env filtering — strip nesting detection vars so SDK subprocess works
+// ---------------------------------------------------------------------------
+
+const INHERITED_ENV_VARS = [
+  "HOME",
+  "LOGNAME",
+  "PATH",
+  "SHELL",
+  "TERM",
+  "USER",
+  "LANG",
+  "LC_ALL",
+  "TMPDIR",
+  "CLAUDE_CONFIG_DIR",
+]
+
+function getCleanEnv(): Record<string, string> {
+  const env: Record<string, string> = {}
+  for (const key of INHERITED_ENV_VARS) {
+    const value = process.env[key]
+    if (typeof value === "string" && !value.startsWith("()")) {
+      env[key] = value
+    }
+  }
+  return env
+}
+
 export class ClaudeCodeAdapter implements CodingToolAdapter {
   readonly name = "claude-code"
 
@@ -22,6 +50,7 @@ export class ClaudeCodeAdapter implements CodingToolAdapter {
       timeout,
       maxBudgetUsd,
       model,
+      resume,
     } = options
 
     const transcript: CodingTranscriptEntry[] = []
@@ -87,6 +116,7 @@ export class ClaudeCodeAdapter implements CodingToolAdapter {
         ]
       }
 
+      const cleanEnv = getCleanEnv()
       const sdkOptions: Record<string, unknown> = {
         cwd: workingDirectory,
         systemPrompt,
@@ -95,6 +125,8 @@ export class ClaudeCodeAdapter implements CodingToolAdapter {
         settingSources: ["project"] as const,
         abortController,
         hooks: Object.keys(sdkHooks).length > 0 ? sdkHooks : undefined,
+        persistSession: true,
+        env: cleanEnv,
       }
 
       if (maxBudgetUsd !== undefined) {
@@ -102,6 +134,9 @@ export class ClaudeCodeAdapter implements CodingToolAdapter {
       }
       if (model !== undefined) {
         sdkOptions.model = model
+      }
+      if (resume) {
+        sdkOptions.resume = resume
       }
 
       const stream = sdkQuery({
@@ -151,6 +186,7 @@ export class ClaudeCodeAdapter implements CodingToolAdapter {
           const durationMs = (sdkMsg.duration_ms as number) ?? Date.now() - startTime
           const costUsd = sdkMsg.total_cost_usd as number | undefined
           const numTurns = sdkMsg.num_turns as number | undefined
+          const resultSessionId = sdkMsg.session_id as string | undefined
 
           if (subtype === "success") {
             const resultText = (sdkMsg.result as string) ?? ""
@@ -162,6 +198,7 @@ export class ClaudeCodeAdapter implements CodingToolAdapter {
               costUsd,
               numTurns,
               transcript,
+              sessionId: resultSessionId,
             }
           } else if (subtype === "error_max_budget_usd") {
             yield {
@@ -172,6 +209,7 @@ export class ClaudeCodeAdapter implements CodingToolAdapter {
               costUsd,
               numTurns,
               transcript,
+              sessionId: resultSessionId,
             }
           } else if (subtype === "error_max_turns") {
             yield {
@@ -182,6 +220,7 @@ export class ClaudeCodeAdapter implements CodingToolAdapter {
               costUsd,
               numTurns,
               transcript,
+              sessionId: resultSessionId,
             }
           } else {
             // error_during_execution and other error subtypes
@@ -193,6 +232,7 @@ export class ClaudeCodeAdapter implements CodingToolAdapter {
               costUsd,
               numTurns,
               transcript,
+              sessionId: resultSessionId,
             }
           }
         }

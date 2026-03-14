@@ -6,6 +6,7 @@ import {
   emptyContext,
   saveOperationalContext,
 } from "../../../agent/operational-memory"
+import { clearCache } from "../../../engine/homeostasis-engine"
 import { getTickRecordPath } from "../../../observation/tick-record"
 // Provider cache is system-level state, not per-agent — don't invalidate on reset
 
@@ -40,7 +41,11 @@ export default defineEventHandler(async (event) => {
   await saveOperationalContext(emptyContext())
   cleared.push("operationalContext")
 
-  // 4. Optionally clear tick records
+  // 4. Clear homeostasis dimension cache (in-memory, per-session)
+  clearCache()
+  cleared.push("homeostasisCache")
+
+  // 5. Optionally clear tick records
   if (body.clearTicks) {
     const tickPath = getTickRecordPath(agentId)
     await rm(tickPath, { force: true })

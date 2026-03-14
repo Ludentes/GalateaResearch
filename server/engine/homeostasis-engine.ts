@@ -247,6 +247,7 @@ const DESTRUCTIVE_PATTERNS = [
   // Infrastructure / deployment
   /\bdeploy\b.*\bproduction\b/i,
   /\bpush\b.*\b(force|--force)\b/i,
+  /\bforce\s+push\b/i,
   /\breset\b.*\b--hard\b/i,
   /\bshutdown\b/i,
   /\brestart\b.*\b(server|service|production)\b/i,

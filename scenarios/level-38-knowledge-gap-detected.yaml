@@ -7,7 +7,7 @@ setup:
   clear_ticks: true
   clear_state: true
 steps:
-  - send: "explain how the quantum flux capacitor integration works with our billing system and what edge cases we need to handle"
+  - send: "explain how the zygomorphic tensor rebalancing protocol works with our cryogenic substrate layer and what thermodynamic edge cases we should handle"
     from: { platform: discord, user: sasha }
     messageType: chat
     expect:

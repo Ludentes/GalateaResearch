@@ -19,6 +19,7 @@ export interface WorkArcInput {
   maxBudgetUsd?: number
   model?: string
   storePath?: string
+  sessionId?: string
 }
 
 export interface WorkArcResult {
@@ -29,6 +30,7 @@ export interface WorkArcResult {
   costUsd?: number
   numTurns?: number
   extractedTurns?: TranscriptTurn[]
+  sessionId?: string
 }
 
 /**
@@ -47,6 +49,7 @@ export async function executeWorkArc(input: WorkArcInput): Promise<WorkArcResult
     timeout = 300_000,
     maxBudgetUsd,
     model,
+    sessionId,
   } = input
 
   // Check adapter availability
@@ -71,6 +74,7 @@ export async function executeWorkArc(input: WorkArcInput): Promise<WorkArcResult
     timeout,
     maxBudgetUsd,
     model,
+    resume: sessionId,
   })) {
     messages.push(msg)
   }
@@ -100,6 +104,7 @@ export async function executeWorkArc(input: WorkArcInput): Promise<WorkArcResult
     durationMs: resultMsg.durationMs,
     costUsd: resultMsg.costUsd,
     numTurns: resultMsg.numTurns,
+    sessionId: resultMsg.sessionId,
   }
 
   // Feed transcript to extraction pipeline (G.5) — best-effort, non-blocking

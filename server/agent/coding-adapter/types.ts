@@ -13,6 +13,7 @@ export type CodingSessionMessage =
       costUsd?: number
       numTurns?: number
       transcript?: CodingTranscriptEntry[]
+      sessionId?: string
     }
 
 export interface CodingTranscriptEntry {
@@ -45,6 +46,7 @@ export interface CodingQueryOptions {
   timeout?: number
   maxBudgetUsd?: number
   model?: string
+  resume?: string
 }
 
 export interface CodingToolAdapter {
