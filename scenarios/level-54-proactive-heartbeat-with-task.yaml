@@ -1,0 +1,19 @@
+scenario: "L54: Heartbeat with active task — productive engagement stays healthy"
+description: >
+  When a heartbeat fires while the agent has an active task,
+  productive_engagement should be HEALTHY (not LOW) since work is assigned.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - trigger: heartbeat
+    setup:
+      createTask:
+        description: "Implement user authentication"
+        phase: implementing
+        status: in_progress
+    expect:
+      homeostasis.productive_engagement: HEALTHY
+      trigger.type: heartbeat
+      outcome.action: idle

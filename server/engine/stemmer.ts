@@ -22,10 +22,14 @@ const SHORT_STEM_LENGTH = 4
  * stemming doesn't fully normalize abbreviations
  * (e.g. "auth" stays "auth" while "authentication" -> "authent").
  */
-export function stemTokenize(text: string): Set<string> {
+export function stemTokenize(
+  text: string,
+  opts?: { shortStems?: boolean },
+): Set<string> {
   const cfg = getHomeostasisConfig()
   const minLen = cfg.keyword_min_length
   const stopWords = getStopWords("dedup")
+  const useShortStems = opts?.shortStems ?? true
 
   const result = new Set<string>()
 
@@ -39,7 +43,7 @@ export function stemTokenize(text: string): Set<string> {
     result.add(stem)
 
     // Add short-stem variant for cross-text prefix matching
-    if (stem.length > SHORT_STEM_LENGTH) {
+    if (useShortStems && stem.length > SHORT_STEM_LENGTH) {
       result.add(stem.slice(0, SHORT_STEM_LENGTH))
     }
   }

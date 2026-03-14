@@ -1,0 +1,17 @@
+scenario: "L51: Communication health HIGH after recent outbound"
+description: >
+  When the agent sent a message recently (< 5 min ago),
+  communication_health should be HIGH (cooldown — don't spam).
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "quick question — what's the project name?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    setup:
+      lastOutboundMinutesAgo: 2
+    expect:
+      homeostasis.communication_health: HIGH
+      outcome.action: respond

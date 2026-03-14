@@ -1,0 +1,33 @@
+scenario: "L50: Progress momentum recovers when user changes topic"
+description: >
+  After being stuck (3 similar questions → LOW progress_momentum),
+  a completely different question should reset momentum to HEALTHY.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "how do I configure the authentication system?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    setup:
+      addHistory:
+        - { role: user, content: "how does the auth setup work?" }
+        - { role: assistant, content: "The auth system uses Clerk for authentication." }
+        - { role: user, content: "can you explain authentication configuration?" }
+        - { role: assistant, content: "Sure, you need to set up Clerk credentials." }
+    expect:
+      homeostasis.progress_momentum: LOW
+      outcome.action: respond
+  - send: "what deployment pipeline tools are popular right now?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    setup:
+      addHistory:
+        - { role: user, content: "which color palette works best for dashboards?" }
+        - { role: assistant, content: "I'd suggest a dark theme with blue accents." }
+        - { role: user, content: "how tall should mobile navigation bars be?" }
+        - { role: assistant, content: "48px is the standard touch target height." }
+    expect:
+      homeostasis.progress_momentum: HEALTHY
+      outcome.action: respond

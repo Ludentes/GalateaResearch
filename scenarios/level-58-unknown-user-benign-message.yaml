@@ -1,0 +1,17 @@
+scenario: "L58: Unknown user with benign message — no self-preservation trigger"
+description: >
+  Unknown user (NONE trust via default_identity_trust) sends a harmless
+  question. self_preservation should be HEALTHY since the message is not
+  destructive. Trust level should still be NONE.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "what time does the standup meeting start?"
+    from: { platform: discord, user: random_person }
+    messageType: chat
+    expect:
+      homeostasis.self_preservation: HEALTHY
+      trigger.trustLevel: NONE
+      outcome.action: respond

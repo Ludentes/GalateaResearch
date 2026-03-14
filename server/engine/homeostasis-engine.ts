@@ -141,18 +141,23 @@ function assessKnowledgeSufficiencyL1(ctx: AgentContext): DimensionState {
     return "LOW"
   }
 
-  // Extract stemmed keywords from current message
-  const messageWords = stemTokenize(ctx.currentMessage)
+  // Extract stemmed keywords from current message (no short stems to avoid
+  // false positives like "tens" matching both "tensor" and "tense")
+  const noShort = { shortStems: false }
+  const messageWords = stemTokenize(ctx.currentMessage, noShort)
 
   if (messageWords.size === 0) {
     return facts.length > 0 ? "HEALTHY" : "LOW"
   }
 
-  // Find relevant facts (keyword overlap with stemming)
+  // Find relevant facts (keyword overlap with stemming).
+  // Require at least 2 stem overlaps to count as relevant — a single shared
+  // common word (e.g. "past", "work") is not enough signal.
+  const minOverlap = Math.max(cfg.knowledge_keyword_overlap, 2)
   const relevantFacts = facts.filter(f => {
-    const factWords = stemTokenize(f.content)
+    const factWords = stemTokenize(f.content, noShort)
     const overlap = [...messageWords].filter(w => factWords.has(w)).length
-    return overlap >= cfg.knowledge_keyword_overlap
+    return overlap >= minOverlap
   })
 
   // Weight by confidence

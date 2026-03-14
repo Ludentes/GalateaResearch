@@ -308,7 +308,8 @@ homeostasis:
   knowledge_message_min_length: 20
 
   # Minimum keyword overlap between message and facts for relevance.
-  knowledge_keyword_overlap: 1
+  # 2 prevents false positives from single common-word matches (e.g. "past").
+  knowledge_keyword_overlap: 2
 
   # Score threshold for HIGH knowledge sufficiency.
   # Score = relevant_facts * avg_confidence. E.g., 3 facts at 0.9 = 2.7.

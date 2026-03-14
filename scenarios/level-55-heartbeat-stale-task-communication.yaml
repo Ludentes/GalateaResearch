@@ -1,0 +1,21 @@
+scenario: "L55: Heartbeat with stale task — communication gap detected"
+description: >
+  Heartbeat fires while agent has a task but hasn't communicated for 4+ hours.
+  productive_engagement is HEALTHY (has task) but communication_health is LOW.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - trigger: heartbeat
+    setup:
+      createTask:
+        description: "Refactor database schema"
+        phase: implementing
+        status: in_progress
+      lastOutboundMinutesAgo: 250
+    expect:
+      homeostasis.productive_engagement: HEALTHY
+      homeostasis.communication_health: LOW
+      trigger.type: heartbeat
+      outcome.action: idle

@@ -5,6 +5,7 @@ import { assertStep } from "./scenario-assert"
 import type { Scenario, ScenarioVerdict, StepVerdict } from "./scenario-types"
 
 const BASE_URL = process.env.SCENARIO_BASE_URL ?? "http://localhost:13000"
+const FETCH_TIMEOUT_MS = 360_000 // 6 minutes — must exceed server-side adapter timeout (5 min)
 
 // ANSI colors
 const GREEN = "\x1b[32m"
@@ -27,6 +28,7 @@ async function handleSetup(scenario: Scenario): Promise<void> {
         agentId: scenario.agent,
         clearTicks: scenario.setup?.clear_ticks ?? false,
       }),
+      signal: AbortSignal.timeout(30_000),
     })
     if (!res.ok) {
       const err = await res.text()
@@ -52,6 +54,7 @@ async function executeStep(
         agentId: scenario.agent,
         ...step.setup,
       }),
+      signal: AbortSignal.timeout(30_000),
     })
     if (!setupRes.ok) {
       const err = await setupRes.text()
@@ -68,6 +71,7 @@ async function executeStep(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ agentId: scenario.agent }),
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       })
     } catch (err) {
       return {
@@ -100,6 +104,7 @@ async function executeStep(
           messageType: step.messageType,
           ...(step.provider ? { provider: step.provider } : {}),
         }),
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       })
     } catch (err) {
       return {
@@ -259,13 +264,43 @@ async function main(): Promise<void> {
   }
 
   const verdicts: ScenarioVerdict[] = []
-  for (const file of files) {
+  let passCount = 0
+  let failCount = 0
+
+  for (let idx = 0; idx < files.length; idx++) {
+    const file = files[idx]
     const resolved = path.resolve(file)
+    const label = path.basename(file, ".yaml")
+    process.stderr.write(
+      `${DIM}[${idx + 1}/${files.length}]${RESET} ${label} ... `,
+    )
     try {
       const verdict = await runScenario(resolved)
       verdicts.push(verdict)
+      if (verdict.pass) {
+        passCount++
+        process.stderr.write(
+          `${GREEN}PASS${RESET} ${DIM}${formatDuration(verdict.durationMs)}${RESET}\n`,
+        )
+      } else {
+        failCount++
+        const failedChecks = verdict.steps
+          .filter((s) => !s.pass)
+          .flatMap((s) =>
+            s.checks
+              .filter((c) => !c.pass)
+              .map((c) => `${c.field}: expected ${JSON.stringify(c.expected)}, got ${JSON.stringify(c.actual)}`),
+          )
+        process.stderr.write(
+          `${RED}FAIL${RESET} ${DIM}${formatDuration(verdict.durationMs)}${RESET}\n`,
+        )
+        for (const msg of failedChecks.slice(0, 3)) {
+          process.stderr.write(`  ${DIM}${msg}${RESET}\n`)
+        }
+      }
     } catch (err) {
-      console.error(`Error loading ${file}: ${(err as Error).message}`)
+      failCount++
+      process.stderr.write(`${RED}ERROR${RESET} ${(err as Error).message}\n`)
       verdicts.push({
         scenario: file,
         agent: "unknown",
@@ -276,6 +311,10 @@ async function main(): Promise<void> {
       })
     }
   }
+
+  process.stderr.write(
+    `\n${BOLD}Progress: ${GREEN}${passCount}${RESET}${BOLD}/${files.length} passed, ${failCount > 0 ? RED : ""}${failCount} failed${RESET}\n`,
+  )
 
   printReport(verdicts)
 

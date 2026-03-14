@@ -65,6 +65,7 @@ export async function executeWorkArc(input: WorkArcInput): Promise<WorkArcResult
 
   const preToolUse = createPreToolUseHook({ workingDirectory, trustLevel })
 
+  const arcStart = Date.now()
   const messages: CodingSessionMessage[] = []
   for await (const msg of adapter.query({
     prompt: task.description,
@@ -77,6 +78,12 @@ export async function executeWorkArc(input: WorkArcInput): Promise<WorkArcResult
     resume: sessionId,
   })) {
     messages.push(msg)
+    const elapsed = Date.now() - arcStart
+    if (elapsed > 250_000) {
+      console.warn(
+        `[work-arc] Long-running adapter: ${Math.round(elapsed / 1000)}s / ${Math.round(timeout / 1000)}s budget`,
+      )
+    }
   }
 
   // Find the result message

@@ -1,0 +1,20 @@
+scenario: "L57: Task completes then heartbeat shows idle"
+description: >
+  Agent receives a task, completes it, then a heartbeat fires.
+  After the task response, productive_engagement on heartbeat should be LOW
+  since no active task remains.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "list the files in the scripts directory"
+    from: { platform: dashboard, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+  - trigger: heartbeat
+    expect:
+      homeostasis.productive_engagement: LOW
+      trigger.type: heartbeat
+      outcome.action: idle

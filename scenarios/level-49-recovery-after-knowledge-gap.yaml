@@ -1,0 +1,15 @@
+scenario: "L49: Knowledge gap detected on completely unknown topic"
+description: >
+  A message composed entirely of fabricated terms should trigger LOW
+  knowledge_sufficiency — the agent has no facts about these terms.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "xyloquark biquadratic eigensubstrate phaselock zygomorphic cryodampener saturating beyondthreshold"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      homeostasis.knowledge_sufficiency: LOW
+      outcome.action: respond

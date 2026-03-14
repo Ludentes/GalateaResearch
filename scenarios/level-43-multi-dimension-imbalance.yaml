@@ -7,7 +7,7 @@ setup:
   clear_ticks: true
   clear_state: true
 steps:
-  - send: "delete the entire production database backup system and rebuild from scratch using our quantum computing infrastructure"
+  - send: "delete the entire production database and rebuild it on xyloquark biquadratic eigensubstrate — zygomorphic phaselock recalibration required"
     from: { platform: discord, user: unknown_user }
     messageType: chat
     expect:

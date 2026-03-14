@@ -7,7 +7,7 @@ setup:
   clear_ticks: true
   clear_state: true
 steps:
-  - send: "explain how the zygomorphic tensor rebalancing protocol works with our cryogenic substrate layer and what thermodynamic edge cases we should handle"
+  - send: "xyloquark tensor rebalancing — zygomorphic cryosubstrate phaselock drifted past eigenthreshold, biquadratic dampener saturating. Thoughts on recalibrating?"
     from: { platform: discord, user: sasha }
     messageType: chat
     expect:

@@ -234,6 +234,11 @@ export function loadConfig(configPath?: string): PipelineConfig {
   return config
 }
 
+/** Invalidate cached config so the next call to loadConfig() re-reads from disk. */
+export function clearConfigCache(): void {
+  _configCache = null
+}
+
 /**
  * Get a specific config section. Shorthand for loadConfig().section.
  */

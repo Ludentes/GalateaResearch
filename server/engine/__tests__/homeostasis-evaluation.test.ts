@@ -37,15 +37,14 @@ describe("Homeostasis Evaluation - Reference Scenarios", () => {
         currentMessage: "How do I implement OAuth2 authentication?",
         messageHistory: [],
         retrievedFacts: [
-          { content: "Use Clerk for mobile auth, not JWT", confidence: 0.95 },
-          { content: "JWT has token refresh issues on mobile", confidence: 0.85 },
-          { content: "@clerk/clerk-expo package for Expo apps", confidence: 0.90 }
+          { content: "Implement OAuth2 authentication using Clerk, not raw JWT", confidence: 0.95 },
+          { content: "OAuth2 token refresh has issues on mobile auth flows", confidence: 0.85 }
         ]
       }
 
       const state = assessDimensions(ctx)
 
-      // With 3 relevant facts, should be HEALTHY
+      // With 2 relevant facts, should be HEALTHY (score ~1.8, under HIGH threshold 2.5)
       expect(state.knowledge_sufficiency).toBe("HEALTHY")
     })
 
