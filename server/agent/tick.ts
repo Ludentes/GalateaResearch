@@ -503,6 +503,16 @@ export async function tick(
             err instanceof OllamaBackpressureError
           ) {
             // Fall through to powered-down template response below
+          } else if (
+            err instanceof TypeError &&
+            (err as Error).message === "fetch failed"
+          ) {
+            // Provider unreachable (connection refused) — fall through
+          } else if (
+            (err as Error).name === "OllamaError" ||
+            (err as Error).message?.includes("ECONNREFUSED")
+          ) {
+            // Ollama SDK connection error — fall through
           } else {
             throw err
           }
