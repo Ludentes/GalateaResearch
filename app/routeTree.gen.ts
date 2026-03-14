@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AgentIndexRouteImport } from './routes/agent/index'
 import { Route as ChatSessionIdRouteImport } from './routes/chat/$sessionId'
 import { Route as AgentTraceRouteImport } from './routes/agent/trace'
+import { Route as AgentSettingsRouteImport } from './routes/agent/settings'
 import { Route as AgentKnowledgeRouteImport } from './routes/agent/knowledge'
 import { Route as AgentExportRouteImport } from './routes/agent/export'
 import { Route as AgentConfigRouteImport } from './routes/agent/config'
@@ -39,6 +40,11 @@ const ChatSessionIdRoute = ChatSessionIdRouteImport.update({
 const AgentTraceRoute = AgentTraceRouteImport.update({
   id: '/agent/trace',
   path: '/agent/trace',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentSettingsRoute = AgentSettingsRouteImport.update({
+  id: '/agent/settings',
+  path: '/agent/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AgentKnowledgeRoute = AgentKnowledgeRouteImport.update({
@@ -84,6 +90,7 @@ export interface FileRoutesByFullPath {
   '/agent/config': typeof AgentConfigRoute
   '/agent/export': typeof AgentExportRoute
   '/agent/knowledge': typeof AgentKnowledgeRoute
+  '/agent/settings': typeof AgentSettingsRoute
   '/agent/trace': typeof AgentTraceRoute
   '/chat/$sessionId': typeof ChatSessionIdRoute
   '/agent/': typeof AgentIndexRoute
@@ -97,6 +104,7 @@ export interface FileRoutesByTo {
   '/agent/config': typeof AgentConfigRoute
   '/agent/export': typeof AgentExportRoute
   '/agent/knowledge': typeof AgentKnowledgeRoute
+  '/agent/settings': typeof AgentSettingsRoute
   '/agent/trace': typeof AgentTraceRoute
   '/chat/$sessionId': typeof ChatSessionIdRoute
   '/agent': typeof AgentIndexRoute
@@ -111,6 +119,7 @@ export interface FileRoutesById {
   '/agent/config': typeof AgentConfigRoute
   '/agent/export': typeof AgentExportRoute
   '/agent/knowledge': typeof AgentKnowledgeRoute
+  '/agent/settings': typeof AgentSettingsRoute
   '/agent/trace': typeof AgentTraceRoute
   '/chat/$sessionId': typeof ChatSessionIdRoute
   '/agent/': typeof AgentIndexRoute
@@ -126,6 +135,7 @@ export interface FileRouteTypes {
     | '/agent/config'
     | '/agent/export'
     | '/agent/knowledge'
+    | '/agent/settings'
     | '/agent/trace'
     | '/chat/$sessionId'
     | '/agent/'
@@ -139,6 +149,7 @@ export interface FileRouteTypes {
     | '/agent/config'
     | '/agent/export'
     | '/agent/knowledge'
+    | '/agent/settings'
     | '/agent/trace'
     | '/chat/$sessionId'
     | '/agent'
@@ -152,6 +163,7 @@ export interface FileRouteTypes {
     | '/agent/config'
     | '/agent/export'
     | '/agent/knowledge'
+    | '/agent/settings'
     | '/agent/trace'
     | '/chat/$sessionId'
     | '/agent/'
@@ -166,6 +178,7 @@ export interface RootRouteChildren {
   AgentConfigRoute: typeof AgentConfigRoute
   AgentExportRoute: typeof AgentExportRoute
   AgentKnowledgeRoute: typeof AgentKnowledgeRoute
+  AgentSettingsRoute: typeof AgentSettingsRoute
   AgentTraceRoute: typeof AgentTraceRoute
   ChatSessionIdRoute: typeof ChatSessionIdRoute
   AgentIndexRoute: typeof AgentIndexRoute
@@ -201,6 +214,13 @@ declare module '@tanstack/react-router' {
       path: '/agent/trace'
       fullPath: '/agent/trace'
       preLoaderRoute: typeof AgentTraceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent/settings': {
+      id: '/agent/settings'
+      path: '/agent/settings'
+      fullPath: '/agent/settings'
+      preLoaderRoute: typeof AgentSettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agent/knowledge': {
@@ -262,6 +282,7 @@ const rootRouteChildren: RootRouteChildren = {
   AgentConfigRoute: AgentConfigRoute,
   AgentExportRoute: AgentExportRoute,
   AgentKnowledgeRoute: AgentKnowledgeRoute,
+  AgentSettingsRoute: AgentSettingsRoute,
   AgentTraceRoute: AgentTraceRoute,
   ChatSessionIdRoute: ChatSessionIdRoute,
   AgentIndexRoute: AgentIndexRoute,
