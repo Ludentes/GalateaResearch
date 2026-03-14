@@ -1,0 +1,17 @@
+scenario: "L71: Research task delegates to Claude Code adapter"
+description: >
+  A research task assignment should be delegated to the Claude Code SDK
+  adapter, which has access to skills like /topic-research. The scenario
+  verifies the delegation path works and the adapter is invoked.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "research what authentication libraries work best with TanStack Start"
+    from: { platform: dashboard, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: research
+      outcome.action: delegate

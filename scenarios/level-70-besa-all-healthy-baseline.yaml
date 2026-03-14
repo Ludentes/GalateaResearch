@@ -1,0 +1,19 @@
+scenario: "L70: Besa PM — all dimensions HEALTHY on normal task"
+description: >
+  Verify that Besa (PM agent) shows all dimensions HEALTHY on a normal
+  task assignment. This is the PM agent golden path baseline.
+agent: besa
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "create a task breakdown for the settings screen feature"
+    from: { platform: dashboard, user: kirill }
+    messageType: task_assignment
+    expect:
+      homeostasis.self_preservation: HEALTHY
+      homeostasis.certainty_alignment: HEALTHY
+      homeostasis.communication_health: HEALTHY
+      homeostasis.productive_engagement: HEALTHY
+      homeostasis.knowledge_application: HEALTHY
+      routing.level: task

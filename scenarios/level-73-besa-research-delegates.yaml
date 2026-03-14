@@ -1,0 +1,17 @@
+scenario: "L73: Besa PM — research task delegates with correct routing"
+description: >
+  Besa (PM agent) receiving a research task should delegate to the Claude
+  Code adapter. Verifies that PM agents also use the delegation path for
+  substantive work, with access to skills like /topic-research.
+agent: besa
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "research competitor pricing models for our target market"
+    from: { platform: dashboard, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: research
+      outcome.action: delegate

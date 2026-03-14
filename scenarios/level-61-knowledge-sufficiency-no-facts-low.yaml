@@ -1,0 +1,17 @@
+scenario: "L61: Knowledge sufficiency LOW — no matching facts for any question"
+description: >
+  When the knowledge store has no facts matching the message content,
+  knowledge_sufficiency is correctly LOW regardless of message length
+  or topic. HEALTHY/HIGH require retrieved facts with stem overlap.
+  This confirms the conservative baseline behavior.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "what framework should we use for the mobile app?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      homeostasis.knowledge_sufficiency: LOW
+      outcome.action: respond

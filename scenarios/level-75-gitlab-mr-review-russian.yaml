@@ -1,0 +1,17 @@
+scenario: "L75: GitLab MR review in Russian — correct routing"
+description: >
+  Russian-language MR review request should be correctly routed as
+  taskType: review, not research. Tests Russian NLP routing for
+  GitLab workflow commands.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "проверь МР !55 по рефакторингу авторизации"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: review
+      outcome.action: delegate

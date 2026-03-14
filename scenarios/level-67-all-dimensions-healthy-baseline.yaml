@@ -1,0 +1,21 @@
+scenario: "L67: All 7 dimensions HEALTHY — golden path baseline"
+description: >
+  The golden path: a normal chat message from a trusted user on a known topic,
+  no stuck detection, no communication gaps, with active task. All 7 dimensions
+  should be HEALTHY. This is the most important baseline scenario.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "how is the OAuth2 implementation going?"
+    from: { platform: dashboard, user: kirill }
+    messageType: chat
+    expect:
+      homeostasis.self_preservation: HEALTHY
+      homeostasis.certainty_alignment: HEALTHY
+      homeostasis.progress_momentum: HEALTHY
+      homeostasis.communication_health: HEALTHY
+      homeostasis.productive_engagement: HEALTHY
+      homeostasis.knowledge_application: HEALTHY
+      outcome.action: respond

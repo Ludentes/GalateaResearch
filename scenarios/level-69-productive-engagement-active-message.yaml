@@ -1,0 +1,16 @@
+scenario: "L69: Productive engagement HEALTHY — incoming message provides work"
+description: >
+  Even without a pre-assigned task, receiving a message means the agent
+  has something to engage with. productive_engagement should be HEALTHY
+  when processing an active conversation.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "what do you think about using Tailwind for the settings page?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      homeostasis.productive_engagement: HEALTHY
+      outcome.action: respond
