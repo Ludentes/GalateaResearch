@@ -41,6 +41,23 @@ async function executeStep(
   stepIndex: number,
 ): Promise<StepVerdict> {
   const stepStart = Date.now()
+
+  // Handle per-step setup (pre-condition operational context)
+  if (step.setup) {
+    const setupRes = await fetch(`${BASE_URL}/api/agent/setup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        agentId: scenario.agent,
+        ...step.setup,
+      }),
+    })
+    if (!setupRes.ok) {
+      const err = await setupRes.text()
+      console.error(`Setup failed for step ${stepIndex}: ${err}`)
+    }
+  }
+
   let res: Response
   try {
     res = await fetch(`${BASE_URL}/api/agent/inject`, {

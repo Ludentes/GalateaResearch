@@ -5,6 +5,17 @@ export interface ScenarioStep {
   /** Override LLM provider for this step (e.g. "none" to simulate outage) */
   provider?: string
   expect: Record<string, unknown>
+  /** Pre-condition the operational context before this step */
+  setup?: {
+    lastOutboundMinutesAgo?: number
+    createTask?: {
+      description: string
+      phase?: string
+      phaseMinutesAgo?: number
+      status?: string
+    }
+    addHistory?: Array<{ role: string; content: string }>
+  }
 }
 
 export interface ScenarioSetup {
