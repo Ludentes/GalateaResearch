@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { AgentCard } from "../../../components/agent/AgentCard"
+import type { HomeostasisState } from "server/engine/types"
 
 export const Route = createFileRoute("/agent/fleet/")({
   component: FleetOverviewPage,
@@ -13,6 +14,7 @@ interface FleetAgent {
   domain: string
   health: string
   lastTick: string | null
+  homeostasis: HomeostasisState | null
 }
 
 function FleetOverviewPage() {
@@ -44,9 +46,7 @@ function FleetOverviewPage() {
         </div>
 
         {isLoading && <div>Loading...</div>}
-        {error && (
-          <div className="text-red-500">Error loading fleet data</div>
-        )}
+        {error && <div className="text-red-500">Error loading fleet data</div>}
 
         {data && data.agents.length === 0 && (
           <p className="text-muted-foreground">No agents registered</p>

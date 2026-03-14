@@ -1,4 +1,6 @@
 import { Link } from "@tanstack/react-router"
+import { HomeostasisSparkline } from "./HomeostasisSparkline"
+import type { HomeostasisState } from "server/engine/types"
 
 interface AgentCardProps {
   id: string
@@ -7,6 +9,7 @@ interface AgentCardProps {
   domain: string
   health: string
   lastTick: string | null
+  homeostasis: HomeostasisState | null
 }
 
 const healthColors: Record<string, string> = {
@@ -23,6 +26,7 @@ export function AgentCard({
   domain,
   health,
   lastTick,
+  homeostasis,
 }: AgentCardProps) {
   const dotColor = healthColors[health] ?? healthColors.unknown
 
@@ -51,11 +55,18 @@ export function AgentCard({
             Last tick: {new Date(lastTick).toLocaleString()}
           </div>
         ) : (
-          <div className="text-xs text-muted-foreground">
-            No activity yet
-          </div>
+          <div className="text-xs text-muted-foreground">No activity yet</div>
         )}
       </div>
+      {homeostasis && (
+        <div className="mt-3 pt-3 border-t border-border">
+          <HomeostasisSparkline
+            homeostasis={homeostasis}
+            compact
+            showLabels={false}
+          />
+        </div>
+      )}
     </Link>
   )
 }
