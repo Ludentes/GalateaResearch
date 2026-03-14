@@ -18,12 +18,13 @@ const SPEC_TO_ENGINE: Record<SpecTrustLevel, TrustLevel> = {
 }
 
 function mapSpecLevel(level: SpecTrustLevel): TrustLevel {
-  return SPEC_TO_ENGINE[level]
+  return SPEC_TO_ENGINE[level] ?? "NONE"
 }
 
 function trustMin(a: TrustLevel, b: TrustLevel): TrustLevel {
   const ai = TRUST_ORDER.indexOf(a)
   const bi = TRUST_ORDER.indexOf(b)
+  if (ai === -1 || bi === -1) return "NONE"
   return TRUST_ORDER[Math.min(ai, bi)]
 }
 
