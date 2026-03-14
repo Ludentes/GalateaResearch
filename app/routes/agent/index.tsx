@@ -52,6 +52,12 @@ function AgentStatusPage() {
               Config
             </Link>
             <Link
+              to="/agent/settings"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Settings
+            </Link>
+            <Link
               to="/agent/chat"
               className="text-muted-foreground hover:text-foreground"
             >

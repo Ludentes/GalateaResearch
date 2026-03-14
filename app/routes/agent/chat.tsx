@@ -80,6 +80,12 @@ function AgentChatPage() {
             >
               Config
             </Link>
+            <Link
+              to="/agent/settings"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Settings
+            </Link>
             <Link to="/agent/chat" className="font-medium underline">
               Chat
             </Link>

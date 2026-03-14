@@ -65,6 +65,12 @@ function ExportPage() {
             >
               Config
             </Link>
+            <Link
+              to="/agent/settings"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Settings
+            </Link>
             <Link to="/agent/export" className="font-medium underline">
               Export
             </Link>
