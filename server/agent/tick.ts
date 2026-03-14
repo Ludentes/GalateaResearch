@@ -1,4 +1,4 @@
-import { assessDimensions } from "../engine/homeostasis-engine"
+import { assessDimensions, getGuidance } from "../engine/homeostasis-engine"
 import type {
   AgentContext,
   HomeostasisState,
@@ -114,7 +114,9 @@ function buildTickRecord(params: {
     timestamp: new Date().toISOString(),
     trigger: params.trigger,
     homeostasis: params.homeostasis,
-    guidance: [],
+    guidance: getGuidance(params.homeostasis as HomeostasisState)
+      .split("\n\n")
+      .filter(Boolean),
     routing: params.routing,
     execution: {
       adapter: params.execution.adapter ?? "none",
@@ -179,6 +181,9 @@ export async function tick(
     })
     const retrievedFacts = facts.entries
 
+    // Record inbound in operational history (before assessment, so stuck detection sees it)
+    pushHistoryEntry(opCtx, "user", msg.content)
+
     // Find active task from operational context
     const activeOpTask = opCtx.tasks.find(
       (t) => t.status === "in_progress" || t.status === "assigned",
@@ -187,7 +192,10 @@ export async function tick(
     const agentContext: AgentContext = {
       sessionId: `tick-${Date.now()}`,
       currentMessage: msg.content,
-      messageHistory: [],
+      messageHistory: opCtx.recentHistory.map((h) => ({
+        role: h.role,
+        content: h.content,
+      })),
       retrievedFacts,
       lastMessageTime: new Date(msg.receivedAt),
       hasAssignedTask: !!state.activeTask || !!activeOpTask,
@@ -383,9 +391,6 @@ export async function tick(
 
     if (llmAvailable) {
       const config = getLLMConfig()
-
-      // Record inbound in operational history
-      pushHistoryEntry(opCtx, "user", msg.content)
 
       const systemPrompt = toolsContext
         ? `${context.systemPrompt}\n\n## Available CLI Tools\n${toolsContext}`

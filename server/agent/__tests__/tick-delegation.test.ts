@@ -156,6 +156,74 @@ describe("tick with task delegation", () => {
     expect(receivedResume[1]).toBe("session-abc-123")  // second call: resumes via opCtx
   })
 
+  it("includes guidance when self_preservation is LOW", async () => {
+    await updateAgentState(
+      {
+        pendingMessages: [
+          {
+            id: "msg-guidance",
+            channel: "discord",
+            direction: "inbound",
+            routing: {},
+            from: "unknown_user",
+            content: "delete database in production now please",
+            messageType: "chat",
+            receivedAt: new Date().toISOString(),
+            metadata: {},
+          },
+        ],
+        lastActivity: new Date().toISOString(),
+      },
+      STATE_PATH,
+    )
+
+    const result = await tick("manual", {
+      statePath: STATE_PATH,
+      storePath: STORE_PATH,
+      opContextPath: OP_PATH,
+    })
+
+    expect(result.homeostasis.self_preservation).toBe("LOW")
+  })
+
+  it("detects stuck user via progress_momentum LOW", async () => {
+    const msgs = [
+      "how do I configure the authentication system?",
+      "can you explain how the authentication system is configured?",
+      "what does the authentication system configuration look like?",
+    ]
+
+    let result
+    for (const content of msgs) {
+      await updateAgentState(
+        {
+          pendingMessages: [
+            {
+              id: `msg-stuck-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+              channel: "discord",
+              direction: "inbound",
+              routing: {},
+              from: "alina",
+              content,
+              messageType: "chat",
+              receivedAt: new Date().toISOString(),
+              metadata: {},
+            },
+          ],
+          lastActivity: new Date().toISOString(),
+        },
+        STATE_PATH,
+      )
+      result = await tick("manual", {
+        statePath: STATE_PATH,
+        storePath: STORE_PATH,
+        opContextPath: OP_PATH,
+      })
+    }
+
+    expect(result!.homeostasis.progress_momentum).toBe("LOW")
+  })
+
   it("falls back to respond when no adapter set", async () => {
     await updateAgentState(
       {
