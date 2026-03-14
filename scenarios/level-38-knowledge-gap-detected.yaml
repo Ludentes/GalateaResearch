@@ -1,0 +1,15 @@
+scenario: "L38: Knowledge gap detected on unfamiliar topic"
+description: >
+  When asked a detailed question about a topic with no matching entries
+  in the knowledge store, knowledge_sufficiency should drop to LOW.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "explain how the quantum flux capacitor integration works with our billing system and what edge cases we need to handle"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      homeostasis.knowledge_sufficiency: LOW
+      outcome.action: respond

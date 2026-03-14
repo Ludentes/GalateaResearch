@@ -1,0 +1,28 @@
+scenario: "L39: Stuck user detected after repeated similar questions"
+description: >
+  When a user asks 3 similar questions (shared stems), progress_momentum
+  drops to LOW and guidance suggests trying a different approach.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "how do I configure the authentication system?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      homeostasis.progress_momentum: HEALTHY
+      outcome.action: respond
+  - send: "can you explain how the authentication system is configured?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      homeostasis.progress_momentum: HEALTHY
+      outcome.action: respond
+  - send: "what does the authentication system configuration look like?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      homeostasis.progress_momentum: LOW
+      guidance.0: "contains: Stuck"
+      outcome.action: respond
