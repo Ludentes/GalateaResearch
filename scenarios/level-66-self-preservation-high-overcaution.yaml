@@ -1,0 +1,17 @@
+scenario: "L66: Self-preservation HIGH — over-caution on routine action"
+description: >
+  Currently the engine has no trigger for self_preservation HIGH
+  (over-caution). This scenario documents the expected baseline:
+  a routine action from a trusted user should NOT trigger HIGH.
+  self_preservation should be HEALTHY for normal requests.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "create a new branch and commit the config changes"
+    from: { platform: dashboard, user: kirill }
+    messageType: task_assignment
+    expect:
+      homeostasis.self_preservation: HEALTHY
+      trigger.trustLevel: ABSOLUTE

@@ -1,0 +1,21 @@
+scenario: "L65: Knowledge application HIGH — analysis paralysis after long exploring"
+description: >
+  When the agent has been in exploring phase for 2+ hours with retrieved
+  facts available, knowledge_application should be HIGH (analysis paralysis).
+  The guidance should nudge toward implementation.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "research more about SSO token refresh patterns"
+    from: { platform: dashboard, user: kirill }
+    messageType: task_assignment
+    setup:
+      createTask:
+        description: "Research SSO provider comparison"
+        phase: exploring
+        phaseMinutesAgo: 150
+    expect:
+      homeostasis.knowledge_application: HIGH
+      guidance.0: "contains: paralysis"

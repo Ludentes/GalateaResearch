@@ -1,0 +1,15 @@
+scenario: "L62: Communication health HEALTHY — normal message timing"
+description: >
+  A message arriving with no prior communication gaps and no recent outbound
+  should show communication_health HEALTHY. This is the baseline state.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "how is the refactoring going?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    expect:
+      homeostasis.communication_health: HEALTHY
+      outcome.action: respond
