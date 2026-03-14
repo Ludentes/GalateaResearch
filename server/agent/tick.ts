@@ -1,4 +1,5 @@
 import { assessDimensions, getGuidance } from "../engine/homeostasis-engine"
+import { resolveTrust } from "../engine/trust-resolver"
 import type {
   AgentContext,
   HomeostasisState,
@@ -11,15 +12,15 @@ import { createWorkKnowledge } from "../memory/work-to-knowledge"
 import { emitEvent } from "../observation/emit"
 import type { TickDecisionRecord } from "../observation/tick-record"
 import { appendTickRecord, getTickRecordPath } from "../observation/tick-record"
-import { getLLMConfig } from "../providers/config"
 import { getModelWithFallback } from "../providers"
+import { getLLMConfig } from "../providers/config"
 import {
   OllamaBackpressureError,
   OllamaCircuitOpenError,
 } from "../providers/ollama-queue"
 import type { AgentTool } from "./agent-loop"
 import { runAgentLoop } from "./agent-loop"
-import { runClaudeCodeRespond } from "./claude-code-respond"
+import type { AgentSpec } from "./agent-spec"
 import { loadAgentSpec } from "./agent-spec"
 import {
   appendActivityLog,
@@ -27,6 +28,7 @@ import {
   removeMessage,
   updateAgentState,
 } from "./agent-state"
+import { runClaudeCodeRespond } from "./claude-code-respond"
 import type { CodingToolAdapter } from "./coding-adapter/types"
 import { executeWorkArc } from "./coding-adapter/work-arc"
 import { dispatchMessage } from "./dispatcher"
@@ -58,7 +60,10 @@ export function clearTools(): void {
   }
 }
 
-function getAgentTools(_agentId: string, workspace?: string): Record<string, AgentTool> {
+function getAgentTools(
+  _agentId: string,
+  workspace?: string,
+): Record<string, AgentTool> {
   const workspaceRoot = workspace || process.cwd()
   return createAllTools(workspaceRoot)
 }
@@ -158,13 +163,15 @@ export async function tick(
   const selfModel = await checkSelfModel()
   const opCtx = await loadOperationalContext(opContextPath)
 
-  // Load agent spec for tools_context injection
+  // Load agent spec for tools_context + trust config
   let toolsContext: string | undefined
+  let specTrust: AgentSpec["trust"] | undefined
   try {
     const spec = await loadAgentSpec(agentId)
     toolsContext = spec.tools_context
+    specTrust = spec.trust
   } catch {
-    // Agent spec not found — not critical, skip tools_context
+    // Agent spec not found — not critical
   }
 
   // Stage 2: Read state
@@ -205,10 +212,12 @@ export async function tick(
       taskPhase: activeOpTask?.phase,
       taskCount: opCtx.tasks.filter((t) => t.status !== "done").length,
       taskToolCallCount: activeOpTask?.toolCallCount,
-      // Trust/safety — sourceTrustLevel is set by trust resolver (Phase G).
-      // Until then, defaults to "NONE" (most restrictive).
+      // Trust/safety — resolved from agent spec trust config
       sourceChannel: msg.channel,
       sourceIdentity: msg.from,
+      sourceTrustLevel: specTrust
+        ? resolveTrust(specTrust, msg.channel, msg.from)
+        : undefined,
     }
 
     const homeostasis = assessDimensions(agentContext)
@@ -220,7 +229,10 @@ export async function tick(
 
     // Smart routing: heuristic first, LLM fallback for low-confidence
     let routing = inferRouting(msg.content, msg.messageType)
-    if (routing.confidence === "low" && selfModel.availableProviders.length > 0) {
+    if (
+      routing.confidence === "low" &&
+      selfModel.availableProviders.length > 0
+    ) {
       const llmRouting = await classifyWithLLM(msg.content)
       if (llmRouting) {
         routing = llmRouting
@@ -237,8 +249,7 @@ export async function tick(
       }
       task.status = "in_progress"
 
-      const resumeSessionId =
-        task.claudeSessionId ?? opCtx.lastClaudeSessionId
+      const resumeSessionId = task.claudeSessionId ?? opCtx.lastClaudeSessionId
       const sessionResumed = !!resumeSessionId
       const workDir = (msg.metadata?.workspace as string) ?? process.cwd()
       const workContext = toolsContext
@@ -352,6 +363,7 @@ export async function tick(
         trigger: {
           type: _trigger === "heartbeat" ? "heartbeat" : "message",
           source: `${msg.channel}:${msg.from}`,
+          trustLevel: agentContext.sourceTrustLevel,
         },
         homeostasis,
         routing,
@@ -386,8 +398,7 @@ export async function tick(
       | string
       | undefined
     const llmAvailable =
-      providerOverride !== "none" &&
-      selfModel.availableProviders.length > 0
+      providerOverride !== "none" && selfModel.availableProviders.length > 0
 
     if (llmAvailable) {
       const config = getLLMConfig()
@@ -427,8 +438,7 @@ export async function tick(
           }
           // else: ok=false → llmResult stays undefined → powered-down template
         } catch (err) {
-          const errorMsg =
-            err instanceof Error ? err.message : String(err)
+          const errorMsg = err instanceof Error ? err.message : String(err)
           emitEvent({
             type: "log",
             source: `${agentId}-api`,
@@ -454,10 +464,7 @@ export async function tick(
             model,
             system: systemPrompt,
             messages: [{ role: "user", content: msg.content }],
-            tools: getAgentTools(
-              agentId,
-              msg.metadata?.workspace as string,
-            ),
+            tools: getAgentTools(agentId, msg.metadata?.workspace as string),
             history,
             config: { maxSteps: 8, timeoutMs: 120_000 },
           })
@@ -475,10 +482,7 @@ export async function tick(
           pushHistoryEntry(opCtx, "assistant", llmResult)
 
           // Log loop metadata
-          if (
-            loopResult.totalSteps > 1 ||
-            loopResult.finishReason !== "text"
-          ) {
+          if (loopResult.totalSteps > 1 || loopResult.finishReason !== "text") {
             emitEvent({
               type: "log",
               source: `${agentId}-api`,
@@ -488,9 +492,7 @@ export async function tick(
                 finishReason: loopResult.finishReason,
                 totalSteps: String(loopResult.totalSteps),
                 toolCalls: String(
-                  loopResult.steps.filter(
-                    (s) => s.type === "tool_call",
-                  ).length,
+                  loopResult.steps.filter((s) => s.type === "tool_call").length,
                 ),
               },
             }).catch(() => {})
@@ -574,6 +576,7 @@ export async function tick(
         trigger: {
           type: _trigger === "heartbeat" ? "heartbeat" : "message",
           source: `${msg.channel}:${msg.from}`,
+          trustLevel: agentContext.sourceTrustLevel,
         },
         homeostasis,
         routing,
@@ -658,6 +661,7 @@ export async function tick(
       trigger: {
         type: _trigger === "heartbeat" ? "heartbeat" : "message",
         source: `${msg.channel}:${msg.from}`,
+        trustLevel: agentContext.sourceTrustLevel,
       },
       homeostasis,
       routing,
