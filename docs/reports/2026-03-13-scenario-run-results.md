@@ -178,6 +178,33 @@ Provider: claude-code, model: haiku (now explicitly passed to delegation path).
 - **Content assertion fragility** — all level scenarios now pass with haiku
 - **Cost optimization** — haiku default, ~$0.01-0.03/scenario (was $0.03-0.05 with sonnet)
 
+## Run 5 — Session Resume (W.9) Implementation
+
+**Date:** 2026-03-14
+
+### Changes
+
+Session resume implemented across the coding adapter stack:
+- `types.ts`: `resume?: string` on query options, `sessionId?: string` on results
+- `claude-code-adapter.ts`: `persistSession: true`, env filtering (`getCleanEnv`), `resume` passthrough, `session_id` capture from all SDK result paths
+- `work-arc.ts`: `sessionId` threaded through input/output, passed as `resume` to adapter
+- `tick.ts`: `getActiveTask()` reuses in-progress tasks on continuation, `claudeSessionId` stored/cleared per task lifecycle
+
+### Unit Test Results
+
+| Suite | Tests | Status |
+|-------|-------|--------|
+| agent/**tests** (10 files) | 107/107 | PASS |
+| tick-delegation (session resume) | 3/3 | PASS |
+
+### L29 Scenario
+
+L29 requires running dev server — not validated offline. Unit test covers the same logic: first tick creates task with no resume, second tick (after timeout/in-progress) resumes with captured `sessionId`.
+
+### Expected Cost Impact
+
+~90% reduction on continuation turns per SDK caching research. First tick pays full context; subsequent ticks only pay for new message + cache read of prior conversation.
+
 ## Infrastructure Notes
 
 - PostgreSQL container (`galatea-postgres-1`) was stopped — needed `docker start`
