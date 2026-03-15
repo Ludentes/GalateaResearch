@@ -367,14 +367,12 @@ async function tickInner(
           })
         }
 
-        // Load agent secrets for SSH key configuration
+        // Load agent secrets for SSH host alias (used by PUBLISH)
         const secrets = await loadAgentSecrets(agentId)
-        if (secrets.gitlab?.ssh_key) {
-          // Store SSH key path on the task for PUBLISH to use
-          ;(task as any)._sshKeyPath = secrets.gitlab.ssh_key
-            .replace("~", process.env.HOME ?? "")
+        if (secrets.gitlab?.ssh_host_alias) {
+          ;(task as any)._sshHostAlias = secrets.gitlab.ssh_host_alias
           console.log(
-            `[tick] Configured SSH key for ${agentId}`,
+            `[tick] Configured SSH host alias for ${agentId}: ${secrets.gitlab.ssh_host_alias}`,
           )
         }
       } catch (wtErr) {
@@ -524,6 +522,12 @@ async function tickInner(
       // ---------------------------------------------------------------
       // PUBLISH phase — push branch and create MR for coding tasks
       // ---------------------------------------------------------------
+      let publishResult: {
+        pushed?: boolean
+        branch?: string
+        mr?: string
+        error?: string
+      } = {}
       if (
         arcResult.status === "completed" &&
         routing.taskType === "coding"
@@ -536,20 +540,35 @@ async function tickInner(
 
           // Only push if on a feature/worktree branch (not main)
           if (branch !== "main" && branch !== "master") {
-            // Use agent-specific SSH key if available
-            const sshKey = (task as any)._sshKeyPath
-            const pushEnv = sshKey
-              ? {
-                  ...process.env,
-                  GIT_SSH_COMMAND: `ssh -i ${sshKey} -o StrictHostKeyChecking=accept-new`,
+            // Ensure remote uses agent's SSH host alias (handles key + port)
+            const sshAlias = (task as any)._sshHostAlias
+            if (sshAlias) {
+              try {
+                const currentUrl = execSync(
+                  "git remote get-url origin",
+                  { cwd: workDir, encoding: "utf-8", timeout: 5000 },
+                ).trim()
+                // Replace hostname with SSH alias: git@host:path → git@alias:path
+                const aliasUrl = currentUrl.replace(
+                  /git@[^:]+:/,
+                  `git@${sshAlias}:`,
+                )
+                if (aliasUrl !== currentUrl) {
+                  execSync(
+                    `git remote set-url origin "${aliasUrl}"`,
+                    { cwd: workDir, encoding: "utf-8", timeout: 5000 },
+                  )
                 }
-              : undefined
+              } catch {
+                // Non-fatal — push may still work with default SSH config
+              }
+            }
             execSync(`git push -u origin ${branch}`, {
               cwd: workDir,
               encoding: "utf-8",
               timeout: 30_000,
-              ...(pushEnv ? { env: pushEnv } : {}),
             })
+            publishResult = { pushed: true, branch }
             console.log(`[tick] PUBLISH: pushed ${branch}`)
 
             // Create MR via glab (best-effort)
@@ -561,17 +580,24 @@ async function tickInner(
                 `glab mr create --title "${safeTitle}" --fill --yes 2>&1`,
                 { cwd: workDir, encoding: "utf-8", timeout: 30_000 },
               ).trim()
+              publishResult.mr = mrOutput
               console.log(`[tick] PUBLISH: MR created — ${mrOutput}`)
             } catch (mrErr) {
+              publishResult.mr = `failed: ${(mrErr as Error).message}`
               console.warn(
                 "[tick] PUBLISH: MR creation failed (glab):",
                 (mrErr as Error).message,
               )
             }
           } else {
+            publishResult = { pushed: false, branch, error: "on main branch" }
             console.log("[tick] PUBLISH: skipped — on main branch")
           }
         } catch (err) {
+          publishResult = {
+            pushed: false,
+            error: (err as Error).message,
+          }
           console.warn("[tick] PUBLISH failed:", (err as Error).message)
         }
       }
@@ -595,10 +621,21 @@ async function tickInner(
         }
       }
 
-      const statusText =
+      let statusText =
         arcResult.status === "completed"
           ? `Task completed: ${arcResult.text}`
           : `Task ${arcResult.status}: ${arcResult.text}`
+
+      // Append publish result to status so the assigner knows what happened
+      if (publishResult.pushed) {
+        statusText += `\nBranch \`${publishResult.branch}\` pushed.`
+        if (publishResult.mr && !publishResult.mr.startsWith("failed"))
+          statusText += ` MR created: ${publishResult.mr}`
+        else if (publishResult.mr)
+          statusText += ` MR creation failed — please create manually.`
+      } else if (publishResult.error) {
+        statusText += `\n⚠ Publish failed: ${publishResult.error}. Changes are committed locally but not pushed.`
+      }
 
       const outbound: ChannelMessage = {
         id: `delegate-${msg.id}`,
@@ -673,6 +710,9 @@ async function tickInner(
           artifactsCreated: [],
           knowledgeEntriesCreated: knowledgeCount,
         },
+        ...(publishResult.pushed !== undefined
+          ? { publish: publishResult }
+          : {}),
         durationMs: Date.now() - tickStart,
       })
       appendTickRecord(delegateRecord, getTickRecordPath(agentId)).catch(

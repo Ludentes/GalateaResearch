@@ -37,6 +37,12 @@ export interface TickDecisionRecord {
     artifactsCreated: string[]
     knowledgeEntriesCreated: number
   }
+  publish?: {
+    pushed?: boolean
+    branch?: string
+    mr?: string
+    error?: string
+  }
 }
 
 export function getTickRecordPath(agentId: string): string {
