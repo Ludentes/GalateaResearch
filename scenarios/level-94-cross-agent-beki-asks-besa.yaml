@@ -5,6 +5,7 @@ description: >
   In production, step 2 would flow automatically through Discord
   integration. Here we manually chain the messages.
 agent: beki
+type: dogfood
 model: sonnet
 setup:
   clear_ticks: true

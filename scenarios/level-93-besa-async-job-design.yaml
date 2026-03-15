@@ -7,6 +7,7 @@ description: >
   POST /inject returns a job ID immediately, GET /jobs/:id polls for
   completion. This is a prerequisite for production deployment.
 agent: besa
+type: dogfood
 model: sonnet
 setup:
   clear_ticks: true

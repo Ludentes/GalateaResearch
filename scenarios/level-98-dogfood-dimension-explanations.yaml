@@ -5,6 +5,7 @@ description: >
   used by agents in their SELF-AWARENESS section to explain their
   state when asked "how are you feeling?"
 agent: besa
+type: dogfood
 model: sonnet
 setup:
   clear_ticks: true

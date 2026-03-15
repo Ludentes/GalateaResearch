@@ -7,6 +7,7 @@ description: >
   server/agent/coding-adapter/work-arc.ts or a new utils file.
   Write tests. Use TDD.
 agent: beki
+type: dogfood
 model: sonnet
 setup:
   clear_ticks: true

@@ -3,6 +3,7 @@ description: >
   Besa receiving an end-of-day report task should delegate to the
   Claude Code adapter, which has access to the /end-of-day-report skill.
 agent: besa
+type: dogfood
 setup:
   clear_ticks: true
   clear_state: true

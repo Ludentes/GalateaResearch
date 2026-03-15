@@ -4,6 +4,7 @@ description: >
   chat=120s, review=180s, coding=300s, admin=120s. The routing heuristic
   already knows the task type — pipe it to the timeout selection.
 agent: beki
+type: dogfood
 model: sonnet
 setup:
   clear_ticks: true

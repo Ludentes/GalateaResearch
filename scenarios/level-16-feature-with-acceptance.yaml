@@ -1,5 +1,6 @@
 scenario: "L16: Feature request with acceptance criteria check"
 agent: beki
+type: dogfood
 setup:
   clear_ticks: true
   clear_state: true

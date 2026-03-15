@@ -1,5 +1,6 @@
 scenario: "Смена контекста — код на исследование"
 agent: beki
+type: dogfood
 setup:
   clear_ticks: true
   clear_state: true

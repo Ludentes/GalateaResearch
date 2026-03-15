@@ -1,5 +1,6 @@
 scenario: "Coding task from issue reference"
 agent: besa
+type: dogfood
 setup:
   clear_ticks: true
 steps:

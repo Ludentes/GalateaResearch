@@ -1,5 +1,6 @@
 scenario: "L6: Create a new file from instructions"
 agent: beki
+type: dogfood
 setup:
   clear_ticks: true
 steps:

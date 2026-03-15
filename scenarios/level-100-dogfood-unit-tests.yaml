@@ -7,6 +7,7 @@ description: >
   more edge case coverage. Review existing tests, add any missing
   coverage, commit.
 agent: beki
+type: dogfood
 model: sonnet
 setup:
   clear_ticks: true

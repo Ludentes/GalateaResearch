@@ -6,6 +6,7 @@ description: >
   stability across a realistic product workflow. Pluggable — change the
   feature description to test any PM→dev handoff.
 agent: besa
+type: dogfood
 model: sonnet
 setup:
   clear_ticks: true

@@ -4,6 +4,7 @@ description: >
   ticks as a colored grid (7 rows × 20 columns). Each cell is
   green/yellow/red based on dimension state. Pure CSS/SVG, no charting libs.
 agent: beki
+type: dogfood
 model: sonnet
 setup:
   clear_ticks: true

@@ -5,6 +5,7 @@ description: >
   pipeline: routing, homeostasis, and delegation for a real product task.
   This is the first half of a two-part dogfooding flow (L80 spec, L81 implement).
 agent: besa
+type: dogfood
 model: sonnet
 setup:
   clear_ticks: true

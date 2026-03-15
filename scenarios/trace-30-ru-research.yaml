@@ -1,5 +1,6 @@
 scenario: "Исследование — русский язык"
 agent: besa
+type: dogfood
 setup:
   clear_ticks: true
 steps:

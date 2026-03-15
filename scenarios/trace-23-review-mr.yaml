@@ -1,6 +1,7 @@
 scenario: "MR review correctly classified"
 source_gherkin: "Trace 16 (adapted for solo agent)"
 agent: besa
+type: dogfood
 setup:
   clear_ticks: true
 steps:

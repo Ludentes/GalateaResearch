@@ -1,5 +1,6 @@
 scenario: "Задача на код — русский язык"
 agent: beki
+type: dogfood
 setup:
   clear_ticks: true
 steps:

@@ -193,8 +193,17 @@ async function executeStep(
   return verdict
 }
 
-async function runScenario(filePath: string): Promise<ScenarioVerdict> {
+async function runScenario(
+  filePath: string,
+  opts?: { regressionOnly?: boolean },
+): Promise<ScenarioVerdict | "skipped"> {
   const scenario = await loadScenario(filePath)
+
+  // Skip dogfood scenarios in regression mode
+  if (opts?.regressionOnly && scenario.type === "dogfood") {
+    return "skipped"
+  }
+
   const scenarioStart = Date.now()
   await handleSetup(scenario)
 
@@ -267,20 +276,23 @@ function printReport(verdicts: ScenarioVerdict[]): void {
 }
 
 async function main(): Promise<void> {
-  const files = process.argv
-    .slice(2)
-    .filter(
-      (a) => !a.startsWith("--") && (a.endsWith(".yaml") || a.endsWith(".yml")),
-    )
+  const args = process.argv.slice(2)
+  const regressionOnly = args.includes("--regression")
+  const files = args.filter(
+    (a) => !a.startsWith("--") && (a.endsWith(".yaml") || a.endsWith(".yml")),
+  )
 
   if (files.length === 0) {
-    console.error("Usage: pnpm tsx scripts/run-scenario.ts <scenario.yaml> ...")
+    console.error(
+      "Usage: pnpm tsx scripts/run-scenario.ts [--regression] <scenario.yaml> ...",
+    )
     process.exit(1)
   }
 
   const verdicts: ScenarioVerdict[] = []
   let passCount = 0
   let failCount = 0
+  let skipCount = 0
 
   for (let idx = 0; idx < files.length; idx++) {
     const file = files[idx]
@@ -290,7 +302,12 @@ async function main(): Promise<void> {
       `${DIM}[${idx + 1}/${files.length}]${RESET} ${label} ... `,
     )
     try {
-      const verdict = await runScenario(resolved)
+      const verdict = await runScenario(resolved, { regressionOnly })
+      if (verdict === "skipped") {
+        skipCount++
+        process.stderr.write(`${DIM}SKIP (dogfood)${RESET}\n`)
+        continue
+      }
       verdicts.push(verdict)
       if (verdict.pass) {
         passCount++
@@ -304,7 +321,10 @@ async function main(): Promise<void> {
           .flatMap((s) =>
             s.checks
               .filter((c) => !c.pass)
-              .map((c) => `${c.field}: expected ${JSON.stringify(c.expected)}, got ${JSON.stringify(c.actual)}`),
+              .map(
+                (c) =>
+                  `${c.field}: expected ${JSON.stringify(c.expected)}, got ${JSON.stringify(c.actual)}`,
+              ),
           )
         process.stderr.write(
           `${RED}FAIL${RESET} ${DIM}${formatDuration(verdict.durationMs)}${RESET}\n`,
@@ -327,8 +347,9 @@ async function main(): Promise<void> {
     }
   }
 
+  const skipMsg = skipCount > 0 ? `, ${skipCount} skipped` : ""
   process.stderr.write(
-    `\n${BOLD}Progress: ${GREEN}${passCount}${RESET}${BOLD}/${files.length} passed, ${failCount > 0 ? RED : ""}${failCount} failed${RESET}\n`,
+    `\n${BOLD}Progress: ${GREEN}${passCount}${RESET}${BOLD}/${verdicts.length} passed, ${failCount > 0 ? RED : ""}${failCount} failed${RESET}${skipMsg}\n`,
   )
 
   printReport(verdicts)

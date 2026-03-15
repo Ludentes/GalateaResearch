@@ -32,6 +32,8 @@ export interface Scenario {
   agent: string
   /** Override LLM model for all steps (e.g. "sonnet" for dogfooding) */
   model?: string
+  /** Scenario type: "regression" (default) or "dogfood" (modifies repo) */
+  type?: "regression" | "dogfood"
   setup?: ScenarioSetup
   steps: ScenarioStep[]
 }

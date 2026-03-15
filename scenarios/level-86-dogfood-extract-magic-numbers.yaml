@@ -4,6 +4,7 @@ description: >
   config.yaml file. Tests that the agent can safely modify config and
   code in a coordinated change. Pluggable for any magic number.
 agent: beki
+type: dogfood
 model: sonnet
 setup:
   clear_ticks: true

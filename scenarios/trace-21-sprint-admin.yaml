@@ -1,6 +1,7 @@
 scenario: "Sprint task creation routed as admin"
 source_gherkin: "Trace 13 (adapted for solo agent)"
 agent: besa
+type: dogfood
 setup:
   clear_ticks: true
 steps:

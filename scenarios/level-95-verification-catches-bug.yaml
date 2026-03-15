@@ -5,6 +5,7 @@ description: >
   the implementation, catching and fixing any issues before
   reporting completion. Tests the VERIFY stage of the work lifecycle.
 agent: beki
+type: dogfood
 model: sonnet
 setup:
   clear_ticks: true

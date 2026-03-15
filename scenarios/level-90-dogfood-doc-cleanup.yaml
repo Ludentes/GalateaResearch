@@ -3,6 +3,7 @@ description: >
   Beki moves deprecated documentation files to docs/archive/. Tests
   that the agent can safely reorganize files without breaking references.
 agent: beki
+type: dogfood
 model: sonnet
 setup:
   clear_ticks: true
