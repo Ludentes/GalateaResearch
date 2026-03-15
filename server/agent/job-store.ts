@@ -41,6 +41,20 @@ export function updateJob(
   Object.assign(job, updates)
 }
 
+/**
+ * Removes jobs from the store that have exceeded their time-to-live duration.
+ *
+ * @param ttlMs - Time-to-live in milliseconds. Jobs created before `Date.now() - ttlMs`
+ *                will be deleted. Defaults to 24 hours if not specified.
+ *
+ * @example
+ * // Remove jobs older than 24 hours (uses default TTL)
+ * cleanExpiredJobs()
+ *
+ * @example
+ * // Remove jobs older than 1 hour
+ * cleanExpiredJobs(60 * 60 * 1000)
+ */
 export function cleanExpiredJobs(ttlMs: number = DEFAULT_TTL_MS): void {
   const cutoff = Date.now() - ttlMs
   for (const [id, job] of store) {
