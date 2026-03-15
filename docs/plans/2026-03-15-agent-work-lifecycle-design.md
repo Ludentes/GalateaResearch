@@ -360,23 +360,199 @@ steps:
 |------|--------|----------|
 | `data/agents/beki/spec.yaml` | Add `workflow_instructions` | P1 |
 | `data/agents/besa/spec.yaml` | Add `workflow_instructions` (PM variant) | P1 |
-| `server/memory/context-assembler.ts` | Inject `workflow_instructions` at constraint priority | P1 |
-| `server/agent/tick.ts` | Add VERIFY and FINISH stages after work arc | P1 |
+| `server/memory/context-assembler.ts` | Inject `workflow_instructions` + `SELF-AWARENESS` section | P1 |
+| `server/agent/tick.ts` | Priority queue + VERIFY and FINISH stages | P1 |
+| `server/engine/homeostasis-engine.ts` | Add `formatHomeostasisState()` function | P1 |
+| `server/engine/config.yaml` | Add `dimension_explanations` | P2 |
 | `server/agent/coding-adapter/work-arc.ts` | Extract `getDiffStat()` helper | P2 |
 | `scenarios/level-94-*.yaml` | Cross-agent communication scenario | P2 |
 | `scenarios/level-95-*.yaml` | Verification catches bug scenario | P2 |
+| `scenarios/level-96-*.yaml` | Reflection / homeostasis introspection | P2 |
+| `scenarios/level-97-*.yaml` | Priority queue — chat before task | P2 |
+
+---
+
+## Priority Queue
+
+Currently `pendingMessages` is a FIFO array — `pending[0]` is always the oldest message. This means a quick chat question waits behind a 5-minute coding task. Fix: sort by priority before popping.
+
+### Priority Levels
+
+| Priority | Message Types | Rationale |
+|----------|--------------|-----------|
+| 0 (highest) | `admin` | System commands, urgent ops |
+| 1 | `chat`, `greeting` | Quick responses, don't block behind tasks |
+| 2 | `task_assignment` | Long-running work |
+| 3 | `status_update` | Informational, can wait |
+
+### Implementation
+
+In `tick.ts`, replace `pending[0]` with priority-sorted selection:
+
+```typescript
+const MESSAGE_PRIORITY: Record<string, number> = {
+  admin: 0,
+  chat: 1,
+  greeting: 1,
+  task_assignment: 2,
+  status_update: 3,
+}
+
+function pickNextMessage(pending: ChannelMessage[]): ChannelMessage {
+  return pending.reduce((best, msg) => {
+    const bestPri = MESSAGE_PRIORITY[best.messageType ?? "chat"] ?? 1
+    const msgPri = MESSAGE_PRIORITY[msg.messageType ?? "chat"] ?? 1
+    return msgPri < bestPri ? msg : best
+  })
+}
+```
+
+This is stable — when priorities are equal, `reduce` keeps the first (oldest) message, preserving FIFO within each priority level.
+
+### Files to Change
+
+- `server/agent/tick.ts` — replace `pending[0]` with `pickNextMessage(pending)`
+
+---
+
+## Reflection (Homeostasis Introspection)
+
+Agents should be able to answer "how are you?" or "what's your state?" with actual awareness of their homeostasis dimensions. Currently the agent only sees guidance text when dimensions are imbalanced — it has no self-awareness when everything is healthy.
+
+### What Changes
+
+Add a `SELF-AWARENESS` section to the assembled context (always included, not just when imbalanced):
+
+```typescript
+// In context-assembler.ts, always include current state
+sections.push({
+  name: "SELF-AWARENESS",
+  content: formatHomeostasisState(dimensions),
+  priority: 0, // Same as constraints — never truncated
+  truncatable: false,
+})
+```
+
+### Format
+
+```
+## Your Current State
+
+| Dimension | State | Meaning |
+|-----------|-------|---------|
+| knowledge_sufficiency | HIGH | You've been learning a lot recently |
+| certainty_alignment | HEALTHY | Your confidence matches your knowledge |
+| progress_momentum | HEALTHY | Work is progressing normally |
+| communication_health | HEALTHY | Communication frequency is appropriate |
+| productive_engagement | HEALTHY | You're productively engaged |
+| knowledge_application | HEALTHY | You're applying what you know |
+| self_preservation | HEALTHY | Operating within safe boundaries |
+
+When asked about your state, explain each dimension honestly.
+If a dimension is LOW or HIGH, explain what might be causing it
+and what you plan to do about it.
+```
+
+### Dimension Explanations (for the agent to use)
+
+```yaml
+dimension_explanations:
+  knowledge_sufficiency:
+    HEALTHY: "I have adequate knowledge for my current tasks"
+    HIGH: "I've been learning a lot — may need to apply more of what I know"
+    LOW: "I'm operating with knowledge gaps — need to research or ask questions"
+  certainty_alignment:
+    HEALTHY: "My confidence matches my actual knowledge level"
+    HIGH: "I might be overconfident — should verify assumptions"
+    LOW: "I'm uncertain — need more context or guidance before acting"
+  progress_momentum:
+    HEALTHY: "Work is progressing at a normal pace"
+    HIGH: "Moving fast — should slow down and verify quality"
+    LOW: "Progress has stalled — something is blocking me"
+  communication_health:
+    HEALTHY: "Communication frequency is appropriate"
+    HIGH: "I've been communicating a lot — might be over-reporting"
+    LOW: "I haven't communicated recently — should update stakeholders"
+  productive_engagement:
+    HEALTHY: "I'm productively engaged with meaningful work"
+    HIGH: "Very busy — may need to prioritize or delegate"
+    LOW: "I'm idle or doing low-value work — should find productive tasks"
+  knowledge_application:
+    HEALTHY: "I'm applying my knowledge appropriately"
+    HIGH: "Applying knowledge heavily — should also be learning new things"
+    LOW: "Not applying what I know — may be doing work below my capability"
+  self_preservation:
+    HEALTHY: "Operating within safe boundaries"
+    HIGH: "Being very cautious — could take more calculated risks"
+    LOW: "Pushing boundaries — should be more careful with safety constraints"
+```
+
+### Files to Change
+
+- `server/memory/context-assembler.ts` — add `SELF-AWARENESS` section with formatted state
+- `server/engine/homeostasis-engine.ts` — add `formatHomeostasisState()` function
+- `server/engine/config.yaml` — add `dimension_explanations` under homeostasis
+
+---
+
+## Scenarios
+
+### L96: Reflection — Agent Describes Own State
+
+```yaml
+scenario: "L96: Reflection — Beki describes his own homeostasis state"
+agent: beki
+model: sonnet
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "How are you feeling? What's your current state?"
+    from: { platform: discord, user: kirill }
+    messageType: chat
+    expect:
+      routing.level: interaction
+      outcome.action: respond
+```
+
+The response should reference specific dimensions (knowledge, certainty, etc.) — not just "I'm fine." Assertion on response content can be added once we see actual output patterns.
+
+### L97: Priority Queue — Chat Answered Before Queued Task
+
+```yaml
+scenario: "L97: Priority queue — chat question answered before queued task"
+agent: beki
+model: sonnet
+steps:
+  # Queue a task first (will be pending)
+  - send: "Refactor the getAdapterTimeout function to use a lookup table"
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      outcome.action: delegate
+
+  # Then queue a chat question (higher priority)
+  - send: "What's the current adapter timeout for coding tasks?"
+    from: { platform: discord, user: kirill }
+    messageType: chat
+    expect:
+      routing.level: interaction
+      outcome.action: respond
+```
 
 ---
 
 ## Implementation Order
 
 1. Add `workflow_instructions` to both agent specs
-2. Update context-assembler to inject them at constraint priority
-3. Run existing dogfood scenarios to verify agents now use skills
-4. Add VERIFY stage to tick.ts (second work arc)
-5. Add FINISH stage (commit check)
-6. Write and run L94/L95 scenarios
-7. Observe and iterate
+2. Update context-assembler to inject workflow_instructions + SELF-AWARENESS
+3. Add priority queue to tick.ts (`pickNextMessage` replaces `pending[0]`)
+4. Add `formatHomeostasisState()` + dimension explanations to config
+5. Run existing dogfood scenarios to verify agents now use skills
+6. Add VERIFY and FINISH stages to tick.ts
+7. Write and run L94-L97 scenarios
+8. Observe and iterate
 
 ---
 

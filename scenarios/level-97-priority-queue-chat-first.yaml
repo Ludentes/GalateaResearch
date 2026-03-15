@@ -1,0 +1,30 @@
+scenario: "L97: Priority queue — chat question answered before queued task"
+description: >
+  When a chat question and a task assignment are both pending,
+  the priority queue should process the chat first (priority 1)
+  before the task (priority 2). This prevents quick questions
+  from being blocked behind 5-minute coding tasks.
+agent: beki
+model: sonnet
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  # Step 1: Assign a coding task (will queue as priority 2)
+  - send: >
+      Refactor the getAdapterTimeout function in tick.ts to use
+      a lookup object instead of a switch statement.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      outcome.action: delegate
+
+  # Step 2: Ask a quick question (priority 1 — should be answered
+  # on next tick even though task is queued)
+  - send: "What's the current adapter timeout for coding tasks?"
+    from: { platform: discord, user: kirill }
+    messageType: chat
+    expect:
+      routing.level: interaction
+      outcome.action: respond

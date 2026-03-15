@@ -1,0 +1,19 @@
+scenario: "L96: Reflection — Beki describes his own homeostasis state"
+description: >
+  Ask Beki how he's doing. With the SELF-AWARENESS section in his
+  context, he should reference specific homeostasis dimensions
+  (knowledge, certainty, progress, etc.) rather than giving a
+  generic "I'm fine" response. Tests that agents have introspective
+  awareness of their regulatory state.
+agent: beki
+model: sonnet
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "How are you feeling? What's your current homeostasis state?"
+    from: { platform: discord, user: kirill }
+    messageType: chat
+    expect:
+      routing.level: interaction
+      outcome.action: respond
