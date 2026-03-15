@@ -955,31 +955,44 @@ Inner loop continues from where it left off (using recentHistory + task.progress
 
 ## Implementation Status
 
-Last updated: 2026-03-12
+Last updated: 2026-03-15
 
-### Production-Ready (tested, 76 test files, 7 integration suites)
+### Production-Ready (tested, 97 test files, 817 tests)
 
 | Layer | Component | Location |
 |-------|-----------|----------|
 | Brain | Homeostasis L0-L1 (7 dimensions, heuristics, caching) | `server/engine/homeostasis-engine.ts` |
 | Brain | Homeostasis L2 (LLM semantic, optional) | `server/engine/homeostasis-engine.ts` |
+| Brain | `formatHomeostasisState()` for agent self-awareness | `server/engine/homeostasis-engine.ts` |
+| Brain | Dimension explanations (HEALTHY/HIGH/LOW per dimension) | `server/engine/config.yaml` |
 | Memory | Full extraction pipeline (signal → heuristic → cloud LLM → consolidate) | `server/memory/` |
 | Memory | Knowledge store (JSONL + dedup + decay + archival) | `server/memory/knowledge-store.ts` |
 | Memory | Fact retrieval (3-pass: entity → keyword → vector stub) | `server/memory/fact-retrieval.ts` |
-| Memory | Context assembler (priority truncation + guidance injection) | `server/memory/context-assembler.ts` |
+| Memory | Context assembler (priority truncation + guidance + workflow + self-awareness) | `server/memory/context-assembler.ts` |
 | Memory | Curation queue, feedback loop, decision trace | `server/memory/` |
 | Memory | Consolidation to CLAUDE.md + skill generation | `server/memory/artifact-generator.ts` |
 | Runtime | Tick loop + heartbeat (30s configurable) | `server/agent/tick.ts`, `heartbeat.ts` |
 | Runtime | Agent loop (ReAct, budget-controlled, max steps) | `server/agent/agent-loop.ts` |
 | Runtime | Operational memory (tasks, phases, history, blockers) | `server/agent/operational-memory.ts` |
 | Runtime | Coding adapter (Claude Code SDK delegation + work arc) | `server/agent/coding-adapter/` |
+| Runtime | 6-phase work lifecycle (BEGIN→DO→VERIFY→PUBLISH→REPORT→FINISH) | `server/agent/tick.ts` |
+| Runtime | VERIFY stage (pipeline-enforced test/lint/diff review after coding) | `server/agent/tick.ts` |
+| Runtime | FINISH stage (commit guarantee — no uncommitted changes left) | `server/agent/tick.ts` |
+| Runtime | Priority queue (`pickNextMessage` — chat before tasks) | `server/agent/tick.ts` |
+| Runtime | Workflow instructions in agent specs (superpowers skill guidance) | `data/agents/*/spec.yaml` |
+| Runtime | SELF-AWARENESS section (always-present homeostasis state in context) | `server/memory/context-assembler.ts` |
+| Runtime | `getDiffStat()` helper for VERIFY stage git operations | `server/agent/utils.ts` |
 | Safety | Tool-call safety (workspace, branch, destructive patterns) | `server/engine/homeostasis-engine.ts` |
 | Infra | Multi-provider (Ollama + OpenRouter + Claude Code, with fallback) | `server/providers/` |
 | Infra | Ollama queue with circuit breaker | `server/providers/ollama-queue.ts` |
 | Infra | Discord bot + dispatcher + mention parsing | `server/discord/` |
-| Infra | API routes (14 endpoints) | `server/routes/` |
+| Infra | API routes (14+ endpoints) | `server/routes/` |
+| Infra | Settings screen (UI + config-update API + validation) | `app/routes/agent/settings.tsx`, `server/routes/api/agent/config-update.ts` |
 | Infra | OTEL event store + Langfuse plugin | `server/observation/` |
+| UI | Fleet dashboard with agent cards | `app/routes/agent/fleet/` |
+| UI | Homeostasis sparkline + dimension heatmap | `app/components/agent/` |
 | Eval | Golden dataset (4 devs, 98 items), 3 strategy comparisons | `experiments/extraction/` |
+| Eval | Scenario runner with regression/dogfood separation (116 scenarios) | `scripts/run-scenario.ts` |
 
 ### Scaffolding / Disabled
 
@@ -989,11 +1002,13 @@ Last updated: 2026-03-12
 | Vector retrieval (Qdrant) | Implemented, disabled (`use_vector: false`) |
 | Batch dedup (LLM) | Implemented, disabled (`enabled: false`) |
 | Homeostasis L3-L4 | Stubs only |
+| PUBLISH stage (branch push + MR creation) | System prompt guided, not pipeline-enforced |
 
 ### Not Yet Built
 
 | Component | Phase |
 |-----------|-------|
+| Async Job Model (non-blocking inject API) | Pre-launch |
 | Multi-Agent State | Phase H |
 | Persona Export/Import | Phase H |
 | Agent Registry | Phase H |
@@ -1013,9 +1028,13 @@ Last updated: 2026-03-12
 | [v2 Architecture Design](plans/2026-02-11-galatea-v2-architecture-design.md) | Original v2 design (homeostasis + memory) |
 | [Cognitive Models Design](plans/2026-02-12-cognitive-models-design.md) | Views over knowledge store |
 | [Phase E Design](plans/2026-02-15-phase-e-design.md) | Launch & observe (command center, lifecycle, eval) |
+| [Agent Work Lifecycle](plans/2026-03-15-agent-work-lifecycle-design.md) | 6-phase lifecycle (BEGIN→DO→VERIFY→PUBLISH→REPORT→FINISH) |
+| [Remaining Work for Launch](plans/2026-03-15-remaining-work-for-launch.md) | P0/P1/P2 items blocking or improving launch |
+| [Async Job Model Spec](plans/2026-03-15-async-job-model-spec.md) | Non-blocking inject API design |
 
 ---
 
 *Created: 2026-02-21*
+*Last major update: 2026-03-15 (lifecycle pipeline, priority queue, SELF-AWARENESS, settings screen)*
 *Synthesized from: Psychological Architecture, Phases A-E implementation, OpenClaw research, 3-agent adversarial review, Reference Scenarios audit*
 *Foundation: Homeostasis-based architecture with 7 universal dimensions (self_preservation added in Phase G)*

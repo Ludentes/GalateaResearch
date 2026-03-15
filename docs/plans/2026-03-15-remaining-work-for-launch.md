@@ -56,13 +56,26 @@ All validated with passing scenarios:
 **Effort:** 2-3 days
 **Decision needed:** In-memory only for MVP, or Redis/DB persistence?
 
-#### 2. Update ARCHITECTURE.md
+#### ~~2. Update ARCHITECTURE.md~~ — DONE
 
-**Problem:** Implementation Status table is dated 2026-03-12. Doesn't reflect lifecycle pipeline, priority queue, VERIFY/FINISH stages, SELF-AWARENESS, or workflow instructions. Gap #12 ("Work is not modeled") is still marked Critical/Open but is now largely resolved.
+Updated 2026-03-15: Implementation Status table now reflects lifecycle pipeline, priority queue, VERIFY/FINISH stages, SELF-AWARENESS, workflow instructions, settings screen, dashboard components, and scenario runner improvements.
 
-**Effort:** 30 minutes
+#### 3. PUBLISH Stage (Branch Push + MR Creation)
 
-#### 3. Scenario Runner Stability
+**Problem:** The 6-phase lifecycle has DO→VERIFY→FINISH working, but PUBLISH is only guided by system prompt workflow_instructions — not pipeline-enforced. Agents commit code but don't push branches or create merge requests. Stale worktrees accumulate.
+
+**Current state:** `workflow_instructions` tell agents to "push your branch and create a merge request" and "use /finishing-a-development-branch", but the pipeline doesn't enforce this and the agent frequently skips it.
+
+**Scope:**
+- Add PUBLISH phase to tick.ts after FINISH
+- Create feature branch, push, create MR via `glab mr create`
+- Clean up worktree after MR creation
+- Or: make the coding adapter create a worktree at start and handle branch lifecycle
+
+**Effort:** 1-2 days
+**Design:** See lifecycle design doc, Phase 4: PUBLISH section
+
+#### 4. Scenario Runner Stability
 
 **Problem:** Long-running scenarios (3-5 min) intermittently return 500. Retry workaround deployed (commit 403a9f1) but root cause unknown. Likely related to Nitro middleware timeout or Ollama backpressure.
 
@@ -167,12 +180,12 @@ Every LLM-facing prompt needs strict structured output. Currently handled case-b
 ## Critical Path
 
 ```
-Now:     Update ARCHITECTURE.md (30m)
-         └─→ Async Job Model implementation (2-3 days)
+Now:     PUBLISH stage implementation (1-2 days)
+    +    Async Job Model implementation (2-3 days)
               └─→ Scenario runner stability (may be fixed by async model)
 
 Parallel: Routing taskType fix (1-2h)
-          Agent worktree/MR pipeline fix (see below)
+          Regression suite fixes (as found)
 
 After:   Confabulation guard (1-2 days)
          Vector retrieval testing (1 day)
@@ -180,7 +193,10 @@ After:   Confabulation guard (1-2 days)
 Launch:  ~1 week from today (2026-03-21)
 ```
 
-**Note:** Items 4 (Settings Backend) and 5 (Fleet Dashboard) were already implemented on main but listed as missing. Stale worktrees `settings-screen-101` and `settings-screen-impl` cleaned up on 2026-03-15.
+**Notes:**
+- ARCHITECTURE.md updated 2026-03-15 (item 2 done).
+- Items 4 (Settings Backend) and 5 (Fleet Dashboard) were already on main. Stale worktrees cleaned up.
+- Scenario runner now supports `--regression` flag to skip dogfood scenarios. 31 dogfood scenarios tagged with `type: dogfood`.
 
 ---
 
