@@ -1,4 +1,5 @@
 import { assessDimensions, getGuidance } from "../engine/homeostasis-engine"
+import { getAgentConfig } from "../engine/config"
 import { resolveTrust } from "../engine/trust-resolver"
 import type {
   AgentContext,
@@ -49,20 +50,14 @@ import type { ChannelMessage, SelfModel, TickResult } from "./types"
 // ---------------------------------------------------------------------------
 
 function getAdapterTimeout(taskType: string | undefined): number {
-  switch (taskType) {
-    case "chat":
-      return 120_000
-    case "review":
-      return 180_000
-    case "coding":
-      return 300_000
-    case "admin":
-      return 120_000
-    case "research":
-      return 300_000
-    default:
-      return 180_000
+  const config = getAgentConfig()
+  const timeouts = config.adapter_timeouts
+
+  if (!taskType) {
+    return timeouts.default ?? 180_000
   }
+
+  return timeouts[taskType] ?? timeouts.default ?? 180_000
 }
 
 // ---------------------------------------------------------------------------

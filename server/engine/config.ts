@@ -83,6 +83,10 @@ export interface HeartbeatConfig {
   skip_when_idle: boolean
 }
 
+export interface AgentConfig {
+  adapter_timeouts: Record<string, number>
+}
+
 export interface DecayConfig {
   enabled: boolean
   decay_start_days: number
@@ -203,6 +207,7 @@ export interface PipelineConfig {
   context: ContextConfig
   homeostasis: HomeostasisConfig
   heartbeat: HeartbeatConfig
+  agent: AgentConfig
   memory: MemoryConfig
   discord: DiscordConfig
   stop_words: StopWordsConfig
@@ -268,6 +273,10 @@ export function getHomeostasisConfig(): HomeostasisConfig {
 
 export function getHeartbeatConfig(): HeartbeatConfig {
   return loadConfig().heartbeat
+}
+
+export function getAgentConfig(): AgentConfig {
+  return loadConfig().agent
 }
 
 export function getDecayConfig(): DecayConfig {

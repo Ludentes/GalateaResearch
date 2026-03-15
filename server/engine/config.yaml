@@ -344,6 +344,21 @@ heartbeat:
   skip_when_idle: true
 
 # -----------------------------------------------------------------------------
+# AGENT — server/agent/tick.ts
+# Agent execution timeouts per task type.
+# Determines how long an adapter waits before timing out.
+# Raise: allow longer-running tasks to complete. Lower: faster timeout.
+# -----------------------------------------------------------------------------
+agent:
+  adapter_timeouts:
+    chat: 120000       # 2 minutes
+    review: 180000     # 3 minutes
+    coding: 300000     # 5 minutes
+    admin: 120000      # 2 minutes
+    research: 300000   # 5 minutes
+    default: 180000    # 3 minutes (fallback for unknown task types)
+
+# -----------------------------------------------------------------------------
 # DISCORD — server/discord/bot.ts
 # Bot connector for Discord messaging.
 # -----------------------------------------------------------------------------
