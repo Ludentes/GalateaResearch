@@ -324,7 +324,30 @@ async function tickInner(
 
       const resumeSessionId = task.claudeSessionId ?? opCtx.lastClaudeSessionId
       const sessionResumed = !!resumeSessionId
-      const workDir = (msg.metadata?.workspace as string) ?? process.cwd()
+      const baseDir = (msg.metadata?.workspace as string) ?? process.cwd()
+
+      // Create an isolated worktree for coding tasks so the main
+      // working directory (and dev server) stays on main undisturbed.
+      const { execSync } = await import("node:child_process")
+      const worktreeBranch = `worktree-task/${task.id}`
+      const worktreePath = `${baseDir}/.worktrees/task-${task.id}`
+      let workDir = baseDir
+      let usingWorktree = false
+      try {
+        execSync(
+          `git worktree add "${worktreePath}" -b "${worktreeBranch}"`,
+          { cwd: baseDir, encoding: "utf-8", timeout: 10_000 },
+        )
+        workDir = worktreePath
+        usingWorktree = true
+        console.log(`[tick] Created worktree at ${worktreePath}`)
+      } catch (wtErr) {
+        console.warn(
+          "[tick] Worktree creation failed, using main dir:",
+          (wtErr as Error).message,
+        )
+      }
+
       const workContext = toolsContext
         ? {
             ...context,
@@ -467,58 +490,60 @@ async function tickInner(
         routing.taskType === "coding"
       ) {
         try {
-          const { execSync } = await import("node:child_process")
-
-          // Check current branch — only publish if not on main
-          const currentBranch = execSync(
-            "git rev-parse --abbrev-ref HEAD",
-            { cwd: workDir, encoding: "utf-8", timeout: 5000 },
-          ).trim()
-
-          if (currentBranch === "main" || currentBranch === "master") {
-            // Create a feature branch from the current commits
-            const branchName = `feature/${task.id}-${Date.now()}`
-            execSync(`git checkout -b ${branchName}`, {
-              cwd: workDir,
-              encoding: "utf-8",
-              timeout: 5000,
-            })
-            console.log(`[tick] PUBLISH: created branch ${branchName}`)
-          }
-
           const branch = execSync(
             "git rev-parse --abbrev-ref HEAD",
             { cwd: workDir, encoding: "utf-8", timeout: 5000 },
           ).trim()
 
-          // Push branch
-          execSync(`git push -u origin ${branch}`, {
-            cwd: workDir,
-            encoding: "utf-8",
-            timeout: 30_000,
-          })
-          console.log(`[tick] PUBLISH: pushed ${branch}`)
+          // Only push if on a feature/worktree branch (not main)
+          if (branch !== "main" && branch !== "master") {
+            execSync(`git push -u origin ${branch}`, {
+              cwd: workDir,
+              encoding: "utf-8",
+              timeout: 30_000,
+            })
+            console.log(`[tick] PUBLISH: pushed ${branch}`)
 
-          // Create MR via glab (best-effort)
-          try {
-            // Sanitize title to prevent shell injection
-            const safeTitle = taskDescription
-              .slice(0, 70)
-              .replace(/["`$\\]/g, "")
-            const mrOutput = execSync(
-              `glab mr create --title "${safeTitle}" --fill --yes 2>&1`,
-              { cwd: workDir, encoding: "utf-8", timeout: 30_000 },
-            ).trim()
-            console.log(`[tick] PUBLISH: MR created — ${mrOutput}`)
-          } catch (mrErr) {
-            // MR creation may fail if glab not configured — log and continue
-            console.warn(
-              "[tick] PUBLISH: MR creation failed (glab):",
-              (mrErr as Error).message,
-            )
+            // Create MR via glab (best-effort)
+            try {
+              const safeTitle = taskDescription
+                .slice(0, 70)
+                .replace(/["`$\\]/g, "")
+              const mrOutput = execSync(
+                `glab mr create --title "${safeTitle}" --fill --yes 2>&1`,
+                { cwd: workDir, encoding: "utf-8", timeout: 30_000 },
+              ).trim()
+              console.log(`[tick] PUBLISH: MR created — ${mrOutput}`)
+            } catch (mrErr) {
+              console.warn(
+                "[tick] PUBLISH: MR creation failed (glab):",
+                (mrErr as Error).message,
+              )
+            }
+          } else {
+            console.log("[tick] PUBLISH: skipped — on main branch")
           }
         } catch (err) {
           console.warn("[tick] PUBLISH failed:", (err as Error).message)
+        }
+      }
+
+      // ---------------------------------------------------------------
+      // CLEANUP — remove worktree after PUBLISH (or on failure)
+      // ---------------------------------------------------------------
+      if (usingWorktree) {
+        try {
+          execSync(`git worktree remove --force "${worktreePath}"`, {
+            cwd: baseDir,
+            encoding: "utf-8",
+            timeout: 10_000,
+          })
+          console.log(`[tick] Cleaned up worktree ${worktreePath}`)
+        } catch (cleanupErr) {
+          console.warn(
+            "[tick] Worktree cleanup failed:",
+            (cleanupErr as Error).message,
+          )
         }
       }
 
