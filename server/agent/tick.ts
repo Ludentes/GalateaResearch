@@ -22,7 +22,7 @@ import {
 import type { AgentTool } from "./agent-loop"
 import { runAgentLoop } from "./agent-loop"
 import type { AgentSpec } from "./agent-spec"
-import { loadAgentSpec } from "./agent-spec"
+import { loadAgentSecrets, loadAgentSpec } from "./agent-spec"
 import {
   appendActivityLog,
   getAgentState,
@@ -341,6 +341,35 @@ async function tickInner(
         workDir = worktreePath
         usingWorktree = true
         console.log(`[tick] Created worktree at ${worktreePath}`)
+
+        // Configure git identity and SSH for this agent
+        const agentEmail = spec?.agent.email
+        const agentName = spec?.agent.full_name ?? spec?.agent.name
+        if (agentEmail) {
+          execSync(`git config user.email "${agentEmail}"`, {
+            cwd: workDir,
+            encoding: "utf-8",
+            timeout: 5000,
+          })
+        }
+        if (agentName) {
+          execSync(`git config user.name "${agentName}"`, {
+            cwd: workDir,
+            encoding: "utf-8",
+            timeout: 5000,
+          })
+        }
+
+        // Load agent secrets for SSH key configuration
+        const secrets = await loadAgentSecrets(agentId)
+        if (secrets.gitlab?.ssh_key) {
+          // Store SSH key path on the task for PUBLISH to use
+          ;(task as any)._sshKeyPath = secrets.gitlab.ssh_key
+            .replace("~", process.env.HOME ?? "")
+          console.log(
+            `[tick] Configured SSH key for ${agentId}`,
+          )
+        }
       } catch (wtErr) {
         console.warn(
           "[tick] Worktree creation failed, using main dir:",
@@ -500,10 +529,19 @@ async function tickInner(
 
           // Only push if on a feature/worktree branch (not main)
           if (branch !== "main" && branch !== "master") {
+            // Use agent-specific SSH key if available
+            const sshKey = (task as any)._sshKeyPath
+            const pushEnv = sshKey
+              ? {
+                  ...process.env,
+                  GIT_SSH_COMMAND: `ssh -i ${sshKey} -o StrictHostKeyChecking=accept-new`,
+                }
+              : undefined
             execSync(`git push -u origin ${branch}`, {
               cwd: workDir,
               encoding: "utf-8",
               timeout: 30_000,
+              ...(pushEnv ? { env: pushEnv } : {}),
             })
             console.log(`[tick] PUBLISH: pushed ${branch}`)
 

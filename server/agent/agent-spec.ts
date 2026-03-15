@@ -3,10 +3,21 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import YAML from "yaml"
 
+export interface AgentSecrets {
+  gitlab?: {
+    token?: string
+    ssh_key?: string
+    ssh_host_alias?: string
+  }
+}
+
 export interface AgentSpec {
   agent: {
     id: string
     name: string
+    full_name?: string
+    email?: string
+    gitlab_username?: string
     role: string
     domain: string
   }
@@ -44,6 +55,18 @@ export async function loadAgentSpec(
     )
   }
   return parsed
+}
+
+export async function loadAgentSecrets(
+  agentId: string,
+): Promise<AgentSecrets> {
+  try {
+    const secretsPath = join(AGENTS_DIR, agentId, "secrets.yaml")
+    const raw = await readFile(secretsPath, "utf-8")
+    return YAML.parse(raw) as AgentSecrets
+  } catch {
+    return {}
+  }
 }
 
 export async function listAgentIds(): Promise<string[]> {

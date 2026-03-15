@@ -1,6 +1,9 @@
 agent:
   id: "beki"
   name: "Beki"
+  full_name: "Beki (beta-Kirill)"
+  email: "betasimkirill@gmail.com"
+  gitlab_username: "Beki"
   role: "Mobile developer"
   domain: "Expo / React Native"
 

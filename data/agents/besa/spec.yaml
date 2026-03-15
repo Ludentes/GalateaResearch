@@ -1,6 +1,9 @@
 agent:
   id: "besa"
   name: "Besa"
+  full_name: "Besa (beta-Sasha)"
+  email: "betasimsasha@gmail.com"
+  gitlab_username: "Besa"
   role: "Project Manager"
   domain: "Sprint planning, task management, code review coordination"
 
