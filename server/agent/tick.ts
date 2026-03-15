@@ -336,7 +336,13 @@ async function tickInner(
       // Create an isolated worktree for coding tasks so the main
       // working directory (and dev server) stays on main undisturbed.
       const { execSync } = await import("node:child_process")
-      const worktreeBranch = `worktree-task/${task.id}`
+      // Generate descriptive branch name from task description
+      const branchSlug = task.description
+        .slice(0, 40)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+      const worktreeBranch = `${agentId}/${branchSlug || task.id}`
       const worktreePath = `${baseDir}/.worktrees/task-${task.id}`
       let workDir = baseDir
       let usingWorktree = false
@@ -575,7 +581,7 @@ async function tickInner(
             publishResult = { pushed: true, branch }
             console.log(`[tick] PUBLISH: pushed ${branch}`)
 
-            // Create MR via GitLab API (glab snap can't auto-detect repo)
+            // Create MR via GitLab API (glab snap has title-parsing bugs)
             try {
               const remoteUrl = execSync(
                 "git remote get-url origin",
@@ -585,22 +591,34 @@ async function tickInner(
                 /[:/]([^/]+\/[^/]+?)(?:\.git)?$/,
               )
               const repoSlug = repoMatch?.[1] ?? ""
+              const token = process.env.GITLAB_TOKEN ?? ""
               const safeTitle = taskDescription
                 .slice(0, 70)
                 .replace(/["`$\\]/g, "")
-              const repoFlag = repoSlug
-                ? ` --repo gitlab.maugry.ru/${repoSlug}`
-                : ""
-              const mrOutput = execSync(
-                `glab mr create --title "${safeTitle}" --source-branch "${branch}" --yes${repoFlag} 2>&1`,
-                { cwd: workDir, encoding: "utf-8", timeout: 30_000 },
-              ).trim()
-              publishResult.mr = mrOutput
-              console.log(`[tick] PUBLISH: MR created — ${mrOutput}`)
+              const encodedSlug = encodeURIComponent(repoSlug)
+              const apiUrl = `https://gitlab.maugry.ru/api/v4/projects/${encodedSlug}/merge_requests`
+              const curlCmd = [
+                "curl -sf",
+                `--header "PRIVATE-TOKEN: ${token}"`,
+                `--data-urlencode "source_branch=${branch}"`,
+                '--data-urlencode "target_branch=master"',
+                `--data-urlencode "title=${safeTitle}"`,
+                `"${apiUrl}"`,
+              ].join(" ")
+              const mrJson = execSync(curlCmd, {
+                cwd: workDir,
+                encoding: "utf-8",
+                timeout: 30_000,
+              }).trim()
+              const mr = JSON.parse(mrJson)
+              publishResult.mr = mr.web_url ?? `!${mr.iid}`
+              console.log(
+                `[tick] PUBLISH: MR created — ${publishResult.mr}`,
+              )
             } catch (mrErr) {
               publishResult.mr = `failed: ${(mrErr as Error).message}`
               console.warn(
-                "[tick] PUBLISH: MR creation failed (glab):",
+                "[tick] PUBLISH: MR creation failed:",
                 (mrErr as Error).message,
               )
             }
