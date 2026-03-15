@@ -383,6 +383,8 @@ async function tickInner(
         ;(task as any)._prevGitlabToken = process.env.GITLAB_TOKEN ?? null
         process.env.GITLAB_TOKEN = secrets.gitlab.token
       }
+      // Skip /etc/gitconfig — snap-confined glab can't read it
+      process.env.GIT_CONFIG_NOSYSTEM = "1"
 
       const workContext = toolsContext
         ? {
@@ -573,27 +575,24 @@ async function tickInner(
             publishResult = { pushed: true, branch }
             console.log(`[tick] PUBLISH: pushed ${branch}`)
 
-            // Create MR via glab (best-effort)
-            // Derive repo slug from git remote URL
+            // Create MR via GitLab API (glab snap can't auto-detect repo)
             try {
               const remoteUrl = execSync(
                 "git remote get-url origin",
                 { cwd: workDir, encoding: "utf-8", timeout: 5000 },
               ).trim()
-              // Extract "group/project" from SSH or HTTPS URL
               const repoMatch = remoteUrl.match(
                 /[:/]([^/]+\/[^/]+?)(?:\.git)?$/,
               )
               const repoSlug = repoMatch?.[1] ?? ""
-              const repoFlag = repoSlug
-                ? ` --repo gitlab.maugry.ru/${repoSlug}`
-                : ""
-
               const safeTitle = taskDescription
                 .slice(0, 70)
                 .replace(/["`$\\]/g, "")
+              const repoFlag = repoSlug
+                ? ` --repo gitlab.maugry.ru/${repoSlug}`
+                : ""
               const mrOutput = execSync(
-                `glab mr create --title "${safeTitle}" --source-branch "${branch}" --fill --yes${repoFlag} 2>&1`,
+                `glab mr create --title "${safeTitle}" --source-branch "${branch}" --yes${repoFlag} 2>&1`,
                 { cwd: workDir, encoding: "utf-8", timeout: 30_000 },
               ).trim()
               publishResult.mr = mrOutput
