@@ -1,7 +1,7 @@
 interface TickDetailProps {
   tick: {
     trigger: { type: string; source?: string }
-    homeostasis: Record<string, { state: string; value?: number }>
+    homeostasis: Record<string, string | { state: string; value?: number }>
     guidance: string[]
     routing: { level: string; taskType?: string; reasoning?: string }
     execution: {
@@ -55,18 +55,21 @@ export function TickDetail({ tick }: TickDetailProps) {
           Homeostasis
         </h4>
         <div className="grid grid-cols-2 gap-1">
-          {Object.entries(tick.homeostasis).map(([dim, val]) => (
-            <div key={dim} className="flex items-center gap-1">
-              <span
-                className={`font-mono text-xs ${stateColors[val.state] ?? "text-gray-400"}`}
-              >
-                {val.state}
-              </span>
-              <span className="text-muted-foreground text-xs">
-                {dim.replace(/_/g, " ")}
-              </span>
-            </div>
-          ))}
+          {Object.entries(tick.homeostasis).map(([dim, val]) => {
+            const state = typeof val === "string" ? val : val.state
+            return (
+              <div key={dim} className="flex items-center gap-1">
+                <span
+                  className={`font-mono text-xs ${stateColors[state] ?? "text-gray-400"}`}
+                >
+                  {state}
+                </span>
+                <span className="text-muted-foreground text-xs">
+                  {dim.replace(/_/g, " ")}
+                </span>
+              </div>
+            )
+          })}
         </div>
       </div>
 

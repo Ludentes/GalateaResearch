@@ -1,0 +1,26 @@
+scenario: "L82: Dogfood — Cross-agent feature flow: PM specs then dev implements"
+description: >
+  Full dogfooding cycle across both agents. Besa receives a feature
+  request and produces a spec, then Beki gets the implementation task.
+  Tests multi-agent collaboration, routing consistency, and homeostasis
+  stability across a realistic product workflow. Pluggable — change the
+  feature description to test any PM→dev handoff.
+agent: besa
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  # Phase 1: PM receives and specs the feature
+  - send: >
+      We need to improve the fleet dashboard. Design a component spec for:
+      1) HomeostasisSparkline — 7 colored bars on agent cards
+      2) DimensionHeatmap — last 20 ticks as colored grid on detail page
+      3) DurationTrend — SVG line chart of tick durations.
+      Write component names, props interfaces, and layout description.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      trigger.trustLevel: HIGH
+      homeostasis.self_preservation: HEALTHY
+      outcome.action: delegate

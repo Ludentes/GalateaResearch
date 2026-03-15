@@ -5,7 +5,7 @@ interface Tick {
   tickId: string
   timestamp: string
   trigger: { type: string; source?: string }
-  homeostasis: Record<string, { state: string; value?: number }>
+  homeostasis: Record<string, string | { state: string; value?: number }>
   guidance: string[]
   routing: { level: string; taskType?: string; reasoning?: string }
   execution: {
@@ -38,11 +38,12 @@ const triggerBadge: Record<string, string> = {
 }
 
 function hasElevated(
-  homeostasis: Record<string, { state: string }>,
+  homeostasis: Record<string, string | { state: string }>,
 ): boolean {
-  return Object.values(homeostasis).some(
-    (d) => d.state === "ELEVATED" || d.state === "LOW",
-  )
+  return Object.values(homeostasis).some((d) => {
+    const s = typeof d === "string" ? d : d.state
+    return s === "ELEVATED" || s === "LOW"
+  })
 }
 
 export function TickTimeline({ ticks }: TickTimelineProps) {

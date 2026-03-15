@@ -1,0 +1,34 @@
+scenario: "L81: Dogfood — Developer agent implements a feature from PM spec"
+description: >
+  Beki (dev) receives a coding task from kirill to implement UI components.
+  Tests the developer pipeline: routing as coding task, delegation to
+  Claude Code adapter with tool access. Second half of dogfooding flow.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  # Step 1: Kirill assigns implementation task
+  - send: >
+      Implement a HomeostasisSparkline React component in
+      app/components/agent/HomeostasisSparkline.tsx. It takes a
+      homeostasis record (7 dimensions, each a string like HEALTHY/LOW/HIGH)
+      and renders 7 tiny horizontal bars, color-coded: green for HEALTHY,
+      yellow for HIGH, red for LOW. Use pure CSS, no charting libraries.
+      TailwindCSS classes only, dark mode compatible.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      trigger.trustLevel: HIGH
+      homeostasis.self_preservation: HEALTHY
+      outcome.action: delegate
+
+  # Step 2: Follow-up implementation task
+  - send: "now add the sparkline to the AgentCard component — import HomeostasisSparkline and render it below the health text, passing the agent's last tick homeostasis data"
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      outcome.action: delegate

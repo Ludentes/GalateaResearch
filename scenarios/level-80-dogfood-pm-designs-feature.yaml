@@ -1,0 +1,33 @@
+scenario: "L80: Dogfood — PM agent designs a feature spec for developer agent"
+description: >
+  Besa (PM) receives a feature request from kirill, routes it as a task,
+  and delegates to Claude Code to produce a design spec. Tests the PM
+  pipeline: routing, homeostasis, and delegation for a real product task.
+  This is the first half of a two-part dogfooding flow (L80 spec, L81 implement).
+agent: besa
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  # Step 1: Kirill assigns a feature design task to Besa
+  - send: >
+      Design a fleet dashboard improvement: add homeostasis sparklines to
+      agent cards (7 tiny bars per dimension, color-coded green/yellow/red)
+      and a dimension history heatmap on the agent detail page showing the
+      last 20 ticks. No external charting libs — pure CSS/SVG. Write a
+      brief spec with component names, data flow, and visual description.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      trigger.trustLevel: HIGH
+      homeostasis.self_preservation: HEALTHY
+      outcome.action: delegate
+
+  # Step 2: Kirill asks for clarification on the spec
+  - send: "also include a tick duration trend line chart — small SVG showing durationMs for last 20 ticks. And make sure it works in dark mode."
+    from: { platform: discord, user: kirill }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      homeostasis.self_preservation: HEALTHY

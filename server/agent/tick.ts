@@ -147,14 +147,45 @@ interface TickOptions {
   opContextPath?: string
 }
 
+// Per-agent mutex — prevents concurrent tick execution that causes adapter
+// failures when back-to-back messages race on the Claude Code SDK session.
+const agentLocks = new Map<string, Promise<TickResult>>()
+
 export async function tick(
   _trigger: "manual" | "heartbeat" | "webhook",
   opts?: TickOptions,
 ): Promise<TickResult> {
+  const agentId = opts?.agentId ?? "galatea"
+
+  // Wait for any in-flight tick for this agent to complete before starting
+  const pending = agentLocks.get(agentId)
+  if (pending) {
+    try {
+      await pending
+    } catch {
+      // Previous tick failed — proceed anyway
+    }
+  }
+
+  const tickPromise = tickInner(_trigger, agentId, opts)
+  agentLocks.set(agentId, tickPromise)
+  try {
+    return await tickPromise
+  } finally {
+    // Only clear if still our promise (not replaced by a newer tick)
+    if (agentLocks.get(agentId) === tickPromise) {
+      agentLocks.delete(agentId)
+    }
+  }
+}
+
+async function tickInner(
+  _trigger: "manual" | "heartbeat" | "webhook",
+  agentId: string,
+  opts?: TickOptions,
+): Promise<TickResult> {
   const tickId = crypto.randomUUID()
   const tickStart = Date.now()
-
-  const agentId = opts?.agentId ?? "galatea"
   const statePath = opts?.statePath
   const storePath = opts?.storePath ?? "data/memory/entries.jsonl"
   const opContextPath = opts?.opContextPath
@@ -423,7 +454,7 @@ export async function tick(
             history: ccHistory,
             workingDirectory:
               (msg.metadata?.workspace as string) ?? process.cwd(),
-            timeoutMs: 120_000,
+            timeoutMs: 300_000,
             model: config.model,
           })
 
@@ -435,8 +466,11 @@ export async function tick(
 
             // Record assistant response in operational history
             pushHistoryEntry(opCtx, "assistant", llmResult)
+          } else {
+            console.warn(
+              `[tick] Claude Code adapter failed for ${agentId}: ${result.text} (${result.durationMs}ms)`,
+            )
           }
-          // else: ok=false → llmResult stays undefined → powered-down template
         } catch (err) {
           const errorMsg = err instanceof Error ? err.message : String(err)
           emitEvent({
