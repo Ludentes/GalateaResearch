@@ -20,6 +20,8 @@ interface AssembleOptions {
   operationalSummary?: string
   conversationHistory?: Array<{ role: string; content: string }>
   toolDefinitions?: string
+  workflowInstructions?: string
+  homeostasisState?: Record<string, string>
 }
 
 export async function assembleContext(
@@ -70,6 +72,16 @@ export async function assembleContext(
     })
   }
 
+  // 3b. WORKFLOW INSTRUCTIONS — from agent spec (never truncated)
+  if (options.workflowInstructions) {
+    sections.push({
+      name: "WORKFLOW",
+      content: options.workflowInstructions,
+      priority: 0,
+      truncatable: false,
+    })
+  }
+
   // 4. IDENTITY section — core + persona preprompts
   const corePrompts = activePrompts.filter(
     (p) => p.type === "core" || p.type === "persona",
@@ -97,6 +109,25 @@ export async function assembleContext(
       })
       homeostasisGuidanceIncluded = true
     }
+  }
+
+  // 5b. SELF-AWARENESS — always show current homeostasis state
+  if (options.homeostasisState) {
+    const stateLines = Object.entries(options.homeostasisState)
+      .map(([dim, state]) => {
+        const label = dim
+          .replace(/_/g, " ")
+          .replace(/\b\w/g, (c) => c.toUpperCase())
+        return `- **${label}**: ${state}`
+      })
+      .join("\n")
+
+    sections.push({
+      name: "SELF-AWARENESS",
+      content: `Your current homeostasis state:\n${stateLines}\n\nWhen asked about your state, explain each dimension honestly. If a dimension is LOW or HIGH, explain what might be causing it and what you plan to do about it.`,
+      priority: 0,
+      truncatable: false,
+    })
   }
 
   // 6. OPERATIONAL CONTEXT — task state, work phase, carryover

@@ -231,11 +231,12 @@ async function tickInner(
   const selfModel = await checkSelfModel()
   const opCtx = await loadOperationalContext(opContextPath)
 
-  // Load agent spec for tools_context + trust config
+  // Load agent spec for tools_context + trust config + workflow
+  let spec: AgentSpec | undefined
   let toolsContext: string | undefined
   let specTrust: AgentSpec["trust"] | undefined
   try {
-    const spec = await loadAgentSpec(agentId)
+    spec = await loadAgentSpec(agentId)
     toolsContext = spec.tools_context
     specTrust = spec.trust
   } catch {
@@ -289,10 +290,18 @@ async function tickInner(
     }
 
     const homeostasis = assessDimensions(agentContext)
+    const homeostasisForContext: Record<string, string> = {}
+    for (const [k, v] of Object.entries(homeostasis)) {
+      if (k !== "assessed_at" && k !== "assessment_method") {
+        homeostasisForContext[k] = v as string
+      }
+    }
     const context = await assembleContext({
       storePath,
       agentContext,
       retrievedEntries: facts.entries,
+      workflowInstructions: spec?.workflow_instructions,
+      homeostasisState: homeostasisForContext,
     })
 
     // Smart routing: heuristic first, LLM fallback for low-confidence
