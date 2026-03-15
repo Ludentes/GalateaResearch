@@ -102,26 +102,14 @@ async function executeStep(
       ...(scenario.model ? { model: scenario.model } : {}),
     })
 
-    // Retry on 500 (Nitro vite middleware flake) up to 2 times
-    let lastError: Error | undefined
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        res = await fetch(`${BASE_URL}/api/agent/inject`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: injectBody,
-          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-        })
-        if (res.status !== 500) break
-        console.error(
-          `${DIM}  inject returned 500, retry ${attempt + 1}/2${RESET}`,
-        )
-      } catch (err) {
-        lastError = err as Error
-      }
-    }
-
-    if (!res!) {
+    try {
+      res = await fetch(`${BASE_URL}/api/agent/inject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: injectBody,
+        signal: AbortSignal.timeout(30_000),
+      })
+    } catch (err) {
       return {
         step: stepIndex,
         send: sendLabel,
@@ -129,8 +117,8 @@ async function executeStep(
         checks: [
           {
             field: "http",
-            expected: "200",
-            actual: `connection error: ${lastError?.message ?? "unknown"}`,
+            expected: "202",
+            actual: `connection error: ${(err as Error).message}`,
             pass: false,
           },
         ],
@@ -138,6 +126,53 @@ async function executeStep(
         durationMs: Date.now() - stepStart,
         costUsd: 0,
       }
+    }
+  }
+
+  // Handle async job polling (202 response)
+  if (res.status === 202) {
+    const injectResult = await res.json()
+    const jobId = injectResult.jobId
+
+    if (jobId) {
+      // Poll for job completion
+      const pollStart = Date.now()
+      let job: any
+      while (Date.now() - pollStart < FETCH_TIMEOUT_MS) {
+        const pollRes = await fetch(
+          `${BASE_URL}/api/agent/jobs/${jobId}`,
+          { signal: AbortSignal.timeout(5000) },
+        )
+        job = await pollRes.json()
+        if (job.status === "completed" || job.status === "failed") break
+        await new Promise((r) => setTimeout(r, 1000))
+      }
+
+      if (!job || job.status === "failed") {
+        return {
+          step: stepIndex,
+          send: sendLabel,
+          pass: false,
+          checks: [
+            {
+              field: "job",
+              expected: "completed",
+              actual: job?.status ?? "timeout",
+              pass: false,
+            },
+          ],
+          tickId: "",
+          durationMs: Date.now() - stepStart,
+          costUsd: 0,
+        }
+      }
+
+      // Build response with tick record for assertion pipeline
+      const tickRecord = job.result?.tick
+      res = new Response(JSON.stringify({ tick: tickRecord }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
     }
   }
 
