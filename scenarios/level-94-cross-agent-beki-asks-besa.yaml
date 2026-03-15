@@ -1,0 +1,45 @@
+scenario: "L94: Cross-agent — Beki asks Besa for requirements"
+description: >
+  Beki receives a vague task and needs to ask Besa for requirements
+  before implementing. Tests cross-agent communication via Discord.
+  In production, step 2 would flow automatically through Discord
+  integration. Here we manually chain the messages.
+agent: beki
+model: sonnet
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  # Step 1: Kirill assigns vague task to Beki
+  - send: >
+      Add rate limiting to the inject API. Check with Besa
+      for the requirements — she has the sprint priorities.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      outcome.action: delegate
+
+  # Step 2: Beki's question reaches Besa (manually injected)
+  - send: >
+      Hey Besa, Kirill asked me to add rate limiting to the
+      inject API. What are the requirements? Max requests per
+      minute? Per agent or global? Should I use a library?
+    from: { platform: discord, user: beki }
+    agent: besa
+    messageType: chat
+    expect:
+      routing.level: interaction
+      outcome.action: respond
+
+  # Step 3: Besa's answer reaches Beki (manually injected)
+  - send: >
+      Use a simple in-memory counter. 60 requests per minute
+      per agent. No library needed — just a Map with TTL cleanup.
+      This is P3, keep it minimal.
+    from: { platform: discord, user: besa }
+    agent: beki
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      outcome.action: delegate
