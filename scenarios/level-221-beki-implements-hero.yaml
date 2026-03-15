@@ -1,0 +1,25 @@
+scenario: "L221: Beki implements hero section, pushes, creates MR"
+description: >
+  Besa assigns Beki the hero section. Beki should implement it in the
+  agenttestproject workspace, commit, push the branch, and create an MR.
+  This tests the full coding workflow end-to-end.
+agent: beki
+type: dogfood
+setup:
+  clear_ticks: true
+steps:
+  - send: >
+      Implement the hero section for our Galatea landing page. Create
+      src/components/Hero.astro with:
+      - A bold headline "Your Team, Amplified" with a CSS gradient effect
+      - A subtitle: "AI teammates that regulate themselves"
+      - A CTA button linking to #pricing
+      Use Tailwind-style utility classes. Import and use it in src/pages/index.astro.
+      Commit, push your branch, and create a merge request.
+    from: { platform: discord, user: besa }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: delegate
+      outcome.response: exists

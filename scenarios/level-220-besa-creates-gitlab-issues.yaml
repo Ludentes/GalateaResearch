@@ -1,0 +1,22 @@
+scenario: "L220: Besa creates GitLab issues for landing page sections"
+description: >
+  Kirill asks Besa to create GitLab issues for the remaining landing page
+  work. Besa should use glab to create real issues in agenttestproject
+  and assign coding tasks to Beki.
+agent: besa
+type: dogfood
+setup:
+  clear_ticks: true
+steps:
+  - send: >
+      Create three GitLab issues in agenttestproject for the landing page:
+      1. "Add hero section with gradient headline" — assigned to Beki
+      2. "Add pricing section with two tiers" — assigned to Beki
+      3. "Add footer with nav links and social icons" — assigned to Beki
+      Each issue should have a clear description and acceptance criteria.
+      Use glab issue create for each one.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      outcome.action: delegate

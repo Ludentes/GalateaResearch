@@ -1,0 +1,24 @@
+scenario: "L222: Beki implements footer section, pushes, creates MR"
+description: >
+  Kirill directly assigns Beki the footer. Tests that Beki can take
+  a task from a non-PM source and still follow the full workflow.
+agent: beki
+type: dogfood
+setup:
+  clear_ticks: true
+steps:
+  - send: >
+      Build a footer component for the landing page. Create
+      src/components/Footer.astro with:
+      - Galatea logo text on the left
+      - Navigation links: Product, Docs, Pricing
+      - Social links: GitHub, Discord
+      - "Built with homeostasis" tagline at the bottom
+      Import it in src/pages/index.astro. Commit, push, and create an MR.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: delegate
+      outcome.response: exists

@@ -1,0 +1,21 @@
+scenario: "L223: Besa reviews latest MR and provides feedback"
+description: >
+  Kirill asks Besa to review the latest MR in agenttestproject.
+  Besa should use glab to view the MR, review the diff, and
+  provide constructive feedback.
+agent: besa
+type: dogfood
+setup:
+  clear_ticks: true
+steps:
+  - send: >
+      Check the latest open MR in agenttestproject and review it.
+      Look at the diff, check if the code matches the issue description,
+      and leave a comment with your feedback. Use glab to view and
+      comment on the MR.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: review
+      outcome.action: delegate

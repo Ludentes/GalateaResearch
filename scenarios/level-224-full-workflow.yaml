@@ -1,0 +1,26 @@
+scenario: "L224: Full workflow — Beki gets task, implements, reports back"
+description: >
+  End-to-end single-agent workflow: Beki receives a concrete task,
+  implements it, pushes, creates MR, and reports what was done.
+  The response should mention the MR or branch.
+agent: beki
+type: dogfood
+setup:
+  clear_ticks: true
+steps:
+  - send: >
+      Add a "How It Works" section to the landing page. Create
+      src/components/HowItWorks.astro with three steps:
+      1. Define your agent from a real teammate
+      2. Agent learns your codebase
+      3. Agent works with self-regulation
+      Use a simple horizontal layout. Import in index.astro.
+      Push and create an MR when done. Report back what you did
+      including the MR link.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: delegate
+      outcome.response: exists
