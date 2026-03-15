@@ -46,7 +46,11 @@ import {
   active = entries.filter((e) => !e.supersededBy)
   console.log("Total:", entries.length, "| Active:", active.length)
   const old = entries.find((e) => e.id === "old-mqtt")
-  console.log("old-mqtt.supersededBy:", old?.supersededBy, "(should be new-mqtt)")
+  console.log(
+    "old-mqtt.supersededBy:",
+    old?.supersededBy,
+    "(should be new-mqtt)",
+  )
 
   const result = await retrieveRelevantFacts("MQTT QoS", testStore)
   console.log()

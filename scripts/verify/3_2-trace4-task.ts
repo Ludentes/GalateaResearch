@@ -1,18 +1,23 @@
+import { rmSync } from "fs"
 import { updateAgentState } from "../../server/agent/agent-state"
 import { tick } from "../../server/agent/tick"
-import { rmSync } from "fs"
 
 const statePath = "/tmp/galatea-trace4-state.json"
-await updateAgentState({
-  lastActivity: new Date().toISOString(),
-  pendingMessages: [{
-    from: "pm",
-    channel: "discord",
-    content: "Implement user profile screen with edit functionality",
-    receivedAt: new Date(Date.now() - 30_000).toISOString(),
-  }],
-  activeTask: { project: "customer-app", topic: "user profile screen" },
-}, statePath)
+await updateAgentState(
+  {
+    lastActivity: new Date().toISOString(),
+    pendingMessages: [
+      {
+        from: "pm",
+        channel: "discord",
+        content: "Implement user profile screen with edit functionality",
+        receivedAt: new Date(Date.now() - 30_000).toISOString(),
+      },
+    ],
+    activeTask: { project: "customer-app", topic: "user profile screen" },
+  },
+  statePath,
+)
 
 const result = await tick("manual", { statePath })
 console.log("Action:", result.action)

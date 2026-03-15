@@ -1,12 +1,12 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
-import type { KnowledgeEntry } from "../types"
 import {
   addDecision,
-  createPipelineRunId,
   capDecisions,
+  createPipelineRunId,
   getDecisionsByStage,
 } from "../decision-trace"
+import type { KnowledgeEntry } from "../types"
 
 function makeEntry(overrides: Partial<KnowledgeEntry> = {}): KnowledgeEntry {
   return {

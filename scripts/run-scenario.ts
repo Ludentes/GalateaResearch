@@ -182,12 +182,7 @@ async function executeStep(
     }
   }
 
-  const verdict = assertStep(
-    body.tick,
-    step.expect,
-    stepIndex,
-    sendLabel,
-  )
+  const verdict = assertStep(body.tick, step.expect, stepIndex, sendLabel)
   verdict.durationMs = Date.now() - stepStart
   verdict.costUsd = body.tick.execution?.costUsd ?? 0
   return verdict

@@ -3,10 +3,10 @@ import { existsSync, rmSync } from "node:fs"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 import {
-  type TickDecisionRecord,
   appendTickRecord,
   getTickRecordPath,
   readTickRecords,
+  type TickDecisionRecord,
 } from "../tick-record"
 
 const TEST_DIR = path.join(__dirname, "fixtures", "test-tick-records")
@@ -57,18 +57,9 @@ describe("TickDecisionRecord", () => {
   })
 
   it("appends multiple records without overwriting", async () => {
-    await appendTickRecord(
-      makeRecord({ tickId: "tick-001" }),
-      TEST_PATH,
-    )
-    await appendTickRecord(
-      makeRecord({ tickId: "tick-002" }),
-      TEST_PATH,
-    )
-    await appendTickRecord(
-      makeRecord({ tickId: "tick-003" }),
-      TEST_PATH,
-    )
+    await appendTickRecord(makeRecord({ tickId: "tick-001" }), TEST_PATH)
+    await appendTickRecord(makeRecord({ tickId: "tick-002" }), TEST_PATH)
+    await appendTickRecord(makeRecord({ tickId: "tick-003" }), TEST_PATH)
     const records = await readTickRecords(TEST_PATH)
     expect(records).toHaveLength(3)
     expect(records[0].tickId).toBe("tick-001")
@@ -76,9 +67,7 @@ describe("TickDecisionRecord", () => {
   })
 
   it("returns empty array when file does not exist", async () => {
-    const records = await readTickRecords(
-      "/tmp/nonexistent-file.jsonl",
-    )
+    const records = await readTickRecords("/tmp/nonexistent-file.jsonl")
     expect(records).toEqual([])
   })
 
@@ -101,12 +90,8 @@ describe("TickDecisionRecord", () => {
   })
 
   it("generates correct agent-specific file path", () => {
-    expect(getTickRecordPath("beki")).toBe(
-      "data/observations/ticks/beki.jsonl",
-    )
-    expect(getTickRecordPath("besa")).toBe(
-      "data/observations/ticks/besa.jsonl",
-    )
+    expect(getTickRecordPath("beki")).toBe("data/observations/ticks/beki.jsonl")
+    expect(getTickRecordPath("besa")).toBe("data/observations/ticks/besa.jsonl")
   })
 
   it("preserves all record fields through serialization", async () => {
@@ -134,13 +119,8 @@ describe("TickDecisionRecord", () => {
     })
     await appendTickRecord(record, TEST_PATH)
     const [restored] = await readTickRecords(TEST_PATH)
-    expect(restored.homeostasis.certainty_alignment?.state).toBe(
-      "LOW",
-    )
-    expect(restored.guidance).toEqual([
-      "Ask before acting",
-      "Check with PM",
-    ])
+    expect(restored.homeostasis.certainty_alignment?.state).toBe("LOW")
+    expect(restored.guidance).toEqual(["Ask before acting", "Check with PM"])
     expect(restored.execution.adapter).toBe("claude-code")
     expect(restored.execution.sessionResumed).toBe(true)
     expect(restored.routing.taskType).toBe("coding")

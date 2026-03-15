@@ -1,8 +1,8 @@
-import { generateText, zodSchema } from "ai"
 import type { LanguageModel, ModelMessage } from "ai"
-import { z } from "zod"
-import { ollamaQueue } from "../providers/ollama-queue"
+import { generateText, zodSchema } from "ai"
+import type { z } from "zod"
 import { emitEvent } from "../observation/emit"
+import { ollamaQueue } from "../providers/ollama-queue"
 
 // ---------------------------------------------------------------------------
 // Types

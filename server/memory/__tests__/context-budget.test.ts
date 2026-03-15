@@ -30,9 +30,9 @@ vi.mock("../../engine/homeostasis-engine", () => ({
 import { existsSync, rmSync } from "node:fs"
 import path from "node:path"
 import { afterEach, beforeEach } from "vitest"
+import { assembleContext } from "../context-assembler"
 import { appendEntries } from "../knowledge-store"
 import type { KnowledgeEntry } from "../types"
-import { assembleContext } from "../context-assembler"
 
 const TEST_DIR = path.join(__dirname, "fixtures", "test-budget")
 const STORE_PATH = path.join(TEST_DIR, "entries.jsonl")
@@ -178,7 +178,8 @@ describe("new sections", () => {
     const result = await assembleContext({
       storePath: STORE_PATH,
       tokenBudget: 12000,
-      operationalSummary: "Current task: Build profile screen. Phase: implementing.",
+      operationalSummary:
+        "Current task: Build profile screen. Phase: implementing.",
     })
 
     expect(result.systemPrompt).toContain("OPERATIONAL CONTEXT")
@@ -203,7 +204,8 @@ describe("new sections", () => {
     const result = await assembleContext({
       storePath: STORE_PATH,
       tokenBudget: 12000,
-      toolDefinitions: "write_file: Write content to a file path\nread_file: Read a file",
+      toolDefinitions:
+        "write_file: Write content to a file path\nread_file: Read a file",
     })
 
     expect(result.systemPrompt).toContain("TOOL DEFINITIONS")
@@ -218,7 +220,13 @@ describe("non-truncatable sections", () => {
   it("always includes rules even with tight budget", async () => {
     // Add a rule entry
     await appendEntries(
-      [makeEntry({ type: "rule", confidence: 1.0, content: "Never push to main" })],
+      [
+        makeEntry({
+          type: "rule",
+          confidence: 1.0,
+          content: "Never push to main",
+        }),
+      ],
       STORE_PATH,
     )
 

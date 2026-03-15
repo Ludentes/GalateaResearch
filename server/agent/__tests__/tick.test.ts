@@ -4,18 +4,21 @@ import path from "node:path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { appendEntries } from "../../memory/knowledge-store"
 import type { KnowledgeEntry } from "../../memory/types"
-import type { ChannelMessage } from "../types"
-import {
-  getAgentState,
-  updateAgentState,
-} from "../agent-state"
+import { getAgentState, updateAgentState } from "../agent-state"
 import { tick } from "../tick"
+import type { ChannelMessage } from "../types"
 
 // Mock the agent loop — tick now delegates to runAgentLoop
 vi.mock("../agent-loop", () => ({
   runAgentLoop: vi.fn().mockResolvedValue({
     text: "Here's a status update on the project.",
-    steps: [{ type: "text", text: "Here's a status update on the project.", durationMs: 10 }],
+    steps: [
+      {
+        type: "text",
+        text: "Here's a status update on the project.",
+        durationMs: 10,
+      },
+    ],
     finishReason: "text",
     totalSteps: 1,
   }),
@@ -251,9 +254,7 @@ describe("tick()", () => {
   })
 
   it("appends TickDecisionRecord on message tick", async () => {
-    const { appendTickRecord } = await import(
-      "../../observation/tick-record"
-    )
+    const { appendTickRecord } = await import("../../observation/tick-record")
     vi.mocked(appendTickRecord).mockClear()
     await updateAgentState(
       {
@@ -300,9 +301,7 @@ describe("tick()", () => {
   })
 
   it("appends TickDecisionRecord on idle tick", async () => {
-    const { appendTickRecord } = await import(
-      "../../observation/tick-record"
-    )
+    const { appendTickRecord } = await import("../../observation/tick-record")
     vi.mocked(appendTickRecord).mockClear()
     await updateAgentState(
       {

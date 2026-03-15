@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { TickTimeline } from "../../../components/agent/TickTimeline"
 import { DimensionHeatmap } from "../../../components/agent/DimensionHeatmap"
+import { TickTimeline } from "../../../components/agent/TickTimeline"
 
 export const Route = createFileRoute("/agent/fleet/$agentId")({
   component: AgentDetailPage,
@@ -12,14 +12,12 @@ function AgentDetailPage() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["fleet-agent", agentId],
-    queryFn: () =>
-      fetch(`/api/agent/fleet/${agentId}`).then((r) => r.json()),
+    queryFn: () => fetch(`/api/agent/fleet/${agentId}`).then((r) => r.json()),
     refetchInterval: 10000,
   })
 
   if (isLoading) return <div className="p-8">Loading...</div>
-  if (error)
-    return <div className="p-8 text-red-500">Error loading agent</div>
+  if (error) return <div className="p-8 text-red-500">Error loading agent</div>
 
   const spec = data?.spec
   const ctx = data?.operationalContext
@@ -60,9 +58,7 @@ function AgentDetailPage() {
                 {spec?.agent?.id && (
                   <div>
                     <span className="font-medium">ID:</span>{" "}
-                    <span className="font-mono text-xs">
-                      {spec.agent.id}
-                    </span>
+                    <span className="font-mono text-xs">{spec.agent.id}</span>
                   </div>
                 )}
                 {spec?.homeostasis && (

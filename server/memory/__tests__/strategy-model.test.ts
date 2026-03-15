@@ -3,13 +3,10 @@ import { describe, expect, it, vi } from "vitest"
 import type { ExtractionStrategyConfig } from "../../engine/config"
 
 vi.mock("../../providers/index", () => ({
-  getModel: vi.fn(
-    (_provider?: string, model?: string) =>
-      ({
-        model: { modelId: model ?? "default-model" },
-        modelName: model ?? "default-model",
-      }),
-  ),
+  getModel: vi.fn((_provider?: string, model?: string) => ({
+    model: { modelId: model ?? "default-model" },
+    modelName: model ?? "default-model",
+  })),
 }))
 
 import { getStrategyModel } from "../strategy-model"

@@ -45,7 +45,8 @@ const alinaEntry: KnowledgeEntry = {
 const domainEntry: KnowledgeEntry = {
   id: "domain-1",
   type: "fact",
-  content: "TypeScript strict mode catches null reference errors at compile time",
+  content:
+    "TypeScript strict mode catches null reference errors at compile time",
   confidence: 0.8,
   entities: [],
   about: { entity: "typescript", type: "domain" },
@@ -65,7 +66,13 @@ const supersededEntry: KnowledgeEntry = {
   supersededBy: "mqtt-1",
 }
 
-const allEntries = [mqttFact, mqttFact2, alinaEntry, domainEntry, supersededEntry]
+const allEntries = [
+  mqttFact,
+  mqttFact2,
+  alinaEntry,
+  domainEntry,
+  supersededEntry,
+]
 
 describe("Fact Retrieval", () => {
   beforeEach(async () => {
@@ -92,9 +99,7 @@ describe("Fact Retrieval", () => {
     )
     expect(result.entries.length).toBeGreaterThan(0)
     expect(result.matchedEntities).toContain("umka")
-    const umkaEntries = result.entries.filter(
-      (e) => e.about?.entity === "umka",
-    )
+    const umkaEntries = result.entries.filter((e) => e.about?.entity === "umka")
     expect(umkaEntries.length).toBeGreaterThan(0)
   })
 

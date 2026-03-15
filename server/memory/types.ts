@@ -57,14 +57,14 @@ export type CurationStatus = "pending" | "approved" | "rejected"
  * When about is omitted, knowledge is assumed to be about the project.
  */
 export type KnowledgeSubjectType =
-  | "user"     // about a specific person (preferences, expertise, habits)
-  | "project"  // about the codebase or project (default when about is omitted)
-  | "agent"    // about the agent itself (capabilities, limitations)
-  | "domain"   // about the problem domain (rules, characteristics)
-  | "team"     // about team dynamics (communication norms, processes)
+  | "user" // about a specific person (preferences, expertise, habits)
+  | "project" // about the codebase or project (default when about is omitted)
+  | "agent" // about the agent itself (capabilities, limitations)
+  | "domain" // about the problem domain (rules, characteristics)
+  | "team" // about team dynamics (communication norms, processes)
 
 export interface KnowledgeAbout {
-  entity: string            // "mary", "paul", "galatea", "expo-project", "mobile-dev"
+  entity: string // "mary", "paul", "galatea", "expo-project", "mobile-dev"
   type: KnowledgeSubjectType
 }
 

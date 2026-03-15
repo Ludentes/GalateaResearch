@@ -129,9 +129,7 @@ describe("Knowledge Extractor", () => {
       "session:test",
     )
     const callArgs = mockGenerateObject.mock.calls[0][0]
-    expect(callArgs.prompt).toContain(
-      "You are a knowledge extraction system",
-    )
+    expect(callArgs.prompt).toContain("You are a knowledge extraction system")
   })
 
   it("bypasses ollamaQueue when useQueue is false", async () => {
@@ -212,7 +210,9 @@ describe("extractWithRetry", () => {
     )
 
     expect(entries).toHaveLength(1)
-    expect(entries[0].content).toBe("Recovered preference for pnpm package manager")
+    expect(entries[0].content).toBe(
+      "Recovered preference for pnpm package manager",
+    )
     expect(mockGenerateObject).toHaveBeenCalledTimes(3)
     expect(mockGenerateObject).toHaveBeenNthCalledWith(
       1,
@@ -299,7 +299,7 @@ describe("Novelty and Origin extraction", () => {
           {
             type: "fact",
             content: "Team probably uses agile methodology for sprints",
-            confidence: 0.90,
+            confidence: 0.9,
             evidence: "Seems like agile from context",
             entities: [],
             novelty: "domain-specific",
@@ -314,7 +314,7 @@ describe("Novelty and Origin extraction", () => {
       "session:test",
       { skipGuard: true },
     )
-    expect(entries[0].confidence).toBe(0.70)
+    expect(entries[0].confidence).toBe(0.7)
   })
 
   it("records novelty-gate decisions on extracted entries", async () => {
@@ -356,7 +356,7 @@ describe("Novelty and Origin extraction", () => {
           {
             type: "fact",
             content: "Team probably uses agile methodology for sprints",
-            confidence: 0.90,
+            confidence: 0.9,
             evidence: "Seems like agile from context",
             entities: [],
             novelty: "domain-specific",
@@ -371,15 +371,13 @@ describe("Novelty and Origin extraction", () => {
       "session:test",
       { skipGuard: true },
     )
-    const capDecisions = result[0].decisions!.filter(
-      (d) => d.action === "cap",
-    )
+    const capDecisions = result[0].decisions!.filter((d) => d.action === "cap")
     expect(capDecisions).toHaveLength(1)
     expect(capDecisions[0].stage).toBe("novelty-gate")
     expect(capDecisions[0].inputs).toEqual(
       expect.objectContaining({
-        originalConfidence: 0.90,
-        cappedTo: 0.70,
+        originalConfidence: 0.9,
+        cappedTo: 0.7,
         origin: "inferred",
       }),
     )
@@ -415,7 +413,7 @@ describe("Novelty and Origin extraction", () => {
     expect(approveDecisions[0].inputs).toEqual(
       expect.objectContaining({
         confidence: 1.0,
-        threshold: 0.90,
+        threshold: 0.9,
       }),
     )
   })

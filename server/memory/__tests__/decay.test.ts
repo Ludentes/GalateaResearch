@@ -2,8 +2,8 @@
 import { existsSync, rmSync } from "node:fs"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import { appendEntries, readEntries } from "../knowledge-store"
 import { runDecay } from "../decay"
+import { appendEntries, readEntries } from "../knowledge-store"
 import type { KnowledgeEntry } from "../types"
 
 const TEST_STORE = path.join(__dirname, "fixtures", "test-decay.jsonl")

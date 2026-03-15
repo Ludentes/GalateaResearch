@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router"
-import { HomeostasisSparkline } from "./HomeostasisSparkline"
 import type { HomeostasisState } from "server/engine/types"
+import { HomeostasisSparkline } from "./HomeostasisSparkline"
 
 interface AgentCardProps {
   id: string

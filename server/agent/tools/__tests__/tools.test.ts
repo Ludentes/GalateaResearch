@@ -1,21 +1,24 @@
 // @vitest-environment node
-import { mkdtemp, writeFile, rm } from "node:fs/promises"
-import path from "node:path"
+import { mkdtemp, rm, writeFile } from "node:fs/promises"
 import os from "node:os"
-import { describe, expect, it, beforeAll, afterAll } from "vitest"
+import path from "node:path"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import {
-  createReadFileTool,
-  createListFilesTool,
-  createWriteFileTool,
-  createBashTool,
   createAllTools,
+  createBashTool,
+  createListFilesTool,
+  createReadFileTool,
+  createWriteFileTool,
 } from "../index"
 
 let tmpDir: string
 
 beforeAll(async () => {
   tmpDir = await mkdtemp(path.join(os.tmpdir(), "agent-tools-"))
-  await writeFile(path.join(tmpDir, "hello.txt"), "line one\nline two\nline three")
+  await writeFile(
+    path.join(tmpDir, "hello.txt"),
+    "line one\nline two\nline three",
+  )
   await writeFile(path.join(tmpDir, "data.json"), '{"key": "value"}')
 })
 
@@ -63,7 +66,10 @@ describe("list_files", () => {
 describe("write_file", () => {
   it("creates a new file", async () => {
     const tool = createWriteFileTool(tmpDir)
-    const result = await tool.execute({ path: "new.txt", content: "hello world" })
+    const result = await tool.execute({
+      path: "new.txt",
+      content: "hello world",
+    })
     expect(result).toContain("File written")
 
     const readTool = createReadFileTool(tmpDir)

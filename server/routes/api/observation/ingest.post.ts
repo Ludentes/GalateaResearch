@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
   const events: ObservationEvent[] = []
 
   // Parse OTLP logs format
-  // @ts-ignore - OTLP payload structure is complex and loosely typed
+  // @ts-expect-error - OTLP payload structure is complex and loosely typed
   if (body.resourceLogs) {
     for (const resourceLog of body.resourceLogs) {
       const source =
@@ -30,7 +30,8 @@ export default defineEventHandler(async (event) => {
 
           // Extract attributes
           for (const attr of logRecord.attributes || []) {
-            const value = attr.value?.stringValue ?? attr.value?.intValue ?? attr.value
+            const value =
+              attr.value?.stringValue ?? attr.value?.intValue ?? attr.value
             attributes[attr.key] = value
           }
 
@@ -62,13 +63,16 @@ export default defineEventHandler(async (event) => {
           const attributes: Record<string, unknown> = {}
 
           for (const attr of span.attributes || []) {
-            const value = attr.value?.stringValue ?? attr.value?.intValue ?? attr.value
+            const value =
+              attr.value?.stringValue ?? attr.value?.intValue ?? attr.value
             attributes[attr.key] = value
           }
 
           events.push({
             id: randomUUID(),
-            timestamp: new Date(Number(span.startTimeUnixNano) / 1_000_000).toISOString(),
+            timestamp: new Date(
+              Number(span.startTimeUnixNano) / 1_000_000,
+            ).toISOString(),
             type: "trace",
             source,
             attributes,

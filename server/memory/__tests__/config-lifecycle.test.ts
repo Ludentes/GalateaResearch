@@ -7,8 +7,8 @@ describe("Evidence-based lifecycle config", () => {
     resetConfigCache()
     const config = loadConfig()
     expect(config.extraction.novelty_filter).toBe(true)
-    expect(config.extraction.inferred_confidence_cap).toBe(0.70)
-    expect(config.extraction.auto_approve_explicit_threshold).toBe(0.90)
+    expect(config.extraction.inferred_confidence_cap).toBe(0.7)
+    expect(config.extraction.auto_approve_explicit_threshold).toBe(0.9)
   })
 
   it("loads artifact_generation settings", () => {
@@ -24,7 +24,9 @@ describe("Evidence-based lifecycle config", () => {
     resetConfigCache()
     const config = loadConfig()
     expect(config.memory.decay.origin_grace_multipliers).toBeDefined()
-    expect(config.memory.decay.origin_grace_multipliers["explicit-statement"]).toBe(2.0)
+    expect(
+      config.memory.decay.origin_grace_multipliers["explicit-statement"],
+    ).toBe(2.0)
     expect(config.memory.decay.origin_grace_multipliers.inferred).toBe(0.5)
   })
 

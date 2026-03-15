@@ -56,11 +56,22 @@ export function classifyTurn(turn: TranscriptTurn): SignalClassification {
   }
 
   // Check noise — only for short messages (greetings in long messages lose to signal)
-  if (NOISE_PATTERNS.greeting.test(text) && text.length < cfg.greeting_max_length) {
-    return { type: "noise", pattern: "greeting", confidence: cfg.noise_confidence }
+  if (
+    NOISE_PATTERNS.greeting.test(text) &&
+    text.length < cfg.greeting_max_length
+  ) {
+    return {
+      type: "noise",
+      pattern: "greeting",
+      confidence: cfg.noise_confidence,
+    }
   }
   if (NOISE_PATTERNS.confirmation.test(text)) {
-    return { type: "noise", pattern: "confirmation", confidence: cfg.noise_confidence }
+    return {
+      type: "noise",
+      pattern: "confirmation",
+      confidence: cfg.noise_confidence,
+    }
   }
 
   // Check signal patterns (first match wins, order matters)
@@ -93,7 +104,10 @@ export function classifyTurn(turn: TranscriptTurn): SignalClassification {
       }
 
       // For "I always/never/usually X", require X to be a known action verb
-      if (type === "preference" && /\bi\s+(always|never|usually)\b/i.test(m[0])) {
+      if (
+        type === "preference" &&
+        /\bi\s+(always|never|usually)\b/i.test(m[0])
+      ) {
         if (!HABIT_VERB_RE.test(text)) {
           continue
         }
@@ -101,9 +115,7 @@ export function classifyTurn(turn: TranscriptTurn): SignalClassification {
 
       // Map option_selection and constraint to decision type
       const effectiveType =
-        type === "option_selection" || type === "constraint"
-          ? "decision"
-          : type
+        type === "option_selection" || type === "constraint" ? "decision" : type
 
       return {
         type: effectiveType as SignalType,

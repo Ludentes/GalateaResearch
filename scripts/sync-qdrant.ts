@@ -7,13 +7,13 @@
  * Usage: pnpm exec tsx scripts/sync-qdrant.ts [--store <path>] [--dry-run]
  */
 
-import { readEntries, batchEmbed } from "../server/memory/knowledge-store"
+import { batchEmbed, readEntries } from "../server/memory/knowledge-store"
 import {
   createQdrantClient,
   ensureCollection,
   isQdrantAvailable,
-  upsertPoints,
   type QdrantPoint,
+  upsertPoints,
 } from "../server/memory/qdrant-client"
 import type { KnowledgeEntry } from "../server/memory/types"
 
@@ -29,7 +29,9 @@ async function main() {
   console.log(`[sync] Reading entries from ${STORE_PATH}`)
   const allEntries = await readEntries(STORE_PATH)
   const active = allEntries.filter((e) => !e.supersededBy)
-  console.log(`[sync] ${allEntries.length} total entries, ${active.length} active (non-superseded)`)
+  console.log(
+    `[sync] ${allEntries.length} total entries, ${active.length} active (non-superseded)`,
+  )
 
   if (active.length === 0) {
     console.log("[sync] Nothing to sync.")
@@ -44,7 +46,9 @@ async function main() {
     console.log("[sync] Ensuring collection exists...")
     await ensureCollection(client)
   }
-  console.log(`[sync] Qdrant OK at ${client.baseUrl}, collection: ${client.collectionName}`)
+  console.log(
+    `[sync] Qdrant OK at ${client.baseUrl}, collection: ${client.collectionName}`,
+  )
 
   if (DRY_RUN) {
     console.log(`[sync] DRY RUN — would upsert ${active.length} points`)
@@ -57,11 +61,15 @@ async function main() {
     const batch = active.slice(i, i + BATCH_SIZE)
     const texts = batch.map((e) => e.content)
 
-    console.log(`[sync] Batch ${Math.floor(i / BATCH_SIZE) + 1}: embedding ${batch.length} entries...`)
+    console.log(
+      `[sync] Batch ${Math.floor(i / BATCH_SIZE) + 1}: embedding ${batch.length} entries...`,
+    )
     const embeddings = await batchEmbed(texts, OLLAMA_URL)
 
     if (!embeddings || embeddings.length !== batch.length) {
-      console.error(`[sync] Embedding failed for batch starting at index ${i} — skipping`)
+      console.error(
+        `[sync] Embedding failed for batch starting at index ${i} — skipping`,
+      )
       continue
     }
 

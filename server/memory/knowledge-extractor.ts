@@ -54,7 +54,12 @@ export const ExtractionSchema = z.object({
           "project-specific: about THIS project/team. domain-specific: specialized technical knowledge. general-knowledge: any competent developer knows this — DO NOT extract these.",
         ),
       origin: z
-        .enum(["explicit-statement", "observed-failure", "observed-pattern", "inferred"])
+        .enum([
+          "explicit-statement",
+          "observed-failure",
+          "observed-pattern",
+          "inferred",
+        ])
         .describe(
           "explicit-statement: user directly said it. observed-failure: lesson from something going wrong. observed-pattern: repeated behavior (2+ times). inferred: you inferred this — USE SPARINGLY.",
         ),
@@ -128,7 +133,7 @@ export async function extractKnowledge(
   const opts: ExtractionOptions =
     typeof optsOrTemp === "number"
       ? { temperature: optsOrTemp }
-      : optsOrTemp ?? {}
+      : (optsOrTemp ?? {})
   const temperature = opts.temperature ?? 0
 
   const transcript = turns

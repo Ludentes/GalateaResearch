@@ -29,11 +29,7 @@ export async function runDecay(storePath: string): Promise<DecayResult> {
 
   const updated: KnowledgeEntry[] = entries.map((entry) => {
     // Skip exempt types, superseded, already archived
-    if (
-      exempt.has(entry.type) ||
-      entry.supersededBy ||
-      entry.archivedAt
-    ) {
+    if (exempt.has(entry.type) || entry.supersededBy || entry.archivedAt) {
       unchanged++
       const reason = exempt.has(entry.type)
         ? "exempt type"
@@ -63,18 +59,11 @@ export async function runDecay(storePath: string): Promise<DecayResult> {
       ? new Date(entry.lastRetrievedAt).getTime()
       : new Date(entry.extractedAt).getTime()
 
-    const daysSince =
-      (now - lastRetrieved) / (1000 * 60 * 60 * 24)
+    const daysSince = (now - lastRetrieved) / (1000 * 60 * 60 * 24)
     const multipliers = cfg.origin_grace_multipliers
     const multiplier =
-      multipliers && entry.origin
-        ? (multipliers[entry.origin] ?? 1.0)
-        : 1.0
-    const graceDays = gracePeriodDays(
-      entry,
-      cfg.decay_start_days,
-      cfg,
-    )
+      multipliers && entry.origin ? (multipliers[entry.origin] ?? 1.0) : 1.0
+    const graceDays = gracePeriodDays(entry, cfg.decay_start_days, cfg)
 
     if (daysSince < graceDays) {
       unchanged++
@@ -93,11 +82,7 @@ export async function runDecay(storePath: string): Promise<DecayResult> {
     }
 
     const decayDays = daysSince - graceDays
-    const factor = effectiveDecayFactor(
-      entry,
-      cfg.decay_factor,
-      cfg,
-    )
+    const factor = effectiveDecayFactor(entry, cfg.decay_factor, cfg)
     const newConfidence = entry.confidence * factor ** decayDays
 
     if (newConfidence < cfg.archive_threshold) {
@@ -168,7 +153,8 @@ function effectiveDecayFactor(
   if (!weighting) return baseFactor
 
   if (impactScore < 0) {
-    const harmPenalty = Math.min(1.0, Math.abs(impactScore)) * weighting.harm_penalty_max
+    const harmPenalty =
+      Math.min(1.0, Math.abs(impactScore)) * weighting.harm_penalty_max
     return baseFactor * (1 - harmPenalty)
   }
 

@@ -1,7 +1,12 @@
 import path from "node:path"
 import type { LanguageModel } from "ai"
-import { getExtractionConfig, getExtractionStrategyConfig } from "../engine/config"
+import {
+  getExtractionConfig,
+  getExtractionStrategyConfig,
+} from "../engine/config"
+import { emitEvent } from "../observation/emit"
 import { getLLMConfig } from "../providers/config"
+import { consolidateToClaudeMd } from "./consolidation"
 import { consolidateExtraction } from "./extraction-consolidation"
 import { getExtractionPrompt } from "./extraction-prompts"
 import { extractHeuristic } from "./heuristic-extractor"
@@ -15,8 +20,6 @@ import { applyNoveltyGateAndApproval } from "./post-extraction"
 import { classifyTurn } from "./signal-classifier"
 import { getStrategyModel } from "./strategy-model"
 import { readTranscript } from "./transcript-reader"
-import { emitEvent } from "../observation/emit"
-import { consolidateToClaudeMd } from "./consolidation"
 import type { ExtractionResult, KnowledgeEntry, TranscriptTurn } from "./types"
 
 export interface ExtractionOptions {

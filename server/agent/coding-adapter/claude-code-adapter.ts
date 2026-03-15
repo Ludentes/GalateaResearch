@@ -1,8 +1,8 @@
 import { query as sdkQuery } from "@anthropic-ai/claude-agent-sdk"
 import type {
-  CodingToolAdapter,
   CodingQueryOptions,
   CodingSessionMessage,
+  CodingToolAdapter,
   CodingTranscriptEntry,
 } from "./types"
 
@@ -41,7 +41,9 @@ export class ClaudeCodeAdapter implements CodingToolAdapter {
     return typeof sdkQuery === "function"
   }
 
-  async *query(options: CodingQueryOptions): AsyncIterable<CodingSessionMessage> {
+  async *query(
+    options: CodingQueryOptions,
+  ): AsyncIterable<CodingSessionMessage> {
     const {
       prompt,
       systemPrompt,
@@ -63,7 +65,10 @@ export class ClaudeCodeAdapter implements CodingToolAdapter {
     }
 
     try {
-      const sdkHooks: Record<string, Array<{ hooks: Array<(...args: unknown[]) => Promise<unknown>> }>> = {}
+      const sdkHooks: Record<
+        string,
+        Array<{ hooks: Array<(...args: unknown[]) => Promise<unknown>> }>
+      > = {}
 
       if (hooks?.preToolUse) {
         const preToolUseHook = hooks.preToolUse
@@ -183,7 +188,8 @@ export class ClaudeCodeAdapter implements CodingToolAdapter {
           }
         } else if (msgType === "result") {
           const subtype = sdkMsg.subtype as string
-          const durationMs = (sdkMsg.duration_ms as number) ?? Date.now() - startTime
+          const durationMs =
+            (sdkMsg.duration_ms as number) ?? Date.now() - startTime
           const costUsd = sdkMsg.total_cost_usd as number | undefined
           const numTurns = sdkMsg.num_turns as number | undefined
           const resultSessionId = sdkMsg.session_id as string | undefined
@@ -204,7 +210,8 @@ export class ClaudeCodeAdapter implements CodingToolAdapter {
             yield {
               type: "result",
               subtype: "budget_exceeded",
-              text: (sdkMsg.errors as string[])?.join("; ") ?? "Budget exceeded",
+              text:
+                (sdkMsg.errors as string[])?.join("; ") ?? "Budget exceeded",
               durationMs,
               costUsd,
               numTurns,
@@ -215,7 +222,8 @@ export class ClaudeCodeAdapter implements CodingToolAdapter {
             yield {
               type: "result",
               subtype: "timeout",
-              text: (sdkMsg.errors as string[])?.join("; ") ?? "Max turns exceeded",
+              text:
+                (sdkMsg.errors as string[])?.join("; ") ?? "Max turns exceeded",
               durationMs,
               costUsd,
               numTurns,

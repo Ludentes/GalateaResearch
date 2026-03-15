@@ -234,44 +234,82 @@ describe("assertStep", () => {
   })
 
   it("handles numeric '> -N' matcher with negative threshold", () => {
-    const negTick = { ...baseTick, execution: { ...baseTick.execution, durationMs: -3 } }
+    const negTick = {
+      ...baseTick,
+      execution: { ...baseTick.execution, durationMs: -3 },
+    }
     const v = assertStep(negTick, { "execution.durationMs": "> -5" }, 0, "test")
     expect(v.pass).toBe(true)
     expect(v.checks[0].pass).toBe(true)
   })
 
   it("handles numeric '< -N' matcher with negative threshold", () => {
-    const negTick = { ...baseTick, execution: { ...baseTick.execution, durationMs: -10 } }
+    const negTick = {
+      ...baseTick,
+      execution: { ...baseTick.execution, durationMs: -10 },
+    }
     const v = assertStep(negTick, { "execution.durationMs": "< -5" }, 0, "test")
     expect(v.pass).toBe(true)
   })
 
   it("handles numeric '>= -N' matcher with negative threshold", () => {
-    const negTick = { ...baseTick, execution: { ...baseTick.execution, durationMs: -5 } }
-    const v = assertStep(negTick, { "execution.durationMs": ">= -5" }, 0, "test")
+    const negTick = {
+      ...baseTick,
+      execution: { ...baseTick.execution, durationMs: -5 },
+    }
+    const v = assertStep(
+      negTick,
+      { "execution.durationMs": ">= -5" },
+      0,
+      "test",
+    )
     expect(v.pass).toBe(true)
   })
 
   it("handles numeric '<= -N' matcher with negative threshold", () => {
-    const negTick = { ...baseTick, execution: { ...baseTick.execution, durationMs: -8 } }
-    const v = assertStep(negTick, { "execution.durationMs": "<= -5" }, 0, "test")
+    const negTick = {
+      ...baseTick,
+      execution: { ...baseTick.execution, durationMs: -8 },
+    }
+    const v = assertStep(
+      negTick,
+      { "execution.durationMs": "<= -5" },
+      0,
+      "test",
+    )
     expect(v.pass).toBe(true)
   })
 
   it("compares positive actual against negative threshold", () => {
-    const v = assertStep(baseTick, { "execution.durationMs": "> -5" }, 0, "test")
+    const v = assertStep(
+      baseTick,
+      { "execution.durationMs": "> -5" },
+      0,
+      "test",
+    )
     expect(v.pass).toBe(true) // 1500 > -5
   })
 
   it("fails numeric '> -N' when actual is less than negative threshold", () => {
-    const negTick = { ...baseTick, execution: { ...baseTick.execution, durationMs: -10 } }
+    const negTick = {
+      ...baseTick,
+      execution: { ...baseTick.execution, durationMs: -10 },
+    }
     const v = assertStep(negTick, { "execution.durationMs": "> -5" }, 0, "test")
     expect(v.pass).toBe(false) // -10 > -5 is false
   })
 
   it("handles decimal negative thresholds", () => {
-    const negTick = { ...baseTick, execution: { ...baseTick.execution, durationMs: -3 } }
-    const v = assertStep(negTick, { "execution.durationMs": "> -5.5" }, 0, "test")
+    const negTick = {
+      ...baseTick,
+      execution: { ...baseTick.execution, durationMs: -3 },
+    }
+    const v = assertStep(
+      negTick,
+      { "execution.durationMs": "> -5.5" },
+      0,
+      "test",
+    )
     expect(v.pass).toBe(true) // -3 > -5.5
   })
 })

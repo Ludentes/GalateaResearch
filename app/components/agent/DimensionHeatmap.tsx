@@ -117,7 +117,10 @@ export function DimensionHeatmap({ ticks }: DimensionHeatmapProps) {
 
         {/* Dimension rows */}
         {DIMENSIONS.map((dimension) => (
-          <div key={dimension} className="flex border-b dark:border-gray-700 last:border-b-0">
+          <div
+            key={dimension}
+            className="flex border-b dark:border-gray-700 last:border-b-0"
+          >
             {/* Dimension label */}
             <div className="w-32 flex-shrink-0 px-3 py-3 text-xs font-medium text-foreground">
               {DIMENSION_LABELS[dimension]}

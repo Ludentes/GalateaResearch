@@ -9,7 +9,13 @@
  * - Golden dataset: experiments/extraction/expected-models.yaml
  * - For cloud strategy: OPENROUTER_API_KEY env var
  */
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
 import path from "node:path"
 import { parse as parseYaml } from "yaml"
 import { resetConfigCache } from "../../server/engine/config"
@@ -31,13 +37,35 @@ interface ExpectedModel {
 
 function extractKeyTerms(expected: string): string[] {
   const stops = new Set([
-    "the", "for", "and", "with", "from", "not", "all", "use", "should",
-    "must", "can", "has", "are", "was", "our", "its", "that", "this",
-    "when", "before", "after", "first", "then", "also", "into",
+    "the",
+    "for",
+    "and",
+    "with",
+    "from",
+    "not",
+    "all",
+    "use",
+    "should",
+    "must",
+    "can",
+    "has",
+    "are",
+    "was",
+    "our",
+    "its",
+    "that",
+    "this",
+    "when",
+    "before",
+    "after",
+    "first",
+    "then",
+    "also",
+    "into",
   ])
   return expected
     .toLowerCase()
-    .replace(/[()—–\-]/g, " ")
+    .replace(/[()—–-]/g, " ")
     .split(/\s+/)
     .filter((w) => w.length >= 3 && !stops.has(w))
     .slice(0, 4)
@@ -73,9 +101,7 @@ async function main() {
     console.error(
       "Usage: pnpm tsx experiments/extraction/run-strategy-eval.ts <developer> [strategy] <session-files...>",
     )
-    console.error(
-      "  strategy: heuristics-only | cloud (default: both)",
-    )
+    console.error("  strategy: heuristics-only | cloud (default: both)")
     process.exit(1)
   }
 
@@ -132,7 +158,10 @@ async function main() {
   }
 
   // Override strategy by temporarily patching config.yaml, then restoring
-  const configPath = path.join(import.meta.dirname, "../../server/engine/config.yaml")
+  const configPath = path.join(
+    import.meta.dirname,
+    "../../server/engine/config.yaml",
+  )
   const originalConfig = readFileSync(configPath, "utf-8")
 
   for (const strategy of strategies) {
@@ -187,16 +216,18 @@ async function main() {
         ? ((totalFound / allExpected.length) * 100).toFixed(1)
         : "N/A"
     console.log(`  Entries extracted: ${entries.length}`)
-    console.log(
-      `  Recall: ${totalFound}/${allExpected.length} (${recallPct}%)`,
-    )
+    console.log(`  Recall: ${totalFound}/${allExpected.length} (${recallPct}%)`)
     console.log(`  Time: ${elapsed}s`)
-    if (sessionErrors > 0) console.log(`  Errors: ${sessionErrors} sessions failed`)
+    if (sessionErrors > 0)
+      console.log(`  Errors: ${sessionErrors} sessions failed`)
 
     // Dump entries for analysis
     const resultsDir = path.join(import.meta.dirname, "results")
     mkdirSync(resultsDir, { recursive: true })
-    const dumpPath = path.join(resultsDir, `${developer}-${strategy}-entries.jsonl`)
+    const dumpPath = path.join(
+      resultsDir,
+      `${developer}-${strategy}-entries.jsonl`,
+    )
     const { writeFileSync: wfs } = await import("node:fs")
     wfs(dumpPath, entries.map((e) => JSON.stringify(e)).join("\n") + "\n")
     console.log(`  Entries saved: ${dumpPath}`)

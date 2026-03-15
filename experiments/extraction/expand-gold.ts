@@ -16,6 +16,7 @@
 import { appendFile, readFile, stat } from "node:fs/promises"
 import { resolve } from "node:path"
 import { config } from "dotenv"
+
 config({ override: true })
 
 import { generateObject } from "ai"
@@ -25,8 +26,7 @@ import { filterSignalTurns } from "../../server/memory/signal-classifier"
 import { readTranscript } from "../../server/memory/transcript-reader"
 import type { TranscriptTurn } from "../../server/memory/types"
 
-const TRANSCRIPT_DIR =
-  "/home/newub/.claude/projects/-home-newub-w-galatea"
+const TRANSCRIPT_DIR = "/home/newub/.claude/projects/-home-newub-w-galatea"
 const OUTPUT_PATH = resolve(import.meta.dirname, "gold-standard.jsonl")
 const MODEL_ID = "gemma3:12b"
 
@@ -167,9 +167,7 @@ async function main() {
       chunks.push(withContext)
     }
 
-    const chunksToProcess = maxChunks
-      ? chunks.slice(0, maxChunks)
-      : chunks
+    const chunksToProcess = maxChunks ? chunks.slice(0, maxChunks) : chunks
 
     console.log(
       `[expand] ${shortId}: ${chunksToProcess.length} chunks to process`,
@@ -246,8 +244,10 @@ async function main() {
   }
 
   const finalCount = existingCount + totalAdded
-  console.log("=" .repeat(60))
-  console.log(`[expand] Done. Added ${totalAdded} items from ${totalChunks} chunks`)
+  console.log("=".repeat(60))
+  console.log(
+    `[expand] Done. Added ${totalAdded} items from ${totalChunks} chunks`,
+  )
   console.log(`[expand] Gold-standard now has ${finalCount} items total`)
   console.log()
   console.log("Next: review new items, then re-seed:")

@@ -11,14 +11,15 @@
  * Env: OPENROUTER_API_KEY required for cloud extraction.
  */
 import { config } from "dotenv"
+
 config({ override: true })
 
-import { parseArgs } from "node:util"
 import { existsSync, mkdirSync } from "node:fs"
 import { readFile } from "node:fs/promises"
 import path from "node:path"
-import { createOpenRouterModel } from "../server/providers/openrouter"
+import { parseArgs } from "node:util"
 import { runExtraction } from "../server/memory/extraction-pipeline"
+import { createOpenRouterModel } from "../server/providers/openrouter"
 
 const { values } = parseArgs({
   options: {
@@ -154,11 +155,13 @@ async function main() {
         continue
       }
 
-      const { turnsProcessed, signalTurns, entriesExtracted, duplicatesSkipped } =
-        result.stats
-      console.log(
-        `  turns: ${turnsProcessed} total, ${signalTurns} signal`,
-      )
+      const {
+        turnsProcessed,
+        signalTurns,
+        entriesExtracted,
+        duplicatesSkipped,
+      } = result.stats
+      console.log(`  turns: ${turnsProcessed} total, ${signalTurns} signal`)
       console.log(
         `  entries: ${entriesExtracted} extracted, ${duplicatesSkipped} dedup skipped, ${result.entries.length} new`,
       )
@@ -174,7 +177,9 @@ async function main() {
   }
 
   console.log("\n" + "=".repeat(60))
-  console.log(`TOTAL: ${sessions.length} sessions, ${totalTurns} turns, ${totalEntries} new entries`)
+  console.log(
+    `TOTAL: ${sessions.length} sessions, ${totalTurns} turns, ${totalEntries} new entries`,
+  )
   console.log(`Store: ${storePath}`)
 }
 

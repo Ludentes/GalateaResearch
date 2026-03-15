@@ -50,9 +50,7 @@ export async function recordOutcome(
         sessionsExposed: e.sessionsExposed,
         sessionsHelpful: e.sessionsHelpful ?? 0,
         sessionsHarmful: e.sessionsHarmful ?? 0,
-        ...(e.impactScore !== undefined
-          ? { impactScore: e.impactScore }
-          : {}),
+        ...(e.impactScore !== undefined ? { impactScore: e.impactScore } : {}),
       },
       pipelineRunId: runId,
     })

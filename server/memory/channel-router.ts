@@ -31,9 +31,7 @@ export function routeEntries(allEntries: KnowledgeEntry[]): RouterResult {
           action: "skip",
           reason: "superseded or archived",
           inputs: {
-            ...(e.supersededBy
-              ? { supersededBy: e.supersededBy }
-              : {}),
+            ...(e.supersededBy ? { supersededBy: e.supersededBy } : {}),
             ...(e.archivedAt ? { archivedAt: e.archivedAt } : {}),
           },
           pipelineRunId: runId,
@@ -62,33 +60,42 @@ export function routeEntries(allEntries: KnowledgeEntry[]): RouterResult {
         skipReasons.push("targetOverride → none")
       } else if (target === "hook") {
         hooks.push(
-          addDecision({ ...entry, targetChannel: "hook" }, {
-            stage: "router",
-            action: "route",
-            reason: "targetOverride → hook",
-            inputs: { channel: "hook", targetOverride: target },
-            pipelineRunId: runId,
-          }),
+          addDecision(
+            { ...entry, targetChannel: "hook" },
+            {
+              stage: "router",
+              action: "route",
+              reason: "targetOverride → hook",
+              inputs: { channel: "hook", targetOverride: target },
+              pipelineRunId: runId,
+            },
+          ),
         )
       } else if (target === "skill") {
         skills.push(
-          addDecision({ ...entry, targetChannel: "skill" }, {
-            stage: "router",
-            action: "route",
-            reason: "targetOverride → skill",
-            inputs: { channel: "skill", targetOverride: target },
-            pipelineRunId: runId,
-          }),
+          addDecision(
+            { ...entry, targetChannel: "skill" },
+            {
+              stage: "router",
+              action: "route",
+              reason: "targetOverride → skill",
+              inputs: { channel: "skill", targetOverride: target },
+              pipelineRunId: runId,
+            },
+          ),
         )
       } else if (target === "claude-md") {
         claudeMd.push(
-          addDecision({ ...entry, targetChannel: "claude-md" }, {
-            stage: "router",
-            action: "route",
-            reason: "targetOverride → claude-md",
-            inputs: { channel: "claude-md", targetOverride: target },
-            pipelineRunId: runId,
-          }),
+          addDecision(
+            { ...entry, targetChannel: "claude-md" },
+            {
+              stage: "router",
+              action: "route",
+              reason: "targetOverride → claude-md",
+              inputs: { channel: "claude-md", targetOverride: target },
+              pipelineRunId: runId,
+            },
+          ),
         )
       }
       continue
@@ -100,13 +107,16 @@ export function routeEntries(allEntries: KnowledgeEntry[]): RouterResult {
       TOOL_CONSTRAINT_PATTERN.test(entry.content)
     ) {
       hooks.push(
-        addDecision({ ...entry, targetChannel: "hook" }, {
-          stage: "router",
-          action: "route",
-          reason: "tool-constraint pattern \u2192 hooks",
-          inputs: { channel: "hook", patternMatched: true },
-          pipelineRunId: runId,
-        }),
+        addDecision(
+          { ...entry, targetChannel: "hook" },
+          {
+            stage: "router",
+            action: "route",
+            reason: "tool-constraint pattern \u2192 hooks",
+            inputs: { channel: "hook", patternMatched: true },
+            pipelineRunId: runId,
+          },
+        ),
       )
       continue
     }
@@ -119,13 +129,16 @@ export function routeEntries(allEntries: KnowledgeEntry[]): RouterResult {
         entry.novelty !== "general-knowledge"
       ) {
         skills.push(
-          addDecision({ ...entry, targetChannel: "skill" }, {
-            stage: "router",
-            action: "route",
-            reason: "approved procedure \u2192 skills",
-            inputs: { channel: "skill" },
-            pipelineRunId: runId,
-          }),
+          addDecision(
+            { ...entry, targetChannel: "skill" },
+            {
+              stage: "router",
+              action: "route",
+              reason: "approved procedure \u2192 skills",
+              inputs: { channel: "skill" },
+              pipelineRunId: runId,
+            },
+          ),
         )
       } else {
         skipped.push(
@@ -153,13 +166,16 @@ export function routeEntries(allEntries: KnowledgeEntry[]): RouterResult {
       !entry.enforcedBy
     ) {
       claudeMd.push(
-        addDecision({ ...entry, targetChannel: "claude-md" }, {
-          stage: "router",
-          action: "route",
-          reason: "approved entry \u2192 CLAUDE.md",
-          inputs: { channel: "claude-md" },
-          pipelineRunId: runId,
-        }),
+        addDecision(
+          { ...entry, targetChannel: "claude-md" },
+          {
+            stage: "router",
+            action: "route",
+            reason: "approved entry \u2192 CLAUDE.md",
+            inputs: { channel: "claude-md" },
+            pipelineRunId: runId,
+          },
+        ),
       )
       continue
     }
@@ -271,7 +287,10 @@ function claudeMdScore(entry: KnowledgeEntry): number {
   return impact * entry.confidence * failureBoost
 }
 
-export function estimatePriorOverlap(content: string, patterns: string[]): number {
+export function estimatePriorOverlap(
+  content: string,
+  patterns: string[],
+): number {
   const regexes = patterns.map((p) => new RegExp(p, "i"))
   const matches = regexes.filter((r) => r.test(content)).length
   return Math.min(1.0, matches / 3)

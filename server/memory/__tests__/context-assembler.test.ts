@@ -129,8 +129,14 @@ describe("Context Assembler", () => {
         currentMessage: "Help me with authentication setup",
         messageHistory: [],
         retrievedFacts: [
-          { content: "Use Clerk for authentication setup on mobile", confidence: 0.95 },
-          { content: "Authentication tokens require proper refresh handling", confidence: 0.9 },
+          {
+            content: "Use Clerk for authentication setup on mobile",
+            confidence: 0.95,
+          },
+          {
+            content: "Authentication tokens require proper refresh handling",
+            confidence: 0.9,
+          },
         ],
       },
     })
@@ -165,13 +171,56 @@ describe("Context Assembler", () => {
   it("uses only retrieved entries for LEARNED KNOWLEDGE section", async () => {
     mkdirSync(TEST_DIR, { recursive: true })
     const entries = [
-      { id: "k1", type: "fact", content: "Kiosk uses Electron and MQTT", confidence: 1.0, entities: [], source: "test", extractedAt: "2026-02-11" },
-      { id: "k2", type: "fact", content: "Kiosk player renders video content", confidence: 0.9, entities: [], source: "test", extractedAt: "2026-02-11" },
-      { id: "u1", type: "fact", content: "Galatea Phase D is complete", confidence: 0.8, entities: [], source: "test", extractedAt: "2026-02-11" },
-      { id: "u2", type: "preference", content: "User prefers pnpm over npm", confidence: 0.95, entities: ["pnpm"], source: "test", extractedAt: "2026-02-11" },
-      { id: "u3", type: "fact", content: "Deploy everything on Linux", confidence: 0.7, entities: [], source: "test", extractedAt: "2026-02-11" },
+      {
+        id: "k1",
+        type: "fact",
+        content: "Kiosk uses Electron and MQTT",
+        confidence: 1.0,
+        entities: [],
+        source: "test",
+        extractedAt: "2026-02-11",
+      },
+      {
+        id: "k2",
+        type: "fact",
+        content: "Kiosk player renders video content",
+        confidence: 0.9,
+        entities: [],
+        source: "test",
+        extractedAt: "2026-02-11",
+      },
+      {
+        id: "u1",
+        type: "fact",
+        content: "Galatea Phase D is complete",
+        confidence: 0.8,
+        entities: [],
+        source: "test",
+        extractedAt: "2026-02-11",
+      },
+      {
+        id: "u2",
+        type: "preference",
+        content: "User prefers pnpm over npm",
+        confidence: 0.95,
+        entities: ["pnpm"],
+        source: "test",
+        extractedAt: "2026-02-11",
+      },
+      {
+        id: "u3",
+        type: "fact",
+        content: "Deploy everything on Linux",
+        confidence: 0.7,
+        entities: [],
+        source: "test",
+        extractedAt: "2026-02-11",
+      },
     ]
-    writeFileSync(TEST_STORE, entries.map((e) => JSON.stringify(e)).join("\n") + "\n")
+    writeFileSync(
+      TEST_STORE,
+      entries.map((e) => JSON.stringify(e)).join("\n") + "\n",
+    )
 
     // Simulate retrieval returning only kiosk-related entries
     const retrieved = entries.filter((e) => e.id === "k1" || e.id === "k2")
@@ -190,13 +239,58 @@ describe("Context Assembler", () => {
 
   it("always includes rules even when retrieval does not return them", async () => {
     mkdirSync(TEST_DIR, { recursive: true })
-    const rule1 = { id: "r1", type: "rule", content: "Never push to main", confidence: 1.0, entities: [], source: "test", extractedAt: "2026-02-11" }
-    const rule2 = { id: "r2", type: "rule", content: "Never deploy on Fridays", confidence: 1.0, entities: [], source: "test", extractedAt: "2026-02-11" }
-    const fact1 = { id: "f1", type: "fact", content: "Kiosk uses MQTT", confidence: 0.9, entities: ["mqtt"], source: "test", extractedAt: "2026-02-11" }
-    const fact2 = { id: "f2", type: "fact", content: "Video playback works on Windows", confidence: 0.8, entities: [], source: "test", extractedAt: "2026-02-11" }
-    const unrelated = { id: "f3", type: "fact", content: "Use Docker Compose for deployment", confidence: 0.7, entities: [], source: "test", extractedAt: "2026-02-11" }
+    const rule1 = {
+      id: "r1",
+      type: "rule",
+      content: "Never push to main",
+      confidence: 1.0,
+      entities: [],
+      source: "test",
+      extractedAt: "2026-02-11",
+    }
+    const rule2 = {
+      id: "r2",
+      type: "rule",
+      content: "Never deploy on Fridays",
+      confidence: 1.0,
+      entities: [],
+      source: "test",
+      extractedAt: "2026-02-11",
+    }
+    const fact1 = {
+      id: "f1",
+      type: "fact",
+      content: "Kiosk uses MQTT",
+      confidence: 0.9,
+      entities: ["mqtt"],
+      source: "test",
+      extractedAt: "2026-02-11",
+    }
+    const fact2 = {
+      id: "f2",
+      type: "fact",
+      content: "Video playback works on Windows",
+      confidence: 0.8,
+      entities: [],
+      source: "test",
+      extractedAt: "2026-02-11",
+    }
+    const unrelated = {
+      id: "f3",
+      type: "fact",
+      content: "Use Docker Compose for deployment",
+      confidence: 0.7,
+      entities: [],
+      source: "test",
+      extractedAt: "2026-02-11",
+    }
 
-    writeFileSync(TEST_STORE, [rule1, rule2, fact1, fact2, unrelated].map((e) => JSON.stringify(e)).join("\n") + "\n")
+    writeFileSync(
+      TEST_STORE,
+      [rule1, rule2, fact1, fact2, unrelated]
+        .map((e) => JSON.stringify(e))
+        .join("\n") + "\n",
+    )
 
     // Retrieval returns only kiosk facts — no rules
     const result = await assembleContext({
@@ -212,17 +306,46 @@ describe("Context Assembler", () => {
     // Only retrieved facts in knowledge
     expect(result.systemPrompt).toContain("Kiosk uses MQTT")
     expect(result.systemPrompt).toContain("Video playback works on Windows")
-    expect(result.systemPrompt).not.toContain("Use Docker Compose for deployment")
+    expect(result.systemPrompt).not.toContain(
+      "Use Docker Compose for deployment",
+    )
   })
 
   it("includes all entries when no retrieved entries provided (backward compat)", async () => {
     mkdirSync(TEST_DIR, { recursive: true })
     const entries = [
-      { id: "1", type: "fact", content: "Fact Alpha", confidence: 0.9, entities: [], source: "test", extractedAt: "2026-02-11" },
-      { id: "2", type: "fact", content: "Fact Beta", confidence: 0.8, entities: [], source: "test", extractedAt: "2026-02-11" },
-      { id: "3", type: "fact", content: "Fact Gamma", confidence: 0.7, entities: [], source: "test", extractedAt: "2026-02-11" },
+      {
+        id: "1",
+        type: "fact",
+        content: "Fact Alpha",
+        confidence: 0.9,
+        entities: [],
+        source: "test",
+        extractedAt: "2026-02-11",
+      },
+      {
+        id: "2",
+        type: "fact",
+        content: "Fact Beta",
+        confidence: 0.8,
+        entities: [],
+        source: "test",
+        extractedAt: "2026-02-11",
+      },
+      {
+        id: "3",
+        type: "fact",
+        content: "Fact Gamma",
+        confidence: 0.7,
+        entities: [],
+        source: "test",
+        extractedAt: "2026-02-11",
+      },
     ]
-    writeFileSync(TEST_STORE, entries.map((e) => JSON.stringify(e)).join("\n") + "\n")
+    writeFileSync(
+      TEST_STORE,
+      entries.map((e) => JSON.stringify(e)).join("\n") + "\n",
+    )
 
     // No retrievedEntries — should include everything
     const result = await assembleContext({ storePath: TEST_STORE })

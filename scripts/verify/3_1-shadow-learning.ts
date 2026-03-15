@@ -1,7 +1,7 @@
 import { ollama } from "ai-sdk-ollama"
+import { rmSync } from "fs"
 import { runExtraction } from "../../server/memory/extraction-pipeline"
 
-import { rmSync } from "fs"
 rmSync("/tmp/galatea-scenario-test", { recursive: true, force: true })
 
 const result = await runExtraction({

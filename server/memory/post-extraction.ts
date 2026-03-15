@@ -54,9 +54,7 @@ export function applyNoveltyGateAndApproval(
   const runId = createPipelineRunId("extraction")
 
   // 0. Content quality gate: drop low-quality entries
-  const qualityFiltered = entries.filter(
-    (e) => !isLowQualityContent(e.content),
-  )
+  const qualityFiltered = entries.filter((e) => !isLowQualityContent(e.content))
 
   // 1. Novelty gate: drop general-knowledge entries
   let filtered = qualityFiltered
@@ -77,7 +75,7 @@ export function applyNoveltyGateAndApproval(
       const originalConfidence = e.confidence
       const capped = {
         ...e,
-        confidence: Math.min(e.confidence, 0.70),
+        confidence: Math.min(e.confidence, 0.7),
       }
       return addDecision(capped, {
         stage: "novelty-gate",
@@ -85,7 +83,7 @@ export function applyNoveltyGateAndApproval(
         reason: "Inferred entry capped at 0.70",
         inputs: {
           originalConfidence,
-          cappedTo: 0.70,
+          cappedTo: 0.7,
           origin: "inferred",
         },
         pipelineRunId: runId,
@@ -96,7 +94,7 @@ export function applyNoveltyGateAndApproval(
 
   // 3. Auto-approve explicit statements with high confidence
   filtered = filtered.map((e) => {
-    if (e.origin === "explicit-statement" && e.confidence >= 0.90) {
+    if (e.origin === "explicit-statement" && e.confidence >= 0.9) {
       const approved = {
         ...e,
         curationStatus: "approved" as const,
@@ -107,7 +105,7 @@ export function applyNoveltyGateAndApproval(
         stage: "extraction",
         action: "auto-approve",
         reason: "Explicit statement with high confidence",
-        inputs: { confidence: e.confidence, threshold: 0.90 },
+        inputs: { confidence: e.confidence, threshold: 0.9 },
         pipelineRunId: runId,
       })
     }

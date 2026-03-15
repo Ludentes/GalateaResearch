@@ -8,8 +8,12 @@
  * Measures if L0-L2 thinking levels improve detection accuracy.
  */
 import { beforeEach, describe, expect, it } from "vitest"
+import {
+  assessDimensions,
+  clearCache,
+  getGuidance,
+} from "../homeostasis-engine"
 import type { AgentContext } from "../types"
-import { assessDimensions, clearCache, getGuidance } from "../homeostasis-engine"
 
 describe("Homeostasis Evaluation - Reference Scenarios", () => {
   beforeEach(() => clearCache())
@@ -18,9 +22,10 @@ describe("Homeostasis Evaluation - Reference Scenarios", () => {
     it("detects LOW when user asks about OAuth2 with no auth facts", () => {
       const ctx: AgentContext = {
         sessionId: "eval-s1",
-        currentMessage: "How do I implement OAuth2 authentication for my mobile app?",
+        currentMessage:
+          "How do I implement OAuth2 authentication for my mobile app?",
         messageHistory: [],
-        retrievedFacts: [] // No facts about auth!
+        retrievedFacts: [], // No facts about auth!
       }
 
       const state = assessDimensions(ctx)
@@ -37,9 +42,15 @@ describe("Homeostasis Evaluation - Reference Scenarios", () => {
         currentMessage: "How do I implement OAuth2 authentication?",
         messageHistory: [],
         retrievedFacts: [
-          { content: "Implement OAuth2 authentication using Clerk, not raw JWT", confidence: 0.95 },
-          { content: "OAuth2 token refresh has issues on mobile auth flows", confidence: 0.85 }
-        ]
+          {
+            content: "Implement OAuth2 authentication using Clerk, not raw JWT",
+            confidence: 0.95,
+          },
+          {
+            content: "OAuth2 token refresh has issues on mobile auth flows",
+            confidence: 0.85,
+          },
+        ],
       }
 
       const state = assessDimensions(ctx)
@@ -56,9 +67,9 @@ describe("Homeostasis Evaluation - Reference Scenarios", () => {
         retrievedFacts: [
           // Irrelevant facts about UI design
           { content: "Use NativeWind for styling", confidence: 0.95 },
-          { content: "Liquid Glass for premium UI on iOS", confidence: 0.90 },
-          { content: "expo-blur is heavy on Android", confidence: 0.85 }
-        ]
+          { content: "Liquid Glass for premium UI on iOS", confidence: 0.9 },
+          { content: "expo-blur is heavy on Android", confidence: 0.85 },
+        ],
       }
 
       const state = assessDimensions(ctx)
@@ -74,12 +85,24 @@ describe("Homeostasis Evaluation - Reference Scenarios", () => {
         sessionId: "eval-s2",
         currentMessage: "This still doesn't work, how do I fix the auth issue?",
         messageHistory: [
-          { role: "user", content: "How do I fix this authentication problem?" },
-          { role: "assistant", content: "Try checking your API keys in the .env file" },
-          { role: "user", content: "That didn't help, how do I fix the auth issue?" },
-          { role: "assistant", content: "Let's verify the Clerk configuration in app/_layout.tsx" },
-          { role: "user", content: "Still broken, how do I fix this?" }
-        ]
+          {
+            role: "user",
+            content: "How do I fix this authentication problem?",
+          },
+          {
+            role: "assistant",
+            content: "Try checking your API keys in the .env file",
+          },
+          {
+            role: "user",
+            content: "That didn't help, how do I fix the auth issue?",
+          },
+          {
+            role: "assistant",
+            content: "Let's verify the Clerk configuration in app/_layout.tsx",
+          },
+          { role: "user", content: "Still broken, how do I fix this?" },
+        ],
       }
 
       const state = assessDimensions(ctx)
@@ -99,8 +122,8 @@ describe("Homeostasis Evaluation - Reference Scenarios", () => {
           { role: "assistant", content: "Installing @clerk/clerk-expo..." },
           { role: "user", content: "Add the ClerkProvider to the layout" },
           { role: "assistant", content: "Added to app/_layout.tsx" },
-          { role: "user", content: "Create the sign-in screen" }
-        ]
+          { role: "user", content: "Create the sign-in screen" },
+        ],
       }
 
       const state = assessDimensions(ctx)
@@ -117,9 +140,9 @@ describe("Homeostasis Evaluation - Reference Scenarios", () => {
         sessionId: "eval-s3",
         currentMessage: "",
         messageHistory: [
-          { role: "user", content: "Working on the auth feature" }
+          { role: "user", content: "Working on the auth feature" },
         ],
-        lastMessageTime: fourHoursAgo
+        lastMessageTime: fourHoursAgo,
       }
 
       const state = assessDimensions(ctx)
@@ -134,9 +157,9 @@ describe("Homeostasis Evaluation - Reference Scenarios", () => {
         sessionId: "eval-s3-healthy",
         currentMessage: "Continue with auth",
         messageHistory: [
-          { role: "user", content: "Working on the auth feature" }
+          { role: "user", content: "Working on the auth feature" },
         ],
-        lastMessageTime: fiveMinutesAgo
+        lastMessageTime: fiveMinutesAgo,
       }
 
       const state = assessDimensions(ctx)
@@ -151,7 +174,7 @@ describe("Homeostasis Evaluation - Reference Scenarios", () => {
         sessionId: "eval-s4",
         currentMessage: "",
         messageHistory: [],
-        hasAssignedTask: false
+        hasAssignedTask: false,
       }
 
       const state = assessDimensions(ctx)
@@ -164,9 +187,9 @@ describe("Homeostasis Evaluation - Reference Scenarios", () => {
         sessionId: "eval-s4-healthy",
         currentMessage: "Let's implement the user profile screen",
         messageHistory: [
-          { role: "user", content: "Need to build the profile feature" }
+          { role: "user", content: "Need to build the profile feature" },
         ],
-        hasAssignedTask: true
+        hasAssignedTask: true,
       }
 
       const state = assessDimensions(ctx)
@@ -180,7 +203,7 @@ describe("Homeostasis Evaluation - Reference Scenarios", () => {
       const ctx: AgentContext = {
         sessionId: "eval-s5",
         currentMessage: "How should I implement the auth flow?",
-        messageHistory: []
+        messageHistory: [],
       }
 
       const state = assessDimensions(ctx)
@@ -199,8 +222,8 @@ describe("Homeostasis Evaluation - Reference Scenarios", () => {
         currentMessage: "Use JWT for mobile auth",
         messageHistory: [],
         retrievedFacts: [
-          { content: "Use Clerk for mobile auth, not JWT", confidence: 0.95 }
-        ]
+          { content: "Use Clerk for mobile auth, not JWT", confidence: 0.95 },
+        ],
       }
 
       const state = assessDimensions(ctx)
@@ -221,13 +244,14 @@ describe("Homeostasis Evaluation - Reference Scenarios", () => {
         retrievedFacts: [
           // 3 irrelevant facts
           { content: "Use NativeWind for styling", confidence: 0.95 },
-          { content: "Liquid Glass for iOS UI", confidence: 0.90 },
-          { content: "expo-blur on Android", confidence: 0.85 }
-        ]
+          { content: "Liquid Glass for iOS UI", confidence: 0.9 },
+          { content: "expo-blur on Android", confidence: 0.85 },
+        ],
       }
 
       // Baseline (old): Just count facts → would say HEALTHY (3 facts)
-      const baselineWouldSay = authQuestion.retrievedFacts!.length > 0 ? "HEALTHY" : "LOW"
+      const baselineWouldSay =
+        authQuestion.retrievedFacts!.length > 0 ? "HEALTHY" : "LOW"
 
       // L1 (new): Check relevance → should say LOW
       const state = assessDimensions(authQuestion)
@@ -249,9 +273,7 @@ describe("Homeostasis Goal Achievement", () => {
     const ctx: AgentContext = {
       sessionId: "scenario-l7",
       currentMessage: "",
-      messageHistory: [
-        { role: "user", content: "Working on feature" }
-      ],
+      messageHistory: [{ role: "user", content: "Working on feature" }],
       lastMessageTime: recentMessage,
     }
 
@@ -267,7 +289,7 @@ describe("Homeostasis Goal Achievement", () => {
       sessionId: "goal-knowledge-gap",
       currentMessage: "How do I implement OAuth2?",
       messageHistory: [],
-      retrievedFacts: []
+      retrievedFacts: [],
     }
 
     const state = assessDimensions(noKnowledgeCtx)
@@ -287,8 +309,8 @@ describe("Homeostasis Goal Achievement", () => {
         { role: "assistant", content: "Check your keys" },
         { role: "user", content: "Still broken, why is auth failing?" },
         { role: "assistant", content: "Verify the config" },
-        { role: "user", content: "That didn't help, how to fix auth?" }
-      ]
+        { role: "user", content: "That didn't help, how to fix auth?" },
+      ],
     }
 
     const state = assessDimensions(stuckCtx)

@@ -1,4 +1,8 @@
-import { type RetrievalConfig, getRetrievalConfig, getStopWords } from "../engine/config"
+import {
+  getRetrievalConfig,
+  getStopWords,
+  type RetrievalConfig,
+} from "../engine/config"
 import { addDecision, createPipelineRunId } from "./decision-trace"
 import { readEntries } from "./knowledge-store"
 import type { KnowledgeEntry } from "./types"
@@ -92,7 +96,9 @@ export async function retrieveRelevantFacts(
         active,
         config.entity_name_min_length,
       )
-      const additionalEntities = (opts?.additionalEntities ?? []).map((e) => e.toLowerCase())
+      const additionalEntities = (opts?.additionalEntities ?? []).map((e) =>
+        e.toLowerCase(),
+      )
       for (const e of additionalEntities) {
         if (!mentionedEntities.includes(e)) mentionedEntities.push(e)
       }
@@ -124,19 +130,34 @@ export async function retrieveRelevantFacts(
   }
 
   if (active.length === 0) {
-    return { entries: [], matchedEntities: [], ...(tracing && { trace: buildTrace(message, storePath, steps, [], [], [], [], config) }) }
+    return {
+      entries: [],
+      matchedEntities: [],
+      ...(tracing && {
+        trace: buildTrace(message, storePath, steps, [], [], [], [], config),
+      }),
+    }
   }
 
   // Stage 1: Entity extraction
-  const mentionedEntities = extractEntityMentions(message, active, config.entity_name_min_length)
-  const additionalEntities = (opts?.additionalEntities ?? []).map((e) => e.toLowerCase())
+  const mentionedEntities = extractEntityMentions(
+    message,
+    active,
+    config.entity_name_min_length,
+  )
+  const additionalEntities = (opts?.additionalEntities ?? []).map((e) =>
+    e.toLowerCase(),
+  )
   for (const e of additionalEntities) {
     if (!mentionedEntities.includes(e)) {
       mentionedEntities.push(e)
     }
   }
 
-  const knownInStore = collectKnownEntities(active, config.entity_name_min_length)
+  const knownInStore = collectKnownEntities(
+    active,
+    config.entity_name_min_length,
+  )
 
   // Stage 2: Entity match (Pass 1)
   const relevant: KnowledgeEntry[] = []
@@ -162,7 +183,11 @@ export async function retrieveRelevantFacts(
           content: entry.content.slice(0, 80),
           action: "pass",
           reason: `entity match: "${matchEntity}"`,
-          values: { entity: matchEntity, about: entry.about?.entity, entities: entry.entities },
+          values: {
+            entity: matchEntity,
+            about: entry.about?.entity,
+            entities: entry.entities,
+          },
         })
       }
     } else if (tracing && mentionedEntities.length > 0) {
@@ -170,7 +195,9 @@ export async function retrieveRelevantFacts(
         id: entry.id,
         content: entry.content.slice(0, 80),
         action: seen.has(entry.id) ? "pass" : "filter",
-        reason: seen.has(entry.id) ? "already matched" : `no entity match (checked: ${mentionedEntities.join(", ")})`,
+        reason: seen.has(entry.id)
+          ? "already matched"
+          : `no entity match (checked: ${mentionedEntities.join(", ")})`,
         values: { about: entry.about?.entity, entities: entry.entities },
       })
     }
@@ -189,7 +216,11 @@ export async function retrieveRelevantFacts(
 
   // Stage 3: Keyword match (Pass 2)
   const stopWords = getStopWords("retrieval")
-  const keywords = extractSignificantKeywords(message, config.keyword_min_length, stopWords)
+  const keywords = extractSignificantKeywords(
+    message,
+    config.keyword_min_length,
+    stopWords,
+  )
   const keywordDetails: TraceDetail[] = []
 
   for (const entry of active) {
@@ -215,7 +246,11 @@ export async function retrieveRelevantFacts(
           content: entry.content.slice(0, 80),
           action: "pass",
           reason: `keyword overlap ${overlap} >= threshold ${config.keyword_overlap_threshold}`,
-          values: { overlap, keywords: [...keywords], threshold: config.keyword_overlap_threshold },
+          values: {
+            overlap,
+            keywords: [...keywords],
+            threshold: config.keyword_overlap_threshold,
+          },
         })
       }
     } else if (tracing) {
@@ -223,16 +258,24 @@ export async function retrieveRelevantFacts(
         id: entry.id,
         content: entry.content.slice(0, 80),
         action: "filter",
-        reason: keywords.size === 0
-          ? "no significant keywords in query"
-          : `keyword overlap ${overlap} < threshold ${config.keyword_overlap_threshold}`,
-        values: { overlap, keywords: [...keywords], threshold: config.keyword_overlap_threshold },
+        reason:
+          keywords.size === 0
+            ? "no significant keywords in query"
+            : `keyword overlap ${overlap} < threshold ${config.keyword_overlap_threshold}`,
+        values: {
+          overlap,
+          keywords: [...keywords],
+          threshold: config.keyword_overlap_threshold,
+        },
       })
     }
   }
 
   if (tracing) {
-    const newPassed = keywordDetails.filter((d) => d.action === "pass" && d.reason !== "already matched in entity pass").length
+    const newPassed = keywordDetails.filter(
+      (d) =>
+        d.action === "pass" && d.reason !== "already matched in entity pass",
+    ).length
     steps.push({
       stage: "keyword_match",
       input: active.length - relevant.length + newPassed,
@@ -281,9 +324,14 @@ export async function retrieveRelevantFacts(
 
   if (tracing) {
     result.trace = buildTrace(
-      message, storePath, steps,
-      mentionedEntities, additionalEntities.map((e) => e.toLowerCase()),
-      [...knownInStore], [...keywords], config,
+      message,
+      storePath,
+      steps,
+      mentionedEntities,
+      additionalEntities.map((e) => e.toLowerCase()),
+      [...knownInStore],
+      [...keywords],
+      config,
     )
   }
 
@@ -321,7 +369,10 @@ function matchesEntity(entry: KnowledgeEntry, entity: string): boolean {
   return false
 }
 
-function collectKnownEntities(entries: KnowledgeEntry[], minLength: number): Set<string> {
+function collectKnownEntities(
+  entries: KnowledgeEntry[],
+  minLength: number,
+): Set<string> {
   const known = new Set<string>()
   for (const e of entries) {
     if (e.about?.entity) known.add(e.about.entity.toLowerCase())

@@ -12,10 +12,16 @@ interface PreToolUseHookOptions {
  */
 export function createPreToolUseHook(
   options: PreToolUseHookOptions,
-): (toolName: string, toolInput: Record<string, unknown>) => Promise<SafetyCheckResult> {
+): (
+  toolName: string,
+  toolInput: Record<string, unknown>,
+) => Promise<SafetyCheckResult> {
   const { workingDirectory, trustLevel } = options
 
-  return async (toolName: string, toolInput: Record<string, unknown>): Promise<SafetyCheckResult> => {
+  return async (
+    toolName: string,
+    toolInput: Record<string, unknown>,
+  ): Promise<SafetyCheckResult> => {
     return checkToolCallSafety({
       toolName,
       toolArgs: toolInput,

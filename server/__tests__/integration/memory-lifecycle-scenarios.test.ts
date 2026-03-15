@@ -8,17 +8,23 @@
  * Each scenario traces an entry through the complete pipeline,
  * verifying behavior at every stage.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { routeEntries } from "../../memory/channel-router"
+import {
+  addToQueue,
+  cleanupStale,
+  getPendingItems,
+  resolveItem,
+} from "../../memory/curation-queue"
+import { runDecay } from "../../memory/decay"
+import { recordOutcome } from "../../memory/feedback-loop"
 import {
   appendEntries,
   readEntries,
   writeEntries,
 } from "../../memory/knowledge-store"
-import { routeEntries } from "../../memory/channel-router"
-import { recordOutcome } from "../../memory/feedback-loop"
-import { runDecay } from "../../memory/decay"
-import { addToQueue, getPendingItems, resolveItem, cleanupStale } from "../../memory/curation-queue"
 import type { KnowledgeEntry } from "../../memory/types"
 
 vi.mock("../../engine/config", async (importOriginal) => {
@@ -42,8 +48,19 @@ vi.mock("../../engine/config", async (importOriginal) => {
       hook_entries_exempt: true,
     }),
     getArtifactConfig: () => ({
-      claude_md: { max_lines: 200, min_confidence: 0.90, require_curation: true, architecture_preamble: "" },
-      skills: { max_count: 3, max_lines_per_skill: 100, min_confidence: 0.85, require_curation: true, staleness_sessions: 3 },
+      claude_md: {
+        max_lines: 200,
+        min_confidence: 0.9,
+        require_curation: true,
+        architecture_preamble: "",
+      },
+      skills: {
+        max_count: 3,
+        max_lines_per_skill: 100,
+        min_confidence: 0.85,
+        require_curation: true,
+        staleness_sessions: 3,
+      },
       hooks: { auto_convert: false, learned_patterns_file: "" },
       prior_overlap: { common_patterns: ["write.*tests?", "git|commit|push"] },
     }),
@@ -69,8 +86,7 @@ vi.mock("../../engine/config", async (importOriginal) => {
       qdrant_url: "http://localhost:6333",
       ollama_embed_url: "http://localhost:11434",
     }),
-    getStopWords: () =>
-      new Set(["the", "and", "for", "that", "this", "with"]),
+    getStopWords: () => new Set(["the", "and", "for", "that", "this", "with"]),
   }
 })
 
@@ -146,7 +162,11 @@ describe("S2: Explicit rule → hook → curation required", () => {
     expect(result.claudeMd.entries).toHaveLength(0)
 
     await addToQueue(
-      { entry: result.hooks.entries[0], action: "approve-hook", reason: "Hook-routed entries require human approval" },
+      {
+        entry: result.hooks.entries[0],
+        action: "approve-hook",
+        reason: "Hook-routed entries require human approval",
+      },
       QUEUE_PATH,
     )
     const pending = await getPendingItems(QUEUE_PATH)
@@ -161,7 +181,7 @@ describe("S3: Observed failure → pending → CLAUDE.md after approval", () => 
     const entry = makeEntry({
       type: "correction",
       content: "Video player back button blocked by z-index of play button div",
-      confidence: 0.90,
+      confidence: 0.9,
       novelty: "project-specific",
       origin: "observed-failure",
       curationStatus: "pending",
@@ -187,7 +207,7 @@ describe("S4: Inferred fact → confidence capped → eventually decays", () => 
     const entry = makeEntry({
       type: "fact",
       content: "Team uses agile methodology",
-      confidence: 0.70,
+      confidence: 0.7,
       novelty: "domain-specific",
       origin: "inferred",
       curationStatus: "pending",
@@ -212,7 +232,7 @@ describe("S5: General knowledge never reaches routing", () => {
     const entry = makeEntry({
       type: "rule",
       content: "Always handle errors in async functions",
-      confidence: 0.60,
+      confidence: 0.6,
       novelty: "general-knowledge",
       origin: "inferred",
       curationStatus: "pending",
@@ -230,10 +250,34 @@ describe("S5: General knowledge never reaches routing", () => {
 describe("S6: Approved procedures become skill files (max 3)", () => {
   it("routes top 3 approved procedures to skills, rest skipped", () => {
     const procs = [
-      makeEntry({ type: "procedure", content: "Copy prototype to server using rsync", confidence: 0.95, origin: "explicit-statement", curationStatus: "approved" }),
-      makeEntry({ type: "procedure", content: "Run setup.sh on first install on target server", confidence: 0.92, origin: "explicit-statement", curationStatus: "approved" }),
-      makeEntry({ type: "procedure", content: "Build Docker images for cms, light-sim, guide-app", confidence: 0.90, origin: "observed-pattern", curationStatus: "approved" }),
-      makeEntry({ type: "procedure", content: "Deploy using docker-compose up -d on production", confidence: 0.93, origin: "explicit-statement", curationStatus: "approved" }),
+      makeEntry({
+        type: "procedure",
+        content: "Copy prototype to server using rsync",
+        confidence: 0.95,
+        origin: "explicit-statement",
+        curationStatus: "approved",
+      }),
+      makeEntry({
+        type: "procedure",
+        content: "Run setup.sh on first install on target server",
+        confidence: 0.92,
+        origin: "explicit-statement",
+        curationStatus: "approved",
+      }),
+      makeEntry({
+        type: "procedure",
+        content: "Build Docker images for cms, light-sim, guide-app",
+        confidence: 0.9,
+        origin: "observed-pattern",
+        curationStatus: "approved",
+      }),
+      makeEntry({
+        type: "procedure",
+        content: "Deploy using docker-compose up -d on production",
+        confidence: 0.93,
+        origin: "explicit-statement",
+        curationStatus: "approved",
+      }),
     ]
 
     const result = routeEntries(procs)
@@ -248,7 +292,7 @@ describe("S7: Harmful outcome → accelerated decay", () => {
   it("entry with negative impactScore decays faster than neutral", async () => {
     const harmful = makeEntry({
       content: "Always use event-based sync instead of time-based",
-      confidence: 0.90,
+      confidence: 0.9,
       origin: "explicit-statement",
       curationStatus: "approved",
       sessionsExposed: 3,
@@ -259,7 +303,7 @@ describe("S7: Harmful outcome → accelerated decay", () => {
     })
     const neutral = makeEntry({
       content: "Project uses TypeScript strict mode",
-      confidence: 0.90,
+      confidence: 0.9,
       origin: "explicit-statement",
       curationStatus: "approved",
       sessionsExposed: 3,
@@ -286,7 +330,7 @@ describe("S8: Helpful outcome → confidence strengthened", () => {
     const entry = makeEntry({
       type: "preference",
       content: "Use NativeWind for styling in Expo projects",
-      confidence: 0.90,
+      confidence: 0.9,
       origin: "explicit-statement",
       curationStatus: "approved",
       sessionsExposed: 2,
@@ -401,7 +445,7 @@ describe("S10: Full lifecycle across multiple sessions", () => {
     const inferredFact = makeEntry({
       type: "fact",
       content: "Team probably does code reviews",
-      confidence: 0.70,
+      confidence: 0.7,
       novelty: "domain-specific",
       origin: "inferred",
       curationStatus: "pending",
@@ -418,12 +462,18 @@ describe("S10: Full lifecycle across multiple sessions", () => {
     expect(afterDecay[0].archivedAt).toBeDefined()
 
     await addToQueue(
-      { entry: inferredFact, action: "approve-entry", reason: "Pending review" },
+      {
+        entry: inferredFact,
+        action: "approve-entry",
+        reason: "Pending review",
+      },
       QUEUE_PATH,
     )
     const { readFileSync } = await import("node:fs")
     const queue = JSON.parse(readFileSync(QUEUE_PATH, "utf-8"))
-    queue.items[0].proposedAt = new Date(Date.now() - 31 * 86400000).toISOString()
+    queue.items[0].proposedAt = new Date(
+      Date.now() - 31 * 86400000,
+    ).toISOString()
     writeFileSync(QUEUE_PATH, JSON.stringify(queue))
 
     const cleaned = await cleanupStale(QUEUE_PATH)
@@ -488,9 +538,7 @@ describe("S12: CLAUDE.md truncation traced with budget info", () => {
     // Skipped entries should have router decisions with budget info
     const budgetSkipped = result.skipped.entries.filter((e) =>
       e.decisions?.some(
-        (d) =>
-          d.stage === "router" &&
-          d.reason.includes("line budget"),
+        (d) => d.stage === "router" && d.reason.includes("line budget"),
       ),
     )
     expect(budgetSkipped.length).toBeGreaterThan(0)
@@ -525,8 +573,7 @@ describe("S13: Full decision chain readable on entry", () => {
         {
           stage: "extraction" as const,
           action: "auto-approve" as const,
-          reason:
-            "explicit-statement with confidence >= threshold",
+          reason: "explicit-statement with confidence >= threshold",
           inputs: { confidence: 0.95, threshold: 0.9 },
           timestamp: new Date().toISOString(),
           pipelineRunId: "extraction:1234:abcd1234",
@@ -546,9 +593,7 @@ describe("S13: Full decision chain readable on entry", () => {
 
     // Extraction decisions share a pipelineRunId
     const extractionRuns = routed
-      .decisions!.filter((d) =>
-        d.pipelineRunId.startsWith("extraction:"),
-      )
+      .decisions!.filter((d) => d.pipelineRunId.startsWith("extraction:"))
       .map((d) => d.pipelineRunId)
     expect(new Set(extractionRuns).size).toBe(1)
   })
@@ -585,16 +630,12 @@ describe("S15: Decision array capped at max length", () => {
       stage: "decay" as const,
       action: "decay" as const,
       reason: `historical run ${i}`,
-      timestamp: new Date(
-        Date.now() - i * 86400000,
-      ).toISOString(),
+      timestamp: new Date(Date.now() - i * 86400000).toISOString(),
       pipelineRunId: `decay:${i}:abcdef00`,
     }))
 
     const entry = makeEntry({
-      extractedAt: new Date(
-        Date.now() - 60 * 86400000,
-      ).toISOString(),
+      extractedAt: new Date(Date.now() - 60 * 86400000).toISOString(),
       decisions,
     })
     await appendEntries([entry], STORE_PATH)

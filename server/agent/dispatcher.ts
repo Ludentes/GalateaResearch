@@ -29,9 +29,7 @@ export function clearHandlers(): void {
 // Dispatch
 // ---------------------------------------------------------------------------
 
-export async function dispatchMessage(
-  message: ChannelMessage,
-): Promise<void> {
+export async function dispatchMessage(message: ChannelMessage): Promise<void> {
   const handler = handlers.get(message.channel)
   if (!handler) {
     throw new Error(`No handler registered for channel: ${message.channel}`)

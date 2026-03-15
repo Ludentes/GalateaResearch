@@ -21,7 +21,10 @@ vi.mock("../../engine/config", async (importOriginal) => {
         require_curation: true,
         staleness_sessions: 3,
       },
-      hooks: { auto_convert: false, learned_patterns_file: "learned-hooks.json" },
+      hooks: {
+        auto_convert: false,
+        learned_patterns_file: "learned-hooks.json",
+      },
       prior_overlap: {
         common_patterns: [
           "write.*tests?",
@@ -35,8 +38,8 @@ vi.mock("../../engine/config", async (importOriginal) => {
   }
 })
 
-import { classifyTurn } from "../signal-classifier"
 import { extractHeuristic } from "../heuristic-extractor"
+import { classifyTurn } from "../signal-classifier"
 
 const user = (content: string): TranscriptTurn => ({ role: "user", content })
 
@@ -251,8 +254,7 @@ describe("extractHeuristic", () => {
     it("resolves 'Let's use the second one' via ordinal", () => {
       const preceding: TranscriptTurn = {
         role: "assistant",
-        content:
-          "I suggest:\n1. EventEmitter2\n2. RxJS\n3. Custom events",
+        content: "I suggest:\n1. EventEmitter2\n2. RxJS\n3. Custom events",
       }
       const turn = user("Let's use the second one")
       const classification = classifyTurn(turn)

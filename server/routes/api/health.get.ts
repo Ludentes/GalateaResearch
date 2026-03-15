@@ -1,8 +1,8 @@
 import { defineEventHandler } from "h3"
 import {
-  getServerUptime,
-  getServerStartTime,
   formatUptime,
+  getServerStartTime,
+  getServerUptime,
 } from "../../utils/startup-time"
 
 export default defineEventHandler(() => {

@@ -7,9 +7,9 @@
  */
 import { readFileSync } from "node:fs"
 import path from "node:path"
-import { classifyTurn } from "../../server/memory/signal-classifier"
 import { extractHeuristic } from "../../server/memory/heuristic-extractor"
 import { applyNoveltyGateAndApproval } from "../../server/memory/post-extraction"
+import { classifyTurn } from "../../server/memory/signal-classifier"
 import type { KnowledgeEntry, TranscriptTurn } from "../../server/memory/types"
 
 interface RegressionCase {
@@ -166,7 +166,9 @@ function runCase(tc: RegressionCase): TestResult {
 
   if (
     tc.expected.contentContains &&
-    !entry.content.toLowerCase().includes(tc.expected.contentContains.toLowerCase())
+    !entry.content
+      .toLowerCase()
+      .includes(tc.expected.contentContains.toLowerCase())
   ) {
     failures.push(
       `content should contain "${tc.expected.contentContains}", got: "${entry.content.slice(0, 80)}"`,
@@ -200,7 +202,10 @@ function runCase(tc: RegressionCase): TestResult {
 
   if (failures.length > 0) {
     result.pass = false
-    result.expected = checks.join(", ") + " + " + failures.map((f) => f.split(":")[0]).join(", ")
+    result.expected =
+      checks.join(", ") +
+      " + " +
+      failures.map((f) => f.split(":")[0]).join(", ")
     result.actual = failures.join("; ")
   } else {
     result.expected = checks.join(", ") || "extracted"
@@ -211,10 +216,7 @@ function runCase(tc: RegressionCase): TestResult {
 }
 
 function main() {
-  const dataPath = path.join(
-    import.meta.dirname,
-    "heuristic-regression.jsonl",
-  )
+  const dataPath = path.join(import.meta.dirname, "heuristic-regression.jsonl")
   const lines = readFileSync(dataPath, "utf-8").trim().split("\n")
   const cases: RegressionCase[] = lines.map((l) => JSON.parse(l))
 
@@ -255,14 +257,14 @@ function main() {
 
   // Summary
   console.log("=".repeat(60))
-  console.log(`TOTAL: ${totalPass}/${totalPass + totalFail} pass (${((totalPass / (totalPass + totalFail)) * 100).toFixed(1)}%)`)
+  console.log(
+    `TOTAL: ${totalPass}/${totalPass + totalFail} pass (${((totalPass / (totalPass + totalFail)) * 100).toFixed(1)}%)`,
+  )
   console.log(`  Pass: ${totalPass}`)
   console.log(`  Fail: ${totalFail}`)
 
   // Recall gap summary
-  const recallGaps = results.filter(
-    (r) => r.category === "recall-gap",
-  )
+  const recallGaps = results.filter((r) => r.category === "recall-gap")
   const recallGapTypes = new Map<string, number>()
   for (const r of recallGaps) {
     const tc = cases.find((c) => c.scenario === r.scenario)

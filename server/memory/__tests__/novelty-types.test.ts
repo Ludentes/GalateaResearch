@@ -1,6 +1,10 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
-import type { KnowledgeEntry, KnowledgeNovelty, KnowledgeOrigin } from "../types"
+import type {
+  KnowledgeEntry,
+  KnowledgeNovelty,
+  KnowledgeOrigin,
+} from "../types"
 
 describe("KnowledgeEntry novelty and origin types", () => {
   it("accepts novelty field with valid values", () => {
@@ -25,7 +29,9 @@ describe("KnowledgeEntry novelty and origin types", () => {
 
   it("accepts all curation statuses", () => {
     const statuses: Array<KnowledgeEntry["curationStatus"]> = [
-      "pending", "approved", "rejected",
+      "pending",
+      "approved",
+      "rejected",
     ]
     expect(statuses).toHaveLength(3)
   })

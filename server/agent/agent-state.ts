@@ -42,9 +42,7 @@ export async function removeMessage(
   statePath = DEFAULT_STATE_PATH,
 ): Promise<void> {
   const state = await getAgentState(statePath)
-  state.pendingMessages = state.pendingMessages.filter(
-    (m) => m.id !== msg.id,
-  )
+  state.pendingMessages = state.pendingMessages.filter((m) => m.id !== msg.id)
   await updateAgentState(state, statePath)
 }
 

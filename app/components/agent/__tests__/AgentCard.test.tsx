@@ -1,7 +1,7 @@
-import { describe, it, expect, vi } from "vitest"
 import { render, screen } from "@testing-library/react"
-import { AgentCard } from "../AgentCard"
 import type { HomeostasisState } from "server/engine/types"
+import { describe, expect, it, vi } from "vitest"
+import { AgentCard } from "../AgentCard"
 
 // Mock the Link component from @tanstack/react-router
 vi.mock("@tanstack/react-router", async () => {

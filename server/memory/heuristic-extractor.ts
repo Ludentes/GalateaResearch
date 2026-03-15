@@ -302,7 +302,7 @@ export function extractHeuristic(
 
   let content: string
   let knowledgeType = mapping.type
-  let confidence = mapping.confidence
+  const confidence = mapping.confidence
 
   if (classification.type === "procedure") {
     // Try splitting numbered list items and re-classifying each

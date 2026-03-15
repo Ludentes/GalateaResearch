@@ -1,13 +1,13 @@
 // @vitest-environment node
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
-import {
-  closeTestDb,
-  ensureOllama,
-  ensureTestDb,
-} from "./helpers/setup"
-import { type TestWorld, scenario } from "./helpers/test-world"
-import { appendEntries, readEntries, supersedeEntry } from "../../memory/knowledge-store"
 import { assembleContext } from "../../memory/context-assembler"
+import {
+  appendEntries,
+  readEntries,
+  supersedeEntry,
+} from "../../memory/knowledge-store"
+import { closeTestDb, ensureOllama, ensureTestDb } from "./helpers/setup"
+import { scenario, type TestWorld } from "./helpers/test-world"
 
 describe("Layer 2: Umka session ends, knowledge extracted", () => {
   let world: TestWorld
@@ -55,8 +55,7 @@ describe("Layer 2: Umka session ends, knowledge extracted", () => {
   it("deduplicates on re-extraction with force", async () => {
     const result = await world.extract({ force: true })
     const totalFiltered =
-      (result.stats.consolidationFiltered ?? 0) +
-      result.stats.duplicatesSkipped
+      (result.stats.consolidationFiltered ?? 0) + result.stats.duplicatesSkipped
     expect(totalFiltered).toBeGreaterThan(0)
   }, 120_000)
 
@@ -114,9 +113,33 @@ describe("Layer 2: Umka session ends, knowledge extracted", () => {
     const content = "Use pnpm in all projects"
     await appendEntries(
       [
-        { id: crypto.randomUUID(), type: "preference", content, confidence: 0.95, entities: [], source: "session:consol-1", extractedAt: new Date().toISOString() },
-        { id: crypto.randomUUID(), type: "preference", content, confidence: 0.90, entities: [], source: "session:consol-2", extractedAt: new Date().toISOString() },
-        { id: crypto.randomUUID(), type: "preference", content, confidence: 0.92, entities: [], source: "session:consol-3", extractedAt: new Date().toISOString() },
+        {
+          id: crypto.randomUUID(),
+          type: "preference",
+          content,
+          confidence: 0.95,
+          entities: [],
+          source: "session:consol-1",
+          extractedAt: new Date().toISOString(),
+        },
+        {
+          id: crypto.randomUUID(),
+          type: "preference",
+          content,
+          confidence: 0.9,
+          entities: [],
+          source: "session:consol-2",
+          extractedAt: new Date().toISOString(),
+        },
+        {
+          id: crypto.randomUUID(),
+          type: "preference",
+          content,
+          confidence: 0.92,
+          entities: [],
+          source: "session:consol-3",
+          extractedAt: new Date().toISOString(),
+        },
       ],
       world.storePath,
     )

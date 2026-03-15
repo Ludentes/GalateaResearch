@@ -106,9 +106,7 @@ describe("formatHomeostasisState", () => {
     expect(result).not.toContain("assessed_at")
     expect(result).not.toContain("assessment_method")
     // Should only contain dimension status lines
-    const lines = result
-      .split("\n")
-      .filter((l) => l.trim().length > 0)
+    const lines = result.split("\n").filter((l) => l.trim().length > 0)
     expect(lines.every((l) => l.startsWith("- **"))).toBe(true)
   })
 })

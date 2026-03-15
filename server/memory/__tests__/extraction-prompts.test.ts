@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
 import {
-  getExtractionPrompt,
   buildConsolidationPrompt,
+  getExtractionPrompt,
 } from "../extraction-prompts"
 
 describe("getExtractionPrompt", () => {

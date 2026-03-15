@@ -1,9 +1,10 @@
 // @vitest-environment node
-import { describe, expect, it, beforeEach, afterEach, vi } from "vitest"
-import { formatDuration, getDiffStat } from "../utils"
+
+import { execSync } from "node:child_process"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { execSync } from "node:child_process"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { formatDuration, getDiffStat } from "../utils"
 
 describe("formatDuration", () => {
   it("returns 0ms for zero milliseconds", () => {

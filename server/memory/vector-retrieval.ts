@@ -115,7 +115,9 @@ export async function retrieveVectorFacts(
   // Step 1: Check Qdrant availability
   const qdrantUp = await isQdrantAvailable(client)
   if (!qdrantUp) {
-    console.warn("[retrieval] Qdrant unavailable — falling back to keyword retrieval")
+    console.warn(
+      "[retrieval] Qdrant unavailable — falling back to keyword retrieval",
+    )
     return {
       entries: hardRules.slice(0, maxEntries).map((e) =>
         addDecision(e, {
@@ -133,7 +135,9 @@ export async function retrieveVectorFacts(
   // Step 2: Embed query
   const embeddings = await batchEmbed([query], ollamaUrl)
   if (!embeddings || embeddings.length === 0) {
-    console.warn("[retrieval] Embedding failed — falling back to keyword retrieval")
+    console.warn(
+      "[retrieval] Embedding failed — falling back to keyword retrieval",
+    )
     return {
       entries: hardRules.slice(0, maxEntries).map((e) =>
         addDecision(e, {
@@ -152,10 +156,12 @@ export async function retrieveVectorFacts(
 
   // Step 3: Search Qdrant
   const filter = opts?.entityFilter
-    ? { should: [
-        { key: "about_entity", match: { value: opts.entityFilter } },
-        { key: "entities", match: { value: opts.entityFilter } },
-      ] }
+    ? {
+        should: [
+          { key: "about_entity", match: { value: opts.entityFilter } },
+          { key: "entities", match: { value: opts.entityFilter } },
+        ],
+      }
     : undefined
 
   let searchResults: QdrantSearchResult[]

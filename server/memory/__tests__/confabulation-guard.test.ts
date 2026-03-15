@@ -76,7 +76,11 @@ describe("invented about.entity detection", () => {
       content: "Jennifer prefers dark mode",
     })
 
-    const result = validateExtraction([entry], SOURCE_TEXT, ["alina", "paul", "mary"])
+    const result = validateExtraction([entry], SOURCE_TEXT, [
+      "alina",
+      "paul",
+      "mary",
+    ])
 
     expect(result.entries[0].about).toBeUndefined()
     expect(result.modified).toBe(1)
@@ -124,7 +128,9 @@ describe("uniform confidence detection", () => {
 
     const result = validateExtraction(entries, SOURCE_TEXT)
 
-    expect(result.warnings.some((w) => w.includes("Uniform confidence"))).toBe(true)
+    expect(result.warnings.some((w) => w.includes("Uniform confidence"))).toBe(
+      true,
+    )
     // Non-rule entries should be adjusted
     for (const entry of result.entries) {
       expect(entry.confidence).toBe(0.7)
@@ -133,10 +139,30 @@ describe("uniform confidence detection", () => {
 
   it("keeps rules at confidence 1.0 during adjustment", () => {
     const entries = [
-      makeEntry({ id: "r1", type: "rule", confidence: 1.0, entities: ["mqtt"] }),
-      makeEntry({ id: "f1", type: "fact", confidence: 1.0, entities: ["mqtt"] }),
-      makeEntry({ id: "f2", type: "fact", confidence: 1.0, entities: ["mqtt"] }),
-      makeEntry({ id: "f3", type: "fact", confidence: 1.0, entities: ["mqtt"] }),
+      makeEntry({
+        id: "r1",
+        type: "rule",
+        confidence: 1.0,
+        entities: ["mqtt"],
+      }),
+      makeEntry({
+        id: "f1",
+        type: "fact",
+        confidence: 1.0,
+        entities: ["mqtt"],
+      }),
+      makeEntry({
+        id: "f2",
+        type: "fact",
+        confidence: 1.0,
+        entities: ["mqtt"],
+      }),
+      makeEntry({
+        id: "f3",
+        type: "fact",
+        confidence: 1.0,
+        entities: ["mqtt"],
+      }),
     ]
 
     const result = validateExtraction(entries, SOURCE_TEXT)
@@ -156,7 +182,9 @@ describe("uniform confidence detection", () => {
 
     const result = validateExtraction(entries, SOURCE_TEXT)
 
-    expect(result.warnings.filter((w) => w.includes("Uniform confidence"))).toHaveLength(0)
+    expect(
+      result.warnings.filter((w) => w.includes("Uniform confidence")),
+    ).toHaveLength(0)
   })
 })
 
@@ -189,7 +217,9 @@ describe("type distribution check", () => {
 
     const result = validateExtraction(entries, SOURCE_TEXT)
 
-    expect(result.warnings.filter((w) => w.includes("misclassified"))).toHaveLength(0)
+    expect(
+      result.warnings.filter((w) => w.includes("misclassified")),
+    ).toHaveLength(0)
   })
 })
 

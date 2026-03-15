@@ -129,12 +129,12 @@ describe("Signal Classifier", () => {
     })
 
     it("detects imperative rules after conversational connectors (S2)", () => {
-      expect(
-        classifyTurn(user("Also, never deploy on Fridays")).type,
-      ).toBe("imperative_rule")
-      expect(
-        classifyTurn(user("And also; never skip code review")).type,
-      ).toBe("imperative_rule")
+      expect(classifyTurn(user("Also, never deploy on Fridays")).type).toBe(
+        "imperative_rule",
+      )
+      expect(classifyTurn(user("And also; never skip code review")).type).toBe(
+        "imperative_rule",
+      )
       expect(
         classifyTurn(user("One more thing: always run migrations")).type,
       ).toBe("imperative_rule")
@@ -142,9 +142,9 @@ describe("Signal Classifier", () => {
 
     it("prefers policy over imperative_rule for we-prefixed statements", () => {
       // "We never" matches policy first
-      expect(
-        classifyTurn(user("We never push to main directly")).type,
-      ).toBe("policy")
+      expect(classifyTurn(user("We never push to main directly")).type).toBe(
+        "policy",
+      )
     })
 
     it("prefers preference over imperative_rule for I-prefixed statements", () => {

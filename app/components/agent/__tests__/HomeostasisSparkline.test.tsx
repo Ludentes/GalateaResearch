@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest"
 import { render, screen } from "@testing-library/react"
-import { HomeostasisSparkline } from "../HomeostasisSparkline"
 import type { HomeostasisState } from "server/engine/types"
+import { describe, expect, it } from "vitest"
+import { HomeostasisSparkline } from "../HomeostasisSparkline"
 
 describe("HomeostasisSparkline", () => {
   const mockHomeostasis: HomeostasisState = {

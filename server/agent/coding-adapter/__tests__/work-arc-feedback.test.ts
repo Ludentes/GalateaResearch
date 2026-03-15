@@ -1,7 +1,7 @@
 // @vitest-environment node
-import { describe, expect, it, vi, beforeEach } from "vitest"
-import type { CodingToolAdapter, CodingSessionMessage } from "../types"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { AssembledContext } from "../../../memory/types"
+import type { CodingSessionMessage, CodingToolAdapter } from "../types"
 
 // Mock the feedback loop
 const mockRecordOutcome = vi.fn().mockResolvedValue(undefined)

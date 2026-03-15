@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { useQuery, useMutation } from "@tanstack/react-query"
-import { SettingsGroup } from "@/components/SettingsGroup"
+import { useEffect, useState } from "react"
 import { SettingInput } from "@/components/SettingInput"
 import { SettingSelect } from "@/components/SettingSelect"
+import { SettingsGroup } from "@/components/SettingsGroup"
 
 export const Route = createFileRoute("/agent/settings")({
   component: SettingsPage,

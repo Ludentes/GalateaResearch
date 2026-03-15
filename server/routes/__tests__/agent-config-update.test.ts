@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest"
+import { describe, expect, it } from "vitest"
 import { validateConfigUpdate } from "../../routes/api/agent/config-validation"
 
 // @vitest-environment node

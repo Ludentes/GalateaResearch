@@ -166,8 +166,7 @@ export async function runClaudeCodeRespond(opts: {
         } else {
           // SDK returned an error result — will be marked as ok: false
           const errors = msg.errors as string[] | undefined
-          resultText =
-            errors?.join("; ") ?? `Agent SDK ${subtype || "error"}`
+          resultText = errors?.join("; ") ?? `Agent SDK ${subtype || "error"}`
           // Throw so it goes through the error path with ok: false
           throw new Error(resultText)
         }

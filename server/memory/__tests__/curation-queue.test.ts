@@ -1,6 +1,7 @@
 // @vitest-environment node
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 vi.mock("../../engine/config", async (importOriginal) => {
   const orig = await importOriginal<typeof import("../../engine/config")>()
@@ -17,9 +18,9 @@ vi.mock("../../engine/config", async (importOriginal) => {
 
 import {
   addToQueue,
-  resolveItem,
-  getPendingItems,
   cleanupStale,
+  getPendingItems,
+  resolveItem,
 } from "../curation-queue"
 import type { KnowledgeEntry } from "../types"
 
@@ -109,7 +110,9 @@ describe("curation queue", () => {
     // Manually backdate
     const { readFileSync } = await import("node:fs")
     const queue = JSON.parse(readFileSync(QUEUE_PATH, "utf-8"))
-    queue.items[0].proposedAt = new Date(Date.now() - 31 * 86400000).toISOString()
+    queue.items[0].proposedAt = new Date(
+      Date.now() - 31 * 86400000,
+    ).toISOString()
     writeFileSync(QUEUE_PATH, JSON.stringify(queue))
 
     const cleaned = await cleanupStale(QUEUE_PATH)

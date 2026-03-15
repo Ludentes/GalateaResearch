@@ -1,10 +1,12 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest"
-import { executeWorkArc } from "../work-arc"
-import type { CodingToolAdapter, CodingSessionMessage } from "../types"
 import type { AssembledContext } from "../../../memory/types"
+import type { CodingSessionMessage, CodingToolAdapter } from "../types"
+import { executeWorkArc } from "../work-arc"
 
-function createMockAdapter(messages: CodingSessionMessage[]): CodingToolAdapter {
+function createMockAdapter(
+  messages: CodingSessionMessage[],
+): CodingToolAdapter {
   return {
     name: "mock",
     isAvailable: vi.fn().mockResolvedValue(true),
@@ -103,8 +105,17 @@ describe("executeWorkArc", () => {
         text: "Session exceeded time limit",
         durationMs: 300_000,
         transcript: [
-          { role: "assistant" as const, content: "Created file A", timestamp: new Date().toISOString() },
-          { role: "tool_call" as const, content: '{"file_path":"a.ts"}', toolName: "Write", timestamp: new Date().toISOString() },
+          {
+            role: "assistant" as const,
+            content: "Created file A",
+            timestamp: new Date().toISOString(),
+          },
+          {
+            role: "tool_call" as const,
+            content: '{"file_path":"a.ts"}',
+            toolName: "Write",
+            timestamp: new Date().toISOString(),
+          },
         ],
       },
     ])
@@ -129,8 +140,17 @@ describe("executeWorkArc", () => {
         text: "Done",
         durationMs: 1000,
         transcript: [
-          { role: "assistant" as const, content: "Using pnpm for this project", timestamp: new Date().toISOString() },
-          { role: "tool_call" as const, content: '{"command":"pnpm test"}', toolName: "Bash", timestamp: new Date().toISOString() },
+          {
+            role: "assistant" as const,
+            content: "Using pnpm for this project",
+            timestamp: new Date().toISOString(),
+          },
+          {
+            role: "tool_call" as const,
+            content: '{"command":"pnpm test"}',
+            toolName: "Bash",
+            timestamp: new Date().toISOString(),
+          },
         ],
       },
     ])
@@ -157,7 +177,11 @@ describe("executeWorkArc", () => {
         text: "Failed",
         durationMs: 100,
         transcript: [
-          { role: "assistant" as const, content: "Tried something", timestamp: new Date().toISOString() },
+          {
+            role: "assistant" as const,
+            content: "Tried something",
+            timestamp: new Date().toISOString(),
+          },
         ],
       },
     ])
@@ -182,8 +206,16 @@ describe("executeWorkArc", () => {
         text: "API rate limit exceeded",
         durationMs: 15_000,
         transcript: [
-          { role: "assistant" as const, content: "Created notification-service.ts", timestamp: new Date().toISOString() },
-          { role: "assistant" as const, content: "Created notification-types.ts", timestamp: new Date().toISOString() },
+          {
+            role: "assistant" as const,
+            content: "Created notification-service.ts",
+            timestamp: new Date().toISOString(),
+          },
+          {
+            role: "assistant" as const,
+            content: "Created notification-types.ts",
+            timestamp: new Date().toISOString(),
+          },
         ],
       },
     ])

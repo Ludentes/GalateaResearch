@@ -19,7 +19,10 @@ vi.mock("../../engine/config", async (importOriginal) => {
         require_curation: true,
         staleness_sessions: 3,
       },
-      hooks: { auto_convert: false, learned_patterns_file: "learned-hooks.json" },
+      hooks: {
+        auto_convert: false,
+        learned_patterns_file: "learned-hooks.json",
+      },
       prior_overlap: {
         common_patterns: ["write.*tests?", "git|commit|push"],
       },
@@ -37,7 +40,8 @@ function makeEntry(overrides: Partial<KnowledgeEntry> = {}): KnowledgeEntry {
     content: "Use null for nullable fields in TypeORM",
     confidence: 0.95,
     entities: ["typeorm"],
-    evidence: "in case of update in typeorm for nullable field we should specify null",
+    evidence:
+      "in case of update in typeorm for nullable field we should specify null",
     source: "session:test",
     extractedAt: new Date().toISOString(),
     novelty: "project-specific",

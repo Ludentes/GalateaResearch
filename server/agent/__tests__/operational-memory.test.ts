@@ -3,7 +3,6 @@ import { existsSync, rmSync } from "node:fs"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 import type { Artifact } from "../artifact"
-import type { ChannelMessage } from "../types"
 import {
   addArtifact,
   addTask,
@@ -18,6 +17,7 @@ import {
   updateTaskPhase,
   updateTaskSessionId,
 } from "../operational-memory"
+import type { ChannelMessage } from "../types"
 
 const TEST_DIR = path.join(__dirname, "fixtures", "test-op-mem")
 const CTX_PATH = path.join(TEST_DIR, "operational-context.json")
@@ -225,12 +225,7 @@ describe("Operational Memory", () => {
 
     it("records document artifact with path", async () => {
       const ctx = await loadOperationalContext(CTX_PATH)
-      const task = addTask(
-        ctx,
-        "Research auth options",
-        makeMsg(),
-        "research",
-      )
+      const task = addTask(ctx, "Research auth options", makeMsg(), "research")
       addArtifact(ctx, task.id, {
         type: "document",
         path: "docs/research/auth-options.md",

@@ -1,8 +1,9 @@
 // @vitest-environment node
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
-import { appendEntries, readEntries } from "../knowledge-store"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { recordOutcome } from "../feedback-loop"
+import { appendEntries, readEntries } from "../knowledge-store"
 import type { KnowledgeEntry } from "../types"
 
 vi.mock("../../engine/config", async (importOriginal) => {

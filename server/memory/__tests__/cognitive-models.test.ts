@@ -53,8 +53,7 @@ const umkaEntries: KnowledgeEntry[] = [
       "Presentation for Alina has been updated with simplified technical details and electron-builder information.",
     confidence: 1,
     entities: ["presentation"],
-    evidence:
-      '[USER]: So she can present, but not really go into detail.',
+    evidence: "[USER]: So she can present, but not really go into detail.",
     source: "session:64d737f3",
     extractedAt: "2026-02-11T21:07:03.205Z",
     about: { entity: "alina", type: "user" },
@@ -102,8 +101,7 @@ const umkaEntries: KnowledgeEntry[] = [
   {
     id: "umka-proj-3",
     type: "preference",
-    content:
-      "The admin panel interface must be in Russian (MVP scope).",
+    content: "The admin panel interface must be in Russian (MVP scope).",
     confidence: 1,
     entities: [],
     evidence:

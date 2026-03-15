@@ -1,7 +1,7 @@
-import { readdir, readFile, writeFile, mkdir } from "node:fs/promises"
 import { execFile } from "node:child_process"
-import { promisify } from "node:util"
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
+import { promisify } from "node:util"
 import { z } from "zod"
 import type { AgentTool } from "../agent-loop"
 
@@ -19,9 +19,7 @@ export function createReadFileTool(workspaceRoot: string): AgentTool {
     description:
       "Read a file from the workspace. Returns file contents with line numbers.",
     parameters: z.object({
-      path: z
-        .string()
-        .describe("File path relative to workspace root"),
+      path: z.string().describe("File path relative to workspace root"),
     }),
     async execute(args) {
       const filePath = path.resolve(workspaceRoot, args.path as string)
@@ -31,9 +29,7 @@ export function createReadFileTool(workspaceRoot: string): AgentTool {
       try {
         const content = await readFile(filePath, "utf-8")
         const lines = content.split("\n")
-        const numbered = lines
-          .map((line, i) => `${i + 1}\t${line}`)
-          .join("\n")
+        const numbered = lines.map((line, i) => `${i + 1}\t${line}`).join("\n")
         return truncate(numbered)
       } catch (err) {
         return `Error reading file: ${(err as Error).message}`
@@ -44,8 +40,7 @@ export function createReadFileTool(workspaceRoot: string): AgentTool {
 
 export function createListFilesTool(workspaceRoot: string): AgentTool {
   return {
-    description:
-      "List files and directories in a workspace directory.",
+    description: "List files and directories in a workspace directory.",
     parameters: z.object({
       path: z
         .string()
@@ -75,9 +70,7 @@ export function createWriteFileTool(workspaceRoot: string): AgentTool {
     description:
       "Write content to a file in the workspace. Creates parent directories if needed.",
     parameters: z.object({
-      path: z
-        .string()
-        .describe("File path relative to workspace root"),
+      path: z.string().describe("File path relative to workspace root"),
       content: z.string().describe("Content to write to the file"),
     }),
     async execute(args) {
@@ -136,14 +129,17 @@ export function createBashTool(workspaceRoot: string): AgentTool {
         return truncate(output) || "(no output)"
       } catch (err) {
         const e = err as { stdout?: string; stderr?: string; message: string }
-        const output = (e.stdout || "") + (e.stderr ? `\nSTDERR:\n${e.stderr}` : "")
+        const output =
+          (e.stdout || "") + (e.stderr ? `\nSTDERR:\n${e.stderr}` : "")
         return truncate(output || `Error: ${e.message}`)
       }
     },
   }
 }
 
-export function createAllTools(workspaceRoot: string): Record<string, AgentTool> {
+export function createAllTools(
+  workspaceRoot: string,
+): Record<string, AgentTool> {
   return {
     read_file: createReadFileTool(workspaceRoot),
     list_files: createListFilesTool(workspaceRoot),

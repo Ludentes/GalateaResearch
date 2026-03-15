@@ -21,8 +21,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { appendEntries } from "../../memory/knowledge-store"
 import type { KnowledgeEntry } from "../../memory/types"
 import { getAgentState, updateAgentState } from "../agent-state"
+import { setAdapter, tick } from "../tick"
 import type { ChannelMessage } from "../types"
-import { tick, setAdapter } from "../tick"
 
 // ---------------------------------------------------------------------------
 // Minimal mocks — only external services
@@ -109,8 +109,7 @@ const OP_CTX_PATH = path.join(TEST_DIR, "op-context.json")
 const oauthFact: KnowledgeEntry = {
   id: "oauth-1",
   type: "fact",
-  content:
-    "Implement OAuth2 authentication using Clerk, not raw JWT tokens",
+  content: "Implement OAuth2 authentication using Clerk, not raw JWT tokens",
   confidence: 0.95,
   entities: ["clerk", "oauth"],
   about: { entity: "galatea", type: "project" },
@@ -271,9 +270,7 @@ describe("tick() integration — real pipeline", () => {
   })
 
   it("routes task_assignment correctly via heuristic", async () => {
-    const { appendTickRecord } = await import(
-      "../../observation/tick-record"
-    )
+    const { appendTickRecord } = await import("../../observation/tick-record")
     vi.mocked(appendTickRecord).mockClear()
 
     await updateAgentState(
@@ -328,9 +325,7 @@ describe("tick() integration — real pipeline", () => {
   })
 
   it("records tick decision with all required fields", async () => {
-    const { appendTickRecord } = await import(
-      "../../observation/tick-record"
-    )
+    const { appendTickRecord } = await import("../../observation/tick-record")
     vi.mocked(appendTickRecord).mockClear()
 
     await updateAgentState(

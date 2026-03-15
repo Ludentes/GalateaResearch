@@ -5,14 +5,18 @@
  * Tests the 4-stage pipeline: self-model -> homeostasis -> channel scan -> action.
  * Uses real Ollama for LLM calls, real DB for context assembly.
  */
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest"
-import { userModel } from "./helpers/fixtures"
 import {
-  closeTestDb,
-  ensureOllama,
-  ensureTestDb,
-} from "./helpers/setup"
-import { type TestWorld, scenario } from "./helpers/test-world"
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from "vitest"
+import { userModel } from "./helpers/fixtures"
+import { closeTestDb, ensureOllama, ensureTestDb } from "./helpers/setup"
+import { scenario, type TestWorld } from "./helpers/test-world"
 
 describe("Layer 3: Alina asks project status, agent decides to respond", () => {
   let world: TestWorld
@@ -24,11 +28,13 @@ describe("Layer 3: Alina asks project status, agent decides to respond", () => {
     // Fresh world per test — tick() mutates state (removes pending messages)
     world = await scenario("alina-asks-status")
       .withSession("umka")
-      .withKnowledge(userModel("alina", {
-        role: "PM / stakeholder",
-        language: "prefers Russian for status updates",
-        communication: "uses Discord for quick questions",
-      }))
+      .withKnowledge(
+        userModel("alina", {
+          role: "PM / stakeholder",
+          language: "prefers Russian for status updates",
+          communication: "uses Discord for quick questions",
+        }),
+      )
       .withAgentState({
         activeTask: {
           project: "umka",
@@ -131,7 +137,6 @@ describe("Layer 3: No pending messages, agent stays idle", () => {
     expect(result.selfModel.availableProviders).toContain("ollama")
     expect(result.selfModel.availableProviders.length).toBeGreaterThan(0)
   })
-
 })
 
 describe("Layer 3: Powered-down mode (no LLM available)", () => {

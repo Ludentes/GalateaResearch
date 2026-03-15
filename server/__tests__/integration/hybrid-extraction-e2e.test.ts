@@ -82,8 +82,8 @@ afterEach(() => {
   globalThis.fetch = originalFetch
 })
 
-import { runExtraction } from "../../memory/extraction-pipeline"
 import { generateAllArtifacts } from "../../memory/artifact-generator"
+import { runExtraction } from "../../memory/extraction-pipeline"
 import { readEntries } from "../../memory/knowledge-store"
 
 const MOCK_MODEL = {} as unknown as LanguageModel
@@ -274,8 +274,7 @@ describe("S6: Procedures stay pending, blocked from skills", () => {
       { role: "assistant", content: "Got it." },
       {
         role: "user",
-        content:
-          "To run tests:\n1) Start the dev server\n2) Run vitest",
+        content: "To run tests:\n1) Start the dev server\n2) Run vitest",
       },
       { role: "assistant", content: "Noted." },
       {
@@ -348,8 +347,7 @@ describe("S9: Duplicate detection across sessions", () => {
     const transcript2 = writeTranscript(tmpDir, "s9-session2", [
       {
         role: "user",
-        content:
-          "I always prefer pnpm over npm for package management",
+        content: "I always prefer pnpm over npm for package management",
       },
       { role: "assistant", content: "Sure." },
     ])
@@ -375,8 +373,7 @@ describe("S10: Mixed session → correct routing to CLAUDE.md", () => {
     const transcript = writeTranscript(tmpDir, "s10-mixed", [
       {
         role: "user",
-        content:
-          "I always use conventional commits: feat:, fix:, docs:",
+        content: "I always use conventional commits: feat:, fix:, docs:",
       },
       { role: "assistant", content: "Good practice." },
       {

@@ -1,8 +1,9 @@
 // @vitest-environment node
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
-import { appendEntries, readEntries } from "../knowledge-store"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { runDecay } from "../decay"
+import { appendEntries, readEntries } from "../knowledge-store"
 import type { KnowledgeEntry } from "../types"
 
 vi.mock("../../engine/config", async (importOriginal) => {
@@ -20,7 +21,7 @@ vi.mock("../../engine/config", async (importOriginal) => {
         "explicit-statement": 2.0,
         "observed-failure": 1.5,
         "observed-pattern": 1.0,
-        "inferred": 0.5,
+        inferred: 0.5,
       },
       outcome_weighting: { harm_penalty_max: 0.5, help_bonus_max: 0.5 },
       hook_entries_exempt: true,
@@ -118,9 +119,7 @@ describe("outcome-weighted decay", () => {
 describe("decay decision tracing", () => {
   it("records decay decisions on entries", async () => {
     // 35 days old, past 30-day grace by 5 days → decays but stays above archive threshold
-    const thirtyFiveDaysAgo = new Date(
-      Date.now() - 35 * 86400000,
-    ).toISOString()
+    const thirtyFiveDaysAgo = new Date(Date.now() - 35 * 86400000).toISOString()
     const entry = makeEntry({ extractedAt: thirtyFiveDaysAgo })
     await appendEntries([entry], STORE_PATH)
 

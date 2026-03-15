@@ -1,17 +1,25 @@
 // @vitest-environment node
-import type { LanguageModel } from "ai"
-import { asc, desc, eq } from "drizzle-orm"
+
 import { existsSync, readFileSync } from "node:fs"
 import { mkdir, writeFile } from "node:fs/promises"
 import path from "node:path"
+import type { LanguageModel } from "ai"
+import { asc, desc, eq } from "drizzle-orm"
+import { updateAgentState } from "../../../agent/agent-state"
+import { tick as agentTick } from "../../../agent/tick"
+import type {
+  AgentState,
+  ChannelMessage,
+  TickResult,
+} from "../../../agent/types"
 import { messages, preprompts, sessions } from "../../../db/schema"
+import { consolidateToClaudeMd } from "../../../memory/consolidation"
 import { assembleContext } from "../../../memory/context-assembler"
 import { runExtraction } from "../../../memory/extraction-pipeline"
 import {
-  getExtractionState,
   type ExtractionState,
+  getExtractionState,
 } from "../../../memory/extraction-state"
-import { consolidateToClaudeMd } from "../../../memory/consolidation"
 import { appendEntries, readEntries } from "../../../memory/knowledge-store"
 import { filterSignalTurns } from "../../../memory/signal-classifier"
 import { readTranscript } from "../../../memory/transcript-reader"
@@ -24,21 +32,14 @@ import type {
 } from "../../../memory/types"
 import { readEvents } from "../../../observation/event-store"
 import type { ObservationEvent } from "../../../observation/types"
-import { updateAgentState } from "../../../agent/agent-state"
-import { tick as agentTick } from "../../../agent/tick"
-import type {
-  AgentState,
-  ChannelMessage,
-  TickResult,
-} from "../../../agent/types"
-import {
-  cleanupTestPreprompts,
-  cleanupTestSession,
-  cleanupTempFiles,
-  getTestDb,
-} from "./setup"
 import { getLLMConfig } from "../../../providers/config"
 import { createOllamaModel } from "../../../providers/ollama"
+import {
+  cleanupTempFiles,
+  cleanupTestPreprompts,
+  cleanupTestSession,
+  getTestDb,
+} from "./setup"
 
 // ---- Types ----
 
@@ -55,7 +56,11 @@ export interface TestWorld {
   sendMessage(content: string): Promise<void>
   roundTrip(
     content: string,
-  ): Promise<{ text: string; tokenCount: number; signalClassification?: SignalClassification }>
+  ): Promise<{
+    text: string
+    tokenCount: number
+    signalClassification?: SignalClassification
+  }>
   lastMessage(role: "user" | "assistant"): Promise<MessageRow>
   getHistory(): Promise<MessageRow[]>
   assembleContext(): Promise<AssembledContext>
@@ -264,10 +269,12 @@ class ScenarioBuilder {
         "fixtures",
         "sample-session.jsonl",
       )
-    const model = this.config.model ?? (() => {
-      const cfg = getLLMConfig()
-      return createOllamaModel(cfg.model, cfg.ollamaBaseUrl)
-    })()
+    const model =
+      this.config.model ??
+      (() => {
+        const cfg = getLLMConfig()
+        return createOllamaModel(cfg.model, cfg.ollamaBaseUrl)
+      })()
 
     return createTestWorld({
       sessionId: session.id,
@@ -339,13 +346,15 @@ function createTestWorld(config: TestWorldConfig): TestWorld {
 
     async roundTrip(
       content: string,
-    ): Promise<{ text: string; tokenCount: number; signalClassification?: SignalClassification }> {
+    ): Promise<{
+      text: string
+      tokenCount: number
+      signalClassification?: SignalClassification
+    }> {
       if (!model) throw new Error("No model configured. Use withModel().")
 
       // Import dynamically to avoid circular deps with db singleton
-      const { sendMessageLogic } = await import(
-        "../../../functions/chat.logic"
-      )
+      const { sendMessageLogic } = await import("../../../functions/chat.logic")
       const result = await sendMessageLogic(
         sessionId,
         content,
@@ -394,9 +403,7 @@ function createTestWorld(config: TestWorldConfig): TestWorld {
         .where(eq(messages.sessionId, sessionId))
         .orderBy(asc(messages.createdAt))
 
-      const lastUserMsg = [...history]
-        .reverse()
-        .find((m) => m.role === "user")
+      const lastUserMsg = [...history].reverse().find((m) => m.role === "user")
 
       return assembleContext({
         storePath,

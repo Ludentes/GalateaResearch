@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { AgentCard } from "../../../components/agent/AgentCard"
 import type { HomeostasisState } from "server/engine/types"
+import { AgentCard } from "../../../components/agent/AgentCard"
 
 export const Route = createFileRoute("/agent/fleet/")({
   component: FleetOverviewPage,

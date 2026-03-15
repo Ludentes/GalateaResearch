@@ -38,8 +38,8 @@ vi.mock("../../engine/config", async (importOriginal) => {
   }
 })
 
-import { classifyTurn } from "../../memory/signal-classifier"
 import { extractHeuristic } from "../../memory/heuristic-extractor"
+import { classifyTurn } from "../../memory/signal-classifier"
 import type { TranscriptTurn } from "../../memory/types"
 
 // ── S20: Declarative statement in message ending with question ──────

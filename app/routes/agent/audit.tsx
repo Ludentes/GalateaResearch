@@ -378,7 +378,8 @@ function AuditPage() {
 
                 {/* Evidence disclosure */}
                 {entry.evidence &&
-                  entry.evidence !== (entry.contentOverride ?? entry.content) && (
+                  entry.evidence !==
+                    (entry.contentOverride ?? entry.content) && (
                     <details className="pl-6">
                       <summary className="text-xs text-muted-foreground cursor-pointer">
                         Show evidence

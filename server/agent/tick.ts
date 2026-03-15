@@ -1,5 +1,5 @@
-import { assessDimensions, getGuidance } from "../engine/homeostasis-engine"
 import { getAgentConfig } from "../engine/config"
+import { assessDimensions, getGuidance } from "../engine/homeostasis-engine"
 import { resolveTrust } from "../engine/trust-resolver"
 import type {
   AgentContext,
@@ -43,8 +43,8 @@ import {
 } from "./operational-memory"
 import { classifyWithLLM, inferRouting } from "./task-type-inference"
 import { createAllTools } from "./tools"
-import { getDiffStat } from "./utils"
 import type { ChannelMessage, SelfModel, TickResult } from "./types"
+import { getDiffStat } from "./utils"
 
 // ---------------------------------------------------------------------------
 // Adapter timeout resolver — maps task type to appropriate timeout
@@ -376,10 +376,7 @@ async function tickInner(
       // ---------------------------------------------------------------
       // VERIFY phase — pipeline-enforced for completed coding tasks
       // ---------------------------------------------------------------
-      if (
-        arcResult.status === "completed" &&
-        routing.taskType === "coding"
-      ) {
+      if (arcResult.status === "completed" && routing.taskType === "coding") {
         try {
           const { diffStat, recentCommits } = await getDiffStat(workDir)
 
@@ -414,9 +411,7 @@ async function tickInner(
             workingDirectory: workDir,
             trustLevel: (agentContext.sourceTrustLevel ??
               "MEDIUM") as TrustLevel,
-            model:
-              (msg.metadata?.modelOverride as string) ||
-              config.model,
+            model: (msg.metadata?.modelOverride as string) || config.model,
             timeout: getAdapterTimeout("review"),
           })
 
@@ -424,10 +419,7 @@ async function tickInner(
             `[tick] VERIFY: ${verifyResult.status} (${verifyResult.durationMs}ms)`,
           )
         } catch (err) {
-          console.warn(
-            "[tick] VERIFY failed:",
-            (err as Error).message,
-          )
+          console.warn("[tick] VERIFY failed:", (err as Error).message)
         }
       }
 
@@ -458,17 +450,12 @@ async function tickInner(
               workingDirectory: workDir,
               trustLevel: (agentContext.sourceTrustLevel ??
                 "MEDIUM") as TrustLevel,
-              model:
-                (msg.metadata?.modelOverride as string) ||
-                config.model,
+              model: (msg.metadata?.modelOverride as string) || config.model,
               timeout: 30_000,
             })
           }
         } catch (err) {
-          console.warn(
-            "[tick] FINISH failed:",
-            (err as Error).message,
-          )
+          console.warn("[tick] FINISH failed:", (err as Error).message)
         }
       }
 
@@ -596,8 +583,7 @@ async function tickInner(
             workingDirectory:
               (msg.metadata?.workspace as string) ?? process.cwd(),
             timeoutMs: getAdapterTimeout(routing.taskType),
-            model:
-              (msg.metadata?.modelOverride as string) || config.model,
+            model: (msg.metadata?.modelOverride as string) || config.model,
           })
 
           if (result.ok) {

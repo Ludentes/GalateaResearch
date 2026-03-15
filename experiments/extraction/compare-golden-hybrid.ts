@@ -7,13 +7,13 @@
 import { readFileSync } from "node:fs"
 import path from "node:path"
 import { parse as parseYaml } from "yaml"
-import { readTranscript } from "../../server/memory/transcript-reader"
-import { classifyTurn } from "../../server/memory/signal-classifier"
 import { extractHeuristic } from "../../server/memory/heuristic-extractor"
 import { extractWithRetry } from "../../server/memory/knowledge-extractor"
 import { applyNoveltyGateAndApproval } from "../../server/memory/post-extraction"
-import { getModel } from "../../server/providers/index"
+import { classifyTurn } from "../../server/memory/signal-classifier"
+import { readTranscript } from "../../server/memory/transcript-reader"
 import type { KnowledgeEntry, TranscriptTurn } from "../../server/memory/types"
+import { getModel } from "../../server/providers/index"
 
 interface ExpectedModel {
   user_model?: { preferences?: string[] }
@@ -28,19 +28,44 @@ interface ExpectedModel {
 
 function extractKeyTerms(expected: string): string[] {
   const stops = new Set([
-    "the", "for", "and", "with", "from", "not", "all", "use", "should",
-    "must", "can", "has", "are", "was", "our", "its", "that", "this",
-    "when", "before", "after", "first", "then", "also", "into",
+    "the",
+    "for",
+    "and",
+    "with",
+    "from",
+    "not",
+    "all",
+    "use",
+    "should",
+    "must",
+    "can",
+    "has",
+    "are",
+    "was",
+    "our",
+    "its",
+    "that",
+    "this",
+    "when",
+    "before",
+    "after",
+    "first",
+    "then",
+    "also",
+    "into",
   ])
   return expected
     .toLowerCase()
-    .replace(/[()—–\-]/g, " ")
+    .replace(/[()—–-]/g, " ")
     .split(/\s+/)
     .filter((w) => w.length >= 3 && !stops.has(w))
     .slice(0, 4)
 }
 
-function checkRecall(entries: KnowledgeEntry[], expected: string[]): { found: string[]; missed: string[] } {
+function checkRecall(
+  entries: KnowledgeEntry[],
+  expected: string[],
+): { found: string[]; missed: string[] } {
   const found: string[] = []
   const missed: string[] = []
   for (const exp of expected) {
@@ -60,7 +85,11 @@ function dedup(entries: KnowledgeEntry[]): KnowledgeEntry[] {
   const seen = new Set<string>()
   const unique: KnowledgeEntry[] = []
   for (const e of entries) {
-    const key = e.content.toLowerCase().trim().replace(/\s+/g, " ").slice(0, 200)
+    const key = e.content
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, " ")
+      .slice(0, 200)
     if (!seen.has(key)) {
       seen.add(key)
       unique.push(e)
@@ -72,16 +101,23 @@ function dedup(entries: KnowledgeEntry[]): KnowledgeEntry[] {
 async function main() {
   const developer = process.argv[2]
   if (!developer || process.argv.length < 4) {
-    console.error("Usage: pnpm tsx experiments/extraction/compare-golden-hybrid.ts <developer> <session-files...>")
+    console.error(
+      "Usage: pnpm tsx experiments/extraction/compare-golden-hybrid.ts <developer> <session-files...>",
+    )
     process.exit(1)
   }
 
   const yamlPath = path.join(import.meta.dirname, "expected-models.yaml")
   const allModels = parseYaml(readFileSync(yamlPath, "utf-8"))
   const expected: ExpectedModel = allModels[developer]
-  if (!expected) { console.error(`No model for: ${developer}`); process.exit(1) }
+  if (!expected) {
+    console.error(`No model for: ${developer}`)
+    process.exit(1)
+  }
 
-  const jsonlFiles = process.argv.slice(3).filter(f => f.endsWith(".jsonl") && !path.basename(f).includes("_"))
+  const jsonlFiles = process.argv
+    .slice(3)
+    .filter((f) => f.endsWith(".jsonl") && !path.basename(f).includes("_"))
 
   console.log(`\n=== Golden Hybrid Comparison: ${developer} ===`)
   console.log(`Sessions: ${jsonlFiles.length}`)
@@ -125,7 +161,8 @@ async function main() {
       const classification = classifyTurn(turn)
       if (classification.type === "noise") continue
       if (classification.type === "factual") continue // handled in LLM pass
-      const preceding = i > 0 && turns[i - 1].role === "assistant" ? turns[i - 1] : undefined
+      const preceding =
+        i > 0 && turns[i - 1].role === "assistant" ? turns[i - 1] : undefined
       const result = extractHeuristic(turn, classification, source, preceding)
       heuristicEntries.push(...result.entries)
     }
@@ -148,10 +185,19 @@ async function main() {
       const chunk = factualWithContext.slice(i, i + chunkSize)
       completedChunks++
       const elapsed = ((Date.now() - t0) / 1000).toFixed(0)
-      const pct = ((completedChunks / Math.max(totalFactualChunks, 1)) * 100).toFixed(0)
-      const avgChunkTime = completedChunks > 1 ? llmTimeMs / (completedChunks - 1) : 10000
-      const remaining = ((totalFactualChunks - completedChunks) * avgChunkTime / 1000).toFixed(0)
-      process.stdout.write(`\r  [${pct}%] session ${si + 1}/${sessionData.length} chunk ${completedChunks}/${totalFactualChunks} | ${elapsed}s elapsed, ~${remaining}s remaining | ${llmEntries.length} LLM entries`)
+      const pct = (
+        (completedChunks / Math.max(totalFactualChunks, 1)) *
+        100
+      ).toFixed(0)
+      const avgChunkTime =
+        completedChunks > 1 ? llmTimeMs / (completedChunks - 1) : 10000
+      const remaining = (
+        ((totalFactualChunks - completedChunks) * avgChunkTime) /
+        1000
+      ).toFixed(0)
+      process.stdout.write(
+        `\r  [${pct}%] session ${si + 1}/${sessionData.length} chunk ${completedChunks}/${totalFactualChunks} | ${elapsed}s elapsed, ~${remaining}s remaining | ${llmEntries.length} LLM entries`,
+      )
       try {
         const ct0 = Date.now()
         const extracted = await extractWithRetry(chunk, model, source)
@@ -181,7 +227,8 @@ async function main() {
 
   // Recall
   console.log("--- RECALL ---\n")
-  let totalExpected = 0, totalFound = 0
+  let totalExpected = 0,
+    totalFound = 0
 
   const categories = [
     { name: "User preferences", items: expected.user_model?.preferences },
@@ -202,15 +249,24 @@ async function main() {
     for (const m of r.missed) console.log(`    ✗ ${m}`)
   }
 
-  console.log(`\n  RECALL TOTAL: ${totalFound}/${totalExpected} (${((totalFound / totalExpected) * 100).toFixed(1)}%)`)
+  console.log(
+    `\n  RECALL TOTAL: ${totalFound}/${totalExpected} (${((totalFound / totalExpected) * 100).toFixed(1)}%)`,
+  )
 
   // Precision quick check
-  const suspicious = deduped.filter(e => {
+  const suspicious = deduped.filter((e) => {
     const c = e.content.toLowerCase()
-    return c.length < 10 || c.includes("<") || /^(ok|yes|no|thanks|sure|got it)/i.test(c) || c.split(" ").length < 3
+    return (
+      c.length < 10 ||
+      c.includes("<") ||
+      /^(ok|yes|no|thanks|sure|got it)/i.test(c) ||
+      c.split(" ").length < 3
+    )
   })
   console.log(`\n--- PRECISION ---`)
-  console.log(`  Good: ${deduped.length - suspicious.length}, Suspicious: ${suspicious.length}`)
+  console.log(
+    `  Good: ${deduped.length - suspicious.length}, Suspicious: ${suspicious.length}`,
+  )
   if (suspicious.length > 0) {
     for (const s of suspicious.slice(0, 5)) {
       console.log(`    ? [${s.type}] "${s.content.slice(0, 80)}"`)
@@ -219,17 +275,25 @@ async function main() {
 
   // Show LLM-only recall (what did LLM add that heuristics missed?)
   const heuristicGated = dedup(applyNoveltyGateAndApproval(heuristicEntries))
-  const llmOnlyEntries = deduped.filter(e => !heuristicGated.some(h => h.content.toLowerCase().trim() === e.content.toLowerCase().trim()))
+  const llmOnlyEntries = deduped.filter(
+    (e) =>
+      !heuristicGated.some(
+        (h) =>
+          h.content.toLowerCase().trim() === e.content.toLowerCase().trim(),
+      ),
+  )
   console.log(`\n--- LLM-ONLY CONTRIBUTION ---`)
   console.log(`  Entries only from LLM: ${llmOnlyEntries.length}`)
-  
+
   // Which golden items does LLM add?
   let llmOnlyRecall = 0
   for (const { name, items } of categories) {
     if (!items?.length) continue
     const heuristicRecall = checkRecall(heuristicGated, items)
     const hybridRecall = checkRecall(deduped, items)
-    const llmAdded = hybridRecall.found.filter(f => !heuristicRecall.found.includes(f))
+    const llmAdded = hybridRecall.found.filter(
+      (f) => !heuristicRecall.found.includes(f),
+    )
     if (llmAdded.length > 0) {
       console.log(`  ${name}: LLM added ${llmAdded.length}`)
       for (const a of llmAdded) console.log(`    + ${a}`)

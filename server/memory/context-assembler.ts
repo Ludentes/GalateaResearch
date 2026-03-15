@@ -2,8 +2,8 @@ import { eq } from "drizzle-orm"
 import { db } from "../db"
 import { preprompts } from "../db/schema"
 import { getContextConfig } from "../engine/config"
-import type { AgentContext } from "../engine/types"
 import { assessDimensions, getGuidance } from "../engine/homeostasis-engine"
+import type { AgentContext } from "../engine/types"
 import { readEntries } from "./knowledge-store"
 import type {
   AssembledContext,
@@ -295,10 +295,7 @@ function buildPromptWithAccounting(
       const available = remaining - header.length - cfg.truncation_header_buffer
       if (available > cfg.truncation_min_content) {
         // For LEARNED KNOWLEDGE, drop lowest-ranked entries first
-        const truncatedContent = truncateByLines(
-          section.content,
-          available,
-        )
+        const truncatedContent = truncateByLines(section.content, available)
         const truncatedBlock = `${header}${truncatedContent.text}\n...\n\n`
         result += truncatedBlock
         remaining -= truncatedBlock.length

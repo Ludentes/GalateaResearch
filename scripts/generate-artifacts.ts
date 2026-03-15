@@ -1,6 +1,6 @@
-import { generateAllArtifacts } from "../server/memory/artifact-generator"
 import { readFileSync } from "node:fs"
 import path from "node:path"
+import { generateAllArtifacts } from "../server/memory/artifact-generator"
 
 async function main() {
   const storePath = process.argv[2] || "data/memory/entries.jsonl"
@@ -13,9 +13,13 @@ async function main() {
   const result = await generateAllArtifacts(storePath, outputDir)
 
   console.log("=== Results ===")
-  console.log(`CLAUDE.md: ${result.claudeMd.entryCount} entries, ${result.claudeMd.lines} lines`)
+  console.log(
+    `CLAUDE.md: ${result.claudeMd.entryCount} entries, ${result.claudeMd.lines} lines`,
+  )
   console.log(`Skills: ${result.skills.count} files`)
-  console.log(`Hooks: written=${result.hooks.written}, count=${result.hooks.count}`)
+  console.log(
+    `Hooks: written=${result.hooks.written}, count=${result.hooks.count}`,
+  )
   console.log(`Skipped: ${result.skipped.count}`)
   console.log()
 
@@ -23,7 +27,9 @@ async function main() {
     console.log("=== CLAUDE.md traced entries ===")
     for (const e of result.claudeMd.tracedEntries) {
       const genDecision = e.decisions?.find((d) => d.stage === "claude-md-gen")
-      console.log(`  [${e.type}] ${e.content.slice(0, 80)} (${genDecision ? "traced" : "NOT traced"})`)
+      console.log(
+        `  [${e.type}] ${e.content.slice(0, 80)} (${genDecision ? "traced" : "NOT traced"})`,
+      )
     }
     console.log()
   }

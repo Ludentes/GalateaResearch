@@ -8,7 +8,9 @@ describe("createPreToolUseHook", () => {
       workingDirectory: "/workspace/project",
       trustLevel: "MEDIUM",
     })
-    const result = await hook("Read", { file_path: "/workspace/project/src/app.ts" })
+    const result = await hook("Read", {
+      file_path: "/workspace/project/src/app.ts",
+    })
     expect(result.decision).toBe("allow")
   })
 
@@ -26,7 +28,10 @@ describe("createPreToolUseHook", () => {
       workingDirectory: "/workspace/project",
       trustLevel: "HIGH",
     })
-    const result = await hook("Write", { file_path: "/etc/passwd", content: "hacked" })
+    const result = await hook("Write", {
+      file_path: "/etc/passwd",
+      content: "hacked",
+    })
     expect(result.decision).toBe("deny")
   })
 
@@ -35,7 +40,9 @@ describe("createPreToolUseHook", () => {
       workingDirectory: "/workspace/project",
       trustLevel: "HIGH",
     })
-    const result = await hook("Bash", { command: "git push --force origin feature/x" })
+    const result = await hook("Bash", {
+      command: "git push --force origin feature/x",
+    })
     expect(result.decision).toBe("ask")
   })
 
@@ -53,7 +60,9 @@ describe("createPreToolUseHook", () => {
       workingDirectory: "/workspace/project",
       trustLevel: "MEDIUM",
     })
-    const result = await hook("Bash", { command: "git push origin feature/profile" })
+    const result = await hook("Bash", {
+      command: "git push origin feature/profile",
+    })
     expect(result.decision).toBe("allow")
   })
 
@@ -63,7 +72,9 @@ describe("createPreToolUseHook", () => {
       workingDirectory: "/workspace/project",
       trustLevel: "NONE",
     })
-    const result = await hook("Read", { file_path: "/workspace/project/src/app.ts" })
+    const result = await hook("Read", {
+      file_path: "/workspace/project/src/app.ts",
+    })
     expect(result.decision).toBe("allow")
   })
 

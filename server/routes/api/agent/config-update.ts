@@ -1,4 +1,4 @@
-import { defineEventHandler, createError, readBody } from "h3"
+import { createError, defineEventHandler, readBody } from "h3"
 import { getConfig, updateConfigRuntime } from "~/server/engine/config"
 import { validateConfigUpdate } from "./config-validation"
 

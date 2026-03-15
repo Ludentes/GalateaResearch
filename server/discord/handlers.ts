@@ -1,6 +1,6 @@
 import { addMessage } from "../agent/agent-state"
-import { normalizeDiscordMessage } from "./adapter"
 import type { InboundDiscordMessage } from "./adapter"
+import { normalizeDiscordMessage } from "./adapter"
 
 export type { InboundDiscordMessage }
 

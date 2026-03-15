@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, expect, it, vi, beforeEach } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { KnowledgeEntry } from "../types"
 
 // Mock config to provide vector retrieval settings
@@ -20,15 +20,13 @@ vi.mock("../../engine/config", async (importOriginal) => {
   }
 })
 
-import { retrieveRelevantFacts } from "../fact-retrieval"
-import { appendEntries } from "../knowledge-store"
 import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import { retrieveRelevantFacts } from "../fact-retrieval"
+import { appendEntries } from "../knowledge-store"
 
-function makeEntry(
-  overrides: Partial<KnowledgeEntry> = {},
-): KnowledgeEntry {
+function makeEntry(overrides: Partial<KnowledgeEntry> = {}): KnowledgeEntry {
   return {
     id: crypto.randomUUID(),
     type: "fact",
@@ -80,18 +78,15 @@ describe("retrieval decision tracing", () => {
 
   it("falls back to keyword when useVector=true but Qdrant unavailable (S14)", async () => {
     const entry = makeEntry({
-      content:
-        "FalkorDB uses Cypher queries for graph traversal",
+      content: "FalkorDB uses Cypher queries for graph traversal",
       entities: ["FalkorDB", "Cypher"],
     })
     await appendEntries([entry], storePath)
 
     // Qdrant is not running in test environment - should fall back gracefully
-    const result = await retrieveRelevantFacts(
-      "FalkorDB Cypher",
-      storePath,
-      { useVector: true },
-    )
+    const result = await retrieveRelevantFacts("FalkorDB Cypher", storePath, {
+      useVector: true,
+    })
 
     // Should not crash - graceful degradation
     expect(result).toBeDefined()

@@ -1,8 +1,5 @@
 import { defineEventHandler, HTTPError, readBody } from "h3"
-import {
-  readEntries,
-  writeEntries,
-} from "../../../memory/knowledge-store"
+import { readEntries, writeEntries } from "../../../memory/knowledge-store"
 import type { CurationStatus } from "../../../memory/types"
 
 export default defineEventHandler(async (event) => {
@@ -22,18 +19,24 @@ export default defineEventHandler(async (event) => {
     curationStatus &&
     !["pending", "approved", "rejected"].includes(curationStatus)
   ) {
-    throw new HTTPError("curationStatus must be pending, approved, or rejected", {
-      status: 400,
-    })
+    throw new HTTPError(
+      "curationStatus must be pending, approved, or rejected",
+      {
+        status: 400,
+      },
+    )
   }
 
   if (
     targetOverride &&
     !["claude-md", "skill", "hook", "none"].includes(targetOverride)
   ) {
-    throw new HTTPError("targetOverride must be claude-md, skill, hook, or none", {
-      status: 400,
-    })
+    throw new HTTPError(
+      "targetOverride must be claude-md, skill, hook, or none",
+      {
+        status: 400,
+      },
+    )
   }
 
   const storePath = "data/memory/entries.jsonl"

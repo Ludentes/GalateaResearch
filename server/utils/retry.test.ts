@@ -1,6 +1,6 @@
 // @vitest-environment node
-import { describe, it, expect, vi } from "vitest"
-import { retryAsync, retrySync, retry } from "./retry"
+import { describe, expect, it, vi } from "vitest"
+import { retry, retryAsync, retrySync } from "./retry"
 
 describe("retry", () => {
   describe("retryAsync", () => {

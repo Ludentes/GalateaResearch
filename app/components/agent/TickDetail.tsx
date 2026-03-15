@@ -138,9 +138,7 @@ export function TickDetail({ tick }: TickDetailProps) {
             <span>Out: {tick.resources.outputTokens} </span>
           )}
           {tick.resources.subscriptionUsage5h != null && (
-            <span>
-              Sub usage (5h): {tick.resources.subscriptionUsage5h}%
-            </span>
+            <span>Sub usage (5h): {tick.resources.subscriptionUsage5h}%</span>
           )}
         </div>
       </div>
@@ -161,14 +159,10 @@ export function TickDetail({ tick }: TickDetailProps) {
             </div>
           )}
           {tick.outcome.artifactsCreated.length > 0 && (
-            <div>
-              Artifacts: {tick.outcome.artifactsCreated.join(", ")}
-            </div>
+            <div>Artifacts: {tick.outcome.artifactsCreated.join(", ")}</div>
           )}
           {tick.outcome.knowledgeEntriesCreated > 0 && (
-            <div>
-              Knowledge entries: {tick.outcome.knowledgeEntriesCreated}
-            </div>
+            <div>Knowledge entries: {tick.outcome.knowledgeEntriesCreated}</div>
           )}
         </div>
       </div>

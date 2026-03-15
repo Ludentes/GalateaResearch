@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { CodingSessionMessage } from "../types"
 
 // Mock the SDK before importing the adapter
@@ -10,7 +10,9 @@ vi.mock("@anthropic-ai/claude-agent-sdk", () => ({
 import { ClaudeCodeAdapter } from "../claude-code-adapter"
 
 /** Helper: collect all messages from an async iterable */
-async function collect(iter: AsyncIterable<CodingSessionMessage>): Promise<CodingSessionMessage[]> {
+async function collect(
+  iter: AsyncIterable<CodingSessionMessage>,
+): Promise<CodingSessionMessage[]> {
   const results: CodingSessionMessage[] = []
   for await (const msg of iter) {
     results.push(msg)
@@ -84,7 +86,12 @@ describe("ClaudeCodeAdapter", () => {
           message: {
             content: [
               { type: "text", text: "I will fix the bug now." },
-              { type: "tool_use", name: "Bash", input: { command: "ls" }, id: "tu_1" },
+              {
+                type: "tool_use",
+                name: "Bash",
+                input: { command: "ls" },
+                id: "tu_1",
+              },
             ],
           },
         },
@@ -107,7 +114,10 @@ describe("ClaudeCodeAdapter", () => {
       }),
     )
 
-    expect(messages[0]).toEqual({ type: "text", text: "I will fix the bug now." })
+    expect(messages[0]).toEqual({
+      type: "text",
+      text: "I will fix the bug now.",
+    })
     expect(messages[1]).toMatchObject({
       type: "tool_call",
       toolName: "Bash",
@@ -121,7 +131,9 @@ describe("ClaudeCodeAdapter", () => {
   })
 
   it("wires preToolUse hook as SDK PreToolUse callback", async () => {
-    const preToolUse = vi.fn().mockResolvedValue({ decision: "allow" as const, reason: "safe" })
+    const preToolUse = vi
+      .fn()
+      .mockResolvedValue({ decision: "allow" as const, reason: "safe" })
 
     mockQuery.mockReturnValue(
       fakeStream([
@@ -226,7 +238,11 @@ describe("ClaudeCodeAdapter", () => {
     )
 
     const messages = await collect(
-      adapter.query({ prompt: "t", systemPrompt: "s", workingDirectory: "/tmp" }),
+      adapter.query({
+        prompt: "t",
+        systemPrompt: "s",
+        workingDirectory: "/tmp",
+      }),
     )
 
     expect(messages).toHaveLength(1)
@@ -249,7 +265,11 @@ describe("ClaudeCodeAdapter", () => {
     )
 
     const messages = await collect(
-      adapter.query({ prompt: "t", systemPrompt: "s", workingDirectory: "/tmp" }),
+      adapter.query({
+        prompt: "t",
+        systemPrompt: "s",
+        workingDirectory: "/tmp",
+      }),
     )
 
     expect(messages).toHaveLength(1)
@@ -266,11 +286,22 @@ describe("ClaudeCodeAdapter", () => {
     )
 
     const messages = await collect(
-      adapter.query({ prompt: "t", systemPrompt: "s", workingDirectory: "/tmp" }),
+      adapter.query({
+        prompt: "t",
+        systemPrompt: "s",
+        workingDirectory: "/tmp",
+      }),
     )
 
-    expect(messages[0]).toMatchObject({ type: "error", error: "connection lost" })
-    expect(messages[1]).toMatchObject({ type: "result", subtype: "error", text: "connection lost" })
+    expect(messages[0]).toMatchObject({
+      type: "error",
+      error: "connection lost",
+    })
+    expect(messages[1]).toMatchObject({
+      type: "result",
+      subtype: "error",
+      text: "connection lost",
+    })
   })
 
   it("handles SDK error results gracefully (maps to subtype 'error')", async () => {

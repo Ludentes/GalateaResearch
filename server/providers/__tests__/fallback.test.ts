@@ -18,9 +18,9 @@ vi.mock("../claude-code", () => ({
   createClaudeCodeModel: vi.fn(() => ({ type: "claude-code-mock" })),
 }))
 
+import { DEFAULT_MODELS } from "../config"
 import { getModelWithFallback } from "../index"
 import { ollamaQueue } from "../ollama-queue"
-import { DEFAULT_MODELS } from "../config"
 
 describe("getModelWithFallback", () => {
   const savedEnv = { ...process.env }

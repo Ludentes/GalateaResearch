@@ -15,6 +15,7 @@
 import { readFile } from "node:fs/promises"
 import { resolve } from "node:path"
 import { config } from "dotenv"
+
 config({ override: true })
 
 const DATASET_NAME = "extraction-gold-standard"
@@ -82,10 +83,13 @@ async function main() {
   console.log(`[seed] Dataset "${DATASET_NAME}" ready`)
 
   // Delete old items first
-  let page = 1
+  const page = 1
   let deleted = 0
   while (true) {
-    const resp = (await api("GET", `/dataset-items?datasetName=${DATASET_NAME}&limit=100&page=${page}`)) as {
+    const resp = (await api(
+      "GET",
+      `/dataset-items?datasetName=${DATASET_NAME}&limit=100&page=${page}`,
+    )) as {
       data: Array<{ id: string }>
       meta?: { totalPages?: number }
     }

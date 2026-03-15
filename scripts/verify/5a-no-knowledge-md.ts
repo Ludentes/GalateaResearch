@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, rmSync } from "fs"
 import { ollama } from "ai-sdk-ollama"
+import { existsSync, mkdirSync, rmSync } from "fs"
 import { runExtraction } from "../../server/memory/extraction-pipeline"
 
 ;(async () => {

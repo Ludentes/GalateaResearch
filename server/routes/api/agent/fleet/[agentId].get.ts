@@ -22,10 +22,9 @@ export default defineEventHandler(async (event) => {
   const operationalContext = await loadOperationalContext(
     spec.operational_memory,
   )
-  const recentTicks = await readTickRecords(
-    getTickRecordPath(agentId),
-    { limit: 50 },
-  )
+  const recentTicks = await readTickRecords(getTickRecordPath(agentId), {
+    limit: 50,
+  })
 
   return {
     spec,

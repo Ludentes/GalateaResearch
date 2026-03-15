@@ -1,9 +1,12 @@
 /**
  * Quick test: re-extract a small chunk with gemma3:12b and compare quality.
  */
-import { extractKnowledge, ExtractionSchema } from "../../server/memory/knowledge-extractor"
-import { createOllamaModel } from "../../server/providers/ollama"
+import {
+  ExtractionSchema,
+  extractKnowledge,
+} from "../../server/memory/knowledge-extractor"
 import type { TranscriptTurn } from "../../server/memory/types"
+import { createOllamaModel } from "../../server/providers/ollama"
 
 // Sample turns that should produce entries with `about` and `entities`
 const sampleTurns: TranscriptTurn[] = [

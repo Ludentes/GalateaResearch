@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
-import type { KnowledgeEntry } from "../types"
 import { consolidateExtraction } from "../extraction-consolidation"
+import type { KnowledgeEntry } from "../types"
 
 const makeEntry = (
   content: string,

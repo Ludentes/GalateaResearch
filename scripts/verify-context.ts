@@ -28,9 +28,7 @@ async function main() {
   for (const r of rules) console.log("  -", r.content)
   console.log()
 
-  console.log(
-    "=== LEARNED KNOWLEDGE (top 15 by confidence, truncatable) ===",
-  )
+  console.log("=== LEARNED KNOWLEDGE (top 15 by confidence, truncatable) ===")
   const knowledge = [...prefs, ...facts, ...decisions, ...corrections]
     .sort((a, b) => b.confidence - a.confidence)
     .slice(0, 15)

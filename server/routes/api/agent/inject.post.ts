@@ -1,4 +1,4 @@
-import { HTTPError, defineEventHandler, readBody } from "h3"
+import { defineEventHandler, HTTPError, readBody } from "h3"
 import { addMessage } from "../../../agent/agent-state"
 import { tick } from "../../../agent/tick"
 import type { ChannelMessage } from "../../../agent/types"

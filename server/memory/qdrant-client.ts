@@ -35,11 +35,16 @@ export function createQdrantClient(
 // Health check
 // ---------------------------------------------------------------------------
 
-export async function isQdrantAvailable(client: QdrantClient): Promise<boolean> {
+export async function isQdrantAvailable(
+  client: QdrantClient,
+): Promise<boolean> {
   try {
-    const res = await fetch(`${client.baseUrl}/collections/${client.collectionName}`, {
-      signal: AbortSignal.timeout(2000),
-    })
+    const res = await fetch(
+      `${client.baseUrl}/collections/${client.collectionName}`,
+      {
+        signal: AbortSignal.timeout(2000),
+      },
+    )
     return res.ok
   } catch {
     return false
@@ -71,7 +76,9 @@ export async function ensureCollection(client: QdrantClient): Promise<void> {
   )
 
   if (!res.ok) {
-    throw new Error(`Failed to create Qdrant collection: ${res.status} ${await res.text()}`)
+    throw new Error(
+      `Failed to create Qdrant collection: ${res.status} ${await res.text()}`,
+    )
   }
 }
 
@@ -138,7 +145,8 @@ export async function searchPoints(
   }
 
   if (opts.filter) body.filter = opts.filter
-  if (opts.scoreThreshold !== undefined) body.score_threshold = opts.scoreThreshold
+  if (opts.scoreThreshold !== undefined)
+    body.score_threshold = opts.scoreThreshold
 
   const res = await fetch(
     `${client.baseUrl}/collections/${client.collectionName}/points/search`,
@@ -155,11 +163,13 @@ export async function searchPoints(
   }
 
   const data = await res.json()
-  return (data.result ?? []).map((r: { id: string; score: number; payload: Record<string, unknown> }) => ({
-    id: typeof r.id === "string" ? r.id : String(r.id),
-    score: r.score,
-    payload: r.payload,
-  }))
+  return (data.result ?? []).map(
+    (r: { id: string; score: number; payload: Record<string, unknown> }) => ({
+      id: typeof r.id === "string" ? r.id : String(r.id),
+      score: r.score,
+      payload: r.payload,
+    }),
+  )
 }
 
 // ---------------------------------------------------------------------------

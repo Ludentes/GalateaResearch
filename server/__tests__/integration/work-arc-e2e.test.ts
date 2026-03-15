@@ -1,14 +1,20 @@
 // @vitest-environment node
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { existsSync, mkdirSync, writeFileSync, rmSync } from "node:fs"
+
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
 import path from "node:path"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 // Mock modules that tick depends on but we don't want to call
 vi.mock("../../memory/context-assembler", () => ({
   assembleContext: vi.fn().mockResolvedValue({
     systemPrompt: "You are Galatea",
     sections: [],
-    metadata: { prepromptsLoaded: 0, knowledgeEntries: 0, rulesCount: 0, homeostasisGuidanceIncluded: false },
+    metadata: {
+      prepromptsLoaded: 0,
+      knowledgeEntries: 0,
+      rulesCount: 0,
+      homeostasisGuidanceIncluded: false,
+    },
   }),
 }))
 
@@ -29,18 +35,24 @@ vi.mock("../../agent/dispatcher", () => ({
   dispatchMessage: vi.fn().mockResolvedValue(undefined),
 }))
 
-import { tick, setAdapter } from "../../agent/tick"
 import { updateAgentState } from "../../agent/agent-state"
+import type {
+  CodingQueryOptions,
+  CodingSessionMessage,
+  CodingToolAdapter,
+} from "../../agent/coding-adapter/types"
 import { loadOperationalContext } from "../../agent/operational-memory"
+import { setAdapter, tick } from "../../agent/tick"
 import type { ChannelMessage } from "../../agent/types"
-import type { CodingToolAdapter, CodingQueryOptions, CodingSessionMessage } from "../../agent/coding-adapter/types"
 
 const TEST_DIR = "data/test-work-arc-e2e"
 const STATE_PATH = path.join(TEST_DIR, "state.json")
 const STORE_PATH = path.join(TEST_DIR, "entries.jsonl")
 const OP_PATH = path.join(TEST_DIR, "op-context.json")
 
-function makeTaskMessage(content = "Create user profile screen with edit functionality"): ChannelMessage {
+function makeTaskMessage(
+  content = "Create user profile screen with edit functionality",
+): ChannelMessage {
   return {
     id: "msg-task-e2e",
     channel: "discord",
@@ -66,7 +78,9 @@ afterEach(() => {
 
 describe("E2E work arc flow", () => {
   it("full work arc: task_assignment -> delegate -> completed", async () => {
-    const mockQuery = vi.fn().mockImplementation(async function* (_opts: CodingQueryOptions) {
+    const mockQuery = vi.fn().mockImplementation(async function* (
+      _opts: CodingQueryOptions,
+    ) {
       yield {
         type: "result",
         subtype: "success",
@@ -75,9 +89,24 @@ describe("E2E work arc flow", () => {
         costUsd: 0.05,
         numTurns: 3,
         transcript: [
-          { role: "assistant", content: "Starting work on profile screen", timestamp: new Date().toISOString() },
-          { role: "tool_call", content: "Write", toolName: "Write", toolInput: { file_path: "/tmp/test-workspace/profile.ts" }, timestamp: new Date().toISOString() },
-          { role: "tool_result", content: "File written", toolName: "Write", timestamp: new Date().toISOString() },
+          {
+            role: "assistant",
+            content: "Starting work on profile screen",
+            timestamp: new Date().toISOString(),
+          },
+          {
+            role: "tool_call",
+            content: "Write",
+            toolName: "Write",
+            toolInput: { file_path: "/tmp/test-workspace/profile.ts" },
+            timestamp: new Date().toISOString(),
+          },
+          {
+            role: "tool_result",
+            content: "File written",
+            toolName: "Write",
+            timestamp: new Date().toISOString(),
+          },
         ],
       } satisfies CodingSessionMessage
     })
@@ -120,7 +149,9 @@ describe("E2E work arc flow", () => {
   }, 30_000)
 
   it("operational memory updated on success (BDD G.3)", async () => {
-    const mockQuery = vi.fn().mockImplementation(async function* (_opts: CodingQueryOptions) {
+    const mockQuery = vi.fn().mockImplementation(async function* (
+      _opts: CodingQueryOptions,
+    ) {
       yield {
         type: "result",
         subtype: "success",
@@ -164,12 +195,16 @@ describe("E2E work arc flow", () => {
   it("preToolUse hook blocks destructive command (BDD Trace 9)", async () => {
     const decisions: Array<{ toolName: string; decision: string }> = []
 
-    const mockQuery = vi.fn().mockImplementation(async function* (opts: CodingQueryOptions) {
+    const mockQuery = vi.fn().mockImplementation(async function* (
+      opts: CodingQueryOptions,
+    ) {
       // Manually invoke the preToolUse hook with different tools
       const hook = opts.hooks?.preToolUse
       if (hook) {
         // Read tool should be allowed
-        const readResult = await hook("Read", { file_path: "/tmp/test-workspace/file.ts" })
+        const readResult = await hook("Read", {
+          file_path: "/tmp/test-workspace/file.ts",
+        })
         decisions.push({ toolName: "Read", decision: readResult.decision })
 
         // Destructive Bash command should be denied

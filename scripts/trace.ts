@@ -1,4 +1,5 @@
 #!/usr/bin/env -S pnpm exec tsx
+import type { PipelineTrace, TraceStep } from "../server/memory/fact-retrieval"
 /**
  * Pipeline trace tool — diagnose why facts were or weren't retrieved.
  *
@@ -9,7 +10,6 @@
  *   pnpm exec tsx scripts/trace.ts "your query" --verbose
  */
 import { retrieveRelevantFacts } from "../server/memory/fact-retrieval"
-import type { PipelineTrace, TraceStep } from "../server/memory/fact-retrieval"
 
 const args = process.argv.slice(2)
 const query = args.find((a) => !a.startsWith("--"))
@@ -18,11 +18,15 @@ const additionalEntities = getAllFlags(args, "--entity")
 const verbose = args.includes("--verbose")
 
 if (!query) {
-  console.error("Usage: pnpm exec tsx scripts/trace.ts \"your query here\"")
+  console.error('Usage: pnpm exec tsx scripts/trace.ts "your query here"')
   console.error("")
   console.error("Options:")
-  console.error("  --store <path>    Knowledge store path (default: data/memory/entries.jsonl)")
-  console.error("  --entity <name>   Add entity to search (repeatable, e.g. --entity alina)")
+  console.error(
+    "  --store <path>    Knowledge store path (default: data/memory/entries.jsonl)",
+  )
+  console.error(
+    "  --entity <name>   Add entity to search (repeatable, e.g. --entity alina)",
+  )
   console.error("  --verbose         Show per-entry details for all stages")
   process.exit(1)
 }
@@ -45,15 +49,16 @@ function getAllFlags(args: string[], flag: string): string[] {
 ;(async () => {
   const result = await retrieveRelevantFacts(query, storePath, {
     trace: true,
-    additionalEntities: additionalEntities.length > 0 ? additionalEntities : undefined,
+    additionalEntities:
+      additionalEntities.length > 0 ? additionalEntities : undefined,
   })
 
   const trace = result.trace!
 
   // Header
-  console.log("=" .repeat(70))
+  console.log("=".repeat(70))
   console.log("PIPELINE TRACE")
-  console.log("=" .repeat(70))
+  console.log("=".repeat(70))
   console.log(`Query:    ${trace.query}`)
   console.log(`Store:    ${trace.storePath}`)
   console.log(`Time:     ${trace.timestamp}`)
@@ -61,8 +66,12 @@ function getAllFlags(args: string[], flag: string): string[] {
 
   // Entities
   console.log("--- Entities ---")
-  console.log(`From message:  ${trace.entities.fromMessage.length > 0 ? trace.entities.fromMessage.join(", ") : "(none)"}`)
-  console.log(`Additional:    ${trace.entities.additional.length > 0 ? trace.entities.additional.join(", ") : "(none)"}`)
+  console.log(
+    `From message:  ${trace.entities.fromMessage.length > 0 ? trace.entities.fromMessage.join(", ") : "(none)"}`,
+  )
+  console.log(
+    `Additional:    ${trace.entities.additional.length > 0 ? trace.entities.additional.join(", ") : "(none)"}`,
+  )
   console.log(`Known in store: ${trace.entities.knownInStore.length} entities`)
   if (verbose && trace.entities.knownInStore.length > 0) {
     console.log(`  ${trace.entities.knownInStore.join(", ")}`)
@@ -71,7 +80,9 @@ function getAllFlags(args: string[], flag: string): string[] {
 
   // Keywords
   console.log("--- Keywords ---")
-  console.log(`Significant: ${trace.keywords.length > 0 ? trace.keywords.join(", ") : "(none — all filtered by stop words or too short)"}`)
+  console.log(
+    `Significant: ${trace.keywords.length > 0 ? trace.keywords.join(", ") : "(none — all filtered by stop words or too short)"}`,
+  )
   console.log()
 
   // Config snapshot
@@ -87,11 +98,13 @@ function getAllFlags(args: string[], flag: string): string[] {
   }
 
   // Result
-  console.log("=" .repeat(70))
+  console.log("=".repeat(70))
   console.log(`RESULT: ${result.entries.length} entries retrieved`)
-  console.log("=" .repeat(70))
+  console.log("=".repeat(70))
   for (const e of result.entries) {
-    console.log(`  [${e.confidence.toFixed(2)}] ${e.type} | ${e.content.slice(0, 80)}`)
+    console.log(
+      `  [${e.confidence.toFixed(2)}] ${e.type} | ${e.content.slice(0, 80)}`,
+    )
   }
 
   if (result.entries.length === 0) {
@@ -106,7 +119,9 @@ function getAllFlags(args: string[], flag: string): string[] {
 function printStage(step: TraceStep, verbose: boolean): void {
   const icon = step.filtered > 0 ? "!" : "+"
   console.log(`[${icon}] Stage: ${step.stage}`)
-  console.log(`    Input: ${step.input} | Output: ${step.output} | Filtered: ${step.filtered}`)
+  console.log(
+    `    Input: ${step.input} | Output: ${step.output} | Filtered: ${step.filtered}`,
+  )
 
   if (verbose) {
     for (const d of step.details) {
@@ -137,11 +152,14 @@ function diagnose(trace: PipelineTrace): void {
   const hints: string[] = []
 
   // No entities found
-  if (trace.entities.fromMessage.length === 0 && trace.entities.additional.length === 0) {
+  if (
+    trace.entities.fromMessage.length === 0 &&
+    trace.entities.additional.length === 0
+  ) {
     hints.push(
       "No entities matched. The query doesn't contain any known entity names.\n" +
-      "  Try: --entity <name> to manually specify an entity.\n" +
-      "  Or: check if your entity is in the store with: grep -i '<name>' data/memory/entries.jsonl"
+        "  Try: --entity <name> to manually specify an entity.\n" +
+        "  Or: check if your entity is in the store with: grep -i '<name>' data/memory/entries.jsonl",
     )
   }
 
@@ -149,8 +167,8 @@ function diagnose(trace: PipelineTrace): void {
   if (trace.keywords.length === 0) {
     hints.push(
       "No significant keywords extracted. All words were either too short\n" +
-      "  (< keyword_min_length) or in the stop words list.\n" +
-      "  Check: server/engine/config.yaml → retrieval.keyword_min_length and stop_words.retrieval"
+        "  (< keyword_min_length) or in the stop words list.\n" +
+        "  Check: server/engine/config.yaml → retrieval.keyword_min_length and stop_words.retrieval",
     )
   }
 
@@ -159,23 +177,29 @@ function diagnose(trace: PipelineTrace): void {
   if (kwStep && kwStep.output === 0 && trace.keywords.length > 0) {
     hints.push(
       `Keywords [${trace.keywords.join(", ")}] didn't match any entries.\n` +
-      "  The entries may use different terminology. Try:\n" +
-      "  1. Search the store directly: grep -i '<keyword>' data/memory/entries.jsonl\n" +
-      "  2. Lower the threshold: config.yaml → retrieval.keyword_overlap_threshold"
+        "  The entries may use different terminology. Try:\n" +
+        "  1. Search the store directly: grep -i '<keyword>' data/memory/entries.jsonl\n" +
+        "  2. Lower the threshold: config.yaml → retrieval.keyword_overlap_threshold",
     )
   }
 
   // Entity match filtered everything
   const entStep = trace.steps.find((s) => s.stage === "entity_match")
-  if (entStep && entStep.filtered === entStep.input && trace.entities.fromMessage.length > 0) {
+  if (
+    entStep &&
+    entStep.filtered === entStep.input &&
+    trace.entities.fromMessage.length > 0
+  ) {
     hints.push(
       `Entity "${trace.entities.fromMessage[0]}" was found in query but matched 0 entries.\n` +
-      "  Check if entries have this entity in about.entity, entities[], or content."
+        "  Check if entries have this entity in about.entity, entities[], or content.",
     )
   }
 
   if (hints.length === 0) {
-    hints.push("No specific diagnosis available. Try --verbose for full per-entry details.")
+    hints.push(
+      "No specific diagnosis available. Try --verbose for full per-entry details.",
+    )
   }
 
   for (const hint of hints) {

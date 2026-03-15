@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, rmSync } from "fs"
 import { ollama } from "ai-sdk-ollama"
+import { existsSync, mkdirSync, rmSync } from "fs"
 import { assembleContext } from "../../server/memory/context-assembler"
 import { runExtraction } from "../../server/memory/extraction-pipeline"
 import { retrieveRelevantFacts } from "../../server/memory/fact-retrieval"

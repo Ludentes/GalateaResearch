@@ -1,9 +1,15 @@
-import { readTranscript } from "../../server/memory/transcript-reader"
 import { classifyTurn } from "../../server/memory/signal-classifier"
+import { readTranscript } from "../../server/memory/transcript-reader"
 
 async function main() {
-  const files = process.argv.slice(2).filter(f => f.endsWith(".jsonl") && !f.includes("_"))
-  let total = 0, noise = 0, factual = 0, heuristic = 0, user_turns = 0
+  const files = process.argv
+    .slice(2)
+    .filter((f) => f.endsWith(".jsonl") && !f.includes("_"))
+  let total = 0,
+    noise = 0,
+    factual = 0,
+    heuristic = 0,
+    user_turns = 0
 
   for (const file of files) {
     try {
@@ -20,7 +26,11 @@ async function main() {
     } catch {}
   }
   console.log(`Total turns: ${total}, User turns: ${user_turns}`)
-  console.log(`  Noise: ${noise}, Factual: ${factual}, Heuristic-eligible: ${heuristic}`)
-  console.log(`  Factual % of user: ${((factual/user_turns)*100).toFixed(1)}%`)
+  console.log(
+    `  Noise: ${noise}, Factual: ${factual}, Heuristic-eligible: ${heuristic}`,
+  )
+  console.log(
+    `  Factual % of user: ${((factual / user_turns) * 100).toFixed(1)}%`,
+  )
 }
 main()

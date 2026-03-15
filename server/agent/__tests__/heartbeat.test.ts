@@ -22,7 +22,12 @@ vi.mock("../tick", () => ({
 vi.mock("../agent-state", () => ({
   getAgentState: vi.fn().mockResolvedValue({
     pendingMessages: [
-      { from: "test", content: "hello", channel: "test", receivedAt: new Date().toISOString() },
+      {
+        from: "test",
+        content: "hello",
+        channel: "test",
+        receivedAt: new Date().toISOString(),
+      },
     ],
     lastActivity: new Date().toISOString(),
   }),

@@ -34,7 +34,9 @@ export async function readTranscript(
     try {
       entry = JSON.parse(line)
     } catch {
-      console.warn(`[transcript] Skipping invalid JSON line: ${line.slice(0, 100)}`)
+      console.warn(
+        `[transcript] Skipping invalid JSON line: ${line.slice(0, 100)}`,
+      )
       continue
     }
 
@@ -148,10 +150,7 @@ const UNWRAP_CLOSE_RES = UNWRAP_TAGS.map(
 STRIP_RES.push(/<suggest[^>]*>[\s\S]*?<\/suggest>/gi)
 // Orphaned closing tags — all tags from both lists
 const ALL_TAGS = [...STRIP_TAGS, ...UNWRAP_TAGS]
-const ORPHANED_CLOSE_RE = new RegExp(
-  `<\\/(?:${ALL_TAGS.join("|")})>`,
-  "gi",
-)
+const ORPHANED_CLOSE_RE = new RegExp(`<\\/(?:${ALL_TAGS.join("|")})>`, "gi")
 
 export function stripIdeWrappers(text: string): string {
   let result = text.trim()

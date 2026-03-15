@@ -1,17 +1,23 @@
 // @vitest-environment node
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { existsSync, mkdirSync, writeFileSync, rmSync } from "node:fs"
+
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
 import path from "node:path"
-import { tick, setAdapter } from "../tick"
-import type { ChannelMessage } from "../types"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { updateAgentState } from "../agent-state"
+import { setAdapter, tick } from "../tick"
+import type { ChannelMessage } from "../types"
 
 // Mock modules that tick depends on but we don't want to call
 vi.mock("../../memory/context-assembler", () => ({
   assembleContext: vi.fn().mockResolvedValue({
     systemPrompt: "You are Galatea",
     sections: [],
-    metadata: { prepromptsLoaded: 0, knowledgeEntries: 0, rulesCount: 0, homeostasisGuidanceIncluded: false },
+    metadata: {
+      prepromptsLoaded: 0,
+      knowledgeEntries: 0,
+      rulesCount: 0,
+      homeostasisGuidanceIncluded: false,
+    },
   }),
 }))
 
@@ -104,7 +110,9 @@ describe("tick with task delegation", () => {
 
   it("resumes session on second task_assignment via opCtx.lastClaudeSessionId", async () => {
     const receivedResume: (string | undefined)[] = []
-    const mockQuery = vi.fn().mockImplementation(async function* (opts: Record<string, unknown>) {
+    const mockQuery = vi.fn().mockImplementation(async function* (
+      opts: Record<string, unknown>,
+    ) {
       receivedResume.push(opts.resume as string | undefined)
       yield {
         type: "result",
@@ -155,12 +163,12 @@ describe("tick with task delegation", () => {
     // VERIFY/FINISH stages may add extra adapter calls in between,
     // so we check first and last rather than exact count.
     expect(receivedResume.length).toBeGreaterThanOrEqual(2)
-    expect(receivedResume[0]).toBeUndefined()         // first DO call: no resume
+    expect(receivedResume[0]).toBeUndefined() // first DO call: no resume
     // Find the last call that has the session resume — that's the second DO call
     const lastResumeIdx = receivedResume.findIndex(
       (r, i) => i > 0 && r === "session-abc-123",
     )
-    expect(lastResumeIdx).toBeGreaterThan(0)          // second DO call: resumes via opCtx
+    expect(lastResumeIdx).toBeGreaterThan(0) // second DO call: resumes via opCtx
   })
 
   it("includes guidance when self_preservation is LOW", async () => {

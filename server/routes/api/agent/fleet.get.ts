@@ -1,10 +1,10 @@
 import { defineEventHandler } from "h3"
 import { listAgentIds, loadAgentSpec } from "../../../agent/agent-spec"
+import type { HomeostasisState } from "../../../engine/types"
 import {
   getTickRecordPath,
   readLastTickRecord,
 } from "../../../observation/tick-record"
-import type { HomeostasisState } from "../../../engine/types"
 
 export default defineEventHandler(async () => {
   const agentIds = await listAgentIds()

@@ -10,8 +10,8 @@
  *   pnpm exec tsx scripts/verify/discord-smoke.ts
  */
 
-import { startDiscordBot, stopDiscordBot } from "../../server/discord/bot"
 import { getAgentState } from "../../server/agent/agent-state"
+import { startDiscordBot, stopDiscordBot } from "../../server/discord/bot"
 
 async function main() {
   const bot = await startDiscordBot()

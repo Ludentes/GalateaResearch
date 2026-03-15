@@ -8,7 +8,7 @@ vi.mock("../../engine/config", async (importOriginal) => {
     getArtifactConfig: vi.fn(() => ({
       claude_md: {
         max_lines: 200,
-        min_confidence: 0.80,
+        min_confidence: 0.8,
         require_curation: true,
         architecture_preamble: "# Test",
       },
@@ -74,8 +74,10 @@ describe("routeEntries with overrides", () => {
 
   it("uses contentOverride in generated artifacts when present", () => {
     const entry = makeEntry({
-      content: "in case of update in typeorm for nullable field we should specify null",
-      contentOverride: "TypeORM: use null (not undefined) for nullable field updates",
+      content:
+        "in case of update in typeorm for nullable field we should specify null",
+      contentOverride:
+        "TypeORM: use null (not undefined) for nullable field updates",
     })
     const result = routeEntries([entry])
     // The routed entry should exist

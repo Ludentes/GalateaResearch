@@ -1,11 +1,13 @@
 // @vitest-environment node
-import { existsSync, rmSync } from "node:fs"
-import { readFileSync } from "node:fs"
+import { existsSync, readFileSync, rmSync } from "node:fs"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
+import {
+  consolidateToClaudeMd,
+  findConsolidationCandidates,
+} from "../consolidation"
 import { appendEntries } from "../knowledge-store"
 import type { KnowledgeEntry } from "../types"
-import { consolidateToClaudeMd, findConsolidationCandidates } from "../consolidation"
 
 const TEST_DIR = path.join("data", "test", "consolidation-test")
 const TEST_STORE = path.join(TEST_DIR, "entries.jsonl")
@@ -62,7 +64,7 @@ describe("Consolidation", () => {
   it("skips entries below occurrence threshold", async () => {
     const entries: KnowledgeEntry[] = [
       makeEntry("Use pnpm in all projects", "preference", 0.95, "session:1"),
-      makeEntry("Use pnpm in all projects", "preference", 0.90, "session:2"),
+      makeEntry("Use pnpm in all projects", "preference", 0.9, "session:2"),
       // Only 2 occurrences — below min_occurrences (3)
     ]
     await appendEntries(entries, TEST_STORE)

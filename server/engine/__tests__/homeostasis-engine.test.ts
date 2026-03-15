@@ -1,7 +1,12 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
+import {
+  assessDimensions,
+  clearCache,
+  getGuidance,
+  loadGuidanceText,
+} from "../homeostasis-engine"
 import type { AgentContext, HomeostasisState } from "../types"
-import { assessDimensions, clearCache, getGuidance, loadGuidanceText } from "../homeostasis-engine"
 
 const baseContext: AgentContext = {
   sessionId: "test-session",
@@ -45,8 +50,14 @@ describe("Homeostasis Engine", () => {
         ...baseContext,
         currentMessage: "How should I set up authentication for mobile?",
         retrievedFacts: [
-          { content: "Use Clerk for mobile authentication setup", confidence: 0.95 },
-          { content: "Authentication with JWT has refresh issues on mobile", confidence: 0.85 },
+          {
+            content: "Use Clerk for mobile authentication setup",
+            confidence: 0.95,
+          },
+          {
+            content: "Authentication with JWT has refresh issues on mobile",
+            confidence: 0.85,
+          },
         ],
       }
       const state = assessDimensions(ctx)
@@ -81,7 +92,10 @@ describe("Homeostasis Engine", () => {
           { role: "assistant", content: "Try X" },
           { role: "user", content: "Still broken, how do I fix this?" },
           { role: "assistant", content: "Try Y" },
-          { role: "user", content: "That didn't work either, how do I fix this?" },
+          {
+            role: "user",
+            content: "That didn't work either, how do I fix this?",
+          },
         ],
       }
       const state = assessDimensions(ctx)
@@ -93,7 +107,9 @@ describe("Homeostasis Engine", () => {
     it("loads guidance YAML", () => {
       const guidance = loadGuidanceText()
       expect(guidance.knowledge_sufficiency).toBeDefined()
-      expect(guidance.knowledge_sufficiency.LOW.primary).toContain("Knowledge gap")
+      expect(guidance.knowledge_sufficiency.LOW.primary).toContain(
+        "Knowledge gap",
+      )
     })
   })
 
@@ -144,10 +160,10 @@ describe("Homeostasis Engine", () => {
 
     it("prioritizes higher-priority guidance first", () => {
       const state: HomeostasisState = {
-        knowledge_sufficiency: "LOW",  // priority 1
+        knowledge_sufficiency: "LOW", // priority 1
         certainty_alignment: "HEALTHY",
-        progress_momentum: "LOW",      // priority 2
-        communication_health: "LOW",   // priority 3
+        progress_momentum: "LOW", // priority 2
+        communication_health: "LOW", // priority 3
         productive_engagement: "HEALTHY",
         knowledge_application: "HEALTHY",
         assessed_at: new Date(),

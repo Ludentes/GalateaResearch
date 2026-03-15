@@ -126,9 +126,7 @@ describe("Extraction Pipeline", () => {
   })
 
   it("skips LLM when strategy is heuristics-only", async () => {
-    const { getExtractionStrategyConfig } = await import(
-      "../../engine/config"
-    )
+    const { getExtractionStrategyConfig } = await import("../../engine/config")
     const origConfig = getExtractionStrategyConfig()
 
     // Temporarily override the config module

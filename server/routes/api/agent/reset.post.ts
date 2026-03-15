@@ -1,5 +1,5 @@
 import { rm } from "node:fs/promises"
-import { HTTPError, defineEventHandler, readBody } from "h3"
+import { defineEventHandler, HTTPError, readBody } from "h3"
 import { updateAgentState } from "../../../agent/agent-state"
 import { clearAgentSession } from "../../../agent/claude-code-respond"
 import {
@@ -9,6 +9,7 @@ import {
 import { clearConfigCache } from "../../../engine/config"
 import { clearCache } from "../../../engine/homeostasis-engine"
 import { getTickRecordPath } from "../../../observation/tick-record"
+
 // Provider cache is system-level state, not per-agent — don't invalidate on reset
 
 interface ResetBody {

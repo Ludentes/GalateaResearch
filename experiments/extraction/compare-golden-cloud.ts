@@ -7,15 +7,15 @@
  */
 import { readFileSync } from "node:fs"
 import path from "node:path"
-import { parse as parseYaml } from "yaml"
 import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import { generateObject } from "ai"
+import { parse as parseYaml } from "yaml"
 import { z } from "zod"
-import { readTranscript } from "../../server/memory/transcript-reader"
-import { classifyTurn } from "../../server/memory/signal-classifier"
+import { validateExtraction } from "../../server/memory/confabulation-guard"
 import { extractHeuristic } from "../../server/memory/heuristic-extractor"
 import { applyNoveltyGateAndApproval } from "../../server/memory/post-extraction"
-import { validateExtraction } from "../../server/memory/confabulation-guard"
+import { classifyTurn } from "../../server/memory/signal-classifier"
+import { readTranscript } from "../../server/memory/transcript-reader"
 import type { KnowledgeEntry, TranscriptTurn } from "../../server/memory/types"
 
 // --- Optimized extraction prompt (manual DSPy from golden dataset analysis) ---
@@ -87,17 +87,37 @@ Origin:
 const ExtractionSchema = z.object({
   items: z.array(
     z.object({
-      type: z.enum(["preference", "fact", "rule", "procedure", "correction", "decision"]),
+      type: z.enum([
+        "preference",
+        "fact",
+        "rule",
+        "procedure",
+        "correction",
+        "decision",
+      ]),
       content: z.string().describe("Concise, actionable, standalone statement"),
       confidence: z.number().describe("0.0 to 1.0"),
-      evidence: z.string().describe("The specific transcript text that supports this"),
+      evidence: z
+        .string()
+        .describe("The specific transcript text that supports this"),
       entities: z.array(z.string()),
-      about: z.object({
-        entity: z.string(),
-        type: z.enum(["user", "project", "agent", "domain", "team"]),
-      }).optional(),
-      novelty: z.enum(["project-specific", "domain-specific", "general-knowledge"]),
-      origin: z.enum(["explicit-statement", "observed-failure", "observed-pattern", "inferred"]),
+      about: z
+        .object({
+          entity: z.string(),
+          type: z.enum(["user", "project", "agent", "domain", "team"]),
+        })
+        .optional(),
+      novelty: z.enum([
+        "project-specific",
+        "domain-specific",
+        "general-knowledge",
+      ]),
+      origin: z.enum([
+        "explicit-statement",
+        "observed-failure",
+        "observed-pattern",
+        "inferred",
+      ]),
     }),
   ),
 })
@@ -106,20 +126,54 @@ const ExtractionSchema = z.object({
 interface ExpectedModel {
   user_model?: { preferences?: string[] }
   team_model?: { rules?: string[] }
-  project_model?: { decisions?: string[]; rules?: string[]; facts?: string[]; lessons?: string[] }
+  project_model?: {
+    decisions?: string[]
+    rules?: string[]
+    facts?: string[]
+    lessons?: string[]
+  }
 }
 
 function extractKeyTerms(expected: string): string[] {
   const stops = new Set([
-    "the", "for", "and", "with", "from", "not", "all", "use", "should",
-    "must", "can", "has", "are", "was", "our", "its", "that", "this",
-    "when", "before", "after", "first", "then", "also", "into",
+    "the",
+    "for",
+    "and",
+    "with",
+    "from",
+    "not",
+    "all",
+    "use",
+    "should",
+    "must",
+    "can",
+    "has",
+    "are",
+    "was",
+    "our",
+    "its",
+    "that",
+    "this",
+    "when",
+    "before",
+    "after",
+    "first",
+    "then",
+    "also",
+    "into",
   ])
-  return expected.toLowerCase().replace(/[()—–\-]/g, " ").split(/\s+/)
-    .filter((w) => w.length >= 3 && !stops.has(w)).slice(0, 4)
+  return expected
+    .toLowerCase()
+    .replace(/[()—–-]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length >= 3 && !stops.has(w))
+    .slice(0, 4)
 }
 
-function checkRecall(entries: KnowledgeEntry[], expected: string[]): { found: string[]; missed: string[] } {
+function checkRecall(
+  entries: KnowledgeEntry[],
+  expected: string[],
+): { found: string[]; missed: string[] } {
   const found: string[] = []
   const missed: string[] = []
   for (const exp of expected) {
@@ -139,8 +193,15 @@ function dedup(entries: KnowledgeEntry[]): KnowledgeEntry[] {
   const seen = new Set<string>()
   const unique: KnowledgeEntry[] = []
   for (const e of entries) {
-    const key = e.content.toLowerCase().trim().replace(/\s+/g, " ").slice(0, 200)
-    if (!seen.has(key)) { seen.add(key); unique.push(e) }
+    const key = e.content
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, " ")
+      .slice(0, 200)
+    if (!seen.has(key)) {
+      seen.add(key)
+      unique.push(e)
+    }
   }
   return unique
 }
@@ -155,9 +216,10 @@ async function extractCloud(
     .join("\n\n")
 
   // Truncate massive turns to 30K chars (avoid exceeding context)
-  const truncated = transcript.length > 30000
-    ? transcript.slice(0, 30000) + "\n\n[...truncated...]"
-    : transcript
+  const truncated =
+    transcript.length > 30000
+      ? transcript.slice(0, 30000) + "\n\n[...truncated...]"
+      : transcript
 
   const promptText = `${OPTIMIZED_PROMPT}\n\n---\n\nTRANSCRIPT:\n${truncated}`
 
@@ -173,12 +235,14 @@ async function extractCloud(
     })
 
     const elapsed = Date.now() - t0
-    const cost = usage ? (
-      ((usage as any).inputTokens * 0.001 + (usage as any).outputTokens * 0.005) / 1000
-    ) : 0
+    const cost = usage
+      ? ((usage as any).inputTokens * 0.001 +
+          (usage as any).outputTokens * 0.005) /
+        1000
+      : 0
     console.log(
       `  [cloud] ${object.items.length} items in ${elapsed}ms | ` +
-      `${(usage as any)?.inputTokens ?? "?"}in/${(usage as any)?.outputTokens ?? "?"}out | $${cost.toFixed(4)}`
+        `${(usage as any)?.inputTokens ?? "?"}in/${(usage as any)?.outputTokens ?? "?"}out | $${cost.toFixed(4)}`,
     )
 
     const rawEntries: KnowledgeEntry[] = object.items.map((item) => ({
@@ -197,8 +261,13 @@ async function extractCloud(
     return applyNoveltyGateAndApproval(guardResult.entries)
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
-    console.warn(`  [cloud] FAILED (${Date.now() - t0}ms): ${msg.slice(0, 500)}`)
-    if ((error as any)?.responseBody) console.warn(`  [cloud] Body: ${String((error as any).responseBody).slice(0, 300)}`)
+    console.warn(
+      `  [cloud] FAILED (${Date.now() - t0}ms): ${msg.slice(0, 500)}`,
+    )
+    if ((error as any)?.responseBody)
+      console.warn(
+        `  [cloud] Body: ${String((error as any).responseBody).slice(0, 300)}`,
+      )
     return []
   }
 }
@@ -208,19 +277,29 @@ async function main() {
   const developer = process.argv[2]
   const modelId = process.argv[3]
   if (!developer || !modelId || process.argv.length < 5) {
-    console.error("Usage: pnpm tsx experiments/extraction/compare-golden-cloud.ts <developer> <model-id> <session-files...>")
+    console.error(
+      "Usage: pnpm tsx experiments/extraction/compare-golden-cloud.ts <developer> <model-id> <session-files...>",
+    )
     process.exit(1)
   }
 
   const apiKey = process.env.OPENROUTER_API_KEY
-  if (!apiKey) { console.error("OPENROUTER_API_KEY not set"); process.exit(1) }
+  if (!apiKey) {
+    console.error("OPENROUTER_API_KEY not set")
+    process.exit(1)
+  }
 
   const yamlPath = path.join(import.meta.dirname, "expected-models.yaml")
   const allModels = parseYaml(readFileSync(yamlPath, "utf-8"))
   const expected: ExpectedModel = allModels[developer]
-  if (!expected) { console.error(`No model for: ${developer}`); process.exit(1) }
+  if (!expected) {
+    console.error(`No model for: ${developer}`)
+    process.exit(1)
+  }
 
-  const jsonlFiles = process.argv.slice(4).filter(f => f.endsWith(".jsonl") && !path.basename(f).includes("_"))
+  const jsonlFiles = process.argv
+    .slice(4)
+    .filter((f) => f.endsWith(".jsonl") && !path.basename(f).includes("_"))
 
   console.log(`\n=== Golden Cloud Comparison: ${developer} (${modelId}) ===`)
   console.log(`Sessions: ${jsonlFiles.length}`)
@@ -232,7 +311,7 @@ async function main() {
   const llmEntries: KnowledgeEntry[] = []
   let totalTurns = 0
   let factualTurns = 0
-  let totalCost = 0
+  const totalCost = 0
   const t0 = Date.now()
   const chunkSize = 8
 
@@ -241,18 +320,24 @@ async function main() {
     let turns: TranscriptTurn[]
     try {
       turns = await readTranscript(file)
-    } catch { continue }
+    } catch {
+      continue
+    }
 
     totalTurns += turns.length
     const source = `session:${path.basename(file, ".jsonl")}`
-    process.stdout.write(`\r  Session ${si + 1}/${jsonlFiles.length} (${turns.length} turns)...`)
+    process.stdout.write(
+      `\r  Session ${si + 1}/${jsonlFiles.length} (${turns.length} turns)...`,
+    )
 
     // Heuristic pass
     for (let i = 0; i < turns.length; i++) {
       const turn = turns[i]
       const classification = classifyTurn(turn)
-      if (classification.type === "noise" || classification.type === "factual") continue
-      const preceding = i > 0 && turns[i - 1].role === "assistant" ? turns[i - 1] : undefined
+      if (classification.type === "noise" || classification.type === "factual")
+        continue
+      const preceding =
+        i > 0 && turns[i - 1].role === "assistant" ? turns[i - 1] : undefined
       const result = extractHeuristic(turn, classification, source, preceding)
       heuristicEntries.push(...result.entries)
     }
@@ -296,7 +381,8 @@ async function main() {
 
   // Recall
   console.log("--- RECALL ---\n")
-  let totalExpected = 0, totalFound = 0
+  let totalExpected = 0,
+    totalFound = 0
 
   const categories = [
     { name: "User preferences", items: expected.user_model?.preferences },
@@ -317,15 +403,24 @@ async function main() {
     for (const m of r.missed) console.log(`    ✗ ${m}`)
   }
 
-  console.log(`\n  RECALL TOTAL: ${totalFound}/${totalExpected} (${((totalFound / totalExpected) * 100).toFixed(1)}%)`)
+  console.log(
+    `\n  RECALL TOTAL: ${totalFound}/${totalExpected} (${((totalFound / totalExpected) * 100).toFixed(1)}%)`,
+  )
 
   // Precision
-  const suspicious = deduped.filter(e => {
+  const suspicious = deduped.filter((e) => {
     const c = e.content.toLowerCase()
-    return c.length < 10 || c.includes("<") || /^(ok|yes|no|thanks|sure|got it)/i.test(c) || c.split(" ").length < 3
+    return (
+      c.length < 10 ||
+      c.includes("<") ||
+      /^(ok|yes|no|thanks|sure|got it)/i.test(c) ||
+      c.split(" ").length < 3
+    )
   })
   console.log(`\n--- PRECISION ---`)
-  console.log(`  Good: ${deduped.length - suspicious.length}, Suspicious: ${suspicious.length}`)
+  console.log(
+    `  Good: ${deduped.length - suspicious.length}, Suspicious: ${suspicious.length}`,
+  )
   if (suspicious.length > 0) {
     for (const s of suspicious.slice(0, 5)) {
       console.log(`    ? [${s.type}] "${s.content.slice(0, 80)}"`)
@@ -334,7 +429,13 @@ async function main() {
 
   // LLM-only contribution
   const heuristicGated = dedup(applyNoveltyGateAndApproval(heuristicEntries))
-  const llmOnlyEntries = deduped.filter(e => !heuristicGated.some(h => h.content.toLowerCase().trim() === e.content.toLowerCase().trim()))
+  const llmOnlyEntries = deduped.filter(
+    (e) =>
+      !heuristicGated.some(
+        (h) =>
+          h.content.toLowerCase().trim() === e.content.toLowerCase().trim(),
+      ),
+  )
   console.log(`\n--- CLOUD LLM CONTRIBUTION ---`)
   console.log(`  Entries only from cloud: ${llmOnlyEntries.length}`)
 
@@ -343,7 +444,9 @@ async function main() {
     if (!items?.length) continue
     const heuristicRecall = checkRecall(heuristicGated, items)
     const hybridRecall = checkRecall(deduped, items)
-    const llmAdded = hybridRecall.found.filter(f => !heuristicRecall.found.includes(f))
+    const llmAdded = hybridRecall.found.filter(
+      (f) => !heuristicRecall.found.includes(f),
+    )
     if (llmAdded.length > 0) {
       console.log(`  ${name}: cloud added ${llmAdded.length}`)
       for (const a of llmAdded) console.log(`    + ${a}`)

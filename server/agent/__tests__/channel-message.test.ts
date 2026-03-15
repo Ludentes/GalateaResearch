@@ -1,11 +1,7 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { clearHandlers, dispatchMessage, registerHandler } from "../dispatcher"
 import type { ChannelMessage } from "../types"
-import {
-  clearHandlers,
-  dispatchMessage,
-  registerHandler,
-} from "../dispatcher"
 
 // ---------------------------------------------------------------------------
 // Feature: Dispatcher with ChannelMessage

@@ -6,9 +6,14 @@
  *   pnpm tsx scripts/gen-artifacts.ts [--store <path>] [--output <dir>]
  */
 import { config } from "dotenv"
+
 config({ override: true })
+
 import { parseArgs } from "node:util"
-import { generateClaudeMd, generateSkillFiles } from "../server/memory/artifact-generator"
+import {
+  generateClaudeMd,
+  generateSkillFiles,
+} from "../server/memory/artifact-generator"
 
 const { values } = parseArgs({
   options: {
@@ -35,4 +40,7 @@ async function main() {
     console.log("No skill files generated")
   }
 }
-main().catch(e => { console.error(e); process.exit(1) })
+main().catch((e) => {
+  console.error(e)
+  process.exit(1)
+})

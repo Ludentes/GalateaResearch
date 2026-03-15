@@ -36,9 +36,7 @@ export default defineEventHandler(async (event) => {
 
   // Filter by curation status
   if (query.curationStatus) {
-    filtered = filtered.filter(
-      (e) => e.curationStatus === query.curationStatus,
-    )
+    filtered = filtered.filter((e) => e.curationStatus === query.curationStatus)
   }
 
   // Filter by target channel

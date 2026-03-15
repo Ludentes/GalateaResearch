@@ -5,13 +5,13 @@ import { drizzle } from "drizzle-orm/postgres-js"
 import postgres from "postgres"
 import { afterAll, describe, expect, it } from "vitest"
 import { messages, sessions } from "../../../db/schema"
+import { getLLMConfig } from "../../../providers/config"
+import { createOllamaModel } from "../../../providers/ollama"
 import {
   createSessionLogic,
   getSessionMessagesLogic,
   sendMessageLogic,
 } from "../../chat.logic"
-import { getLLMConfig } from "../../../providers/config"
-import { createOllamaModel } from "../../../providers/ollama"
 
 const TEST_DB_URL =
   process.env.DATABASE_URL ||

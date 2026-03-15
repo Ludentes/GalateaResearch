@@ -49,6 +49,7 @@ import { stemTokenize } from "./stemmer"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+
 import { parse as parseYaml } from "yaml"
 import type {
   AgentContext,
@@ -71,19 +72,40 @@ const dimensionCache = new Map<string, CachedAssessment>()
 
 interface DimensionConfig {
   cacheTTL: number // milliseconds
-  thinkingLevel: 0 | 1 | 2  // 0=cached, 1=computed, 2=LLM
+  thinkingLevel: 0 | 1 | 2 // 0=cached, 1=computed, 2=LLM
 }
 
 function getDimensionConfigs(): Record<Dimension, DimensionConfig> {
   const ttl = getHomeostasisConfig().cache_ttl
   return {
-    knowledge_sufficiency: { cacheTTL: ttl.knowledge_sufficiency ?? 0, thinkingLevel: 1 },
-    certainty_alignment: { cacheTTL: ttl.certainty_alignment ?? 60_000, thinkingLevel: 2 },
-    progress_momentum: { cacheTTL: ttl.progress_momentum ?? 120_000, thinkingLevel: 1 },
-    communication_health: { cacheTTL: ttl.communication_health ?? 1800_000, thinkingLevel: 1 },
-    productive_engagement: { cacheTTL: ttl.productive_engagement ?? 0, thinkingLevel: 1 },
-    knowledge_application: { cacheTTL: ttl.knowledge_application ?? 300_000, thinkingLevel: 2 },
-    self_preservation: { cacheTTL: ttl.self_preservation ?? 0, thinkingLevel: 1 },
+    knowledge_sufficiency: {
+      cacheTTL: ttl.knowledge_sufficiency ?? 0,
+      thinkingLevel: 1,
+    },
+    certainty_alignment: {
+      cacheTTL: ttl.certainty_alignment ?? 60_000,
+      thinkingLevel: 2,
+    },
+    progress_momentum: {
+      cacheTTL: ttl.progress_momentum ?? 120_000,
+      thinkingLevel: 1,
+    },
+    communication_health: {
+      cacheTTL: ttl.communication_health ?? 1800_000,
+      thinkingLevel: 1,
+    },
+    productive_engagement: {
+      cacheTTL: ttl.productive_engagement ?? 0,
+      thinkingLevel: 1,
+    },
+    knowledge_application: {
+      cacheTTL: ttl.knowledge_application ?? 300_000,
+      thinkingLevel: 2,
+    },
+    self_preservation: {
+      cacheTTL: ttl.self_preservation ?? 0,
+      thinkingLevel: 1,
+    },
   }
 }
 
@@ -93,7 +115,7 @@ function getCacheKey(dimension: Dimension, sessionId: string): string {
 
 function assessL0Cached(
   dimension: Dimension,
-  sessionId: string
+  sessionId: string,
 ): DimensionState | null {
   const config = getDimensionConfigs()[dimension]
   if (config.cacheTTL === 0) return null
@@ -114,7 +136,7 @@ function assessL0Cached(
 export function updateCache(
   dimension: Dimension,
   sessionId: string,
-  state: DimensionState
+  state: DimensionState,
 ): void {
   const cacheKey = getCacheKey(dimension, sessionId)
   dimensionCache.set(cacheKey, {
@@ -137,7 +159,10 @@ function assessKnowledgeSufficiencyL1(ctx: AgentContext): DimensionState {
   const cfg = getHomeostasisConfig()
   const facts = ctx.retrievedFacts || []
 
-  if (facts.length === 0 && ctx.currentMessage.length > cfg.knowledge_message_min_length) {
+  if (
+    facts.length === 0 &&
+    ctx.currentMessage.length > cfg.knowledge_message_min_length
+  ) {
     return "LOW"
   }
 
@@ -154,16 +179,18 @@ function assessKnowledgeSufficiencyL1(ctx: AgentContext): DimensionState {
   // Require at least 2 stem overlaps to count as relevant — a single shared
   // common word (e.g. "past", "work") is not enough signal.
   const minOverlap = Math.max(cfg.knowledge_keyword_overlap, 2)
-  const relevantFacts = facts.filter(f => {
+  const relevantFacts = facts.filter((f) => {
     const factWords = stemTokenize(f.content, noShort)
-    const overlap = [...messageWords].filter(w => factWords.has(w)).length
+    const overlap = [...messageWords].filter((w) => factWords.has(w)).length
     return overlap >= minOverlap
   })
 
   // Weight by confidence
-  const avgConfidence = relevantFacts.length > 0
-    ? relevantFacts.reduce((sum, f) => sum + f.confidence, 0) / relevantFacts.length
-    : 0
+  const avgConfidence =
+    relevantFacts.length > 0
+      ? relevantFacts.reduce((sum, f) => sum + f.confidence, 0) /
+        relevantFacts.length
+      : 0
 
   const score = relevantFacts.length * avgConfidence
 
@@ -181,7 +208,9 @@ function assessProgressMomentumL1(ctx: AgentContext): DimensionState {
   // Uses stem-frequency counting: if N+ stems appear in 2+ messages, user is stuck.
   // This is more robust than pairwise Jaccard which fails when messages have
   // varied surrounding words but share the same core topic.
-  const recent = userMessages.slice(-cfg.stuck_detection_window).map((m) => m.content.toLowerCase())
+  const recent = userMessages
+    .slice(-cfg.stuck_detection_window)
+    .map((m) => m.content.toLowerCase())
   const words = recent.map((m) => stemTokenize(m))
 
   if (words.length >= cfg.stuck_detection_window) {
@@ -192,7 +221,9 @@ function assessProgressMomentumL1(ctx: AgentContext): DimensionState {
         stemCounts.set(stem, (stemCounts.get(stem) || 0) + 1)
       }
     }
-    const repeatedStems = [...stemCounts.values()].filter((count) => count >= 2).length
+    const repeatedStems = [...stemCounts.values()].filter(
+      (count) => count >= 2,
+    ).length
     if (repeatedStems >= cfg.stuck_shared_stems_min) return "LOW"
   }
 
@@ -204,13 +235,15 @@ function assessCommunicationHealthL1(ctx: AgentContext): DimensionState {
 
   // Check outbound cooldown: HIGH if we just sent a message (< 5 min ago)
   if (ctx.lastOutboundAt) {
-    const outboundElapsedMs = Date.now() - new Date(ctx.lastOutboundAt).getTime()
+    const outboundElapsedMs =
+      Date.now() - new Date(ctx.lastOutboundAt).getTime()
     if (outboundElapsedMs < 5 * 60_000) return "HIGH"
   }
 
   // Check silence during active work: LOW if has task but no outbound for 3+ hours
   if (ctx.hasAssignedTask && ctx.lastOutboundAt) {
-    const outboundElapsedMs = Date.now() - new Date(ctx.lastOutboundAt).getTime()
+    const outboundElapsedMs =
+      Date.now() - new Date(ctx.lastOutboundAt).getTime()
     const hours = outboundElapsedMs / (1000 * 60 * 60)
     if (hours >= 3) return "LOW"
   }
@@ -360,7 +393,7 @@ export function assessDimensions(ctx: AgentContext): HomeostasisState {
     assessed_at: new Date(),
     assessment_method: {
       knowledge_sufficiency: "computed",
-      certainty_alignment: "computed",  // Will be "llm" when L2 implemented
+      certainty_alignment: "computed", // Will be "llm" when L2 implemented
       progress_momentum: "computed",
       communication_health: "computed",
       productive_engagement: "computed",
@@ -476,7 +509,10 @@ async function assessL2Semantic(
 
     return parseL2Result(result.text)
   } catch (err) {
-    console.warn(`[homeostasis] L2 assessment failed for ${dimension}, falling back to HEALTHY:`, (err as Error)?.message ?? err)
+    console.warn(
+      `[homeostasis] L2 assessment failed for ${dimension}, falling back to HEALTHY:`,
+      (err as Error)?.message ?? err,
+    )
     return null
   }
 }
@@ -583,7 +619,11 @@ export function loadGuidanceText(): GuidanceConfig {
 
 export function getGuidance(state: HomeostasisState): string {
   const guidance = loadGuidanceText()
-  const imbalanced: Array<{ dimension: Dimension; state: DimensionState; entry: GuidanceEntry }> = []
+  const imbalanced: Array<{
+    dimension: Dimension
+    state: DimensionState
+    entry: GuidanceEntry
+  }> = []
 
   for (const [dim, dimState] of Object.entries(state)) {
     if (dim === "assessed_at" || dim === "assessment_method") continue
@@ -603,9 +643,7 @@ export function getGuidance(state: HomeostasisState): string {
   // Sort by priority (lower = higher priority)
   imbalanced.sort((a, b) => a.entry.priority - b.entry.priority)
 
-  return imbalanced
-    .map((g) => g.entry.primary.trim())
-    .join("\n\n")
+  return imbalanced.map((g) => g.entry.primary.trim()).join("\n\n")
 }
 
 // NOTE: L2 LLM Assessment is implemented above via assessL2Semantic() and assessDimensionsAsync().
@@ -618,7 +656,11 @@ export function checkBranchProtection(cmd: string): string | null {
   const pushMatch = cmd.match(/\bgit\s+push\b.*?\b([\w/.-]+)\s*$/)
   if (pushMatch) {
     const branch = pushMatch[1]
-    if (PROTECTED_BRANCHES.some((pb) => branch === pb || branch.startsWith(`${pb}/`))) {
+    if (
+      PROTECTED_BRANCHES.some(
+        (pb) => branch === pb || branch.startsWith(`${pb}/`),
+      )
+    ) {
       return `Push to protected branch "${branch}" is not allowed`
     }
   }
@@ -637,7 +679,10 @@ export function checkBranchProtection(cmd: string): string | null {
  * HIGH/ABSOLUTE → ask (escalate for confirmation)
  * MEDIUM/LOW/NONE → deny
  */
-function trustDecision(trustLevel: TrustLevel, reason: string): SafetyCheckResult {
+function trustDecision(
+  trustLevel: TrustLevel,
+  reason: string,
+): SafetyCheckResult {
   if (trustLevel === "ABSOLUTE") {
     return { decision: "allow", reason, triggeredBy: "trust-override" }
   }
@@ -667,11 +712,21 @@ const TOOL_DESTRUCTIVE_PATTERNS = [
  *
  * Read-only tools (Read, Glob, Grep, WebSearch) are always allowed.
  */
-export function checkToolCallSafety(input: ToolCallCheckInput): SafetyCheckResult {
+export function checkToolCallSafety(
+  input: ToolCallCheckInput,
+): SafetyCheckResult {
   const { toolName, toolArgs, trustLevel, workingDirectory } = input
 
   // Read-only tools are always safe
-  const readOnlyTools = ["Read", "Glob", "Grep", "WebSearch", "WebFetch", "ListMcpResourcesTool", "ReadMcpResourceTool"]
+  const readOnlyTools = [
+    "Read",
+    "Glob",
+    "Grep",
+    "WebSearch",
+    "WebFetch",
+    "ListMcpResourcesTool",
+    "ReadMcpResourceTool",
+  ]
   if (readOnlyTools.includes(toolName)) {
     return { decision: "allow", reason: "Read-only tool" }
   }
@@ -692,7 +747,10 @@ export function checkToolCallSafety(input: ToolCallCheckInput): SafetyCheckResul
   }
 
   // Check 2: Branch protection
-  if ((toolName === "Bash" || toolName === "bash") && typeof toolArgs.command === "string") {
+  if (
+    (toolName === "Bash" || toolName === "bash") &&
+    typeof toolArgs.command === "string"
+  ) {
     const branchResult = checkBranchProtection(toolArgs.command as string)
     if (branchResult) {
       return trustDecision(trustLevel, branchResult)
@@ -700,7 +758,10 @@ export function checkToolCallSafety(input: ToolCallCheckInput): SafetyCheckResul
   }
 
   // Check 3: Destructive patterns in Bash commands
-  if ((toolName === "Bash" || toolName === "bash") && typeof toolArgs.command === "string") {
+  if (
+    (toolName === "Bash" || toolName === "bash") &&
+    typeof toolArgs.command === "string"
+  ) {
     const cmd = toolArgs.command as string
     const matched = TOOL_DESTRUCTIVE_PATTERNS.find((p) => p.test(cmd))
     if (matched) {

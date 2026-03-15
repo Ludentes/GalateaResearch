@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { runAgentLoop } from "../agent-loop"
 import type { AgentTool } from "../agent-loop"
+import { runAgentLoop } from "../agent-loop"
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -45,7 +45,9 @@ describe("Agent Loop", () => {
     const result = await runAgentLoop({
       model: fakeModel,
       system: "You are Galatea.",
-      messages: [{ role: "user", content: "How do you feel about TypeScript?" }],
+      messages: [
+        { role: "user", content: "How do you feel about TypeScript?" },
+      ],
     })
 
     expect(result.text).toBe("TypeScript is great for type safety!")
@@ -67,9 +69,7 @@ describe("Agent Loop", () => {
           args: { message: "hello" },
         },
       ],
-      toolResults: [
-        { result: "echo: hello" },
-      ],
+      toolResults: [{ result: "echo: hello" }],
       response: {
         messages: [
           {
@@ -252,9 +252,7 @@ describe("Agent Loop", () => {
           args: {},
         },
       ],
-      toolResults: [
-        { result: "Tool error: Error: connection refused" },
-      ],
+      toolResults: [{ result: "Tool error: Error: connection refused" }],
       response: {
         messages: [
           {

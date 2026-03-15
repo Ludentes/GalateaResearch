@@ -1,11 +1,11 @@
 import type { TrustLevel } from "../../engine/types"
+import { recordOutcome } from "../../memory/feedback-loop"
 import type { AssembledContext, TranscriptTurn } from "../../memory/types"
 import { createPreToolUseHook } from "./hooks"
-import { recordOutcome } from "../../memory/feedback-loop"
 import { transcriptToTurns } from "./transcript-to-extraction"
 import type {
-  CodingToolAdapter,
   CodingSessionMessage,
+  CodingToolAdapter,
   CodingTranscriptEntry,
 } from "./types"
 
@@ -39,7 +39,9 @@ export interface WorkArcResult {
  *
  * This is the core of G.3 — Galatea decides WHAT, adapter decides HOW.
  */
-export async function executeWorkArc(input: WorkArcInput): Promise<WorkArcResult> {
+export async function executeWorkArc(
+  input: WorkArcInput,
+): Promise<WorkArcResult> {
   const {
     adapter,
     task,

@@ -5,7 +5,10 @@ import { compositeScore, retrieveVectorFacts } from "../vector-retrieval"
 
 // Mock qdrant-client
 vi.mock("../qdrant-client", () => ({
-  createQdrantClient: vi.fn(() => ({ baseUrl: "http://localhost:6333", collectionName: "test" })),
+  createQdrantClient: vi.fn(() => ({
+    baseUrl: "http://localhost:6333",
+    collectionName: "test",
+  })),
   isQdrantAvailable: vi.fn(),
   searchPoints: vi.fn(),
 }))
@@ -15,8 +18,8 @@ vi.mock("../knowledge-store", () => ({
   batchEmbed: vi.fn(),
 }))
 
-import { isQdrantAvailable, searchPoints } from "../qdrant-client"
 import { batchEmbed } from "../knowledge-store"
+import { isQdrantAvailable, searchPoints } from "../qdrant-client"
 
 const mockedIsQdrantAvailable = vi.mocked(isQdrantAvailable)
 const mockedSearchPoints = vi.mocked(searchPoints)
@@ -40,8 +43,16 @@ function makeEntry(overrides: Partial<KnowledgeEntry> = {}): KnowledgeEntry {
 // ---------------------------------------------------------------------------
 describe("vector retrieval", () => {
   it("returns entries ranked by composite score", async () => {
-    const entry1 = makeEntry({ id: "e1", confidence: 0.9, content: "MQTT QoS 1" })
-    const entry2 = makeEntry({ id: "e2", confidence: 0.5, content: "HTTP polling" })
+    const entry1 = makeEntry({
+      id: "e1",
+      confidence: 0.9,
+      content: "MQTT QoS 1",
+    })
+    const entry2 = makeEntry({
+      id: "e2",
+      confidence: 0.5,
+      content: "HTTP polling",
+    })
     const allEntries = [entry1, entry2]
 
     mockedIsQdrantAvailable.mockResolvedValue(true)
@@ -207,7 +218,11 @@ describe("composite scoring formula", () => {
 // ---------------------------------------------------------------------------
 describe("entity-based filtering", () => {
   it("passes entity filter to Qdrant search", async () => {
-    const entry = makeEntry({ id: "e1", entities: ["alina"], about: { entity: "alina", type: "user" } })
+    const entry = makeEntry({
+      id: "e1",
+      entities: ["alina"],
+      about: { entity: "alina", type: "user" },
+    })
     mockedIsQdrantAvailable.mockResolvedValue(true)
     mockedBatchEmbed.mockResolvedValue([[0.1, 0.2]])
     mockedSearchPoints.mockResolvedValue([

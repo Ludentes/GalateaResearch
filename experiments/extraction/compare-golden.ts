@@ -10,10 +10,10 @@
 import { readFileSync } from "node:fs"
 import path from "node:path"
 import { parse as parseYaml } from "yaml"
-import { readTranscript } from "../../server/memory/transcript-reader"
-import { classifyTurn } from "../../server/memory/signal-classifier"
 import { extractHeuristic } from "../../server/memory/heuristic-extractor"
 import { applyNoveltyGateAndApproval } from "../../server/memory/post-extraction"
+import { classifyTurn } from "../../server/memory/signal-classifier"
+import { readTranscript } from "../../server/memory/transcript-reader"
 import type { KnowledgeEntry } from "../../server/memory/types"
 
 interface ExpectedModel {
@@ -41,13 +41,35 @@ interface ExpectedModel {
 function extractKeyTerms(expected: string): string[] {
   // Extract meaningful terms (3+ chars, not stop words)
   const stops = new Set([
-    "the", "for", "and", "with", "from", "not", "all", "use", "should",
-    "must", "can", "has", "are", "was", "our", "its", "that", "this",
-    "when", "before", "after", "first", "then", "also", "into",
+    "the",
+    "for",
+    "and",
+    "with",
+    "from",
+    "not",
+    "all",
+    "use",
+    "should",
+    "must",
+    "can",
+    "has",
+    "are",
+    "was",
+    "our",
+    "its",
+    "that",
+    "this",
+    "when",
+    "before",
+    "after",
+    "first",
+    "then",
+    "also",
+    "into",
   ])
   return expected
     .toLowerCase()
-    .replace(/[()—–\-]/g, " ")
+    .replace(/[()—–-]/g, " ")
     .split(/\s+/)
     .filter((w) => w.length >= 3 && !stops.has(w))
     .slice(0, 4) // top 4 terms
@@ -143,13 +165,19 @@ async function main() {
       for (let i = 0; i < turns.length; i++) {
         const turn = turns[i]
         const classification = classifyTurn(turn)
-        if (classification.type === "noise" || classification.type === "factual")
+        if (
+          classification.type === "noise" ||
+          classification.type === "factual"
+        )
           continue
         const preceding =
-          i > 0 && turns[i - 1].role === "assistant"
-            ? turns[i - 1]
-            : undefined
-        const result = extractHeuristic(turn, classification, `session:${developer}`, preceding)
+          i > 0 && turns[i - 1].role === "assistant" ? turns[i - 1] : undefined
+        const result = extractHeuristic(
+          turn,
+          classification,
+          `session:${developer}`,
+          preceding,
+        )
         allEntries.push(...result.entries)
       }
     } catch {
@@ -164,7 +192,11 @@ async function main() {
     const seen = new Set<string>()
     const unique: KnowledgeEntry[] = []
     for (const e of entries) {
-      const key = e.content.toLowerCase().trim().replace(/\s+/g, " ").slice(0, 200)
+      const key = e.content
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, " ")
+        .slice(0, 200)
       if (!seen.has(key)) {
         seen.add(key)
         unique.push(e)
@@ -178,7 +210,9 @@ async function main() {
   console.log(`Turns: ${totalTurns}`)
   console.log(`Raw entries: ${allEntries.length}`)
   console.log(`After gate: ${gated.length}`)
-  console.log(`After dedup: ${deduped.length} (${gated.length - deduped.length} duplicates removed)`)
+  console.log(
+    `After dedup: ${deduped.length} (${gated.length - deduped.length} duplicates removed)`,
+  )
   console.log()
 
   // === RECALL ===
@@ -202,7 +236,9 @@ async function main() {
     const r = checkRecall(deduped, expected.team_model.rules)
     totalExpected += expected.team_model.rules.length
     totalFound += r.found.length
-    console.log(`  Team rules: ${r.found.length}/${expected.team_model.rules.length}`)
+    console.log(
+      `  Team rules: ${r.found.length}/${expected.team_model.rules.length}`,
+    )
     for (const f of r.found) console.log(`    ✓ ${f}`)
     for (const m of r.missed) console.log(`    ✗ ${m}`)
   }
@@ -251,7 +287,9 @@ async function main() {
     for (const m of r.missed) console.log(`    ✗ ${m}`)
   }
 
-  console.log(`\n  RECALL TOTAL: ${totalFound}/${totalExpected} (${((totalFound / totalExpected) * 100).toFixed(1)}%)`)
+  console.log(
+    `\n  RECALL TOTAL: ${totalFound}/${totalExpected} (${((totalFound / totalExpected) * 100).toFixed(1)}%)`,
+  )
 
   // === PRECISION ===
   console.log("\n--- PRECISION (are extracted entries good?) ---\n")
@@ -293,7 +331,9 @@ async function main() {
     const key = e.content.toLowerCase().trim()
     contentSet.set(key, (contentSet.get(key) || 0) + 1)
   }
-  const dupes = [...contentSet.entries()].filter(([, c]) => c > 1).sort((a, b) => b[1] - a[1])
+  const dupes = [...contentSet.entries()]
+    .filter(([, c]) => c > 1)
+    .sort((a, b) => b[1] - a[1])
   console.log(`  Unique entries: ${contentSet.size}/${gated.length}`)
   if (dupes.length > 0) {
     console.log(`  Duplicates (${dupes.length}):`)

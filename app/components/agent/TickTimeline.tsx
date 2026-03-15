@@ -64,9 +64,7 @@ export function TickTimeline({ ticks }: TickTimelineProps) {
           <div
             key={tick.tickId}
             className="rounded border p-3 cursor-pointer hover:bg-muted/30 transition-colors"
-            onClick={() =>
-              setExpandedId(isExpanded ? null : tick.tickId)
-            }
+            onClick={() => setExpandedId(isExpanded ? null : tick.tickId)}
           >
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
@@ -78,15 +76,11 @@ export function TickTimeline({ ticks }: TickTimelineProps) {
                 {hasElevated(tick.homeostasis) && (
                   <span className="inline-block w-2 h-2 rounded-full bg-yellow-500" />
                 )}
-                <span className="font-mono text-sm">
-                  {tick.outcome.action}
-                </span>
+                <span className="font-mono text-sm">{tick.outcome.action}</span>
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
                 <span>{tick.execution.durationMs}ms</span>
-                <span>
-                  {new Date(tick.timestamp).toLocaleTimeString()}
-                </span>
+                <span>{new Date(tick.timestamp).toLocaleTimeString()}</span>
               </div>
             </div>
 

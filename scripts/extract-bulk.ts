@@ -5,13 +5,17 @@
  * Usage: pnpm tsx scripts/extract-bulk.ts <claude-dir> [label]
  * Example: pnpm tsx scripts/extract-bulk.ts ~/w/galatea/data/otherdevs/dem/.claude dem
  */
-import { readTranscript } from "../server/memory/transcript-reader"
-import { classifyTurn } from "../server/memory/signal-classifier"
-import { extractHeuristic } from "../server/memory/heuristic-extractor"
-import { applyNoveltyGateAndApproval } from "../server/memory/post-extraction"
-import type { KnowledgeEntry, SignalClassification } from "../server/memory/types"
+
 import { readdirSync, statSync } from "node:fs"
 import path from "node:path"
+import { extractHeuristic } from "../server/memory/heuristic-extractor"
+import { applyNoveltyGateAndApproval } from "../server/memory/post-extraction"
+import { classifyTurn } from "../server/memory/signal-classifier"
+import { readTranscript } from "../server/memory/transcript-reader"
+import type {
+  KnowledgeEntry,
+  SignalClassification,
+} from "../server/memory/types"
 
 const claudeDir = process.argv[2]
 const label = process.argv[3] || "unknown"
@@ -168,7 +172,9 @@ async function main() {
   }
 
   for (const [type, items] of byType) {
-    console.log(`\n  --- ${type.toUpperCase()} (${items.length} total, showing 5) ---`)
+    console.log(
+      `\n  --- ${type.toUpperCase()} (${items.length} total, showing 5) ---`,
+    )
     for (const item of items.slice(0, 5)) {
       const about = item.about ? `[${item.about.type}]` : ""
       console.log(`  ${about} ${item.content.slice(0, 120)}`)
@@ -179,7 +185,9 @@ async function main() {
   if (factualExamples.length > 0) {
     console.log(`\n${"=".repeat(60)}`)
     console.log(`  FACTUAL TURNS (missed by heuristics, would need LLM)`)
-    console.log(`  Showing ${Math.min(15, factualExamples.length)} of ${signalCounts.get("factual") || 0}`)
+    console.log(
+      `  Showing ${Math.min(15, factualExamples.length)} of ${signalCounts.get("factual") || 0}`,
+    )
     console.log(`${"=".repeat(60)}`)
     for (const ex of factualExamples.slice(0, 15)) {
       console.log(`  > ${ex}`)
@@ -187,10 +195,11 @@ async function main() {
   }
 
   // Yield rate
-  const yieldRate = totalTurns > 0
-    ? ((allEntries.length / totalTurns) * 100).toFixed(2)
-    : "0"
-  console.log(`\n  YIELD: ${allEntries.length} entries from ${totalTurns} turns (${yieldRate}%)`)
+  const yieldRate =
+    totalTurns > 0 ? ((allEntries.length / totalTurns) * 100).toFixed(2) : "0"
+  console.log(
+    `\n  YIELD: ${allEntries.length} entries from ${totalTurns} turns (${yieldRate}%)`,
+  )
 }
 
 main().catch(console.error)

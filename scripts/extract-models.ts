@@ -5,10 +5,11 @@
  * Usage: pnpm tsx scripts/extract-models.ts [session1.jsonl] [session2.jsonl] ...
  * Default: all 4 telejobs sessions
  */
-import { readTranscript } from "../server/memory/transcript-reader"
-import { classifyTurn } from "../server/memory/signal-classifier"
+
 import { extractHeuristic } from "../server/memory/heuristic-extractor"
 import { applyNoveltyGateAndApproval } from "../server/memory/post-extraction"
+import { classifyTurn } from "../server/memory/signal-classifier"
+import { readTranscript } from "../server/memory/transcript-reader"
 import type { KnowledgeEntry } from "../server/memory/types"
 
 const DEFAULT_SESSIONS = [
@@ -19,9 +20,8 @@ const DEFAULT_SESSIONS = [
 ]
 
 async function main() {
-  const sessionPaths = process.argv.length > 2
-    ? process.argv.slice(2)
-    : DEFAULT_SESSIONS
+  const sessionPaths =
+    process.argv.length > 2 ? process.argv.slice(2) : DEFAULT_SESSIONS
 
   const allEntries: KnowledgeEntry[] = []
   let totalTurns = 0
@@ -29,7 +29,11 @@ async function main() {
   let noiseTurns = 0
 
   for (const sessionPath of sessionPaths) {
-    const sessionId = sessionPath.split("/").pop()?.replace(".jsonl", "").slice(0, 8)
+    const sessionId = sessionPath
+      .split("/")
+      .pop()
+      ?.replace(".jsonl", "")
+      .slice(0, 8)
     const source = `session:${sessionId}`
 
     try {
@@ -56,7 +60,9 @@ async function main() {
 
       const gated = applyNoveltyGateAndApproval(rawEntries)
       allEntries.push(...gated)
-      console.log(`[${sessionId}] ${turns.length} turns → ${rawEntries.length} raw → ${gated.length} after gate`)
+      console.log(
+        `[${sessionId}] ${turns.length} turns → ${rawEntries.length} raw → ${gated.length} after gate`,
+      )
     } catch (err) {
       console.error(`[${sessionId}] SKIP: ${err}`)
     }
@@ -69,10 +75,10 @@ async function main() {
   console.log(`Entries after gate: ${allEntries.length}`)
 
   // Group by about.type
-  const userModel = allEntries.filter(e => e.about?.type === "user")
-  const teamModel = allEntries.filter(e => e.about?.type === "team")
-  const projectModel = allEntries.filter(e => e.about?.type === "project")
-  const noAbout = allEntries.filter(e => !e.about)
+  const userModel = allEntries.filter((e) => e.about?.type === "user")
+  const teamModel = allEntries.filter((e) => e.about?.type === "team")
+  const projectModel = allEntries.filter((e) => e.about?.type === "project")
+  const noAbout = allEntries.filter((e) => !e.about)
 
   console.log(`\nUser model: ${userModel.length}`)
   console.log(`Team model: ${teamModel.length}`)
@@ -115,9 +121,15 @@ async function main() {
   console.log(`\n${"=".repeat(60)}`)
   console.log(`  STATS`)
   console.log(`${"=".repeat(60)}`)
-  const approved = allEntries.filter(e => e.curationStatus === "approved").length
-  const pending = allEntries.filter(e => e.curationStatus === "pending").length
-  const generalKnowledge = allEntries.filter(e => e.novelty === "general-knowledge").length
+  const approved = allEntries.filter(
+    (e) => e.curationStatus === "approved",
+  ).length
+  const pending = allEntries.filter(
+    (e) => e.curationStatus === "pending",
+  ).length
+  const generalKnowledge = allEntries.filter(
+    (e) => e.novelty === "general-knowledge",
+  ).length
   console.log(`  Auto-approved: ${approved}`)
   console.log(`  Pending review: ${pending}`)
   console.log(`  General knowledge (will be dropped): ${generalKnowledge}`)

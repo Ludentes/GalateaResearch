@@ -1,4 +1,6 @@
 #!/usr/bin/env -S pnpm tsx
+import { existsSync } from "node:fs"
+import { appendFile, mkdir } from "node:fs/promises"
 /**
  * Claude Code SessionEnd hook — auto-extract knowledge from completed sessions.
  *
@@ -7,8 +9,6 @@
  * Tracks extraction state to avoid re-processing.
  */
 import path from "node:path"
-import { existsSync } from "node:fs"
-import { appendFile, mkdir } from "node:fs/promises"
 
 // Read hook input from stdin
 const input = await new Promise<string>((resolve) => {

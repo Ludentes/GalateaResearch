@@ -10,9 +10,7 @@ export function createWorkKnowledge(
 
   // Main fact: what was completed
   const progressSummary =
-    task.progress.length > 0
-      ? ` Steps: ${task.progress.join("; ")}.`
-      : ""
+    task.progress.length > 0 ? ` Steps: ${task.progress.join("; ")}.` : ""
   const artifactSummary =
     task.artifacts.length > 0
       ? ` Artifacts: ${task.artifacts.map(summarizeArtifact).join(", ")}.`

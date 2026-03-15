@@ -64,7 +64,9 @@ export async function startDiscordBot(): Promise<Client | null> {
     send: async (message) => {
       const channelId = message.metadata.discordChannelId as string | undefined
       if (!channelId || !client) {
-        console.warn(`[discord] Cannot send: ${!channelId ? "missing channelId" : "client not ready"}`)
+        console.warn(
+          `[discord] Cannot send: ${!channelId ? "missing channelId" : "client not ready"}`,
+        )
         return
       }
 
@@ -72,7 +74,9 @@ export async function startDiscordBot(): Promise<Client | null> {
       if (channel?.isTextBased() && "send" in channel) {
         // If we have a threadId in routing, try to send there
         if (message.routing.threadId) {
-          const thread = await client.channels.fetch(message.routing.threadId).catch(() => null)
+          const thread = await client.channels
+            .fetch(message.routing.threadId)
+            .catch(() => null)
           if (thread?.isTextBased() && "send" in thread) {
             await thread.send(message.content)
             return
@@ -80,7 +84,9 @@ export async function startDiscordBot(): Promise<Client | null> {
         }
         await channel.send(message.content)
       } else {
-        console.warn(`[discord] Channel ${channelId} not text-based or not found`)
+        console.warn(
+          `[discord] Channel ${channelId} not text-based or not found`,
+        )
       }
     },
   })

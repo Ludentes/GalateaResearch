@@ -1,8 +1,5 @@
 import { defineEventHandler, HTTPError, readBody } from "h3"
-import {
-  readEntries,
-  writeEntries,
-} from "../../../../memory/knowledge-store"
+import { readEntries, writeEntries } from "../../../../memory/knowledge-store"
 import type { CurationStatus } from "../../../../memory/types"
 
 export default defineEventHandler(async (event) => {

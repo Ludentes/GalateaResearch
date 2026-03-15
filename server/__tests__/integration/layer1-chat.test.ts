@@ -1,12 +1,8 @@
 // @vitest-environment node
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
-import {
-  closeTestDb,
-  ensureOllama,
-  ensureTestDb,
-} from "./helpers/setup"
-import { type TestWorld, scenario } from "./helpers/test-world"
 import { retrieveRelevantFacts } from "../../memory/fact-retrieval"
+import { closeTestDb, ensureOllama, ensureTestDb } from "./helpers/setup"
+import { scenario, type TestWorld } from "./helpers/test-world"
 
 describe("Layer 1: Developer works on Umka MQTT persistence", () => {
   let world: TestWorld
@@ -116,7 +112,9 @@ describe("Layer 1: Developer works on Umka MQTT persistence", () => {
   })
 
   it("runs signal classification on the user's message in real-time", async () => {
-    const response = await world.roundTrip("I prefer using pnpm over npm for all projects")
+    const response = await world.roundTrip(
+      "I prefer using pnpm over npm for all projects",
+    )
     expect(response.signalClassification).toBeDefined()
     expect(response.signalClassification?.type).toBe("preference")
   }, 120_000)

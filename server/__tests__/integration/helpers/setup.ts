@@ -1,7 +1,8 @@
 // @vitest-environment node
+
+import { existsSync, rmSync } from "node:fs"
 import { eq } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/postgres-js"
-import { existsSync, rmSync } from "node:fs"
 import postgres from "postgres"
 import { messages, preprompts, sessions } from "../../../db/schema"
 

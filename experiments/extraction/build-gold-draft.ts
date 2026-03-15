@@ -113,14 +113,18 @@ async function main() {
   const output = goldItems.map((item) => JSON.stringify(item)).join("\n")
   await writeFile(OUTPUT_PATH, output + "\n", "utf-8")
 
-  console.log(`[build-gold-draft] Wrote ${goldItems.length} items to ${OUTPUT_PATH}`)
+  console.log(
+    `[build-gold-draft] Wrote ${goldItems.length} items to ${OUTPUT_PATH}`,
+  )
   console.log(`[build-gold-draft] Total entries: ${entries.length}`)
   console.log(
     `[build-gold-draft] Items per chunk: min=${Math.min(...goldItems.map((g) => g.expected.items.length))}, max=${Math.max(...goldItems.map((g) => g.expected.items.length))}, avg=${(entries.length / goldItems.length).toFixed(1)}`,
   )
   console.log()
   console.log("Next steps:")
-  console.log("  1. Review gold-standard.jsonl — correct about, entities, confidence")
+  console.log(
+    "  1. Review gold-standard.jsonl — correct about, entities, confidence",
+  )
   console.log("  2. Remove the _meta field from each item")
   console.log("  3. Run: pnpm tsx experiments/extraction/seed-dataset.ts")
 }

@@ -22,16 +22,19 @@
 
 // Save CLI-specified env vars before dotenv override
 const cliLlmModel = process.env.LLM_MODEL
+
 import { config } from "dotenv"
+
 config({ override: true })
 // Restore CLI-specified LLM_MODEL (it should take precedence over .env)
 if (cliLlmModel) {
   process.env.LLM_MODEL = cliLlmModel
 }
-import { generateObject, generateText } from "ai"
-import type { LanguageModel } from "ai"
-import { ollama } from "ai-sdk-ollama"
+
 import { createOpenRouter } from "@openrouter/ai-sdk-provider"
+import type { LanguageModel } from "ai"
+import { generateObject, generateText } from "ai"
+import { ollama } from "ai-sdk-ollama"
 import { Langfuse } from "langfuse"
 import { ExtractionSchema } from "../../server/memory/knowledge-extractor"
 
@@ -109,7 +112,9 @@ async function api(
     body: opts?.body ? JSON.stringify(opts.body) : undefined,
   })
   if (!res.ok) {
-    throw new Error(`Langfuse API ${method} ${path}: ${res.status} ${await res.text()}`)
+    throw new Error(
+      `Langfuse API ${method} ${path}: ${res.status} ${await res.text()}`,
+    )
   }
   return res.json()
 }
@@ -128,15 +133,25 @@ async function fetchAllDatasetItems(): Promise<DatasetItem[]> {
   return items.filter((item) => item.status === "ACTIVE")
 }
 
-function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  label: string,
+): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(
       () => reject(new Error(`Timeout after ${ms / 1000}s: ${label}`)),
       ms,
     )
     promise.then(
-      (v) => { clearTimeout(timer); resolve(v) },
-      (e) => { clearTimeout(timer); reject(e) },
+      (v) => {
+        clearTimeout(timer)
+        resolve(v)
+      },
+      (e) => {
+        clearTimeout(timer)
+        reject(e)
+      },
     )
   })
 }
@@ -155,7 +170,9 @@ async function main() {
   })
 
   console.log(`[eval] Langfuse: ${BASE_URL}`)
-  console.log(`[eval] Project: ${process.env.LANGFUSE_PUBLIC_KEY?.slice(0, 15)}...`)
+  console.log(
+    `[eval] Project: ${process.env.LANGFUSE_PUBLIC_KEY?.slice(0, 15)}...`,
+  )
 
   // Fetch prompt
   let promptText: string
@@ -163,13 +180,15 @@ async function main() {
     const { readFile } = await import("node:fs/promises")
     const { resolve } = await import("node:path")
     const source = await readFile(
-      resolve(import.meta.dirname, "../../server/memory/knowledge-extractor.ts"),
+      resolve(
+        import.meta.dirname,
+        "../../server/memory/knowledge-extractor.ts",
+      ),
       "utf-8",
     )
-    const match = source.match(
-      /const EXTRACTION_PROMPT = `([\s\S]*?)`/,
-    )
-    if (!match) throw new Error("Could not extract EXTRACTION_PROMPT from source")
+    const match = source.match(/const EXTRACTION_PROMPT = `([\s\S]*?)`/)
+    if (!match)
+      throw new Error("Could not extract EXTRACTION_PROMPT from source")
     promptText = match[1]
     console.log("[eval] Using local prompt from knowledge-extractor.ts")
   } else {
@@ -203,11 +222,15 @@ async function main() {
     return text.length
   })
   const maxInput = Math.max(...inputSizes)
-  const avgInput = Math.round(inputSizes.reduce((a, b) => a + b, 0) / inputSizes.length)
+  const avgInput = Math.round(
+    inputSizes.reduce((a, b) => a + b, 0) / inputSizes.length,
+  )
   console.log(`[eval] Input sizes: avg=${avgInput}ch, max=${maxInput}ch`)
 
   // Model slug for run name: strip provider prefix and special chars
-  const modelSlug = MODEL_ID.replace(/^openrouter:/, "").replace(/[/:]/g, "-").replace(/\./g, "")
+  const modelSlug = MODEL_ID.replace(/^openrouter:/, "")
+    .replace(/[/:]/g, "-")
+    .replace(/\./g, "")
   const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)
   const tempSuffix = temperature > 0 ? `-t${temperature}` : ""
   const formatSuffix = noFormat ? "-nofmt" : ""
@@ -233,14 +256,20 @@ async function main() {
     const hintsLines: string[] = []
     hintsLines.push(`Project name: "umka"`)
     if (people.size > 0) {
-      hintsLines.push(`Known people: ${[...people].join(", ")} — use these names in the about field when the user refers to themselves or others`)
+      hintsLines.push(
+        `Known people: ${[...people].join(", ")} — use these names in the about field when the user refers to themselves or others`,
+      )
     }
     if (entities.size > 0) {
-      hintsLines.push(`Known entity slugs: ${[...entities].sort().join(", ")} — prefer these exact slugs when tagging entities`)
+      hintsLines.push(
+        `Known entity slugs: ${[...entities].sort().join(", ")} — prefer these exact slugs when tagging entities`,
+      )
     }
     const hintsBlock = `CONTEXT HINTS:\n${hintsLines.join("\n")}\n\n`
     promptText = promptText.replace("{{hints}}", hintsBlock)
-    console.log(`[eval] Hints: ${people.size} people, ${entities.size} entities`)
+    console.log(
+      `[eval] Hints: ${people.size} people, ${entities.size} entities`,
+    )
   } else {
     promptText = promptText.replace("{{hints}}", "")
   }
@@ -249,7 +278,12 @@ async function main() {
   let failures = 0
   let timeouts = 0
   let totalTokens = 0
-  const timings: Array<{ index: number; duration: number; inputChars: number; status: string }> = []
+  const timings: Array<{
+    index: number
+    duration: number
+    inputChars: number
+    status: string
+  }> = []
   const runStart = Date.now()
 
   for (let i = 0; i < datasetItems.length; i++) {
@@ -288,7 +322,9 @@ async function main() {
 
     try {
       const model: LanguageModel = MODEL_ID.startsWith("openrouter:")
-        ? createOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY! })(MODEL_ID.slice("openrouter:".length)) as LanguageModel
+        ? (createOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY! })(
+            MODEL_ID.slice("openrouter:".length),
+          ) as LanguageModel)
         : ollama(MODEL_ID)
 
       let object: any
@@ -300,7 +336,9 @@ async function main() {
         const textResult = await withTimeout(
           generateText({
             model,
-            prompt: fullPrompt + `\n\nRespond with a valid JSON object matching this schema:\n${jsonSchema}\n\nJSON:`,
+            prompt:
+              fullPrompt +
+              `\n\nRespond with a valid JSON object matching this schema:\n${jsonSchema}\n\nJSON:`,
             temperature,
             maxRetries: 0,
           }),
@@ -309,8 +347,11 @@ async function main() {
         )
         const raw = textResult.text
         // Extract JSON from response (may be wrapped in markdown code blocks)
-        const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/) || raw.match(/(\{[\s\S]*\})/)
-        if (!jsonMatch) throw new Error(`No object generated: could not parse the response.`)
+        const jsonMatch =
+          raw.match(/```(?:json)?\s*([\s\S]*?)```/) ||
+          raw.match(/(\{[\s\S]*\})/)
+        if (!jsonMatch)
+          throw new Error(`No object generated: could not parse the response.`)
         object = ExtractionSchema.parse(JSON.parse(jsonMatch[1]))
         usage = textResult.usage
       } else {
@@ -332,7 +373,12 @@ async function main() {
       const duration = (Date.now() - itemStart) / 1000
       generation.end({
         output: object,
-        usage: usage ? { input: (usage as any).promptTokens ?? usage.totalTokens, output: (usage as any).completionTokens ?? 0 } : undefined,
+        usage: usage
+          ? {
+              input: (usage as any).promptTokens ?? usage.totalTokens,
+              output: (usage as any).completionTokens ?? 0,
+            }
+          : undefined,
       })
       trace.update({ output: object })
       if (usage?.totalTokens) totalTokens += usage.totalTokens
@@ -352,7 +398,11 @@ async function main() {
         body: {
           runName,
           runDescription: `Model: ${MODEL_ID}, temp: ${temperature}, prompt: ${useLocalPrompt ? "local" : `langfuse v${promptVersion ?? "latest"}`}`,
-          metadata: { model: MODEL_ID, temperature, promptSource: useLocalPrompt ? "local" : "langfuse" },
+          metadata: {
+            model: MODEL_ID,
+            temperature,
+            promptSource: useLocalPrompt ? "local" : "langfuse",
+          },
           datasetItemId: dsItem.id,
           traceId: trace.id,
         },
@@ -367,7 +417,8 @@ async function main() {
       )
     } catch (error) {
       const duration = (Date.now() - itemStart) / 1000
-      const isTimeout = error instanceof Error && error.message.startsWith("Timeout")
+      const isTimeout =
+        error instanceof Error && error.message.startsWith("Timeout")
       if (isTimeout) timeouts++
       failures++
 
@@ -385,7 +436,12 @@ async function main() {
         },
       })
 
-      timings.push({ index: i, duration, inputChars, status: isTimeout ? "timeout" : "error" })
+      timings.push({
+        index: i,
+        duration,
+        inputChars,
+        status: isTimeout ? "timeout" : "error",
+      })
 
       console.error(
         `[eval] Item ${i + 1}/${datasetItems.length} (${duration.toFixed(1)}s, ${inputChars}ch): ` +
@@ -402,8 +458,12 @@ async function main() {
   console.log("=".repeat(70))
   console.log(`Run: ${runName}`)
   console.log(`Model: ${MODEL_ID}`)
-  console.log(`Items: ${datasetItems.length} (${failures} failures, ${timeouts} timeouts)`)
-  console.log(`Total time: ${totalDuration.toFixed(1)}s (avg ${(totalDuration / datasetItems.length).toFixed(1)}s/item)`)
+  console.log(
+    `Items: ${datasetItems.length} (${failures} failures, ${timeouts} timeouts)`,
+  )
+  console.log(
+    `Total time: ${totalDuration.toFixed(1)}s (avg ${(totalDuration / datasetItems.length).toFixed(1)}s/item)`,
+  )
   if (totalTokens > 0) {
     console.log(`Total tokens: ${totalTokens.toLocaleString()}`)
   }
@@ -416,8 +476,7 @@ async function main() {
       console.log(`  ${name}: ${value.toFixed(3)}`)
     }
     const overallAvg =
-      Object.values(avg).reduce((a, b) => a + b, 0) /
-      Object.values(avg).length
+      Object.values(avg).reduce((a, b) => a + b, 0) / Object.values(avg).length
     console.log(`  overall: ${overallAvg.toFixed(3)}`)
   }
 
@@ -428,7 +487,9 @@ async function main() {
     console.log()
     console.log("Slowest items:")
     for (const t of sorted.slice(0, 5)) {
-      console.log(`  Item ${t.index + 1}: ${t.duration.toFixed(1)}s (${t.inputChars}ch)`)
+      console.log(
+        `  Item ${t.index + 1}: ${t.duration.toFixed(1)}s (${t.inputChars}ch)`,
+      )
     }
   }
 
@@ -437,7 +498,9 @@ async function main() {
     console.log()
     console.log("Failed/timed-out items:")
     for (const t of failedTimings) {
-      console.log(`  Item ${t.index + 1}: ${t.status} after ${t.duration.toFixed(1)}s (${t.inputChars}ch)`)
+      console.log(
+        `  Item ${t.index + 1}: ${t.status} after ${t.duration.toFixed(1)}s (${t.inputChars}ch)`,
+      )
     }
   }
 
@@ -445,10 +508,7 @@ async function main() {
   console.log(`View results: ${BASE_URL}`)
 }
 
-function scoreResult(
-  actual: ExpectedItem[],
-  expected: ExpectedItem[],
-): Scores {
+function scoreResult(actual: ExpectedItem[], expected: ExpectedItem[]): Scores {
   const expectedWithAbout = expected.filter((e) => e.about)
   let aboutRecallHits = 0
   for (const exp of expectedWithAbout) {
@@ -522,12 +582,14 @@ function scoreResult(
         ? 1.0
         : 0.0
 
-  const aboutF1 = aboutRecall + aboutPrecision > 0
-    ? 2 * aboutRecall * aboutPrecision / (aboutRecall + aboutPrecision)
-    : 0
-  const entityF1 = entityRecall + entityPrecision > 0
-    ? 2 * entityRecall * entityPrecision / (entityRecall + entityPrecision)
-    : 0
+  const aboutF1 =
+    aboutRecall + aboutPrecision > 0
+      ? (2 * aboutRecall * aboutPrecision) / (aboutRecall + aboutPrecision)
+      : 0
+  const entityF1 =
+    entityRecall + entityPrecision > 0
+      ? (2 * entityRecall * entityPrecision) / (entityRecall + entityPrecision)
+      : 0
 
   return {
     about_recall: aboutRecall,
