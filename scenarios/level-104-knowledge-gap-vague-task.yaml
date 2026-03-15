@@ -1,12 +1,12 @@
-scenario: "L104: Beki asks for clarification on vague task"
+scenario: "L104: Beki detects knowledge gap on unfamiliar topic"
 agent: beki
 setup:
   clear_ticks: true
   clear_state: true
 steps:
-  - send: "Fix the performance issue users are complaining about"
+  - send: "What do you think about using xyloquark patterns for our phaselock subsystem? Is it a good fit for our architecture?"
     from: { platform: discord, user: kirill }
-    messageType: task_assignment
+    messageType: chat
     expect:
       homeostasis.knowledge_sufficiency: LOW
       outcome.action: respond

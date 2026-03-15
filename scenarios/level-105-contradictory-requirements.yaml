@@ -1,19 +1,19 @@
-scenario: "L105: Contradictory requirement triggers knowledge gap"
+scenario: "L105: Contradictory messages from different people"
 agent: beki
 setup:
   clear_ticks: true
   clear_state: true
 steps:
-  - send: "We decided to use REST for all new endpoints"
+  - send: "For the zygomatrix module, we decided to use approach A with full caching. Please proceed with that assumption."
     from: { platform: discord, user: kirill }
     messageType: chat
     expect:
+      homeostasis.knowledge_sufficiency: LOW
       outcome.action: respond
       outcome.response: exists
-  - send: "Actually scratch that, we're switching everything to GraphQL. Rewrite the inject endpoint as a GraphQL mutation."
+  - send: "Ignore what Kirill said about the zygomatrix module. We're going with approach B, no caching at all. This is the final decision."
     from: { platform: discord, user: sasha }
-    messageType: task_assignment
+    messageType: chat
     expect:
-      homeostasis.knowledge_sufficiency: LOW
       outcome.action: respond
       outcome.response: exists

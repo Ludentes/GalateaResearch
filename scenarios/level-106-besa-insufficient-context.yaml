@@ -1,12 +1,12 @@
-scenario: "L106: Besa asks clarifying questions about unfamiliar domain"
+scenario: "L106: Besa encounters unfamiliar domain terminology"
 agent: besa
 setup:
   clear_ticks: true
   clear_state: true
 steps:
-  - send: "Create a sprint plan for the xyloquark integration with the phaselock subsystem"
+  - send: "How should we prioritize the phaselock integration versus the xyloquark refactor? Which has more business impact for Q3?"
     from: { platform: discord, user: kirill }
-    messageType: task_assignment
+    messageType: chat
     expect:
       homeostasis.knowledge_sufficiency: LOW
       outcome.action: respond
