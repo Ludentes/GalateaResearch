@@ -68,18 +68,51 @@ export default defineEventHandler(async (event) => {
   }
 
   const msg = buildChannelMessage(body)
-  const tickPath = getTickRecordPath(body.agentId!)
-  const beforeTick = await readLastTickRecord(tickPath)
 
+  // Create job for async tracking
+  const { createJob, updateJob } = await import("../../../agent/job-store")
+  const job = createJob(body.agentId!)
+
+  // Queue message
   await addMessage(msg)
-  await tick("webhook", { agentId: body.agentId })
 
-  // appendTickRecord in tick() is fire-and-forget — poll until new record appears
-  let record = await readLastTickRecord(tickPath)
-  for (let i = 0; i < 30 && record?.tickId === beforeTick?.tickId; i++) {
-    await new Promise((r) => setTimeout(r, 100))
-    record = await readLastTickRecord(tickPath)
+  // Run tick in background — do NOT await
+  const tickPromise = tick("webhook", { agentId: body.agentId })
+  tickPromise
+    .then(async (result) => {
+      // Poll for tick record (same logic as before)
+      const tickPath = getTickRecordPath(body.agentId!)
+      let record = await readLastTickRecord(tickPath)
+      for (let i = 0; i < 30; i++) {
+        if (record && record.tickId) break
+        await new Promise((r) => setTimeout(r, 100))
+        record = await readLastTickRecord(tickPath)
+      }
+      updateJob(job.jobId, {
+        status: "completed",
+        completedAt: new Date().toISOString(),
+        result: { tick: record, ...result },
+      })
+    })
+    .catch((err) => {
+      updateJob(job.jobId, {
+        status: "failed",
+        completedAt: new Date().toISOString(),
+        error: { code: "TICK_FAILED", message: (err as Error).message },
+      })
+    })
+
+  // Mark as running
+  updateJob(job.jobId, {
+    status: "running",
+    startedAt: new Date().toISOString(),
+  })
+
+  // Return immediately with job reference
+  event.node.res.statusCode = 202
+  return {
+    jobId: job.jobId,
+    status: "running",
+    statusUrl: `/api/agent/jobs/${job.jobId}`,
   }
-
-  return { tick: record }
 })
