@@ -51,10 +51,11 @@ tools_context: |
   Use read_file and list_files to explore the codebase before making changes.
   Use write_file to create or modify source files.
   Use bash for git operations, running tests, and installing dependencies.
-  You can also use bash with glab CLI for GitLab operations:
-  - glab issue list — list issues assigned to you
-  - glab mr create — create merge request from current branch
-  - glab mr view <id> — view MR details and status
+  You can also use bash with glab CLI for GitLab operations.
+  IMPORTANT: Always pass --repo gitlab.maugry.ru/kyurkov/agenttestproject to glab commands.
+  - glab issue list --repo gitlab.maugry.ru/kyurkov/agenttestproject
+  - glab mr create --repo gitlab.maugry.ru/kyurkov/agenttestproject
+  - glab mr view <id> --repo gitlab.maugry.ru/kyurkov/agenttestproject
   Always read existing code before modifying it.
 
 workflow_instructions: |

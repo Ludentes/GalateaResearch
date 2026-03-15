@@ -367,19 +367,21 @@ async function tickInner(
           })
         }
 
-        // Load agent secrets for SSH host alias (used by PUBLISH)
-        const secrets = await loadAgentSecrets(agentId)
-        if (secrets.gitlab?.ssh_host_alias) {
-          ;(task as any)._sshHostAlias = secrets.gitlab.ssh_host_alias
-          console.log(
-            `[tick] Configured SSH host alias for ${agentId}: ${secrets.gitlab.ssh_host_alias}`,
-          )
-        }
       } catch (wtErr) {
         console.warn(
           "[tick] Worktree creation failed, using main dir:",
           (wtErr as Error).message,
         )
+      }
+
+      // Load agent secrets — applies to ALL delegate tasks (not just coding)
+      const secrets = await loadAgentSecrets(agentId)
+      if (secrets.gitlab?.ssh_host_alias) {
+        ;(task as any)._sshHostAlias = secrets.gitlab.ssh_host_alias
+      }
+      if (secrets.gitlab?.token) {
+        ;(task as any)._prevGitlabToken = process.env.GITLAB_TOKEN ?? null
+        process.env.GITLAB_TOKEN = secrets.gitlab.token
       }
 
       const workContext = toolsContext
@@ -603,8 +605,17 @@ async function tickInner(
       }
 
       // ---------------------------------------------------------------
-      // CLEANUP — remove worktree after PUBLISH (or on failure)
+      // CLEANUP — remove worktree and restore env after PUBLISH
       // ---------------------------------------------------------------
+      // Restore previous GITLAB_TOKEN (or remove if there wasn't one)
+      if ("_prevGitlabToken" in (task as any)) {
+        if ((task as any)._prevGitlabToken) {
+          process.env.GITLAB_TOKEN = (task as any)._prevGitlabToken
+        } else {
+          delete process.env.GITLAB_TOKEN
+        }
+      }
+
       if (usingWorktree) {
         try {
           execSync(`git worktree remove --force "${worktreePath}"`, {

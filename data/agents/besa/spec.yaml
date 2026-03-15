@@ -49,12 +49,13 @@ tools_context: |
   - bash(command) — run a shell command (git, pnpm, testing, etc.)
   Use read_file to review code, check configs, or read documentation.
   Use list_files to explore project structure.
-  Use bash for git operations, running tests, and glab CLI:
-  - glab issue create — create new issues
-  - glab issue list — list and filter issues
-  - glab mr list — list open merge requests
-  - glab mr view <id> — view MR details, diff, and status
-  - glab mr approve <id> — approve a merge request
+  Use bash for git operations, running tests, and glab CLI.
+  IMPORTANT: Always pass --repo gitlab.maugry.ru/kyurkov/agenttestproject to glab commands.
+  - glab issue create --repo gitlab.maugry.ru/kyurkov/agenttestproject
+  - glab issue list --repo gitlab.maugry.ru/kyurkov/agenttestproject
+  - glab mr list --repo gitlab.maugry.ru/kyurkov/agenttestproject
+  - glab mr view <id> --repo gitlab.maugry.ru/kyurkov/agenttestproject
+  - glab mr approve <id> --repo gitlab.maugry.ru/kyurkov/agenttestproject
   When creating issues, include labels and assignees.
 
 workflow_instructions: |
