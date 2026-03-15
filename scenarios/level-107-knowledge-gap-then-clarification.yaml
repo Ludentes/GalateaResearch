@@ -1,0 +1,19 @@
+scenario: "L107: Beki gets clarification and proceeds with task"
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "Refactor the authentication module to use the new approach"
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      homeostasis.knowledge_sufficiency: LOW
+      outcome.action: respond
+      outcome.response: exists
+  - send: "The new approach is JWT with refresh tokens stored in httpOnly cookies. The auth module is in server/auth/. Replace the current session-based system."
+    from: { platform: discord, user: kirill }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: exists

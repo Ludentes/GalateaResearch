@@ -1,0 +1,19 @@
+scenario: "L105: Contradictory requirement triggers knowledge gap"
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "We decided to use REST for all new endpoints"
+    from: { platform: discord, user: kirill }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: exists
+  - send: "Actually scratch that, we're switching everything to GraphQL. Rewrite the inject endpoint as a GraphQL mutation."
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      homeostasis.knowledge_sufficiency: LOW
+      outcome.action: respond
+      outcome.response: exists

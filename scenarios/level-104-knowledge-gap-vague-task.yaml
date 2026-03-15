@@ -1,0 +1,13 @@
+scenario: "L104: Beki asks for clarification on vague task"
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "Fix the performance issue users are complaining about"
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      homeostasis.knowledge_sufficiency: LOW
+      outcome.action: respond
+      outcome.response: exists
