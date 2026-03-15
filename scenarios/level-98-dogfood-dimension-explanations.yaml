@@ -1,0 +1,26 @@
+scenario: "L98: Dogfood — Besa adds dimension_explanations to config.yaml"
+description: >
+  Besa adds human-readable explanations for each homeostasis dimension
+  state (HEALTHY/HIGH/LOW) to server/engine/config.yaml. These are
+  used by agents in their SELF-AWARENESS section to explain their
+  state when asked "how are you feeling?"
+agent: besa
+model: sonnet
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: >
+      Add a dimension_explanations section to server/engine/config.yaml
+      under the homeostasis key. For each of the 7 dimensions
+      (knowledge_sufficiency, certainty_alignment, progress_momentum,
+      communication_health, productive_engagement, knowledge_application,
+      self_preservation), add HEALTHY, HIGH, and LOW explanations that
+      an agent can use to describe its own state. Keep explanations
+      first-person ("I have adequate knowledge..." not "The agent has...").
+      Commit when done.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      outcome.action: delegate

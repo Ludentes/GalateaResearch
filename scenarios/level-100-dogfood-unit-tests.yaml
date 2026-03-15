@@ -1,0 +1,27 @@
+scenario: "L100: Dogfood — Beki writes tests for pickNextMessage and formatHomeostasisState"
+description: >
+  Beki writes comprehensive unit tests for pickNextMessage (priority
+  queue) and formatHomeostasisState (homeostasis formatting). Tests
+  already exist in server/agent/__tests__/priority-queue.test.ts and
+  server/engine/__tests__/homeostasis-format.test.ts but may need
+  more edge case coverage. Review existing tests, add any missing
+  coverage, commit.
+agent: beki
+model: sonnet
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: >
+      Review the existing tests in server/agent/__tests__/priority-queue.test.ts
+      and server/engine/__tests__/homeostasis-format.test.ts. Add any
+      missing edge case tests. For pickNextMessage, test: empty array edge case,
+      unknown messageType handling, messages with no messageType field.
+      For formatHomeostasisState, test: empty state object, state with
+      only assessed_at/assessment_method (should return empty). Run all
+      tests to make sure they pass. Commit when done.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      outcome.action: delegate

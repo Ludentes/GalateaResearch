@@ -1,0 +1,27 @@
+scenario: "L99: Dogfood — Beki extracts getDiffStat helper"
+description: >
+  Beki extracts the inline git diff/log commands in the VERIFY stage
+  of tick.ts into a reusable getDiffStat() helper function. Currently
+  the VERIFY stage has inline exec calls for git diff --stat and
+  git log --oneline. Extract these into a helper in
+  server/agent/coding-adapter/work-arc.ts or a new utils file.
+  Write tests. Use TDD.
+agent: beki
+model: sonnet
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: >
+      In server/agent/tick.ts, the VERIFY stage has inline shell commands
+      for getting git diff stats and recent commits. Extract these into
+      a getDiffStat() helper function that returns { diffStat: string,
+      recentCommits: string }. Put it in server/agent/utils.ts (create
+      if needed, or add to existing). Write tests first using TDD.
+      The function should handle errors gracefully (return empty strings
+      if git commands fail). Commit when done.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      outcome.action: delegate
