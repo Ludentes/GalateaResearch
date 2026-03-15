@@ -148,7 +148,7 @@ async function executeStep(
         await new Promise((r) => setTimeout(r, 1000))
       }
 
-      if (!job || job.status === "failed") {
+      if (!job || job.status !== "completed") {
         return {
           step: stepIndex,
           send: sendLabel,

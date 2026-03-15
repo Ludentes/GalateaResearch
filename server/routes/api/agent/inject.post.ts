@@ -84,18 +84,18 @@ export default defineEventHandler(async (event) => {
   // Queue message
   await addMessage(msg)
 
+  // Mark as running BEFORE starting tick to avoid race condition
+  updateJob(job.jobId, {
+    status: "running",
+    startedAt: new Date().toISOString(),
+  })
+
   // Run tick in background — do NOT await
   const tickPromise = tick("webhook", { agentId: body.agentId })
   tickPromise
     .then(async (result) => {
-      // Poll for tick record (same logic as before)
       const tickPath = getTickRecordPath(body.agentId!)
-      let record = await readLastTickRecord(tickPath)
-      for (let i = 0; i < 30; i++) {
-        if (record && record.tickId) break
-        await new Promise((r) => setTimeout(r, 100))
-        record = await readLastTickRecord(tickPath)
-      }
+      const record = await readLastTickRecord(tickPath)
       updateJob(job.jobId, {
         status: "completed",
         completedAt: new Date().toISOString(),
@@ -109,12 +109,6 @@ export default defineEventHandler(async (event) => {
         error: { code: "TICK_FAILED", message: (err as Error).message },
       })
     })
-
-  // Mark as running
-  updateJob(job.jobId, {
-    status: "running",
-    startedAt: new Date().toISOString(),
-  })
 
   // Return immediately with job reference
   setResponseStatus(event, 202)

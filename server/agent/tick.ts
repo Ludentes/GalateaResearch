@@ -501,8 +501,12 @@ async function tickInner(
 
           // Create MR via glab (best-effort)
           try {
+            // Sanitize title to prevent shell injection
+            const safeTitle = taskDescription
+              .slice(0, 70)
+              .replace(/["`$\\]/g, "")
             const mrOutput = execSync(
-              `glab mr create --title "${taskDescription.slice(0, 70)}" --fill --yes 2>&1`,
+              `glab mr create --title "${safeTitle}" --fill --yes 2>&1`,
               { cwd: workDir, encoding: "utf-8", timeout: 30_000 },
             ).trim()
             console.log(`[tick] PUBLISH: MR created — ${mrOutput}`)
