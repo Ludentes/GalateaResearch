@@ -11,7 +11,12 @@ export interface Job {
   error?: { code: string; message: string }
 }
 
-const store = new Map<string, Job>()
+// Use globalThis to survive Nitro HMR reloads during development —
+// without this, coding tasks that trigger file changes wipe the store
+const STORE_KEY = "__galatea_job_store__"
+const store: Map<string, Job> =
+  (globalThis as any)[STORE_KEY] ??
+  ((globalThis as any)[STORE_KEY] = new Map<string, Job>())
 
 const DEFAULT_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
 
