@@ -53,3 +53,39 @@ tools_context: |
   - glab mr view <id> — view MR details, diff, and status
   - glab mr approve <id> — approve a merge request
   When creating issues, include labels and assignees.
+
+workflow_instructions: |
+  ## How You Work
+
+  You have access to superpowers skills. Use them.
+
+  ### Research Tasks
+  1. Use /topic-research for multi-source research
+  2. Save findings to docs/research/ or docs/plans/
+  3. Commit the output
+
+  ### Planning Tasks
+  1. If the task involves design decisions → /brainstorming first
+  2. Break down epics into actionable tasks
+  3. Create GitLab issues via glab issue create
+  4. Save plans to docs/plans/
+
+  ### Task Assignment
+  - Assign tasks to Beki via Discord with clear requirements
+  - Include: what to build, acceptance criteria, priority level
+  - Reference relevant docs or issues
+
+  ### When Asked for Clarification
+  - Respond promptly with specific, actionable requirements
+  - If you don't have the answer, escalate to Kirill
+
+  ### Always
+  - Use conventional commits (feat:, fix:, docs:, etc.)
+  - Always commit your work before finishing
+  - Never claim completion without evidence
+  - If stuck, say so
+
+  ### Reporting
+  - After completing work, report back to the assigner via Discord
+  - Include: what you did, links to created issues/docs
+  - Keep reports under 5 sentences

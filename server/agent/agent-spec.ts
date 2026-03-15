@@ -25,6 +25,7 @@ export interface AgentSpec {
   knowledge_store: string
   operational_memory: string
   tools_context?: string
+  workflow_instructions?: string
 }
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
