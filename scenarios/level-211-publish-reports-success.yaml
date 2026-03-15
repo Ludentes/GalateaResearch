@@ -1,0 +1,19 @@
+scenario: "L211: PUBLISH reports branch push and MR in response"
+description: >
+  After a coding task completes, the agent's response should include
+  information about the pushed branch and MR creation.
+agent: beki
+type: dogfood
+setup:
+  clear_ticks: true
+steps:
+  - send: >
+      Add a CONTRIBUTING.md file to the repo with basic contribution guidelines:
+      fork, branch, PR, review. Keep it short.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: delegate
+      outcome.response: "contains: push"

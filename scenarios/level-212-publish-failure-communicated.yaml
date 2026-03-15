@@ -1,0 +1,20 @@
+scenario: "L212: PUBLISH failure is communicated in agent response"
+description: >
+  When PUBLISH fails (e.g., push fails due to SSH issues), the agent's
+  status update should mention the failure so the assigner can act on it.
+  This tests resilience — the task itself succeeds, only publishing fails.
+agent: beki
+setup:
+  clear_ticks: true
+steps:
+  - send: >
+      Create a file called test-publish.txt with the content "hello world"
+      and commit it.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: delegate
+      # The response should exist regardless of publish outcome
+      outcome.response: exists

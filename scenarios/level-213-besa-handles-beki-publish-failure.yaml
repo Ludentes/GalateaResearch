@@ -1,0 +1,18 @@
+scenario: "L213: Besa receives Beki's failure report and responds appropriately"
+description: >
+  When Beki reports a problem (task failed, publish failed, blocked),
+  Besa should acknowledge and suggest next steps rather than ignoring it.
+agent: besa
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: >
+      Task completed: I added the CONTRIBUTING.md file and committed it.
+      ⚠ Publish failed: Connection refused. Changes are committed locally
+      but not pushed. Can you help me resolve this?
+    from: { platform: discord, user: beki }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: exists
