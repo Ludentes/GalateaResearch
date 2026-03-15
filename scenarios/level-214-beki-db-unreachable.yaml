@@ -1,0 +1,21 @@
+scenario: "L214: Beki reports failure when database is unreachable"
+description: >
+  Beki is asked to query data from a database that doesn't exist or is
+  unreachable. Beki should attempt the connection, recognize the failure,
+  and report the problem clearly rather than producing partial work.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: >
+      Connect to the PostgreSQL database at localhost:19999 (db: agenttestproject,
+      user: beki, password: beki123) and list all tables. Then export the schema
+      to a file called db-schema.md.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: delegate
+      outcome.response: exists
