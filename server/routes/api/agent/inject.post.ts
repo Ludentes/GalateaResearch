@@ -84,6 +84,10 @@ export default defineEventHandler(async (event) => {
   // Queue message
   await addMessage(msg)
 
+  // Capture tick record before starting — so we can detect the new one
+  const tickPath = getTickRecordPath(body.agentId!)
+  const beforeTick = await readLastTickRecord(tickPath)
+
   // Mark as running BEFORE starting tick to avoid race condition
   updateJob(job.jobId, {
     status: "running",
@@ -94,8 +98,16 @@ export default defineEventHandler(async (event) => {
   const tickPromise = tick("webhook", { agentId: body.agentId })
   tickPromise
     .then(async (result) => {
-      const tickPath = getTickRecordPath(body.agentId!)
-      const record = await readLastTickRecord(tickPath)
+      // appendTickRecord is fire-and-forget — poll until new record appears
+      let record = await readLastTickRecord(tickPath)
+      for (
+        let i = 0;
+        i < 30 && record?.tickId === beforeTick?.tickId;
+        i++
+      ) {
+        await new Promise((r) => setTimeout(r, 100))
+        record = await readLastTickRecord(tickPath)
+      }
       updateJob(job.jobId, {
         status: "completed",
         completedAt: new Date().toISOString(),
