@@ -20,6 +20,12 @@ const store: Map<string, Job> =
 
 const DEFAULT_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
 
+/**
+ * Creates a new job and stores it in the job store.
+ *
+ * @param agentId - The ID of the agent that will execute this job
+ * @returns A new Job object with queued status and a generated jobId
+ */
 export function createJob(agentId: string): Job {
   const job: Job = {
     jobId: randomUUID(),
@@ -31,10 +37,24 @@ export function createJob(agentId: string): Job {
   return job
 }
 
+/**
+ * Retrieves a job from the store by its ID.
+ *
+ * @param jobId - The unique identifier of the job to retrieve
+ * @returns The Job object if found, or undefined if the job does not exist
+ */
 export function getJob(jobId: string): Job | undefined {
   return store.get(jobId)
 }
 
+/**
+ * Updates a job's properties in the store.
+ *
+ * @param jobId - The unique identifier of the job to update
+ * @param updates - Partial object containing job fields to update. Can include status, startedAt,
+ *                  completedAt, result, or error
+ * @returns void. If the job is not found, the function returns silently without error
+ */
 export function updateJob(
   jobId: string,
   updates: Partial<
@@ -72,6 +92,15 @@ export function cleanExpiredJobs(ttlMs: number = DEFAULT_TTL_MS): void {
 // Schedule cleanup every hour
 let cleanupTimer: ReturnType<typeof setInterval> | undefined
 
+/**
+ * Starts a periodic cleanup timer that removes expired jobs from the store.
+ *
+ * The cleanup runs every hour and removes jobs that have exceeded the default TTL (24 hours).
+ * The timer will not keep the process alive. If the timer is already running, this function
+ * returns early without creating a duplicate.
+ *
+ * @returns void
+ */
 export function startCleanupTimer(): void {
   if (cleanupTimer) return
   cleanupTimer = setInterval(() => cleanExpiredJobs(), 60 * 60 * 1000)
@@ -79,6 +108,14 @@ export function startCleanupTimer(): void {
   if (cleanupTimer.unref) cleanupTimer.unref()
 }
 
+/**
+ * Stops the periodic cleanup timer if it is running.
+ *
+ * After calling this function, expired jobs will no longer be automatically removed
+ * from the store. The timer can be restarted by calling startCleanupTimer().
+ *
+ * @returns void
+ */
 export function stopCleanupTimer(): void {
   if (cleanupTimer) {
     clearInterval(cleanupTimer)
