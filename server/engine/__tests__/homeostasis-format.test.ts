@@ -46,4 +46,69 @@ describe("formatHomeostasisState", () => {
       .filter((l) => l.startsWith("- **"))
     expect(dimensionLines).toHaveLength(7)
   })
+
+  it("handles empty state object", () => {
+    const emptyState = {
+      assessed_at: new Date(),
+      assessment_method: {
+        knowledge_sufficiency: "computed",
+        certainty_alignment: "computed",
+        progress_momentum: "computed",
+        communication_health: "computed",
+        productive_engagement: "computed",
+        knowledge_application: "computed",
+        self_preservation: "computed",
+      },
+    } as unknown as HomeostasisState
+    const result = formatHomeostasisState(emptyState)
+    // All entries are filtered out (only assessed_at and assessment_method)
+    expect(result).toBe("")
+  })
+
+  it("returns empty string when state has only assessed_at and assessment_method", () => {
+    const metadataOnlyState = {
+      assessed_at: new Date(),
+      assessment_method: {
+        knowledge_sufficiency: "computed",
+        certainty_alignment: "computed",
+        progress_momentum: "computed",
+        communication_health: "computed",
+        productive_engagement: "computed",
+        knowledge_application: "computed",
+        self_preservation: "computed",
+      },
+    } as unknown as HomeostasisState
+    const result = formatHomeostasisState(metadataOnlyState)
+    expect(result).toBe("")
+    expect(result).not.toContain("assessed_at")
+    expect(result).not.toContain("assessment_method")
+  })
+
+  it("handles mixed healthy and imbalanced state", () => {
+    const mixedState = {
+      ...healthyState,
+      knowledge_sufficiency: "LOW" as const,
+      progress_momentum: "HIGH" as const,
+    }
+    const result = formatHomeostasisState(mixedState)
+    expect(result).toContain("- **Knowledge Sufficiency**: LOW")
+    expect(result).toContain("- **Progress Momentum**: HIGH")
+    // All 7 dimensions should be present
+    const dimensionLines = result
+      .split("\n")
+      .filter((l) => l.startsWith("- **"))
+    expect(dimensionLines).toHaveLength(7)
+  })
+
+  it("excludes metadata fields from output", () => {
+    const result = formatHomeostasisState(healthyState)
+    // Should not contain the literal field names
+    expect(result).not.toContain("assessed_at")
+    expect(result).not.toContain("assessment_method")
+    // Should only contain dimension status lines
+    const lines = result
+      .split("\n")
+      .filter((l) => l.trim().length > 0)
+    expect(lines.every((l) => l.startsWith("- **"))).toBe(true)
+  })
 })

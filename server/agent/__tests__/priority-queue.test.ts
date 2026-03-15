@@ -49,4 +49,31 @@ describe("pickNextMessage", () => {
     const msg = makeMsg("chat", "only one")
     expect(pickNextMessage([msg])).toBe(msg)
   })
+
+  it("throws on empty array", () => {
+    expect(() => pickNextMessage([])).toThrow()
+  })
+
+  it("handles unknown messageType by defaulting to priority 1", () => {
+    const unknown = makeMsg("unknown_type" as any, "test")
+    const task = makeMsg("task_assignment", "implement X")
+    // unknown defaults to priority 1, task is priority 2
+    // lower priority number is picked first, so unknown is picked
+    expect(pickNextMessage([task, unknown])).toBe(unknown)
+  })
+
+  it("picks admin before chat", () => {
+    const admin = makeMsg("admin" as any, "admin command")
+    const chat = makeMsg("chat", "quick question")
+    // admin is priority 0, chat is priority 1
+    expect(pickNextMessage([chat, admin])).toBe(admin)
+  })
+
+  it("defaults to priority 1 when messageType is missing", () => {
+    const withoutType = makeMsg("chat", "test")
+    delete (withoutType as any).messageType
+    const status = makeMsg("status_update", "done")
+    // missing type defaults to 1 (same as chat), FIFO wins
+    expect(pickNextMessage([withoutType, status])).toBe(withoutType)
+  })
 })
