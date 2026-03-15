@@ -1,0 +1,32 @@
+scenario: "L93: Besa designs async job model for long-running agent tasks"
+description: >
+  The inject API currently blocks the HTTP request while the agent works
+  (up to 300s). This causes Nitro middleware timeouts, prevents real
+  integrations (Discord/GitLab can't hold connections), and makes the
+  scenario runner fragile. Besa should design an async job model:
+  POST /inject returns a job ID immediately, GET /jobs/:id polls for
+  completion. This is a prerequisite for production deployment.
+agent: besa
+model: sonnet
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: >
+      Design an async job model for the agent tick pipeline. Currently
+      POST /api/agent/inject blocks for up to 300 seconds while the
+      Claude Code adapter runs. This causes HTTP timeouts and prevents
+      real integrations. Design:
+      1) POST /inject returns { jobId } immediately after queuing
+      2) Tick runs in background, writes result to job store
+      3) GET /jobs/:jobId returns status (pending/running/completed/failed)
+         and tick record when done
+      4) Optional: SSE endpoint for real-time progress
+      5) Job store can be simple in-memory Map with TTL cleanup
+      Write a brief spec with API contracts, data flow, and migration
+      path from current sync API. Save to docs/plans/.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      outcome.action: delegate

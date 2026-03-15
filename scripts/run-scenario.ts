@@ -92,22 +92,36 @@ async function executeStep(
       }
     }
   } else {
-    try {
-      res = await fetch(`${BASE_URL}/api/agent/inject`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          agentId: scenario.agent,
-          content: step.send,
-          from: step.from!.user,
-          channel: step.from!.platform,
-          messageType: step.messageType,
-          ...(step.provider ? { provider: step.provider } : {}),
-          ...(scenario.model ? { model: scenario.model } : {}),
-        }),
-        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      })
-    } catch (err) {
+    const injectBody = JSON.stringify({
+      agentId: scenario.agent,
+      content: step.send,
+      from: step.from!.user,
+      channel: step.from!.platform,
+      messageType: step.messageType,
+      ...(step.provider ? { provider: step.provider } : {}),
+      ...(scenario.model ? { model: scenario.model } : {}),
+    })
+
+    // Retry on 500 (Nitro vite middleware flake) up to 2 times
+    let lastError: Error | undefined
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        res = await fetch(`${BASE_URL}/api/agent/inject`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: injectBody,
+          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        })
+        if (res.status !== 500) break
+        console.error(
+          `${DIM}  inject returned 500, retry ${attempt + 1}/2${RESET}`,
+        )
+      } catch (err) {
+        lastError = err as Error
+      }
+    }
+
+    if (!res!) {
       return {
         step: stepIndex,
         send: sendLabel,
@@ -116,7 +130,7 @@ async function executeStep(
           {
             field: "http",
             expected: "200",
-            actual: `connection error: ${(err as Error).message}`,
+            actual: `connection error: ${lastError?.message ?? "unknown"}`,
             pass: false,
           },
         ],

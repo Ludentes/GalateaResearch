@@ -20,5 +20,5 @@ steps:
     messageType: task_assignment
     expect:
       routing.level: task
-      routing.taskType: coding
+      routing.taskType: research
       outcome.action: delegate

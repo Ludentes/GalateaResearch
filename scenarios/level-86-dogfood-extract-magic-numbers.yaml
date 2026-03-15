@@ -10,11 +10,12 @@ setup:
   clear_state: true
 steps:
   - send: >
-      In server/agent/tick.ts, the Claude Code adapter timeout is hardcoded
-      as 300_000 (line with timeoutMs: 300_000). Move this to
-      server/engine/config.yaml under a new key
-      agent.claude_code_timeout_ms with default 300000. Then read it
-      in tick.ts via getConfig().
+      In server/agent/tick.ts, the getAdapterTimeout() function has
+      hardcoded timeout values in a switch statement (chat=120000,
+      review=180000, coding=300000, etc). Move these values to
+      server/engine/config.yaml under agent.adapter_timeouts (a map
+      of taskType → ms). Then read them in getAdapterTimeout() via
+      getConfig(). Keep the function signature the same.
     from: { platform: discord, user: kirill }
     messageType: task_assignment
     expect:
