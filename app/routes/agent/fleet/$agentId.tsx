@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { TickTimeline } from "../../../components/agent/TickTimeline"
+import { DimensionHeatmap } from "../../../components/agent/DimensionHeatmap"
 
 export const Route = createFileRoute("/agent/fleet/$agentId")({
   component: AgentDetailPage,
@@ -99,6 +100,14 @@ function AgentDetailPage() {
             <TickTimeline ticks={ticks} />
           </div>
         </div>
+
+        {/* Dimension Heatmap */}
+        {ticks.length > 0 && (
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold">Homeostasis Timeline</h2>
+            <DimensionHeatmap ticks={ticks} />
+          </div>
+        )}
       </div>
     </div>
   )
