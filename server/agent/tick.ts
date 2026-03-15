@@ -324,7 +324,14 @@ async function tickInner(
 
       const resumeSessionId = task.claudeSessionId ?? opCtx.lastClaudeSessionId
       const sessionResumed = !!resumeSessionId
-      const baseDir = (msg.metadata?.workspace as string) ?? process.cwd()
+      // Use workspace from: message metadata > agent spec > cwd
+      const specWorkspace = spec?.workspace
+        ? `${process.cwd()}/${spec.workspace}`
+        : undefined
+      const baseDir =
+        (msg.metadata?.workspace as string) ??
+        specWorkspace ??
+        process.cwd()
 
       // Create an isolated worktree for coding tasks so the main
       // working directory (and dev server) stays on main undisturbed.

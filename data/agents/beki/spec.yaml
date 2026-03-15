@@ -7,7 +7,7 @@ agent:
   role: "Mobile developer"
   domain: "Expo / React Native"
 
-workspace: "/workspace/beki/"
+workspace: "workspaces/agenttestproject"
 allowed_branches: ["feature/*", "fix/*"]
 
 thresholds:

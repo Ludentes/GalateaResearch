@@ -1,0 +1,21 @@
+scenario: "L200: Besa designs Astro landing page using /frontend-design skill"
+description: >
+  Kirill asks Besa (PM) to design a landing page for Galatea using the
+  /frontend-design skill. Besa should research, design, and produce a plan.
+agent: besa
+type: dogfood
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: >
+      We need a landing page for Galatea — our homeostasis-based AI agent system.
+      The project lives in the agenttestproject repo. Use /frontend-design to design
+      an Astro landing page. Target audience: technical founders and dev teams who
+      want autonomous AI teammates. Key sections: hero, how it works, agent profiles,
+      pricing, CTA. Make it distinctive — no generic SaaS look.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      outcome.action: delegate

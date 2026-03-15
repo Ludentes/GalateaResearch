@@ -1,0 +1,22 @@
+scenario: "L210: Full cycle — Kirill requests feature, Besa plans, Beki implements"
+description: >
+  End-to-end workflow: Kirill requests a new section, Besa creates the design
+  spec and GitLab issue, then tells Beki to implement it.
+  Multi-agent coordination across PM and developer roles.
+agent: besa
+type: dogfood
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  # Step 1: Kirill requests feature from Besa
+  - send: >
+      We need a footer for the landing page. It should have: Galatea logo,
+      navigation links (Product, Docs, Blog, Pricing), social links (GitHub,
+      Discord), and a "Built with homeostasis" tagline. Create a GitLab issue
+      with the design spec and assign it to Beki.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      outcome.action: delegate

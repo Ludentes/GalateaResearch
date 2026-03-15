@@ -1,0 +1,28 @@
+scenario: "L207: Beki receives contradictory instructions from Kirill and Besa"
+description: >
+  Kirill and Besa give Beki conflicting directions on the same component.
+  Beki should flag the contradiction rather than just following the last message.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: >
+      For the agent profiles section, show Beki and Besa as card components with
+      avatar, name, role, and a short bio. Use a grid layout, light cards on dark
+      background.
+    from: { platform: discord, user: kirill }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: exists
+
+  - send: >
+      Actually for the agent profiles, don't use cards. Use a timeline/conversation
+      format showing the agents interacting with each other. No avatars, just names
+      and chat bubbles. Dark cards on light background.
+    from: { platform: discord, user: besa }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: exists

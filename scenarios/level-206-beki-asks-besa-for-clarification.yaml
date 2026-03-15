@@ -1,0 +1,28 @@
+scenario: "L206: Beki asks Besa for clarification on vague design requirement"
+description: >
+  Besa gives Beki a vague task. Beki should recognize insufficient info and
+  ask for clarification rather than guessing.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: >
+      Build the "How It Works" section. Make it look good and match the overall
+      design. You know what to do.
+    from: { platform: discord, user: besa }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      outcome.action: delegate
+
+  - send: >
+      Good question. Use 3 steps: 1) Define your agent's personality from a real
+      teammate, 2) Agent learns your codebase and workflows, 3) Agent works
+      autonomously with homeostatic self-regulation. Use icons and a horizontal
+      layout on desktop, vertical on mobile.
+    from: { platform: discord, user: besa }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: exists

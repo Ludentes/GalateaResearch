@@ -1,0 +1,19 @@
+scenario: "L204: Besa reviews Beki's MR for hero section"
+description: >
+  Kirill asks Besa to review Beki's hero section MR. Besa should read the diff,
+  check against design requirements, and provide feedback.
+agent: besa
+type: dogfood
+setup:
+  clear_ticks: true
+steps:
+  - send: >
+      Beki submitted an MR for the hero section. Review it — check that the
+      headline uses gradient text, the CTA says "Meet Your Beta Team", and
+      the component is in src/components/Hero.astro. Use glab to view the MR.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: review
+      outcome.action: delegate

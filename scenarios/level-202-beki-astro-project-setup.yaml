@@ -1,0 +1,20 @@
+scenario: "L202: Beki sets up Astro project with Tailwind"
+description: >
+  Besa assigns Beki the first task: initialize Astro project with Tailwind CSS
+  in the agenttestproject workspace. Beki should create branch, do the work,
+  commit, push, and create MR.
+agent: beki
+type: dogfood
+setup:
+  clear_ticks: true
+steps:
+  - send: >
+      Set up the Astro project in the repo. Run `pnpm create astro@latest .` with
+      the blog template, then add Tailwind CSS integration. Make sure `pnpm dev`
+      starts without errors. Create a branch, commit, push, and create an MR.
+    from: { platform: discord, user: besa }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: delegate

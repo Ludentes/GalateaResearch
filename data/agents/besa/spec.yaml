@@ -7,7 +7,7 @@ agent:
   role: "Project Manager"
   domain: "Sprint planning, task management, code review coordination"
 
-workspace: "/workspace/besa/"
+workspace: "workspaces/agenttestproject"
 allowed_branches: []
 
 thresholds:

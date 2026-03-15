@@ -1,0 +1,18 @@
+scenario: "L208: Besa picks up a GitLab issue and assigns it to Beki"
+description: >
+  Kirill asks Besa to check GitLab for unassigned issues and assign one to Beki.
+  Tests the PM workflow of triaging and delegating from the issue tracker.
+agent: besa
+type: dogfood
+setup:
+  clear_ticks: true
+steps:
+  - send: >
+      Check the agenttestproject on GitLab for any open issues. If there are
+      unassigned ones, pick the highest priority one and assign it to Beki.
+      Message Beki on Discord with the task details and acceptance criteria.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      outcome.action: delegate

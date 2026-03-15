@@ -1,0 +1,30 @@
+scenario: "L205: Beki handles mid-task requirements change from Besa"
+description: >
+  Beki is working on a section, then Besa changes the requirements.
+  Tests that Beki adapts without losing previous work.
+agent: beki
+type: dogfood
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: >
+      Build the pricing section with three tiers: Starter ($0), Pro ($49/mo),
+      Enterprise (contact us). Use cards with a highlighted "most popular" badge
+      on Pro. Put it in src/components/Pricing.astro.
+    from: { platform: discord, user: besa }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: delegate
+
+  - send: >
+      Actually, Kirill says we're dropping the Starter tier. Make it just two
+      tiers: Pro ($99/mo) and Enterprise (contact us). Also rename Pro to "Team".
+      Update the existing component — don't start over.
+    from: { platform: discord, user: besa }
+    messageType: chat
+    expect:
+      outcome.action: respond
+      outcome.response: exists

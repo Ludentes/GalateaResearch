@@ -1,0 +1,19 @@
+scenario: "L209: Beki picks up a GitLab issue and works on it independently"
+description: >
+  Kirill tells Beki to check GitLab for assigned issues and work on one.
+  Tests the developer workflow of taking a task from the tracker through to MR.
+agent: beki
+type: dogfood
+setup:
+  clear_ticks: true
+steps:
+  - send: >
+      Check your assigned issues in the agenttestproject on GitLab. Pick one
+      and work on it. Follow the normal workflow: branch, implement, test,
+      commit, push, MR.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: delegate

@@ -75,6 +75,9 @@ coverage/
 # Git worktrees
 .worktrees/
 
+# Agent workspaces (cloned external projects — contain credentials in git config)
+workspaces/
+
 # Runtime data (agent state, memory, observations, test output)
 # Use data/* (not data/) so negation patterns below work
 data/*

@@ -1,0 +1,23 @@
+scenario: "L203: Beki implements hero section"
+description: >
+  Besa assigns Beki the hero section task with specific design requirements.
+  Full coding workflow: branch → implement → test → commit → push → MR.
+agent: beki
+type: dogfood
+setup:
+  clear_ticks: true
+steps:
+  - send: >
+      Implement the hero section for the Galatea landing page. It needs:
+      - Bold headline: "Your Team, Amplified" with a gradient text effect
+      - Subtitle explaining homeostasis-based AI agents
+      - CTA button "Meet Your Beta Team"
+      - Dark theme with accent colors
+      Create a branch feature/hero-section, implement in src/components/Hero.astro,
+      commit, push, and create an MR.
+    from: { platform: discord, user: besa }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: delegate

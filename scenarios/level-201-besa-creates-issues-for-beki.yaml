@@ -1,0 +1,19 @@
+scenario: "L201: Besa breaks down landing page into GitLab issues for Beki"
+description: >
+  After designing the landing page, Kirill asks Besa to create GitLab issues
+  and assign implementation tasks to Beki.
+agent: besa
+type: dogfood
+setup:
+  clear_ticks: true
+steps:
+  - send: >
+      Great design. Now break it into implementation tasks and create GitLab issues
+      in agenttestproject. Assign the coding tasks to Beki. Start with project setup
+      (Astro init, Tailwind config), then hero section, then the remaining sections.
+      Each issue should have clear acceptance criteria.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      outcome.action: delegate
