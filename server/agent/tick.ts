@@ -460,12 +460,17 @@ async function tickInner(
             recentCommits || "(no commits)",
             "",
             "## Checklist",
-            "1. Run tests: pnpm vitest run — do they pass?",
-            "2. Run linter: pnpm biome check — any violations?",
+            "1. Run tests if available (pnpm vitest run or similar) — do they pass?",
+            "2. Run linter if configured (pnpm biome check or similar) — any violations?",
             "3. Review the diff: does it match what was asked?",
-            "4. If issues found, fix them and commit the fix.",
+            "4. Check: are all changes committed? (git status --porcelain should be empty)",
+            "5. Check: was the branch pushed? (git log origin/<branch>..HEAD should be empty)",
+            "   If not pushed, push it now: git push -u origin <current-branch>",
+            "6. Check: was a merge request created?",
+            "   If not, create one now using glab or the GitLab API.",
+            "7. If any issues found, fix them, commit, and push.",
             "",
-            "Use /verification-before-completion.",
+            "Report what you found and fixed. Never skip a failing check silently.",
           ].join("\n")
 
           const verifyResult = await executeWorkArc({
