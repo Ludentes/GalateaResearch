@@ -50,14 +50,9 @@ import type { ChannelMessage, SelfModel, TickResult } from "./types"
 // ---------------------------------------------------------------------------
 
 function getAdapterTimeout(taskType: string | undefined): number {
-  const config = getAgentConfig()
-  const timeouts = config.adapter_timeouts
-
-  if (!taskType) {
-    return timeouts.default ?? 180_000
-  }
-
-  return timeouts[taskType] ?? timeouts.default ?? 180_000
+  const { adapter_timeouts: timeouts } = getAgentConfig()
+  const defaultTimeout = timeouts.default ?? 180_000
+  return taskType ? (timeouts[taskType] ?? defaultTimeout) : defaultTimeout
 }
 
 // ---------------------------------------------------------------------------
