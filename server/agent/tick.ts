@@ -382,9 +382,6 @@ async function tickInner(
 
       // Load agent secrets — applies to ALL delegate tasks (not just coding)
       const secrets = await loadAgentSecrets(agentId)
-      if (secrets.gitlab?.ssh_host_alias) {
-        ;(task as any)._sshHostAlias = secrets.gitlab.ssh_host_alias
-      }
       if (secrets.gitlab?.token) {
         ;(task as any)._prevGitlabToken = process.env.GITLAB_TOKEN ?? null
         process.env.GITLAB_TOKEN = secrets.gitlab.token
@@ -401,7 +398,7 @@ async function tickInner(
       const config = getLLMConfig()
       const rawDescription = existingTask ? msg.content : task.description
       const taskDescription = usingWorktree
-        ? `${rawDescription}\n\n**Working directory:** You are in an isolated git worktree at \`${workDir}\` on branch \`${worktreeBranch}\`. The main repo is undisturbed. Commit your changes here — they will be pushed and an MR created automatically when you finish.`
+        ? `${rawDescription}\n\n**Working directory:** You are in an isolated git worktree at \`${workDir}\` on branch \`${worktreeBranch}\`. The main repo is undisturbed.\n\n**When you finish:** Commit your changes, push the branch (\`git push -u origin ${worktreeBranch}\`), and create a merge request. If push or MR creation fails, report the error — do not fail silently.`
         : rawDescription
       const arcResult = await executeWorkArc({
         adapter,
@@ -530,113 +527,7 @@ async function tickInner(
       }
 
       // ---------------------------------------------------------------
-      // PUBLISH phase — push branch and create MR for coding tasks
-      // ---------------------------------------------------------------
-      let publishResult: {
-        pushed?: boolean
-        branch?: string
-        mr?: string
-        error?: string
-      } = {}
-      if (
-        arcResult.status === "completed" &&
-        routing.taskType === "coding"
-      ) {
-        try {
-          const branch = execSync(
-            "git rev-parse --abbrev-ref HEAD",
-            { cwd: workDir, encoding: "utf-8", timeout: 5000 },
-          ).trim()
-
-          // Only push if on a feature/worktree branch (not main)
-          if (branch !== "main" && branch !== "master") {
-            // Ensure remote uses agent's SSH host alias (handles key + port)
-            const sshAlias = (task as any)._sshHostAlias
-            if (sshAlias) {
-              try {
-                const currentUrl = execSync(
-                  "git remote get-url origin",
-                  { cwd: workDir, encoding: "utf-8", timeout: 5000 },
-                ).trim()
-                // Replace hostname with SSH alias: git@host:path → git@alias:path
-                const aliasUrl = currentUrl.replace(
-                  /git@[^:]+:/,
-                  `git@${sshAlias}:`,
-                )
-                if (aliasUrl !== currentUrl) {
-                  execSync(
-                    `git remote set-url origin "${aliasUrl}"`,
-                    { cwd: workDir, encoding: "utf-8", timeout: 5000 },
-                  )
-                }
-              } catch {
-                // Non-fatal — push may still work with default SSH config
-              }
-            }
-            execSync(`git push -u origin ${branch}`, {
-              cwd: workDir,
-              encoding: "utf-8",
-              timeout: 30_000,
-            })
-            publishResult = { pushed: true, branch }
-            console.log(`[tick] PUBLISH: pushed ${branch}`)
-
-            // Create MR via GitLab API (glab snap has title-parsing bugs)
-            try {
-              const remoteUrl = execSync(
-                "git remote get-url origin",
-                { cwd: workDir, encoding: "utf-8", timeout: 5000 },
-              ).trim()
-              const repoMatch = remoteUrl.match(
-                /[:/]([^/]+\/[^/]+?)(?:\.git)?$/,
-              )
-              const repoSlug = repoMatch?.[1] ?? ""
-              const token = process.env.GITLAB_TOKEN ?? ""
-              const safeTitle = taskDescription
-                .slice(0, 70)
-                .replace(/["`$\\]/g, "")
-              const encodedSlug = encodeURIComponent(repoSlug)
-              const apiUrl = `https://gitlab.maugry.ru/api/v4/projects/${encodedSlug}/merge_requests`
-              const curlCmd = [
-                "curl -sf",
-                `--header "PRIVATE-TOKEN: ${token}"`,
-                `--data-urlencode "source_branch=${branch}"`,
-                '--data-urlencode "target_branch=master"',
-                `--data-urlencode "title=${safeTitle}"`,
-                `"${apiUrl}"`,
-              ].join(" ")
-              const mrJson = execSync(curlCmd, {
-                cwd: workDir,
-                encoding: "utf-8",
-                timeout: 30_000,
-              }).trim()
-              const mr = JSON.parse(mrJson)
-              publishResult.mr = mr.web_url ?? `!${mr.iid}`
-              console.log(
-                `[tick] PUBLISH: MR created — ${publishResult.mr}`,
-              )
-            } catch (mrErr) {
-              publishResult.mr = `failed: ${(mrErr as Error).message}`
-              console.warn(
-                "[tick] PUBLISH: MR creation failed:",
-                (mrErr as Error).message,
-              )
-            }
-          } else {
-            publishResult = { pushed: false, branch, error: "on main branch" }
-            console.log("[tick] PUBLISH: skipped — on main branch")
-          }
-        } catch (err) {
-          publishResult = {
-            pushed: false,
-            error: (err as Error).message,
-          }
-          console.warn("[tick] PUBLISH failed:", (err as Error).message)
-        }
-      }
-
-      // ---------------------------------------------------------------
-      // CLEANUP — remove worktree and restore env after PUBLISH
+      // CLEANUP — restore env and remove worktree
       // ---------------------------------------------------------------
       // Restore previous GITLAB_TOKEN (or remove if there wasn't one)
       if ("_prevGitlabToken" in (task as any)) {
@@ -663,21 +554,10 @@ async function tickInner(
         }
       }
 
-      let statusText =
+      const statusText =
         arcResult.status === "completed"
           ? `Task completed: ${arcResult.text}`
           : `Task ${arcResult.status}: ${arcResult.text}`
-
-      // Append publish result to status so the assigner knows what happened
-      if (publishResult.pushed) {
-        statusText += `\nBranch \`${publishResult.branch}\` pushed.`
-        if (publishResult.mr && !publishResult.mr.startsWith("failed"))
-          statusText += ` MR created: ${publishResult.mr}`
-        else if (publishResult.mr)
-          statusText += ` MR creation failed — please create manually.`
-      } else if (publishResult.error) {
-        statusText += `\n⚠ Publish failed: ${publishResult.error}. Changes are committed locally but not pushed.`
-      }
 
       const outbound: ChannelMessage = {
         id: `delegate-${msg.id}`,
@@ -752,9 +632,6 @@ async function tickInner(
           artifactsCreated: [],
           knowledgeEntriesCreated: knowledgeCount,
         },
-        ...(publishResult.pushed !== undefined
-          ? { publish: publishResult }
-          : {}),
         durationMs: Date.now() - tickStart,
       })
       appendTickRecord(delegateRecord, getTickRecordPath(agentId)).catch(

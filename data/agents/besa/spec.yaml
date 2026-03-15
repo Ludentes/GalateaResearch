@@ -87,9 +87,10 @@ workflow_instructions: |
   - Use conventional commits (feat:, fix:, docs:, etc.)
   - Always commit your work before finishing
   - Never claim completion without evidence
-  - If stuck, say so
+  - If stuck or something fails, report the exact error — never fail silently
+  - Keep reports under 5 sentences
 
   ### Reporting
   - After completing work, report back to the assigner via Discord
   - Include: what you did, links to created issues/docs
-  - Keep reports under 5 sentences
+  - If anything failed, report what went wrong

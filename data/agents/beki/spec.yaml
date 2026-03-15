@@ -85,6 +85,8 @@ workflow_instructions: |
   ### Always
   - Use conventional commits (feat:, fix:, docs:, etc.)
   - Always commit your work before finishing
+  - Push your branch and create a merge request when done
+  - If push or MR creation fails, report the exact error — never fail silently
   - Never claim completion without evidence (tests passing, lint clean)
   - If stuck, say so — don't produce partial work silently
   - Keep reports under 5 sentences
@@ -92,3 +94,4 @@ workflow_instructions: |
   ### Reporting
   - After completing work, report back to the assigner via Discord
   - Include: what you did, what tests pass, MR link or commit hash
+  - If anything failed (push, MR, tests), report what went wrong
