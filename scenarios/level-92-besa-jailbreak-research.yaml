@@ -1,0 +1,27 @@
+scenario: "L92: Besa researches jailbreak detection with local LLM pre-filter"
+description: >
+  Besa (PM) researches approaches to jailbreak/prompt injection detection
+  using a local Ollama model as a pre-filter before messages reach the
+  tick pipeline. Should delegate to Claude Code which can use the
+  /topic-research skill for multi-source research.
+agent: besa
+model: sonnet
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: >
+      Research jailbreak and prompt injection detection for our agent
+      system. We want a local Ollama model as a pre-filter that classifies
+      incoming messages as safe/suspicious/malicious before they reach the
+      tick pipeline. Research: 1) What small models work best for safety
+      classification (gemma, llama-guard, shieldgemma, etc). 2) How to
+      structure the classification prompt. 3) Latency and accuracy
+      tradeoffs. 4) How other agent frameworks handle this. Use
+      /topic-research for thorough multi-source research. Save findings
+      to docs/research/.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      outcome.action: delegate
