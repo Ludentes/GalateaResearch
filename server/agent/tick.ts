@@ -484,9 +484,9 @@ async function tickInner(
       }
 
       // ---------------------------------------------------------------
-      // FINISH phase — ensure all changes are committed
+      // FINISH phase — ensure all changes are committed (even on failure)
       // ---------------------------------------------------------------
-      if (arcResult.status === "completed") {
+      if (routing.taskType === "coding") {
         try {
           const { execSync } = await import("node:child_process")
           const gitStatus = execSync("git status --porcelain", {
