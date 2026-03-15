@@ -1,5 +1,11 @@
-import { defineEventHandler, HTTPError, readBody } from "h3"
+import {
+  defineEventHandler,
+  HTTPError,
+  readBody,
+  setResponseStatus,
+} from "h3"
 import { addMessage } from "../../../agent/agent-state"
+import { startCleanupTimer } from "../../../agent/job-store"
 import { tick } from "../../../agent/tick"
 import type { ChannelMessage } from "../../../agent/types"
 import {
@@ -67,6 +73,8 @@ export default defineEventHandler(async (event) => {
     throw new HTTPError(error, { status: 400 })
   }
 
+  startCleanupTimer()
+
   const msg = buildChannelMessage(body)
 
   // Create job for async tracking
@@ -109,7 +117,7 @@ export default defineEventHandler(async (event) => {
   })
 
   // Return immediately with job reference
-  event.node.res.statusCode = 202
+  setResponseStatus(event, 202)
   return {
     jobId: job.jobId,
     status: "running",

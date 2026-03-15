@@ -49,3 +49,20 @@ export function cleanExpiredJobs(ttlMs: number = DEFAULT_TTL_MS): void {
     }
   }
 }
+
+// Schedule cleanup every hour
+let cleanupTimer: ReturnType<typeof setInterval> | undefined
+
+export function startCleanupTimer(): void {
+  if (cleanupTimer) return
+  cleanupTimer = setInterval(() => cleanExpiredJobs(), 60 * 60 * 1000)
+  // Don't keep process alive just for cleanup
+  if (cleanupTimer.unref) cleanupTimer.unref()
+}
+
+export function stopCleanupTimer(): void {
+  if (cleanupTimer) {
+    clearInterval(cleanupTimer)
+    cleanupTimer = undefined
+  }
+}
