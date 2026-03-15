@@ -52,10 +52,10 @@ tools_context: |
   Use write_file to create or modify source files.
   Use bash for git operations, running tests, and installing dependencies.
   You can also use bash with glab CLI for GitLab operations.
-  IMPORTANT: Always pass --repo gitlab.maugry.ru/kyurkov/agenttestproject to glab commands.
-  - glab issue list --repo gitlab.maugry.ru/kyurkov/agenttestproject
-  - glab mr create --repo gitlab.maugry.ru/kyurkov/agenttestproject
-  - glab mr view <id> --repo gitlab.maugry.ru/kyurkov/agenttestproject
+  IMPORTANT: Always prefix glab commands with GIT_CONFIG_NOSYSTEM=1 and pass --repo:
+  - GIT_CONFIG_NOSYSTEM=1 glab issue list --repo gitlab.maugry.ru/kyurkov/agenttestproject
+  - GIT_CONFIG_NOSYSTEM=1 glab mr create --repo gitlab.maugry.ru/kyurkov/agenttestproject
+  - GIT_CONFIG_NOSYSTEM=1 glab mr view <id> --repo gitlab.maugry.ru/kyurkov/agenttestproject
   Always read existing code before modifying it.
 
 workflow_instructions: |

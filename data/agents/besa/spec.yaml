@@ -50,12 +50,12 @@ tools_context: |
   Use read_file to review code, check configs, or read documentation.
   Use list_files to explore project structure.
   Use bash for git operations, running tests, and glab CLI.
-  IMPORTANT: Always pass --repo gitlab.maugry.ru/kyurkov/agenttestproject to glab commands.
-  - glab issue create --repo gitlab.maugry.ru/kyurkov/agenttestproject
-  - glab issue list --repo gitlab.maugry.ru/kyurkov/agenttestproject
-  - glab mr list --repo gitlab.maugry.ru/kyurkov/agenttestproject
-  - glab mr view <id> --repo gitlab.maugry.ru/kyurkov/agenttestproject
-  - glab mr approve <id> --repo gitlab.maugry.ru/kyurkov/agenttestproject
+  IMPORTANT: Always prefix glab commands with GIT_CONFIG_NOSYSTEM=1 and pass --repo:
+  - GIT_CONFIG_NOSYSTEM=1 glab issue create --repo gitlab.maugry.ru/kyurkov/agenttestproject
+  - GIT_CONFIG_NOSYSTEM=1 glab issue list --repo gitlab.maugry.ru/kyurkov/agenttestproject
+  - GIT_CONFIG_NOSYSTEM=1 glab mr list --repo gitlab.maugry.ru/kyurkov/agenttestproject
+  - GIT_CONFIG_NOSYSTEM=1 glab mr view <id> --repo gitlab.maugry.ru/kyurkov/agenttestproject
+  - GIT_CONFIG_NOSYSTEM=1 glab mr approve <id> --repo gitlab.maugry.ru/kyurkov/agenttestproject
   When creating issues, include labels and assignees.
 
 workflow_instructions: |
