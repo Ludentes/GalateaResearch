@@ -459,6 +459,65 @@ async function tickInner(
         }
       }
 
+      // ---------------------------------------------------------------
+      // PUBLISH phase — push branch and create MR for coding tasks
+      // ---------------------------------------------------------------
+      if (
+        arcResult.status === "completed" &&
+        routing.taskType === "coding"
+      ) {
+        try {
+          const { execSync } = await import("node:child_process")
+
+          // Check current branch — only publish if not on main
+          const currentBranch = execSync(
+            "git rev-parse --abbrev-ref HEAD",
+            { cwd: workDir, encoding: "utf-8", timeout: 5000 },
+          ).trim()
+
+          if (currentBranch === "main" || currentBranch === "master") {
+            // Create a feature branch from the current commits
+            const branchName = `feature/${task.id}-${Date.now()}`
+            execSync(`git checkout -b ${branchName}`, {
+              cwd: workDir,
+              encoding: "utf-8",
+              timeout: 5000,
+            })
+            console.log(`[tick] PUBLISH: created branch ${branchName}`)
+          }
+
+          const branch = execSync(
+            "git rev-parse --abbrev-ref HEAD",
+            { cwd: workDir, encoding: "utf-8", timeout: 5000 },
+          ).trim()
+
+          // Push branch
+          execSync(`git push -u origin ${branch}`, {
+            cwd: workDir,
+            encoding: "utf-8",
+            timeout: 30_000,
+          })
+          console.log(`[tick] PUBLISH: pushed ${branch}`)
+
+          // Create MR via glab (best-effort)
+          try {
+            const mrOutput = execSync(
+              `glab mr create --title "${taskDescription.slice(0, 70)}" --fill --yes 2>&1`,
+              { cwd: workDir, encoding: "utf-8", timeout: 30_000 },
+            ).trim()
+            console.log(`[tick] PUBLISH: MR created — ${mrOutput}`)
+          } catch (mrErr) {
+            // MR creation may fail if glab not configured — log and continue
+            console.warn(
+              "[tick] PUBLISH: MR creation failed (glab):",
+              (mrErr as Error).message,
+            )
+          }
+        } catch (err) {
+          console.warn("[tick] PUBLISH failed:", (err as Error).message)
+        }
+      }
+
       const statusText =
         arcResult.status === "completed"
           ? `Task completed: ${arcResult.text}`
