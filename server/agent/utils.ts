@@ -37,3 +37,47 @@ export function formatDuration(ms: number): string {
 
   return parts.join(" ")
 }
+
+/**
+ * Get git diff stats and recent commits from a working directory.
+ * Returns empty strings if git commands fail.
+ *
+ * @param workDir - The working directory to run git commands in
+ * @returns Object with diffStat (from "git diff --stat HEAD~1") and
+ *          recentCommits (from "git log --oneline -3")
+ * @example
+ * const { diffStat, recentCommits } = await getDiffStat("/path/to/repo")
+ * // diffStat: "file1.txt | 5 +++++\n file2.ts | 10 +-------"
+ * // recentCommits: "abc1234 Fix bug\ndef5678 Add feature\n..."
+ */
+export async function getDiffStat(
+  workDir: string,
+): Promise<{ diffStat: string; recentCommits: string }> {
+  const { execSync } = await import("node:child_process")
+
+  const diffStat = (() => {
+    try {
+      return execSync("git diff --stat HEAD~1", {
+        cwd: workDir,
+        encoding: "utf-8",
+        timeout: 5000,
+      }).trim()
+    } catch {
+      return ""
+    }
+  })()
+
+  const recentCommits = (() => {
+    try {
+      return execSync("git log --oneline -3", {
+        cwd: workDir,
+        encoding: "utf-8",
+        timeout: 5000,
+      }).trim()
+    } catch {
+      return ""
+    }
+  })()
+
+  return { diffStat, recentCommits }
+}

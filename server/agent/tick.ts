@@ -43,6 +43,7 @@ import {
 } from "./operational-memory"
 import { classifyWithLLM, inferRouting } from "./task-type-inference"
 import { createAllTools } from "./tools"
+import { getDiffStat } from "./utils"
 import type { ChannelMessage, SelfModel, TickResult } from "./types"
 
 // ---------------------------------------------------------------------------
@@ -380,29 +381,7 @@ async function tickInner(
         routing.taskType === "coding"
       ) {
         try {
-          const { execSync } = await import("node:child_process")
-          const diffStat = (() => {
-            try {
-              return execSync("git diff --stat HEAD~1", {
-                cwd: workDir,
-                encoding: "utf-8",
-                timeout: 5000,
-              }).trim()
-            } catch {
-              return "(no recent commits to diff)"
-            }
-          })()
-          const recentCommits = (() => {
-            try {
-              return execSync("git log --oneline -3", {
-                cwd: workDir,
-                encoding: "utf-8",
-                timeout: 5000,
-              }).trim()
-            } catch {
-              return "(no commits)"
-            }
-          })()
+          const { diffStat, recentCommits } = await getDiffStat(workDir)
 
           const verifyPrompt = [
             "A coding task was just completed. Verify the work.",
@@ -411,10 +390,10 @@ async function tickInner(
             taskDescription,
             "",
             "## What Was Done",
-            diffStat,
+            diffStat || "(no recent commits to diff)",
             "",
             "## Recent Commits",
-            recentCommits,
+            recentCommits || "(no commits)",
             "",
             "## Checklist",
             "1. Run tests: pnpm vitest run — do they pass?",
