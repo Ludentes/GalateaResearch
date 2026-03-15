@@ -1,0 +1,13 @@
+scenario: "L102: Async coding task completes with delegation"
+agent: beki
+model: sonnet
+setup:
+  clear_ticks: true
+steps:
+  - send: "Add a JSDoc comment to the cleanExpiredJobs function in server/agent/job-store.ts explaining the TTL parameter"
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: delegate
