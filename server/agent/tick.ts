@@ -45,6 +45,27 @@ import { createAllTools } from "./tools"
 import type { ChannelMessage, SelfModel, TickResult } from "./types"
 
 // ---------------------------------------------------------------------------
+// Adapter timeout resolver — maps task type to appropriate timeout
+// ---------------------------------------------------------------------------
+
+function getAdapterTimeout(taskType: string | undefined): number {
+  switch (taskType) {
+    case "chat":
+      return 120_000
+    case "review":
+      return 180_000
+    case "coding":
+      return 300_000
+    case "admin":
+      return 120_000
+    case "research":
+      return 300_000
+    default:
+      return 180_000
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Tool registry — auto-populated with workspace tools per agent
 // ---------------------------------------------------------------------------
 
@@ -454,7 +475,7 @@ async function tickInner(
             history: ccHistory,
             workingDirectory:
               (msg.metadata?.workspace as string) ?? process.cwd(),
-            timeoutMs: 300_000,
+            timeoutMs: getAdapterTimeout(routing.taskType),
             model:
               (msg.metadata?.modelOverride as string) || config.model,
           })
