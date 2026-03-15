@@ -103,6 +103,7 @@ async function executeStep(
           channel: step.from!.platform,
           messageType: step.messageType,
           ...(step.provider ? { provider: step.provider } : {}),
+          ...(scenario.model ? { model: scenario.model } : {}),
         }),
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       })

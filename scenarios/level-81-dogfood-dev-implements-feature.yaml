@@ -4,6 +4,7 @@ description: >
   Tests the developer pipeline: routing as coding task, delegation to
   Claude Code adapter with tool access. Second half of dogfooding flow.
 agent: beki
+model: sonnet
 setup:
   clear_ticks: true
   clear_state: true

@@ -30,6 +30,8 @@ export interface Scenario {
   scenario: string
   source_gherkin?: string
   agent: string
+  /** Override LLM model for all steps (e.g. "sonnet" for dogfooding) */
+  model?: string
   setup?: ScenarioSetup
   steps: ScenarioStep[]
 }

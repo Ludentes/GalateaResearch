@@ -15,6 +15,8 @@ interface InjectBody {
   messageType?: string
   /** Override LLM provider for this message (e.g. "none" to simulate outage) */
   provider?: string
+  /** Override LLM model for this message (e.g. "sonnet" for dogfooding) */
+  model?: string
 }
 
 export function validateInjectBody(body: InjectBody): string | null {
@@ -52,6 +54,7 @@ export function buildChannelMessage(body: InjectBody): ChannelMessage {
     receivedAt: new Date().toISOString(),
     metadata: {
       ...(body.provider ? { providerOverride: body.provider } : {}),
+      ...(body.model ? { modelOverride: body.model } : {}),
     },
   }
 }

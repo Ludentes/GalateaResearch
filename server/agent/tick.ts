@@ -455,7 +455,8 @@ async function tickInner(
             workingDirectory:
               (msg.metadata?.workspace as string) ?? process.cwd(),
             timeoutMs: 300_000,
-            model: config.model,
+            model:
+              (msg.metadata?.modelOverride as string) || config.model,
           })
 
           if (result.ok) {
