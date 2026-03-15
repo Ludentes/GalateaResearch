@@ -355,7 +355,10 @@ async function tickInner(
           }
         : context
       const config = getLLMConfig()
-      const taskDescription = existingTask ? msg.content : task.description
+      const rawDescription = existingTask ? msg.content : task.description
+      const taskDescription = usingWorktree
+        ? `${rawDescription}\n\n**Working directory:** You are in an isolated git worktree at \`${workDir}\` on branch \`${worktreeBranch}\`. The main repo is undisturbed. Commit your changes here — they will be pushed and an MR created automatically when you finish.`
+        : rawDescription
       const arcResult = await executeWorkArc({
         adapter,
         task: { id: task.id, description: taskDescription },
