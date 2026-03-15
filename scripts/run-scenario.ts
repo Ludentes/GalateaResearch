@@ -6,6 +6,7 @@ import type { Scenario, ScenarioVerdict, StepVerdict } from "./scenario-types"
 
 const BASE_URL = process.env.SCENARIO_BASE_URL ?? "http://localhost:13000"
 const FETCH_TIMEOUT_MS = 360_000 // 6 minutes — must exceed server-side adapter timeout (5 min)
+const DOGFOOD_TIMEOUT_MS = 900_000 // 15 minutes — dogfood tasks involve real coding/design work
 
 // ANSI colors
 const GREEN = "\x1b[32m"
@@ -42,6 +43,8 @@ async function executeStep(
   step: Scenario["steps"][number],
   stepIndex: number,
 ): Promise<StepVerdict> {
+  const timeoutMs =
+    scenario.type === "dogfood" ? DOGFOOD_TIMEOUT_MS : FETCH_TIMEOUT_MS
   const stepStart = Date.now()
   const sendLabel = step.send ?? "(heartbeat)"
 
@@ -71,7 +74,7 @@ async function executeStep(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ agentId: scenario.agent }),
-        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        signal: AbortSignal.timeout(timeoutMs),
       })
     } catch (err) {
       return {
