@@ -6,7 +6,7 @@
 **Related:**
 - [OBSERVATION_PIPELINE.md](../archive/pre-v2/OBSERVATION_PIPELINE.md) (Layer 4: Memory Formation, archived)
 - [REFERENCE_SCENARIOS.md](../REFERENCE_SCENARIOS.md) (Expected behavior)
-- [memory-findings.md](./2026-02-02-memory-findings.md) (Early Mem0/Graphiti analysis)
+- [memory-findings.md](../archive/pre-v2/plans/2026-02-02-memory-findings.md) (Early Mem0/Graphiti analysis, archived)
 - [cognitive-models-design.md](./2026-02-12-cognitive-models-design.md) (How models are implemented)
 - [learning-scenarios.md](./2026-02-11-learning-scenarios.md) (End-to-end learning scenarios)
 

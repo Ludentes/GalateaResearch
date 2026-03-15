@@ -55,7 +55,7 @@ Galatea builds **two things**. Everything else leverages the ecosystem.
 | Document | Description |
 |----------|-------------|
 | **[Homeostasis Design](plans/2026-02-02-homeostasis-architecture-design.md)** | Homeostasis decision record (concept survives in v2) |
-| **[Memory Research](plans/2026-02-02-memory-findings.md)** | Memory system research findings |
+| **[Memory Research](archive/pre-v2/plans/2026-02-02-memory-findings.md)** | Memory system research findings (archived) |
 | **[Memory Lifecycle](plans/2026-02-07-memory-lifecycle.md)** | Memory consolidation/decay design |
 | **[Cognitive Models](plans/2026-02-12-cognitive-models-design.md)** | Cognitive models as views over knowledge store |
 
