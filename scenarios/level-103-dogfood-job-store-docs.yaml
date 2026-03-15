@@ -1,0 +1,14 @@
+scenario: "L103: Beki adds JSDoc to job-store module"
+type: dogfood
+agent: beki
+model: sonnet
+setup:
+  clear_ticks: true
+steps:
+  - send: "Add JSDoc comments to all exported functions in server/agent/job-store.ts. Each function should have a brief description and @param/@returns tags."
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: delegate
