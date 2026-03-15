@@ -78,6 +78,9 @@ coverage/
 # Agent workspaces (cloned external projects — contain credentials in git config)
 workspaces/
 
+# Landing page project (built by agents in agenttestproject, not part of Galatea)
+landing/
+
 # Runtime data (agent state, memory, observations, test output)
 # Use data/* (not data/) so negation patterns below work
 data/*
