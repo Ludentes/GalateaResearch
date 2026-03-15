@@ -377,6 +377,127 @@ async function tickInner(
         )
       }
 
+      // ---------------------------------------------------------------
+      // VERIFY phase — pipeline-enforced for completed coding tasks
+      // ---------------------------------------------------------------
+      if (
+        arcResult.status === "completed" &&
+        routing.taskType === "coding"
+      ) {
+        try {
+          const { execSync } = await import("node:child_process")
+          const diffStat = (() => {
+            try {
+              return execSync("git diff --stat HEAD~1", {
+                cwd: workDir,
+                encoding: "utf-8",
+                timeout: 5000,
+              }).trim()
+            } catch {
+              return "(no recent commits to diff)"
+            }
+          })()
+          const recentCommits = (() => {
+            try {
+              return execSync("git log --oneline -3", {
+                cwd: workDir,
+                encoding: "utf-8",
+                timeout: 5000,
+              }).trim()
+            } catch {
+              return "(no commits)"
+            }
+          })()
+
+          const verifyPrompt = [
+            "A coding task was just completed. Verify the work.",
+            "",
+            "## Original Task",
+            taskDescription,
+            "",
+            "## What Was Done",
+            diffStat,
+            "",
+            "## Recent Commits",
+            recentCommits,
+            "",
+            "## Checklist",
+            "1. Run tests: pnpm vitest run — do they pass?",
+            "2. Run linter: pnpm biome check — any violations?",
+            "3. Review the diff: does it match what was asked?",
+            "4. If issues found, fix them and commit the fix.",
+            "",
+            "Use /verification-before-completion.",
+          ].join("\n")
+
+          const verifyResult = await executeWorkArc({
+            adapter,
+            task: {
+              id: `verify-${task.id}`,
+              description: verifyPrompt,
+            },
+            context: workContext,
+            workingDirectory: workDir,
+            trustLevel: (agentContext.sourceTrustLevel ??
+              "MEDIUM") as TrustLevel,
+            model:
+              (msg.metadata?.modelOverride as string) ||
+              config.model,
+            timeout: getAdapterTimeout("review"),
+          })
+
+          console.log(
+            `[tick] VERIFY: ${verifyResult.status} (${verifyResult.durationMs}ms)`,
+          )
+        } catch (err) {
+          console.warn(
+            "[tick] VERIFY failed:",
+            (err as Error).message,
+          )
+        }
+      }
+
+      // ---------------------------------------------------------------
+      // FINISH phase — ensure all changes are committed
+      // ---------------------------------------------------------------
+      if (arcResult.status === "completed") {
+        try {
+          const { execSync } = await import("node:child_process")
+          const gitStatus = execSync("git status --porcelain", {
+            cwd: workDir,
+            encoding: "utf-8",
+            timeout: 5000,
+          }).trim()
+
+          if (gitStatus.length > 0) {
+            console.log(
+              "[tick] FINISH: uncommitted changes, running commit arc",
+            )
+            await executeWorkArc({
+              adapter,
+              task: {
+                id: `finish-${task.id}`,
+                description:
+                  "You have uncommitted changes. Stage relevant files and commit with a conventional commit message.",
+              },
+              context: workContext,
+              workingDirectory: workDir,
+              trustLevel: (agentContext.sourceTrustLevel ??
+                "MEDIUM") as TrustLevel,
+              model:
+                (msg.metadata?.modelOverride as string) ||
+                config.model,
+              timeout: 30_000,
+            })
+          }
+        } catch (err) {
+          console.warn(
+            "[tick] FINISH failed:",
+            (err as Error).message,
+          )
+        }
+      }
+
       const statusText =
         arcResult.status === "completed"
           ? `Task completed: ${arcResult.text}`
