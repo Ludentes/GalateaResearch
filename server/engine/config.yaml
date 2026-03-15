@@ -334,6 +334,45 @@ homeostasis:
     max_tokens: 50
     timeout_ms: 10000
 
+  # Dimension Explanations — self-descriptions for homeostasis reporting
+  # Agents use these to articulate their current state across 7 dimensions.
+  # Each dimension has HEALTHY (baseline), HIGH (above normal), LOW (below normal).
+  dimension_explanations:
+    knowledge_sufficiency:
+      HEALTHY: "I have adequate knowledge to understand the current task. Relevant facts are available and at reasonable confidence levels."
+      HIGH: "I have extensive, high-confidence knowledge across multiple domains relevant to my work. Context is rich and comprehensive."
+      LOW: "I lack sufficient relevant knowledge to approach this confidently. Critical facts are missing or too uncertain to rely on."
+
+    certainty_alignment:
+      HEALTHY: "I feel reasonably confident in my approach. My beliefs about the task align with available evidence and feedback."
+      HIGH: "I have very high confidence in my direction. My understanding is well-validated and I see clear pathways forward."
+      LOW: "I'm uncertain about my approach. My assumptions feel disconnected from evidence, or I'm receiving contradictory signals."
+
+    progress_momentum:
+      HEALTHY: "I'm making steady forward progress. I'm completing work units at a sustainable pace with few blockers."
+      HIGH: "I'm moving quickly with excellent momentum. Work is flowing smoothly and I'm hitting milestones ahead of schedule."
+      LOW: "My progress has stalled. I'm blocked, going in circles, or facing unexpected obstacles that are slowing me down."
+
+    communication_health:
+      HEALTHY: "I'm communicating regularly and clearly. My responses are timely and I'm effectively sharing status and blockers."
+      HIGH: "I'm communicating proactively and frequently. I'm providing clear updates and actively keeping stakeholders informed."
+      LOW: "I haven't been communicating adequately. I'm either unresponsive or my messages lack clarity about my status."
+
+    productive_engagement:
+      HEALTHY: "I'm focused and engaged with my work. I'm making deliberate decisions and applying sustained attention to the task."
+      HIGH: "I'm deeply engaged and fully focused. I have excellent flow and am making high-quality decisions consistently."
+      LOW: "I'm struggling to stay engaged. I'm distracted, unfocused, or lack motivation for the current work."
+
+    knowledge_application:
+      HEALTHY: "I'm applying my knowledge appropriately to the current situation. My decisions draw from relevant learned patterns."
+      HIGH: "I'm applying knowledge skillfully and creatively. I'm drawing connections across domains and my decisions are well-informed."
+      LOW: "I'm not effectively applying what I know. My decisions feel disconnected from available knowledge or patterns."
+
+    self_preservation:
+      HEALTHY: "I'm maintaining healthy boundaries. I'm not overcommitting and I'm protecting my capacity for quality work."
+      HIGH: "I have strong boundaries and am protecting my well-being well. I'm choosing work deliberately and declining appropriately."
+      LOW: "My boundaries are breaking down. I'm overcommitted, taking on too much, or pushing beyond sustainable capacity."
+
 # -----------------------------------------------------------------------------
 # HEARTBEAT — server/agent/heartbeat.ts
 # Periodic tick() scheduler for autonomous operation.
