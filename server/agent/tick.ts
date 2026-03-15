@@ -574,12 +574,26 @@ async function tickInner(
             console.log(`[tick] PUBLISH: pushed ${branch}`)
 
             // Create MR via glab (best-effort)
+            // Derive repo slug from git remote URL
             try {
+              const remoteUrl = execSync(
+                "git remote get-url origin",
+                { cwd: workDir, encoding: "utf-8", timeout: 5000 },
+              ).trim()
+              // Extract "group/project" from SSH or HTTPS URL
+              const repoMatch = remoteUrl.match(
+                /[:/]([^/]+\/[^/]+?)(?:\.git)?$/,
+              )
+              const repoSlug = repoMatch?.[1] ?? ""
+              const repoFlag = repoSlug
+                ? ` --repo gitlab.maugry.ru/${repoSlug}`
+                : ""
+
               const safeTitle = taskDescription
                 .slice(0, 70)
                 .replace(/["`$\\]/g, "")
               const mrOutput = execSync(
-                `glab mr create --title "${safeTitle}" --fill --yes 2>&1`,
+                `glab mr create --title "${safeTitle}" --source-branch "${branch}" --fill --yes${repoFlag} 2>&1`,
                 { cwd: workDir, encoding: "utf-8", timeout: 30_000 },
               ).trim()
               publishResult.mr = mrOutput
