@@ -141,7 +141,7 @@ async function executeStep(
       // Poll for job completion
       const pollStart = Date.now()
       let job: any
-      while (Date.now() - pollStart < FETCH_TIMEOUT_MS) {
+      while (Date.now() - pollStart < timeoutMs) {
         const pollRes = await fetch(
           `${BASE_URL}/api/agent/jobs/${jobId}`,
           { signal: AbortSignal.timeout(5000) },
