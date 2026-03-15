@@ -1,0 +1,23 @@
+scenario: "L86: Dogfood — extract hardcoded timeout to config.yaml"
+description: >
+  Beki extracts a hardcoded timeout value from tick.ts into the engine
+  config.yaml file. Tests that the agent can safely modify config and
+  code in a coordinated change. Pluggable for any magic number.
+agent: beki
+model: sonnet
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: >
+      In server/agent/tick.ts, the Claude Code adapter timeout is hardcoded
+      as 300_000 (line with timeoutMs: 300_000). Move this to
+      server/engine/config.yaml under a new key
+      agent.claude_code_timeout_ms with default 300000. Then read it
+      in tick.ts via getConfig().
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: delegate

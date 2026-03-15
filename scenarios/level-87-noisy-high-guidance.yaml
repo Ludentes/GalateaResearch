@@ -1,0 +1,17 @@
+scenario: "L87: HIGH dimensions should not fire alarming guidance"
+description: >
+  When knowledge_sufficiency or communication_health is HIGH (not LOW),
+  the guidance should not contain alarming language like "information
+  overload detected" or "frequent communication detected". These are
+  informational, not warnings.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "what's the status on OAuth2 authentication?"
+    from: { platform: discord, user: kirill }
+    messageType: chat
+    expect:
+      homeostasis.self_preservation: HEALTHY
+      outcome.action: exists

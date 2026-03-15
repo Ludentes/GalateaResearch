@@ -1,0 +1,22 @@
+scenario: "L88: Dogfood — suppress HMR error overlay in dev server"
+description: >
+  Beki fixes the vite/nitro HMR overlay that shows 'fetch failed' from
+  @azure/identity on page load. This blocks the fleet dashboard UI.
+agent: beki
+model: sonnet
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: >
+      The dev server shows an HMR error overlay on page load with
+      'fetch failed' from @azure/identity middleware. Fix this by
+      adding server.hmr.overlay: false to vite.config.ts or by
+      filtering the error in the Nitro dev middleware. The error is
+      harmless — it's just Azure identity probing that fails locally.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: delegate

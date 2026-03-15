@@ -1,0 +1,26 @@
+scenario: "L89: Dogfood — implement dimension history heatmap on detail page"
+description: >
+  Beki implements the DimensionHeatmap component that shows the last 20
+  ticks as a colored grid (7 rows × 20 columns). Each cell is
+  green/yellow/red based on dimension state. Pure CSS/SVG, no charting libs.
+agent: beki
+model: sonnet
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: >
+      Create app/components/agent/DimensionHeatmap.tsx — a React component
+      that takes an array of ticks (each with homeostasis Record<string, string>)
+      and renders a heatmap grid. 7 rows (one per dimension), columns for
+      each tick (newest on right). Each cell is a small colored square:
+      green for HEALTHY, yellow for HIGH, red for LOW. Use pure CSS with
+      TailwindCSS classes. Add dimension labels on the left. Dark mode
+      compatible. Then integrate it into the agent detail page at
+      app/routes/agent/fleet/$agentId.tsx below the tick timeline.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: delegate

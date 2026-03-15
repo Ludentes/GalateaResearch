@@ -1,0 +1,24 @@
+scenario: "L91: Dogfood — implement task-based adapter timeout"
+description: >
+  Beki implements variable adapter timeout based on routing task type.
+  chat=120s, review=180s, coding=300s, admin=120s. The routing heuristic
+  already knows the task type — pipe it to the timeout selection.
+agent: beki
+model: sonnet
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: >
+      In server/agent/tick.ts, the Claude Code adapter timeout is
+      hardcoded at 300_000ms. Make it variable based on the routing
+      result's taskType: chat=120000, review=180000, coding=300000,
+      admin=120000, research=300000. Default to 180000 for unknown types.
+      Add a function getAdapterTimeout(taskType: string): number and
+      use it where timeoutMs is currently hardcoded.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: delegate

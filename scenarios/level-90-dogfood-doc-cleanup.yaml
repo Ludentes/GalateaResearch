@@ -1,0 +1,22 @@
+scenario: "L90: Dogfood — move deprecated docs to archive"
+description: >
+  Beki moves deprecated documentation files to docs/archive/. Tests
+  that the agent can safely reorganize files without breaking references.
+agent: beki
+model: sonnet
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: >
+      Move deprecated docs to a docs/archive/ directory. Candidates:
+      any doc that references FalkorDB, Graphiti, or pre-v2 architecture.
+      Check docs/ for files that are clearly outdated. Create docs/archive/
+      if it doesn't exist, then git mv the files. Don't move ARCHITECTURE.md,
+      CHANGELOG.md, or any active plans/research.
+    from: { platform: discord, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: delegate

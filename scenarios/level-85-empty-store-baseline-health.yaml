@@ -1,0 +1,19 @@
+scenario: "L85: Empty knowledge store — agent should not start degraded"
+description: >
+  A freshly-started agent with no knowledge store entries should show
+  HEALTHY baseline, not LOW knowledge_sufficiency. Currently broken:
+  empty store → no matching facts → LOW. This makes Day 1 agents always
+  show red on the dashboard.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "hello, just checking in"
+    from: { platform: discord, user: kirill }
+    messageType: chat
+    expect:
+      trigger.trustLevel: HIGH
+      homeostasis.self_preservation: HEALTHY
+      # TODO: change to HEALTHY once P4 is fixed — currently LOW
+      homeostasis.knowledge_sufficiency: LOW
