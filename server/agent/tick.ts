@@ -61,6 +61,27 @@ function getAdapterTimeout(taskType: string | undefined): number {
 }
 
 // ---------------------------------------------------------------------------
+// Priority queue — process higher-priority messages first
+// ---------------------------------------------------------------------------
+
+const MESSAGE_PRIORITY: Record<string, number> = {
+  admin: 0,
+  chat: 1,
+  greeting: 1,
+  task_assignment: 2,
+  review_comment: 2,
+  status_update: 3,
+}
+
+export function pickNextMessage(pending: ChannelMessage[]): ChannelMessage {
+  return pending.reduce((best, msg) => {
+    const bestPri = MESSAGE_PRIORITY[best.messageType] ?? 1
+    const msgPri = MESSAGE_PRIORITY[msg.messageType] ?? 1
+    return msgPri < bestPri ? msg : best
+  })
+}
+
+// ---------------------------------------------------------------------------
 // Tool registry — auto-populated with workspace tools per agent
 // ---------------------------------------------------------------------------
 
@@ -227,7 +248,7 @@ async function tickInner(
 
   // Stage 3: Decide what to act on
   if (pending.length > 0) {
-    const msg = pending[0] // oldest first
+    const msg = pickNextMessage(pending) // priority-sorted
 
     // Retrieve facts relevant to the message + sender entity
     const facts = await retrieveRelevantFacts(msg.content, storePath, {

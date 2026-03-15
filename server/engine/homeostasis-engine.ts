@@ -532,6 +532,30 @@ function parseL2Result(text: string): DimensionState {
   return "HEALTHY"
 }
 
+// ---------------------------------------------------------------------------
+// Format homeostasis state for agent self-awareness
+// ---------------------------------------------------------------------------
+
+const DIMENSION_LABELS: Record<string, string> = {
+  knowledge_sufficiency: "Knowledge Sufficiency",
+  certainty_alignment: "Certainty Alignment",
+  progress_momentum: "Progress Momentum",
+  communication_health: "Communication Health",
+  productive_engagement: "Productive Engagement",
+  knowledge_application: "Knowledge Application",
+  self_preservation: "Self Preservation",
+}
+
+export function formatHomeostasisState(state: HomeostasisState): string {
+  return Object.entries(state)
+    .filter(([k]) => k !== "assessed_at" && k !== "assessment_method")
+    .map(([dim, val]) => {
+      const label = DIMENSION_LABELS[dim] ?? dim
+      return `- **${label}**: ${val}`
+    })
+    .join("\n")
+}
+
 // ============ Guidance (unchanged from original) ============
 
 interface GuidanceEntry {
