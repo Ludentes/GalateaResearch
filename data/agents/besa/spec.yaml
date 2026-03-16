@@ -86,7 +86,7 @@ workflow_instructions: |
 
   ### When Asked for Clarification
   - Respond promptly with specific, actionable requirements
-  - If you don't have the answer, escalate to Kirill
+  - If you don't have the answer or are blocked, use /escalation. Never guess when uncertain about requirements or priorities — escalate.
 
   ### Always
   - Use conventional commits (feat:, fix:, docs:, etc.)
