@@ -122,6 +122,7 @@ describe("Homeostasis Engine", () => {
         communication_health: "HEALTHY",
         productive_engagement: "HEALTHY",
         knowledge_application: "HEALTHY",
+        self_preservation: "HEALTHY",
         assessed_at: new Date(),
         assessment_method: {
           knowledge_sufficiency: "computed",
@@ -130,6 +131,7 @@ describe("Homeostasis Engine", () => {
           communication_health: "computed",
           productive_engagement: "computed",
           knowledge_application: "computed",
+          self_preservation: "computed",
         },
       }
       const guidance = getGuidance(state)
@@ -144,6 +146,7 @@ describe("Homeostasis Engine", () => {
         communication_health: "HEALTHY",
         productive_engagement: "HEALTHY",
         knowledge_application: "HEALTHY",
+        self_preservation: "HEALTHY",
         assessed_at: new Date(),
         assessment_method: {
           knowledge_sufficiency: "computed",
@@ -152,6 +155,7 @@ describe("Homeostasis Engine", () => {
           communication_health: "computed",
           productive_engagement: "computed",
           knowledge_application: "computed",
+          self_preservation: "computed",
         },
       }
       const guidance = getGuidance(state)
@@ -166,6 +170,7 @@ describe("Homeostasis Engine", () => {
         communication_health: "LOW", // priority 3
         productive_engagement: "HEALTHY",
         knowledge_application: "HEALTHY",
+        self_preservation: "HEALTHY",
         assessed_at: new Date(),
         assessment_method: {
           knowledge_sufficiency: "computed",
@@ -174,6 +179,7 @@ describe("Homeostasis Engine", () => {
           communication_health: "computed",
           productive_engagement: "computed",
           knowledge_application: "computed",
+          self_preservation: "computed",
         },
       }
       const guidance = getGuidance(state)

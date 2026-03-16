@@ -411,7 +411,7 @@ export function assessDimensions(ctx: AgentContext): HomeostasisState {
 // ============ L2: LLM Semantic Assessment ============
 
 import { generateText } from "ai"
-import { createClaudeCodeModel } from "../providers/claude-code"
+import { claudeCodeGenerateText } from "../providers/claude-code"
 import { createOllamaModel } from "../providers/ollama"
 import { emitEvent } from "../observation/emit"
 
@@ -477,34 +477,27 @@ async function assessL2Semantic(
   const prompt = buildL2Prompt(dimension, ctx)
   const sid = ctx.sessionId.slice(0, 8)
 
-  // Level 1: Try Claude Code Haiku (unset CLAUDECODE to allow nested spawn)
+  // Level 1: Try Claude Code Haiku (with auth retry in provider)
   try {
-    const savedEnv = process.env.CLAUDECODE
-    delete process.env.CLAUDECODE
-    try {
-      const model = createClaudeCodeModel("haiku")
-      const result = await generateText({
-        model,
-        prompt,
-        maxOutputTokens: cfg.l2.max_tokens,
-        abortSignal: AbortSignal.timeout(cfg.l2.timeout_ms),
-      })
-      const state = parseL2Result(result.text)
-      emitEvent({
-        type: "log",
-        source: "homeostasis",
-        body: `l2.${dimension}.assessed`,
-        attributes: {
-          "event.name": `l2.${dimension}.assessed`,
-          provider: "haiku",
-          result: state,
-          sessionId: sid,
-        },
-      }).catch(() => {})
-      return state
-    } finally {
-      if (savedEnv) process.env.CLAUDECODE = savedEnv
-    }
+    const text = await claudeCodeGenerateText({
+      modelId: "haiku",
+      prompt,
+      maxOutputTokens: cfg.l2.max_tokens,
+      timeoutMs: cfg.l2.timeout_ms,
+    })
+    const state = parseL2Result(text)
+    emitEvent({
+      type: "log",
+      source: "homeostasis",
+      body: `l2.${dimension}.assessed`,
+      attributes: {
+        "event.name": `l2.${dimension}.assessed`,
+        provider: "haiku",
+        result: state,
+        sessionId: sid,
+      },
+    }).catch(() => {})
+    return state
   } catch (err) {
     emitEvent({
       type: "log",
@@ -657,35 +650,28 @@ Your answer (one word):`
 
   const sid = ctx.sessionId.slice(0, 8)
 
-  // Level 1: Try Claude Code Haiku
+  // Level 1: Try Claude Code Haiku (with auth retry in provider)
   try {
-    const savedEnv = process.env.CLAUDECODE
-    delete process.env.CLAUDECODE
-    try {
-      const model = createClaudeCodeModel("haiku")
-      const result = await generateText({
-        model,
-        prompt,
-        maxOutputTokens: 10,
-        abortSignal: AbortSignal.timeout(cfg.l2.timeout_ms),
-      })
-      const state = parseL2Result(result.text)
-      emitEvent({
-        type: "log",
-        source: "homeostasis",
-        body: "l2.knowledge_sufficiency.assessed",
-        attributes: {
-          "event.name": "l2.knowledge_sufficiency.assessed",
-          provider: "haiku",
-          result: state,
-          factCount: facts.length,
-          sessionId: sid,
-        },
-      }).catch(() => {})
-      return state
-    } finally {
-      if (savedEnv) process.env.CLAUDECODE = savedEnv
-    }
+    const text = await claudeCodeGenerateText({
+      modelId: "haiku",
+      prompt,
+      maxOutputTokens: 10,
+      timeoutMs: cfg.l2.timeout_ms,
+    })
+    const state = parseL2Result(text)
+    emitEvent({
+      type: "log",
+      source: "homeostasis",
+      body: "l2.knowledge_sufficiency.assessed",
+      attributes: {
+        "event.name": "l2.knowledge_sufficiency.assessed",
+        provider: "haiku",
+        result: state,
+        factCount: facts.length,
+        sessionId: sid,
+      },
+    }).catch(() => {})
+    return state
   } catch (err) {
     emitEvent({
       type: "log",
