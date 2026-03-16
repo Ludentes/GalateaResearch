@@ -1,17 +1,50 @@
-# Claude Code OAuth Token Refresh
+# Claude Code OAuth Token Refresh — SDK Auth Architecture
 
-**Date:** 2026-03-16
-**Status:** Researched, not yet implemented
+**Date:** 2026-03-16 (updated after SDK source analysis)
+**Status:** Root cause identified, fix implemented
 
 ## Problem
 
-When Galatea spawns Claude Code Haiku subprocesses for L2 assessments or dogfood scenarios, they authenticate using the OAuth token stored in `~/.claude/.credentials.json`. After ~8 hours (or if the main Claude Code session refreshes the token first), these subprocesses get 401 errors:
+When Galatea spawns Claude Code SDK subprocesses (for both L2 assessments and dogfood task execution), they get 401 "OAuth token has expired" errors — even when the credentials file shows the token has hours remaining.
 
-```
-OAuth token has expired. Please obtain a new token or refresh your existing token.
-```
+## Root Cause: Token Rotation Race Condition
 
-The 3-level fallback (Haiku → Ollama → L1) handles this for L2 assessments, but dogfood scenarios that use Claude Code as the main LLM adapter fail completely — "no language model available".
+The Claude Agent SDK does NOT do its own auth. It spawns the full `cli.js` binary as a child process. The child reads `~/.claude/.credentials.json` on startup.
+
+**The race:**
+1. Our server spawns an SDK subprocess → subprocess reads `accessToken_v1` from file
+2. The interactive Claude Code session (or another subprocess) refreshes its token
+3. Refresh is single-use: old `accessToken_v1` is **revoked server-side**
+4. Our subprocess tries to use `accessToken_v1` → 401 "expired"
+
+The `expiresAt` field is a **local estimate**, not authoritative. The server may revoke a token at any time via rotation.
+
+## SDK Auth Architecture (from minified source analysis)
+
+### How the SDK authenticates
+
+The `query()` function in `sdk.mjs` spawns `cli.js` as a child process. All auth lives in `cli.js`.
+
+**Auth priority (in `cli.js`):**
+1. `process.env.CLAUDE_CODE_OAUTH_TOKEN` — if set, use directly (no file read)
+2. `CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR` — fd-based token passing
+3. `~/.claude/.credentials.json` — file-based, with memoization cache
+
+### Token refresh inside cli.js
+
+- Refresh triggered 5 minutes before `expiresAt` (`Date.now() + 300000 >= expiresAt`)
+- Uses file locking (`flock`) on `~/.claude` directory to coordinate between processes
+- After acquiring lock, re-reads file (checks if another process already refreshed)
+- Calls `POST https://platform.claude.com/v1/oauth/token` with `grant_type=refresh_token`
+- **Refresh tokens are single-use** — the old one is invalidated
+
+### 401 handling inside cli.js
+
+On 401, the SDK clears its memoized token cache and checks if the file has a newer token (another process may have refreshed). If yes, retries with the new token. If no, forces a refresh.
+
+### CLAUDE_CODE_SSE_PORT
+
+**Not related to auth.** Used by IDE integration to find running Claude Code instances for VS Code extension communication.
 
 ## Credentials File
 
@@ -20,124 +53,77 @@ The 3-level fallback (Haiku → Ollama → L1) handles this for L2 assessments, 
 ```json
 {
   "claudeAiOauth": {
-    "accessToken": "...",
-    "refreshToken": "...",
+    "accessToken": "sk-ant-oat01-...",
+    "refreshToken": "sk-ant-ort01-...",
     "expiresAt": 1773705934297,
-    "scopes": ["user:inference", "user:mcp_servers", "user:profile", "user:sessions:claude_code"],
-    "subscriptionType": "max",
-    "rateLimitTier": "default_claude_max_5x"
+    "scopes": ["user:inference", "user:mcp_servers", "user:profile", "user:sessions:claude_code"]
   }
 }
 ```
 
-- `expiresAt` is a Unix timestamp in milliseconds
-- Tokens last ~8 hours from login
-- Both `accessToken` and `refreshToken` are present
+**Important:** OAuth tokens can ONLY be used via the SDK/CLI subprocess, NOT via direct API calls to `api.anthropic.com`. The API returns "OAuth authentication is currently not supported" for direct bearer token usage.
+
+The **usage endpoint** `https://api.anthropic.com/api/oauth/usage` works with OAuth tokens (requires `anthropic-beta: oauth-2025-04-20` header).
 
 ## OAuth Refresh Endpoint
 
 **URL:** `POST https://platform.claude.com/v1/oauth/token`
+**Content-Type:** `application/x-www-form-urlencoded`
+**Client ID:** `9d1c250a-e61b-44d9-88ed-5944d1962f5e`
+**Required header:** `User-Agent: claude-code/...` (Cloudflare blocks requests without it)
 
-**Content-Type:** `application/x-www-form-urlencoded` (NOT JSON)
-
-**Client ID:** `9d1c250a-e61b-44d9-88ed-5944d1962f5e` (extracted from Claude Code v2.1.76 binary)
-
-**Request:**
 ```
 grant_type=refresh_token
-refresh_token=<refresh_token_from_credentials>
+refresh_token=<refresh_token>
 client_id=9d1c250a-e61b-44d9-88ed-5944d1962f5e
 ```
 
-**Response (JSON):**
-```json
-{
-  "access_token": "new_access_token",
-  "refresh_token": "new_refresh_token",
-  "expires_in": 28800
-}
-```
+## Fix: `CLAUDE_CODE_OAUTH_TOKEN` env var
 
-## Implementation Sketch
+**Implemented in `server/agent/coding-adapter/claude-code-adapter.ts`.**
+
+The adapter reads the OAuth token fresh from the credentials file right before each `query()` call and passes it via `CLAUDE_CODE_OAUTH_TOKEN` in the subprocess env. This bypasses the race condition because:
+
+1. The token is read at spawn time (not minutes earlier)
+2. It's passed directly via env, so the subprocess doesn't re-read the file
+3. If the token was just refreshed by the interactive session, we get the fresh one
 
 ```typescript
-import { readFileSync, writeFileSync } from "node:fs"
-import { join } from "node:path"
-import { homedir } from "node:os"
-
-const CREDENTIALS_PATH = join(homedir(), ".claude", ".credentials.json")
-const CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
-const REFRESH_URL = "https://platform.claude.com/v1/oauth/token"
-
-export async function refreshClaudeToken(): Promise<boolean> {
-  const creds = JSON.parse(readFileSync(CREDENTIALS_PATH, "utf-8"))
-  const oauth = creds.claudeAiOauth
-  if (!oauth?.refreshToken) return false
-
-  const response = await fetch(REFRESH_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "refresh_token",
-      refresh_token: oauth.refreshToken,
-      client_id: CLIENT_ID,
-    }),
-  })
-
-  if (!response.ok) return false
-
-  const data = await response.json()
-  creds.claudeAiOauth = {
-    ...oauth,
-    accessToken: data.access_token,
-    refreshToken: data.refresh_token,
-    expiresAt: Date.now() + data.expires_in * 1000,
+function readFreshOAuthToken(): string | undefined {
+  try {
+    const credPath = join(homedir(), ".claude", ".credentials.json")
+    const creds = JSON.parse(readFileSync(credPath, "utf-8"))
+    return creds.claudeAiOauth?.accessToken
+  } catch {
+    return undefined
   }
-  writeFileSync(CREDENTIALS_PATH, JSON.stringify(creds, null, 2))
-  return true
+}
+
+// In getCleanEnv():
+const token = readFreshOAuthToken()
+if (token) {
+  env.CLAUDE_CODE_OAUTH_TOKEN = token
 }
 ```
 
-## Critical Caveats
+The adapter also has auth retry: if the first attempt returns a 401 (as a "success" result with auth error text), it waits 3s and retries once. This handles the narrow window where a refresh happens between our file read and the API call.
 
-1. **Refresh tokens are single-use.** Using a refresh token invalidates the old one server-side. If the main Claude Code CLI session refreshes simultaneously, you get a race condition. See [#24317](https://github.com/anthropics/claude-code/issues/24317).
+## Remaining Risks
 
-2. **File locking required.** Multiple processes reading/writing `~/.claude/.credentials.json` simultaneously need mutual exclusion. Use `flock` or equivalent.
+1. **Interactive session refreshes during subprocess execution.** If a subprocess runs for minutes and the interactive session refreshes mid-run, the subprocess's in-memory token gets revoked. The SDK's internal 401 handler should catch this and re-read the file.
 
-3. **Refresh tokens expire after inactivity.** Extended idle periods invalidate the refresh token server-side — no periodic refresh prevents this.
+2. **Multiple agents running simultaneously.** Each agent spawn reads the file independently. If one agent's subprocess triggers a refresh that invalidates another agent's in-flight token, the 401 handler in `cli.js` should recover.
 
-4. **Claude Code handles its own refresh internally.** The CLI binary does auth/refresh automatically for interactive sessions. The issue only affects spawned subprocesses that read a stale credentials file.
+3. **`/login` doesn't update credentials file.** The Claude Code `/login` command may update the in-memory session without writing to the file. The fix: after `/login`, either restart the server or manually run `curl` to refresh the file token.
 
-## Alternative: `apiKeyHelper`
+## Alternative Approaches (for future)
 
-Claude Code supports `CLAUDE_CODE_API_KEY_HELPER_TTL_MS` (default 5 minutes) which calls a configured shell script to get a fresh API key. This is the official way to inject dynamic credentials for automated workflows:
-
-```bash
-# Helper script that refreshes and outputs the token
-#!/bin/bash
-python3 -c "
-import json
-creds = json.load(open('$HOME/.claude/.credentials.json'))
-print(creds['claudeAiOauth']['accessToken'])
-"
-```
-
-## Recommended Approach for Galatea
-
-**Short-term (current):** The 3-level fallback (Haiku → Ollama → L1) handles expired tokens for L2 assessments. Dogfood scenarios should be run within ~2 hours of server start to avoid token expiration.
-
-**Medium-term:** Add retry-with-refresh logic at the `generateText` call sites in `homeostasis-engine.ts`:
-1. Catch 401 errors
-2. Call `refreshClaudeToken()`
-3. Retry the `generateText` call once
-4. Use file locking to prevent race conditions with running Claude Code sessions
-
-**Long-term:** Use the `apiKeyHelper` mechanism or switch to a proper API key (not OAuth) once Anthropic supports it for Claude Code subscriptions.
+- **`ANTHROPIC_API_KEY`** — Static API key from Console. No rotation, no race. Requires separate Console subscription.
+- **`apiKeyHelper` script** — Official mechanism for dynamic credentials. CLI calls a shell script to get fresh token, with configurable TTL (`CLAUDE_CODE_API_KEY_HELPER_TTL_MS`, default 5min).
+- **Separate `CLAUDE_CONFIG_DIR`** — Isolate agent sessions from interactive sessions. Each uses its own credentials file.
 
 ## References
 
+- SDK source: `node_modules/@anthropic-ai/claude-agent-sdk/{sdk.mjs,cli.js}`
+- ContextForge example: `/home/newub/w/ContextLibrary/ContextForgeTS/convex/claudeNode.ts`
 - [Claude Code Authentication docs](https://code.claude.com/docs/en/authentication)
-- [OAuth token refresh race condition #24317](https://github.com/anthropics/claude-code/issues/24317)
-- [OAuth token expiration not handled #12879](https://github.com/anthropics/claude-code/issues/12879)
-- [opencode-anthropic-auth source](https://github.com/anomalyco/opencode-anthropic-auth/blob/master/index.mjs)
-- [How to Dynamically Change API Key](https://aiengineerguide.com/til/dynamically-change-api-key-in-claude-code/)

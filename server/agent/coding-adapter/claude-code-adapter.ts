@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
+import { homedir } from "node:os"
 import { query as sdkQuery } from "@anthropic-ai/claude-agent-sdk"
 import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk"
 import type { ImageBlock } from "../types"
@@ -28,6 +31,20 @@ const INHERITED_ENV_VARS = [
   "GIT_CONFIG_NOSYSTEM",
 ]
 
+/**
+ * Read fresh OAuth token from ~/.claude/.credentials.json.
+ * Returns undefined if not available (falls back to SDK's own auth).
+ */
+function readFreshOAuthToken(): string | undefined {
+  try {
+    const credPath = join(homedir(), ".claude", ".credentials.json")
+    const creds = JSON.parse(readFileSync(credPath, "utf-8"))
+    return creds.claudeAiOauth?.accessToken
+  } catch {
+    return undefined
+  }
+}
+
 function getCleanEnv(): Record<string, string> {
   const env: Record<string, string> = {}
   for (const key of INHERITED_ENV_VARS) {
@@ -35,6 +52,13 @@ function getCleanEnv(): Record<string, string> {
     if (typeof value === "string" && !value.startsWith("()")) {
       env[key] = value
     }
+  }
+  // Pass fresh OAuth token directly — avoids race condition where
+  // another Claude Code session refreshes the token between our
+  // file read and the SDK subprocess's file read
+  const token = readFreshOAuthToken()
+  if (token) {
+    env.CLAUDE_CODE_OAUTH_TOKEN = token
   }
   return env
 }
@@ -83,6 +107,15 @@ async function* makePromptStream(
   }
 }
 
+function isAuthError(text: string): boolean {
+  return (
+    text.includes("401") ||
+    text.includes("authentication_error") ||
+    text.includes("OAuth token has expired") ||
+    text.includes("Unauthorized")
+  )
+}
+
 export class ClaudeCodeAdapter implements CodingToolAdapter {
   readonly name = "claude-code"
 
@@ -91,6 +124,42 @@ export class ClaudeCodeAdapter implements CodingToolAdapter {
   }
 
   async *query(
+    options: CodingQueryOptions,
+  ): AsyncIterable<CodingSessionMessage> {
+    // Try once, retry on auth error (token may have been refreshed by Claude Code)
+    const firstAttempt = this._executeQuery(options)
+    const messages: CodingSessionMessage[] = []
+    let gotAuthError = false
+
+    for await (const msg of firstAttempt) {
+      messages.push(msg)
+      // Detect auth errors — SDK may return them as "success" (Claude Code
+      // reports the error as its answer) or as "error" (SDK catches it)
+      if (
+        msg.type === "result" &&
+        typeof msg.text === "string" &&
+        isAuthError(msg.text) &&
+        messages.filter((m) => m.type === "tool_call").length === 0
+      ) {
+        gotAuthError = true
+        break
+      }
+    }
+
+    if (gotAuthError) {
+      // Wait for Claude Code to refresh its token, then retry once
+      await new Promise((r) => setTimeout(r, 3000))
+      yield* this._executeQuery(options)
+      return
+    }
+
+    // No auth error — yield all collected messages
+    for (const msg of messages) {
+      yield msg
+    }
+  }
+
+  private async *_executeQuery(
     options: CodingQueryOptions,
   ): AsyncIterable<CodingSessionMessage> {
     const {
