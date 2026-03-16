@@ -1,4 +1,6 @@
 import { query as sdkQuery } from "@anthropic-ai/claude-agent-sdk"
+import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk"
+import type { ImageBlock } from "../types"
 import type {
   CodingQueryOptions,
   CodingSessionMessage,
@@ -37,6 +39,50 @@ function getCleanEnv(): Record<string, string> {
   return env
 }
 
+// ---------------------------------------------------------------------------
+// Multimodal prompt helpers
+// ---------------------------------------------------------------------------
+
+type AnthropicContentBlock =
+  | { type: "text"; text: string }
+  | {
+      type: "image"
+      source: {
+        type: "base64"
+        media_type: string
+        data: string
+      }
+    }
+
+type AnthropicMessageParam = {
+  role: "user"
+  content: AnthropicContentBlock[]
+}
+
+function imagesToAnthropicBlocks(
+  images: ImageBlock[],
+): AnthropicContentBlock[] {
+  return images.map((img) => ({
+    type: "image" as const,
+    source: {
+      type: "base64" as const,
+      media_type: img.source.media_type,
+      data: img.source.data,
+    },
+  }))
+}
+
+async function* makePromptStream(
+  messageParam: AnthropicMessageParam,
+): AsyncIterable<SDKUserMessage> {
+  yield {
+    type: "user",
+    message: messageParam as SDKUserMessage["message"],
+    parent_tool_use_id: null,
+    session_id: "",
+  }
+}
+
 export class ClaudeCodeAdapter implements CodingToolAdapter {
   readonly name = "claude-code"
 
@@ -56,6 +102,7 @@ export class ClaudeCodeAdapter implements CodingToolAdapter {
       maxBudgetUsd,
       model,
       resume,
+      images,
     } = options
 
     const transcript: CodingTranscriptEntry[] = []
@@ -147,8 +194,18 @@ export class ClaudeCodeAdapter implements CodingToolAdapter {
         sdkOptions.resume = resume
       }
 
+      // Build prompt — multimodal when images are provided
+      let sdkPrompt: string | AsyncIterable<SDKUserMessage> = prompt
+      if (images?.length) {
+        const blocks: AnthropicContentBlock[] = [
+          ...imagesToAnthropicBlocks(images),
+          { type: "text", text: prompt },
+        ]
+        sdkPrompt = makePromptStream({ role: "user", content: blocks })
+      }
+
       const stream = sdkQuery({
-        prompt,
+        prompt: sdkPrompt,
         options: sdkOptions as Parameters<typeof sdkQuery>[0]["options"],
       })
 

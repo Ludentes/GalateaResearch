@@ -1,6 +1,7 @@
 import type { TrustLevel } from "../../engine/types"
 import { recordOutcome } from "../../memory/feedback-loop"
 import type { AssembledContext, TranscriptTurn } from "../../memory/types"
+import type { ImageBlock } from "../types"
 import { createPreToolUseHook } from "./hooks"
 import { transcriptToTurns } from "./transcript-to-extraction"
 import type {
@@ -20,6 +21,8 @@ export interface WorkArcInput {
   model?: string
   storePath?: string
   sessionId?: string
+  /** Optional images to include in the prompt (multimodal support) */
+  images?: ImageBlock[]
 }
 
 export interface WorkArcResult {
@@ -52,6 +55,7 @@ export async function executeWorkArc(
     maxBudgetUsd,
     model,
     sessionId,
+    images,
   } = input
 
   // Check adapter availability
@@ -78,6 +82,7 @@ export async function executeWorkArc(
     maxBudgetUsd,
     model,
     resume: sessionId,
+    images,
   })) {
     messages.push(msg)
     const elapsed = Date.now() - arcStart

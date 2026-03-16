@@ -1,4 +1,5 @@
 import type { SafetyCheckResult, TrustLevel } from "../../engine/types"
+import type { ImageBlock } from "../types"
 
 export type CodingSessionMessage =
   | { type: "tool_call"; toolName: string; toolInput: Record<string, unknown> }
@@ -47,6 +48,8 @@ export interface CodingQueryOptions {
   maxBudgetUsd?: number
   model?: string
   resume?: string
+  /** Optional images to prepend to the prompt (multimodal support) */
+  images?: ImageBlock[]
 }
 
 export interface CodingToolAdapter {

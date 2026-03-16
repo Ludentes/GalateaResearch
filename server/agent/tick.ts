@@ -409,8 +409,15 @@ async function tickInner(
           }
         : context
       const config = getLLMConfig()
-      // TODO(task-48): pass raw msg.content for multimodal support
+      // Pass raw content through for multimodal support (images)
       const rawDescription = existingTask ? textContent : task.description
+      // Extract images from content blocks for the adapter
+      const images =
+        Array.isArray(msg.content)
+          ? msg.content.filter(
+              (b): b is import("./types").ImageBlock => b.type === "image",
+            )
+          : undefined
       const taskDescription = usingWorktree
         ? `${rawDescription}\n\n**Working directory:** You are in an isolated git worktree at \`${workDir}\` on branch \`${worktreeBranch}\`. The main repo is undisturbed.\n\n**When you finish:** Commit your changes, push the branch (\`git push -u origin ${worktreeBranch}\`), and create a merge request. If push or MR creation fails, report the error — do not fail silently.`
         : rawDescription
@@ -422,6 +429,7 @@ async function tickInner(
         trustLevel: (agentContext.sourceTrustLevel ?? "MEDIUM") as TrustLevel,
         model: config.model,
         sessionId: resumeSessionId,
+        images: images?.length ? images : undefined,
       })
 
       // Store session ID for potential resume (both on task and context)
@@ -698,11 +706,10 @@ async function tickInner(
             .slice(0, -1)
             .map((h) => ({ role: h.role, content: h.content }))
 
-          // TODO(task-47): pass raw msg.content for multimodal support
           const result = await runClaudeCodeRespond({
             agentId,
             systemPrompt,
-            userMessage: textContent,
+            userMessage: msg.content,
             history: ccHistory,
             workingDirectory:
               (msg.metadata?.workspace as string) ?? process.cwd(),

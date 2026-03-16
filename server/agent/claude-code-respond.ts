@@ -1,5 +1,7 @@
 import { query as sdkQuery } from "@anthropic-ai/claude-agent-sdk"
+import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk"
 import { emitEvent } from "../observation/emit"
+import type { ContentBlock, MessageContent } from "./types"
 
 // ---------------------------------------------------------------------------
 // Session tracking — one persistent session per agent
@@ -58,13 +60,60 @@ function getCleanEnv(): Record<string, string> {
 }
 
 // ---------------------------------------------------------------------------
+// Multimodal prompt helpers
+// ---------------------------------------------------------------------------
+
+type AnthropicContentBlock =
+  | { type: "text"; text: string }
+  | {
+      type: "image"
+      source: {
+        type: "base64"
+        media_type: string
+        data: string
+      }
+    }
+
+type AnthropicMessageParam = {
+  role: "user"
+  content: AnthropicContentBlock[]
+}
+
+function contentBlocksToAnthropicBlocks(
+  blocks: ContentBlock[],
+): AnthropicContentBlock[] {
+  return blocks.map((b) => {
+    if (b.type === "text") return { type: "text" as const, text: b.text }
+    return {
+      type: "image" as const,
+      source: {
+        type: "base64" as const,
+        media_type: b.source.media_type,
+        data: b.source.data,
+      },
+    }
+  })
+}
+
+async function* makePromptStream(
+  messageParam: AnthropicMessageParam,
+): AsyncIterable<SDKUserMessage> {
+  yield {
+    type: "user",
+    message: messageParam as SDKUserMessage["message"],
+    parent_tool_use_id: null,
+    session_id: "",
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Respond via Agent SDK (direct, no AI SDK wrapper)
 // ---------------------------------------------------------------------------
 
 export async function runClaudeCodeRespond(opts: {
   agentId: string
   systemPrompt: string
-  userMessage: string
+  userMessage: MessageContent
   history?: Array<{ role: "user" | "assistant"; content: string }>
   workingDirectory?: string
   timeoutMs?: number
@@ -107,19 +156,40 @@ export async function runClaudeCodeRespond(opts: {
     }
 
     // Build prompt with conversation history for context continuity
-    let fullPrompt = userMessage
-    if (history.length > 0) {
-      const historyBlock = history
-        .map(
-          (h) =>
-            `<${h.role === "user" ? "human" : "assistant"}>\n${h.content}\n</${h.role === "user" ? "human" : "assistant"}>`,
-        )
-        .join("\n\n")
-      fullPrompt = `<conversation_history>\n${historyBlock}\n</conversation_history>\n\n${userMessage}`
+    const isMultimodal = Array.isArray(userMessage)
+    const historyBlock =
+      history.length > 0
+        ? history
+            .map(
+              (h) =>
+                `<${h.role === "user" ? "human" : "assistant"}>\n${h.content}\n</${h.role === "user" ? "human" : "assistant"}>`,
+            )
+            .join("\n\n")
+        : ""
+    const historyPrefix = historyBlock
+      ? `<conversation_history>\n${historyBlock}\n</conversation_history>\n\n`
+      : ""
+
+    let prompt: string | AsyncIterable<SDKUserMessage>
+    if (isMultimodal) {
+      // Multimodal: build SDK message with content blocks
+      const blocks = historyPrefix
+        ? [
+            { type: "text" as const, text: historyPrefix },
+            ...contentBlocksToAnthropicBlocks(userMessage),
+          ]
+        : contentBlocksToAnthropicBlocks(userMessage)
+      prompt = makePromptStream({
+        role: "user",
+        content: blocks,
+      })
+    } else {
+      // String: existing path
+      prompt = historyPrefix + userMessage
     }
 
     const stream = sdkQuery({
-      prompt: fullPrompt,
+      prompt,
       options: queryOptions as Parameters<typeof sdkQuery>[0]["options"],
     })
 
