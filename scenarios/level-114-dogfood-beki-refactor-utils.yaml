@@ -1,0 +1,25 @@
+scenario: "L114: Dogfood — Beki extracts shared utility from agenttestproject"
+description: >
+  Beki receives a task to extract common utility functions.
+  Tests the developer agent's ability to analyze code, identify
+  patterns, create a shared module, and update imports.
+agent: beki
+type: dogfood
+model: sonnet
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: >
+      In the agenttestproject, look at src/pages/index.astro and
+      any other .astro pages. If there are common patterns (imports,
+      layout wrappers, meta tags), extract them into a shared layout
+      component at src/layouts/BaseLayout.astro. If there's only one
+      page and no patterns to extract, create the layout anyway as
+      a wrapper for future pages. Commit when done.
+    from: { platform: dashboard, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: delegate

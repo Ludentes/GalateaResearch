@@ -1,0 +1,22 @@
+scenario: "L113: Dogfood — Besa creates a sprint plan document"
+description: >
+  Besa receives a task to write a sprint plan for the next week.
+  Tests the PM agent's ability to assess current state, prioritize
+  work, and produce a structured planning document.
+agent: besa
+type: dogfood
+model: sonnet
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: >
+      Write a sprint plan for next week. Review the project state
+      (open issues, recent commits, docs/plans/) and create a
+      prioritized plan with 3-5 tasks. Save it as
+      docs/plans/sprint-plan-next-week.md. Keep it concise.
+    from: { platform: dashboard, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      outcome.action: delegate

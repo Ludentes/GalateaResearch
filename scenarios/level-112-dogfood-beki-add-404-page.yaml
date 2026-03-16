@@ -1,0 +1,23 @@
+scenario: "L112: Dogfood — Beki adds a 404 page to agenttestproject"
+description: >
+  Beki receives a task to create a simple 404 Not Found page for the
+  Astro project. Tests the developer agent's ability to create a new
+  file, follow Astro conventions, and commit.
+agent: beki
+type: dogfood
+model: sonnet
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: >
+      The agenttestproject needs a 404 page. Create src/pages/404.astro
+      with a simple "Page Not Found" message and a link back to the
+      homepage. Keep it minimal — match the existing site style.
+      Commit when done.
+    from: { platform: dashboard, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: delegate
