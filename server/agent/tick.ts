@@ -267,6 +267,11 @@ async function tickInner(
       (t) => t.status === "in_progress" || t.status === "assigned",
     )
 
+    // Find any blocked task with a pending escalation
+    const escalationTask = opCtx.tasks.find(
+      (t) => t.status === "blocked" && t.escalatedAt,
+    )
+
     const agentContext: AgentContext = {
       sessionId: `tick-${Date.now()}`,
       currentMessage: msg.content,
@@ -288,6 +293,13 @@ async function tickInner(
       sourceIdentity: msg.from,
       sourceTrustLevel: specTrust
         ? resolveTrust(specTrust, msg.channel, msg.from)
+        : undefined,
+      // Escalation state
+      pendingEscalation: escalationTask
+        ? {
+            category: escalationTask.escalationCategory ?? "blocked",
+            escalatedAt: escalationTask.escalatedAt!,
+          }
         : undefined,
     }
 
@@ -466,6 +478,8 @@ async function tickInner(
       const escalation = await checkForEscalation(workDir, task.id)
       if (escalation) {
         task.status = "blocked"
+        task.escalatedAt = new Date().toISOString()
+        task.escalationCategory = escalation.category
         opCtx.blockers.push(
           `Escalated (${escalation.category}): ${escalation.reason}`,
         )

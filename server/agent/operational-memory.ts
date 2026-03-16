@@ -20,6 +20,8 @@ export interface TaskState {
   phaseStartedAt: string
   toolCallCount: number
   claudeSessionId?: string
+  escalatedAt?: string
+  escalationCategory?: string
 }
 
 export type TaskType = TaskState["type"]
