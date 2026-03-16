@@ -47,7 +47,11 @@ async function executeStep(
   const timeoutMs =
     scenario.type === "dogfood" ? DOGFOOD_TIMEOUT_MS : FETCH_TIMEOUT_MS
   const stepStart = Date.now()
-  const sendLabel = step.send ?? "(heartbeat)"
+  const sendLabel = step.send
+    ? typeof step.send === "string"
+      ? step.send
+      : `[${step.send.length} content blocks]`
+    : "(heartbeat)"
 
   // Handle per-step setup (pre-condition operational context)
   if (step.setup) {

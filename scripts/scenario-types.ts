@@ -1,6 +1,21 @@
+/** Content block types matching server/agent/types.ts */
+export interface ScenarioTextBlock {
+  type: "text"
+  text: string
+}
+export interface ScenarioImageBlock {
+  type: "image"
+  source: {
+    type: "base64"
+    media_type: string
+    data: string
+  }
+}
+export type ScenarioContentBlock = ScenarioTextBlock | ScenarioImageBlock
+
 export interface ScenarioStep {
-  /** Message to send (required unless trigger is set) */
-  send?: string
+  /** Message to send — string or multimodal content blocks (required unless trigger is set) */
+  send?: string | ScenarioContentBlock[]
   from?: { platform: string; user: string }
   messageType?: string
   /** Override LLM provider for this step (e.g. "none" to simulate outage) */
@@ -48,7 +63,7 @@ export interface CheckResult {
 
 export interface StepVerdict {
   step: number
-  send: string
+  send: string | ScenarioContentBlock[]
   pass: boolean
   checks: CheckResult[]
   tickId: string
