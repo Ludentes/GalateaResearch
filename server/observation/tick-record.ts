@@ -43,6 +43,20 @@ export interface TickDecisionRecord {
     mr?: string
     error?: string
   }
+  diagnostics?: {
+    operationalMemoryPath?: string
+    knowledgeStorePath?: string
+    specLoaded?: boolean
+    modelUsed?: string
+    providerUsed?: string
+    workspacePath?: string
+    factsRetrieved?: number
+    escalation?: {
+      category: string
+      reason: string
+      target?: string
+    }
+  }
 }
 
 export function getTickRecordPath(agentId: string): string {

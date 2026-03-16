@@ -11,9 +11,117 @@ const DOGFOOD_TIMEOUT_MS = 900_000 // 15 minutes — dogfood tasks involve real 
 // ANSI colors
 const GREEN = "\x1b[32m"
 const RED = "\x1b[31m"
+const YELLOW = "\x1b[33m"
+const CYAN = "\x1b[36m"
 const DIM = "\x1b[2m"
 const BOLD = "\x1b[1m"
 const RESET = "\x1b[0m"
+
+let traceMode = false
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function printTrace(tick: any, stepIndex: number): void {
+  console.log(`\n${CYAN}--- TRACE: Step ${stepIndex} ---${RESET}`)
+
+  // Diagnostics block
+  const diag = tick.diagnostics
+  if (diag) {
+    console.log(`${CYAN}  Diagnostics:${RESET}`)
+    console.log(
+      `    specLoaded:           ${diag.specLoaded ? GREEN + "true" : RED + "false"}${RESET}`,
+    )
+    console.log(`    operationalMemoryPath: ${diag.operationalMemoryPath}`)
+    console.log(`    knowledgeStorePath:    ${diag.knowledgeStorePath}`)
+    console.log(`    workspacePath:         ${diag.workspacePath ?? "(none)"}`)
+    console.log(`    modelUsed:             ${diag.modelUsed ?? "(default)"}`)
+    console.log(
+      `    providerUsed:          ${diag.providerUsed ?? "(default)"}`,
+    )
+    console.log(`    factsRetrieved:        ${diag.factsRetrieved ?? 0}`)
+  } else {
+    console.log(
+      `  ${YELLOW}WARNING: No diagnostics in tick record — old server version?${RESET}`,
+    )
+  }
+
+  // Homeostasis
+  console.log(`${CYAN}  Homeostasis:${RESET}`)
+  const homeo = tick.homeostasis ?? {}
+  for (const [dim, val] of Object.entries(homeo)) {
+    const color = val === "HEALTHY" ? DIM : val === "HIGH" ? YELLOW : RED
+    console.log(`    ${dim}: ${color}${val}${RESET}`)
+  }
+
+  // Routing
+  console.log(`${CYAN}  Routing:${RESET}`)
+  console.log(`    level:    ${tick.routing?.level}`)
+  console.log(`    taskType: ${tick.routing?.taskType ?? "(none)"}`)
+  console.log(`    reasoning: ${tick.routing?.reasoning ?? "(none)"}`)
+
+  // Execution
+  console.log(`${CYAN}  Execution:${RESET}`)
+  console.log(`    adapter:        ${tick.execution?.adapter}`)
+  console.log(`    sessionResumed: ${tick.execution?.sessionResumed}`)
+  console.log(`    toolCalls:      ${tick.execution?.toolCalls}`)
+  console.log(
+    `    toolNames:      ${(tick.execution?.toolNames ?? []).join(", ") || "(none)"}`,
+  )
+  console.log(`    durationMs:     ${tick.execution?.durationMs}`)
+  console.log(`    costUsd:        ${tick.execution?.costUsd ?? "null"}`)
+
+  // Trigger
+  console.log(`${CYAN}  Trigger:${RESET}`)
+  console.log(`    type:       ${tick.trigger?.type}`)
+  console.log(`    source:     ${tick.trigger?.source ?? "(none)"}`)
+  console.log(`    trustLevel: ${tick.trigger?.trustLevel ?? "(none)"}`)
+
+  // Guidance
+  const guidance = tick.guidance ?? []
+  if (guidance.length > 0) {
+    console.log(`${CYAN}  Guidance (${guidance.length}):${RESET}`)
+    for (const g of guidance) {
+      console.log(`    ${DIM}${(g as string).slice(0, 120)}${RESET}`)
+    }
+  }
+
+  // Outcome
+  console.log(`${CYAN}  Outcome:${RESET}`)
+  console.log(`    action:   ${tick.outcome?.action}`)
+  console.log(
+    `    response: ${DIM}${(tick.outcome?.response ?? "").slice(0, 200)}${RESET}`,
+  )
+
+  // Anomaly warnings
+  const warnings: string[] = []
+  if (diag && !diag.specLoaded) {
+    warnings.push("Agent spec NOT loaded — using defaults for everything")
+  }
+  if (diag?.operationalMemoryPath === "data/agent/operational-context.json") {
+    warnings.push(
+      "Using DEFAULT operational memory path — may cause cross-agent contamination",
+    )
+  }
+  if (!tick.trigger?.trustLevel || tick.trigger.trustLevel === "NONE") {
+    warnings.push("Trust level is NONE — message may be ignored or restricted")
+  }
+  const allHealthy = Object.values(homeo).every((v) => v === "HEALTHY")
+  if (allHealthy && Object.keys(homeo).length > 0) {
+    warnings.push(
+      "All dimensions HEALTHY — verify this isn't caused by missing data",
+    )
+  }
+  if (tick.execution?.sessionResumed) {
+    warnings.push("Session was RESUMED — verify correct session for this agent")
+  }
+
+  if (warnings.length > 0) {
+    console.log(`${YELLOW}  Warnings:${RESET}`)
+    for (const w of warnings) {
+      console.log(`    ${YELLOW}⚠ ${w}${RESET}`)
+    }
+  }
+  console.log(`${CYAN}--- END TRACE ---${RESET}\n`)
+}
 
 async function loadScenario(filePath: string): Promise<Scenario> {
   const raw = await readFile(filePath, "utf-8")
@@ -147,10 +255,9 @@ async function executeStep(
       const pollStart = Date.now()
       let job: any
       while (Date.now() - pollStart < timeoutMs) {
-        const pollRes = await fetch(
-          `${BASE_URL}/api/agent/jobs/${jobId}`,
-          { signal: AbortSignal.timeout(5000) },
-        )
+        const pollRes = await fetch(`${BASE_URL}/api/agent/jobs/${jobId}`, {
+          signal: AbortSignal.timeout(5000),
+        })
         job = await pollRes.json()
         if (job.status === "completed" || job.status === "failed") break
         await new Promise((r) => setTimeout(r, 1000))
@@ -223,6 +330,10 @@ async function executeStep(
       durationMs: Date.now() - stepStart,
       costUsd: 0,
     }
+  }
+
+  if (traceMode && body.tick) {
+    printTrace(body.tick, stepIndex)
   }
 
   const verdict = assertStep(body.tick, step.expect, stepIndex, sendLabel)
@@ -316,6 +427,7 @@ function printReport(verdicts: ScenarioVerdict[]): void {
 async function main(): Promise<void> {
   const args = process.argv.slice(2)
   const regressionOnly = args.includes("--regression")
+  traceMode = args.includes("--trace")
   const files = args.filter(
     (a) => !a.startsWith("--") && (a.endsWith(".yaml") || a.endsWith(".yml")),
   )

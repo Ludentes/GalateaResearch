@@ -181,6 +181,7 @@ function buildTickRecord(params: {
   execution: Partial<TickDecisionRecord["execution"]>
   outcome: TickDecisionRecord["outcome"]
   durationMs: number
+  diagnostics?: TickDecisionRecord["diagnostics"]
 }): TickDecisionRecord {
   return {
     tickId: params.tickId,
@@ -202,6 +203,7 @@ function buildTickRecord(params: {
     },
     resources: {},
     outcome: params.outcome,
+    ...(params.diagnostics ? { diagnostics: params.diagnostics } : {}),
   }
 }
 
@@ -278,6 +280,24 @@ async function tickInner(
   // cross-agent session contamination (shared file = shared tasks/sessions)
   const agentOpPath = optsOpContextPath ?? spec?.operational_memory ?? undefined
   const opCtx = await loadOperationalContext(agentOpPath)
+
+  // Build diagnostics closure — captures paths used for this tick
+  const buildDiagnostics = (extra?: {
+    modelUsed?: string
+    providerUsed?: string
+    factsRetrieved?: number
+    escalation?: TickDecisionRecord["diagnostics"] extends
+      | { escalation?: infer E }
+      | undefined
+      ? E
+      : never
+  }): TickDecisionRecord["diagnostics"] => ({
+    operationalMemoryPath: agentOpPath ?? "data/agent/operational-context.json",
+    knowledgeStorePath: storePath,
+    specLoaded: !!spec,
+    workspacePath: spec?.workspace,
+    ...extra,
+  })
 
   // Stage 2: Read state
   const state = await getAgentState(statePath)
@@ -777,9 +797,20 @@ async function tickInner(
           knowledgeEntriesCreated: knowledgeCount,
         },
         durationMs: Date.now() - tickStart,
+        diagnostics: buildDiagnostics({
+          modelUsed: (msg.metadata?.modelOverride as string) || config.model,
+          factsRetrieved: retrievedFacts.length,
+          escalation: escalation
+            ? {
+                category: escalation.category,
+                reason: escalation.reason,
+                target: spec?.escalation_target?.entity,
+              }
+            : undefined,
+        }),
       })
       appendTickRecord(delegateRecord, getTickRecordPath(agentId)).catch(
-        () => {},
+        (err) => console.warn("[tick] Failed to persist tick record:", err),
       )
 
       return tickResult
@@ -1004,9 +1035,12 @@ async function tickInner(
           knowledgeEntriesCreated: 0,
         },
         durationMs: Date.now() - tickStart,
+        diagnostics: buildDiagnostics({
+          factsRetrieved: retrievedFacts.length,
+        }),
       })
-      appendTickRecord(respondRecord, getTickRecordPath(agentId)).catch(
-        () => {},
+      appendTickRecord(respondRecord, getTickRecordPath(agentId)).catch((err) =>
+        console.warn("[tick] Failed to persist tick record:", err),
       )
 
       return tickResult
@@ -1084,8 +1118,13 @@ async function tickInner(
         knowledgeEntriesCreated: 0,
       },
       durationMs: Date.now() - tickStart,
+      diagnostics: buildDiagnostics({
+        factsRetrieved: retrievedFacts.length,
+      }),
     })
-    appendTickRecord(templateRecord, getTickRecordPath(agentId)).catch(() => {})
+    appendTickRecord(templateRecord, getTickRecordPath(agentId)).catch((err) =>
+      console.warn("[tick] Failed to persist tick record:", err),
+    )
 
     return templateResult
   }
@@ -1135,8 +1174,11 @@ async function tickInner(
       knowledgeEntriesCreated: 0,
     },
     durationMs: Date.now() - tickStart,
+    diagnostics: buildDiagnostics(),
   })
-  appendTickRecord(idleRecord, getTickRecordPath(agentId)).catch(() => {})
+  appendTickRecord(idleRecord, getTickRecordPath(agentId)).catch((err) =>
+    console.warn("[tick] Failed to persist tick record:", err),
+  )
 
   return tickResult
 }
