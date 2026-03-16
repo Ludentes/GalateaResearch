@@ -411,6 +411,9 @@ export function assessDimensions(ctx: AgentContext): HomeostasisState {
 // ============ L2: LLM Semantic Assessment ============
 
 import { generateText } from "ai"
+import { createClaudeCodeModel } from "../providers/claude-code"
+import { createOllamaModel } from "../providers/ollama"
+import { emitEvent } from "../observation/emit"
 
 export async function assessDimensionsAsync(
   ctx: AgentContext,
@@ -424,7 +427,7 @@ export async function assessDimensionsAsync(
     ...l1.assessment_method,
   }
 
-  // L2 certainty_alignment + knowledge_application via Ollama
+  // L2 certainty_alignment + knowledge_application via Claude Code Haiku
   if (cfg.l2?.enabled) {
     const [ca, ka] = await Promise.all([
       assessL0Cached("certainty_alignment", sessionId)
@@ -446,8 +449,7 @@ export async function assessDimensionsAsync(
     }
   }
 
-  // L2 knowledge_sufficiency via Claude Haiku — semantic relevance check
-  // Only if not already cached and message is long enough to warrant it
+  // L2 knowledge_sufficiency — only if not cached and message is long enough
   if (
     !assessL0Cached("knowledge_sufficiency", sessionId) &&
     ctx.currentMessage &&
@@ -472,25 +474,103 @@ async function assessL2Semantic(
   dimension: "certainty_alignment" | "knowledge_application",
 ): Promise<DimensionState | null> {
   const cfg = getHomeostasisConfig()
-  try {
-    const model = createClaudeCodeModel("haiku")
+  const prompt = buildL2Prompt(dimension, ctx)
+  const sid = ctx.sessionId.slice(0, 8)
 
-    const prompt = buildL2Prompt(dimension, ctx)
+  // Level 1: Try Claude Code Haiku (unset CLAUDECODE to allow nested spawn)
+  try {
+    const savedEnv = process.env.CLAUDECODE
+    delete process.env.CLAUDECODE
+    try {
+      const model = createClaudeCodeModel("haiku")
+      const result = await generateText({
+        model,
+        prompt,
+        maxOutputTokens: cfg.l2.max_tokens,
+        abortSignal: AbortSignal.timeout(cfg.l2.timeout_ms),
+      })
+      const state = parseL2Result(result.text)
+      emitEvent({
+        type: "log",
+        source: "homeostasis",
+        body: `l2.${dimension}.assessed`,
+        attributes: {
+          "event.name": `l2.${dimension}.assessed`,
+          provider: "haiku",
+          result: state,
+          sessionId: sid,
+        },
+      }).catch(() => {})
+      return state
+    } finally {
+      if (savedEnv) process.env.CLAUDECODE = savedEnv
+    }
+  } catch (err) {
+    emitEvent({
+      type: "log",
+      source: "homeostasis",
+      body: `l2.${dimension}.provider_failed`,
+      attributes: {
+        "event.name": `l2.${dimension}.provider_failed`,
+        severity: "warning",
+        provider: "haiku",
+        error: (err as Error)?.message ?? String(err),
+        sessionId: sid,
+      },
+    }).catch(() => {})
+  }
+
+  // Level 2: Try Ollama fallback
+  try {
+    const ollamaUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434"
+    const model = createOllamaModel(cfg.l2.model, ollamaUrl, { think: false })
     const result = await generateText({
       model,
       prompt,
       maxOutputTokens: cfg.l2.max_tokens,
       abortSignal: AbortSignal.timeout(cfg.l2.timeout_ms),
     })
-
-    return parseL2Result(result.text)
+    const state = parseL2Result(result.text)
+    emitEvent({
+      type: "log",
+      source: "homeostasis",
+      body: `l2.${dimension}.assessed`,
+      attributes: {
+        "event.name": `l2.${dimension}.assessed`,
+        provider: `ollama:${cfg.l2.model}`,
+        result: state,
+        sessionId: sid,
+        fallback: true,
+      },
+    }).catch(() => {})
+    return state
   } catch (err) {
-    console.warn(
-      `[homeostasis] L2 assessment failed for ${dimension}, falling back to HEALTHY:`,
-      (err as Error)?.message ?? err,
-    )
-    return null
+    emitEvent({
+      type: "log",
+      source: "homeostasis",
+      body: `l2.${dimension}.provider_failed`,
+      attributes: {
+        "event.name": `l2.${dimension}.provider_failed`,
+        severity: "warning",
+        provider: `ollama:${cfg.l2.model}`,
+        error: (err as Error)?.message ?? String(err),
+        sessionId: sid,
+      },
+    }).catch(() => {})
   }
+
+  // Level 3: Fall back to L1 (return null → caller keeps L1 value)
+  emitEvent({
+    type: "log",
+    source: "homeostasis",
+    body: `l2.${dimension}.all_failed`,
+    attributes: {
+      "event.name": `l2.${dimension}.all_failed`,
+      severity: "error",
+      sessionId: sid,
+    },
+  }).catch(() => {})
+  return null
 }
 
 function buildL2Prompt(
@@ -546,22 +626,20 @@ function parseL2Result(text: string): DimensionState {
 
 // ============ L2: Knowledge Sufficiency via Claude Haiku ============
 
-import { createClaudeCodeModel } from "../providers/claude-code"
-
 async function assessKnowledgeSufficiencyL2(
   ctx: AgentContext,
 ): Promise<DimensionState | null> {
-  try {
-    const facts = ctx.retrievedFacts || []
-    const factSummary =
-      facts.length === 0
-        ? "No facts retrieved."
-        : facts
-            .slice(0, 5)
-            .map((f) => `- "${f.content.slice(0, 100)}" (confidence: ${f.confidence})`)
-            .join("\n")
+  const cfg = getHomeostasisConfig()
+  const facts = ctx.retrievedFacts || []
+  const factSummary =
+    facts.length === 0
+      ? "No facts retrieved."
+      : facts
+          .slice(0, 5)
+          .map((f) => `- "${f.content.slice(0, 100)}" (confidence: ${f.confidence})`)
+          .join("\n")
 
-    const prompt = `You assess whether an AI agent has sufficient knowledge to handle a message.
+  const prompt = `You assess whether an AI agent has sufficient knowledge to handle a message.
 
 Message: "${ctx.currentMessage.slice(0, 300)}"
 
@@ -577,22 +655,104 @@ Respond with exactly one word: LOW, HEALTHY, or HIGH
 
 Your answer (one word):`
 
-    const model = createClaudeCodeModel("haiku")
+  const sid = ctx.sessionId.slice(0, 8)
+
+  // Level 1: Try Claude Code Haiku
+  try {
+    const savedEnv = process.env.CLAUDECODE
+    delete process.env.CLAUDECODE
+    try {
+      const model = createClaudeCodeModel("haiku")
+      const result = await generateText({
+        model,
+        prompt,
+        maxOutputTokens: 10,
+        abortSignal: AbortSignal.timeout(cfg.l2.timeout_ms),
+      })
+      const state = parseL2Result(result.text)
+      emitEvent({
+        type: "log",
+        source: "homeostasis",
+        body: "l2.knowledge_sufficiency.assessed",
+        attributes: {
+          "event.name": "l2.knowledge_sufficiency.assessed",
+          provider: "haiku",
+          result: state,
+          factCount: facts.length,
+          sessionId: sid,
+        },
+      }).catch(() => {})
+      return state
+    } finally {
+      if (savedEnv) process.env.CLAUDECODE = savedEnv
+    }
+  } catch (err) {
+    emitEvent({
+      type: "log",
+      source: "homeostasis",
+      body: "l2.knowledge_sufficiency.provider_failed",
+      attributes: {
+        "event.name": "l2.knowledge_sufficiency.provider_failed",
+        severity: "warning",
+        provider: "haiku",
+        error: (err as Error)?.message ?? String(err),
+        sessionId: sid,
+      },
+    }).catch(() => {})
+  }
+
+  // Level 2: Try Ollama fallback
+  try {
+    const ollamaUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434"
+    const model = createOllamaModel(cfg.l2.model, ollamaUrl, { think: false })
     const result = await generateText({
       model,
       prompt,
       maxOutputTokens: 10,
-      abortSignal: AbortSignal.timeout(5000),
+      abortSignal: AbortSignal.timeout(cfg.l2.timeout_ms),
     })
-
-    return parseL2Result(result.text)
+    const state = parseL2Result(result.text)
+    emitEvent({
+      type: "log",
+      source: "homeostasis",
+      body: "l2.knowledge_sufficiency.assessed",
+      attributes: {
+        "event.name": "l2.knowledge_sufficiency.assessed",
+        provider: `ollama:${cfg.l2.model}`,
+        result: state,
+        factCount: facts.length,
+        sessionId: sid,
+        fallback: true,
+      },
+    }).catch(() => {})
+    return state
   } catch (err) {
-    console.warn(
-      "[homeostasis] L2 knowledge_sufficiency (Haiku) failed, using L1:",
-      (err as Error)?.message ?? err,
-    )
-    return null
+    emitEvent({
+      type: "log",
+      source: "homeostasis",
+      body: "l2.knowledge_sufficiency.provider_failed",
+      attributes: {
+        "event.name": "l2.knowledge_sufficiency.provider_failed",
+        severity: "warning",
+        provider: `ollama:${cfg.l2.model}`,
+        error: (err as Error)?.message ?? String(err),
+        sessionId: sid,
+      },
+    }).catch(() => {})
   }
+
+  // Level 3: Fall back to L1
+  emitEvent({
+    type: "log",
+    source: "homeostasis",
+    body: "l2.knowledge_sufficiency.all_failed",
+    attributes: {
+      "event.name": "l2.knowledge_sufficiency.all_failed",
+      severity: "error",
+      sessionId: sid,
+    },
+  }).catch(() => {})
+  return null
 }
 
 // ---------------------------------------------------------------------------

@@ -332,7 +332,7 @@ homeostasis:
     enabled: true
     model: "gemma3:12b"
     max_tokens: 50
-    timeout_ms: 10000
+    timeout_ms: 15000
 
   # Dimension Explanations — self-descriptions for homeostasis reporting
   # Agents use these to articulate their current state across 7 dimensions.
