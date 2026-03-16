@@ -12,7 +12,7 @@ describe("loadAgentSpec", () => {
     expect(spec.agent.id).toBe("beki")
     expect(spec.agent.name).toBe("Beki")
     expect(spec.agent.role).toBe("Mobile developer")
-    expect(spec.workspace).toBe("/workspace/beki/")
+    expect(spec.workspace).toBe("workspaces/agenttestproject")
     expect(spec.hard_blocks).toContain("push directly to main")
   })
 
