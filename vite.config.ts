@@ -14,6 +14,8 @@ export default defineConfig({
         "**/graphiti/**",
         "**/node_modules/**",
         "**/.git/**",
+        "**/docs/archive/**",
+        "**/workspaces/**",
       ],
     },
   },
