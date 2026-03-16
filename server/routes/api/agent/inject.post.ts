@@ -7,15 +7,53 @@ import {
 import { addMessage } from "../../../agent/agent-state"
 import { startCleanupTimer } from "../../../agent/job-store"
 import { tick } from "../../../agent/tick"
-import type { ChannelMessage } from "../../../agent/types"
+import type { ChannelMessage, MessageContent } from "../../../agent/types"
 import {
   getTickRecordPath,
   readLastTickRecord,
 } from "../../../observation/tick-record"
 
+const VALID_IMAGE_MEDIA_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+]
+
+function validateContentBlocks(blocks: unknown[]): string | null {
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i] as Record<string, unknown>
+    if (!block || typeof block !== "object") {
+      return `content[${i}]: must be an object`
+    }
+    if (block.type === "text") {
+      if (typeof block.text !== "string") {
+        return `content[${i}]: text block must have a "text" string field`
+      }
+    } else if (block.type === "image") {
+      const source = block.source as Record<string, unknown> | undefined
+      if (!source || typeof source !== "object") {
+        return `content[${i}]: image block must have a "source" object`
+      }
+      if (source.type !== "base64") {
+        return `content[${i}]: source.type must be "base64"`
+      }
+      if (!VALID_IMAGE_MEDIA_TYPES.includes(source.media_type as string)) {
+        return `content[${i}]: source.media_type must be one of: ${VALID_IMAGE_MEDIA_TYPES.join(", ")}`
+      }
+      if (typeof source.data !== "string") {
+        return `content[${i}]: source.data must be a string`
+      }
+    } else {
+      return `content[${i}]: type must be "text" or "image"`
+    }
+  }
+  return null
+}
+
 interface InjectBody {
   agentId?: string
-  content?: string
+  content?: MessageContent
   from?: string
   channel?: string
   messageType?: string
@@ -28,6 +66,16 @@ interface InjectBody {
 export function validateInjectBody(body: InjectBody): string | null {
   if (!body.agentId) return "Missing required field: agentId"
   if (!body.content) return "Missing required field: content"
+  if (typeof body.content !== "string") {
+    if (!Array.isArray(body.content)) {
+      return "content must be a string or an array of content blocks"
+    }
+    if (body.content.length === 0) {
+      return "content array must not be empty"
+    }
+    const blockError = validateContentBlocks(body.content)
+    if (blockError) return blockError
+  }
   if (!body.from) return "Missing required field: from"
   if (!body.channel) return "Missing required field: channel"
   const validChannels = ["discord", "dashboard", "gitlab", "internal"]
