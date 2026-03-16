@@ -4,6 +4,7 @@ import {
   loadOperationalContext,
   saveOperationalContext,
 } from "../../../agent/operational-memory"
+import { appendEntries } from "../../../memory/knowledge-store"
 import type { ChannelMessage } from "../../../agent/types"
 
 interface SetupBody {
@@ -19,6 +20,8 @@ interface SetupBody {
   }
   /** Add messages to recentHistory (for stuck detection) */
   addHistory?: Array<{ role: "user" | "assistant"; content: string }>
+  /** Seed knowledge store with facts (for homeostasis dimension tests) */
+  seedFacts?: Array<{ content: string; source?: string }>
 }
 
 export default defineEventHandler(async (event) => {
@@ -73,6 +76,21 @@ export default defineEventHandler(async (event) => {
       })
     }
     applied.push(`history+=${body.addHistory.length}`)
+  }
+
+  if (body.seedFacts?.length) {
+    const storePath = "data/memory/entries.jsonl"
+    const entries = body.seedFacts.map((f, i) => ({
+      id: `seed-${Date.now()}-${i}`,
+      type: "fact" as const,
+      content: f.content,
+      source: f.source || "setup-seed",
+      confidence: 0.9,
+      entities: [],
+      extractedAt: new Date().toISOString(),
+    }))
+    await appendEntries(entries, storePath)
+    applied.push(`seedFacts=${entries.length}`)
   }
 
   await saveOperationalContext(opCtx)

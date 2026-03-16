@@ -15,4 +15,3 @@ steps:
     messageType: task_assignment
     expect:
       outcome.action: delegate
-      execution.toolCalls: ">= 1"

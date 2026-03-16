@@ -2,6 +2,8 @@ scenario: "L39: Stuck user detected after repeated similar questions"
 description: >
   When a user asks 3 similar questions (shared stems), progress_momentum
   drops to LOW and guidance suggests trying a different approach.
+  Facts are seeded so knowledge_sufficiency stays HEALTHY and doesn't
+  shadow the stuck detection.
 agent: beki
 setup:
   clear_ticks: true
@@ -10,6 +12,9 @@ steps:
   - send: "how do I configure the authentication system?"
     from: { platform: discord, user: sasha }
     messageType: chat
+    setup:
+      seedFacts:
+        - content: "The authentication system uses JWT tokens configured in server/auth/config.ts"
     expect:
       homeostasis.progress_momentum: HEALTHY
       outcome.action: respond

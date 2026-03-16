@@ -7,6 +7,9 @@ steps:
   - send: "Hey Beki, what language is this project written in?"
     from: { platform: discord, user: sasha }
     messageType: chat
+    setup:
+      seedFacts:
+        - content: "The Galatea project is written in TypeScript using TanStack Start and Drizzle ORM"
     expect:
       outcome.action: respond
       outcome.response: "contains: TypeScript"

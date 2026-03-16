@@ -31,6 +31,7 @@ export interface ScenarioStep {
       status?: string
     }
     addHistory?: Array<{ role: string; content: string }>
+    seedFacts?: Array<{ content: string; source?: string }>
   }
   /** Trigger a heartbeat tick instead of sending a message */
   trigger?: "heartbeat"

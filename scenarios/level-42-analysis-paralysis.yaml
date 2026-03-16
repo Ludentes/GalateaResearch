@@ -2,6 +2,7 @@ scenario: "L42: Analysis paralysis detected after 2+ hours exploring"
 description: >
   When agent has been in exploring phase for 2+ hours with knowledge
   available, knowledge_application goes HIGH signaling analysis paralysis.
+  Facts must be seeded so the assessor sees "has knowledge but not applying it."
 agent: beki
 setup:
   clear_ticks: true
@@ -11,6 +12,9 @@ steps:
     from: { platform: discord, user: sasha }
     messageType: chat
     setup:
+      seedFacts:
+        - content: "React and Vue are the most popular frontend frameworks for this use case"
+        - content: "The team has prior experience with Svelte and Astro"
       createTask:
         description: "Research frontend frameworks"
         phase: exploring
