@@ -8,6 +8,7 @@ agent:
   domain: "Expo / React Native"
 
 workspace: "workspaces/agenttestproject"
+claude_config_dir: "/home/newub/.claude-agents"
 allowed_branches: ["feature/*", "fix/*"]
 
 thresholds:
@@ -38,6 +39,10 @@ trust:
     discord: "high"
     gitlab: "medium"
   default_identity_trust: "none"
+
+escalation_target:
+  entity: "kirill"
+  channel: "discord"
 
 knowledge_store: "data/agents/beki/knowledge/entries.jsonl"
 operational_memory: "data/agents/beki/context.jsonl"

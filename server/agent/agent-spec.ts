@@ -22,6 +22,7 @@ export interface AgentSpec {
     domain: string
   }
   workspace: string
+  claude_config_dir?: string
   allowed_branches: string[]
   thresholds: Record<string, { context: string }>
   hard_blocks: string[]
@@ -35,6 +36,10 @@ export interface AgentSpec {
   }
   knowledge_store: string
   operational_memory: string
+  escalation_target?: {
+    entity: string
+    channel: string
+  }
   tools_context?: string
   workflow_instructions?: string
 }

@@ -8,6 +8,7 @@ agent:
   domain: "Sprint planning, task management, code review coordination"
 
 workspace: "workspaces/agenttestproject"
+claude_config_dir: "/home/newub/.claude-agents"
 allowed_branches: []
 
 thresholds:
@@ -37,6 +38,10 @@ trust:
     discord: "high"
     gitlab: "medium"
   default_identity_trust: "none"
+
+escalation_target:
+  entity: "kirill"
+  channel: "discord"
 
 knowledge_store: "data/agents/besa/knowledge/entries.jsonl"
 operational_memory: "data/agents/besa/context.jsonl"
