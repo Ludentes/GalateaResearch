@@ -23,4 +23,4 @@ steps:
       routing.level: task
       routing.taskType: coding
       outcome.action: delegate
-      outcome.response: exists
+      outcome.response: "contains: commit"
