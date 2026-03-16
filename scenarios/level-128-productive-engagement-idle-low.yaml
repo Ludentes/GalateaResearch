@@ -1,0 +1,14 @@
+scenario: "L128: Productive engagement LOW — heartbeat with no tasks"
+description: >
+  When the agent has no tasks, no messages, and receives a heartbeat,
+  productive_engagement should be LOW indicating idle state.
+  The guidance should tell the agent to seek work.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - trigger: heartbeat
+    expect:
+      homeostasis.productive_engagement: LOW
+      guidance.0: "contains: Idle"

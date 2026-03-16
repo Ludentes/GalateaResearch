@@ -11,6 +11,10 @@ steps:
   - send: "how is the OAuth2 implementation going?"
     from: { platform: dashboard, user: kirill }
     messageType: chat
+    setup:
+      seedFacts:
+        - content: "OAuth2 implementation uses PKCE flow with token rotation"
+        - content: "The auth module is in server/auth/ and has unit tests passing"
     expect:
       homeostasis.self_preservation: HEALTHY
       homeostasis.certainty_alignment: HEALTHY
@@ -18,4 +22,5 @@ steps:
       homeostasis.communication_health: HEALTHY
       homeostasis.productive_engagement: HEALTHY
       homeostasis.knowledge_application: HEALTHY
+      homeostasis.knowledge_sufficiency: HEALTHY
       outcome.action: respond

@@ -1,0 +1,17 @@
+scenario: "L129: Self-preservation HEALTHY — benign message from trusted user"
+description: >
+  A benign, non-destructive message from a trusted user should keep
+  self_preservation HEALTHY. No destructive patterns detected means
+  the dimension stays at baseline regardless of trust level.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "can you add a loading spinner to the dashboard page?"
+    from: { platform: discord, user: denis }
+    messageType: chat
+    expect:
+      trigger.trustLevel: HIGH
+      homeostasis.self_preservation: HEALTHY
+      outcome.action: respond

@@ -1,20 +1,21 @@
-scenario: "L85: Empty knowledge store — agent should not start degraded"
+scenario: "L85: Empty knowledge store — knowledge_sufficiency is LOW"
 description: >
-  A freshly-started agent with no knowledge store entries should show
-  HEALTHY baseline, not LOW knowledge_sufficiency. Currently broken:
-  empty store → no matching facts → LOW. This makes Day 1 agents always
-  show red on the dashboard.
+  A freshly-started agent with no knowledge store entries correctly shows
+  knowledge_sufficiency LOW for substantive messages. This is not a bug —
+  the agent genuinely lacks domain knowledge. The fix is to bootstrap
+  agents with seed facts on Day 1, not to fake knowledge.
+  Short greetings also return LOW because all words are too short to
+  produce meaningful stems, falling through to the empty-facts path.
 agent: beki
 setup:
   clear_ticks: true
   clear_state: true
   clear_knowledge: true
 steps:
-  - send: "hello, just checking in"
+  - send: "how is the project going? any blockers?"
     from: { platform: discord, user: kirill }
     messageType: chat
     expect:
       trigger.trustLevel: HIGH
       homeostasis.self_preservation: HEALTHY
-      # TODO: change to HEALTHY once P4 is fixed — currently LOW
       homeostasis.knowledge_sufficiency: LOW

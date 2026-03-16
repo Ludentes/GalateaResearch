@@ -1,0 +1,27 @@
+scenario: "L130: Multi-dimension — realistic scenario with communication gap and knowledge"
+description: >
+  A realistic production scenario: agent has been silent for 4 hours
+  during active work, and receives a question about a topic it has
+  knowledge about. communication_health should be LOW while
+  knowledge_sufficiency should be HEALTHY.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "hey, haven't heard from you in a while — how's the auth module refactoring going?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    setup:
+      lastOutboundMinutesAgo: 250
+      createTask:
+        description: "Refactor auth module"
+        status: in_progress
+      seedFacts:
+        - content: "Auth module refactoring involves splitting monolithic auth.ts into separate files"
+        - content: "The refactoring preserves all existing API contracts"
+    expect:
+      homeostasis.communication_health: LOW
+      homeostasis.knowledge_sufficiency: HEALTHY
+      homeostasis.self_preservation: HEALTHY
+      outcome.action: respond

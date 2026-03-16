@@ -1,0 +1,28 @@
+scenario: "L115: Knowledge growth — sufficiency moves from LOW to HEALTHY after seeding"
+description: >
+  Step 1 sends a substantive question with no knowledge store → LOW.
+  Step 2 seeds relevant facts then asks a related question → HEALTHY.
+  This validates that knowledge acquisition actually improves the dimension.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+  clear_knowledge: true
+steps:
+  - send: "what authentication approach should we use for the mobile API endpoints?"
+    from: { platform: dashboard, user: kirill }
+    messageType: chat
+    expect:
+      homeostasis.knowledge_sufficiency: LOW
+      outcome.action: respond
+  - send: "how should we handle token refresh for the mobile API auth?"
+    from: { platform: dashboard, user: kirill }
+    messageType: chat
+    setup:
+      seedFacts:
+        - content: "Mobile API uses JWT tokens with refresh token rotation for authentication"
+        - content: "Auth endpoints are in server/auth/ and follow OAuth2 PKCE flow"
+        - content: "Token refresh should use sliding window expiration of 30 days"
+    expect:
+      homeostasis.knowledge_sufficiency: HEALTHY
+      outcome.action: respond

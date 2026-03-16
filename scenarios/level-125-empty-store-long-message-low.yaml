@@ -1,0 +1,19 @@
+scenario: "L125: Empty store + substantive message = knowledge_sufficiency LOW"
+description: >
+  Unlike L85 (short greeting → HEALTHY), a substantive question with
+  an empty knowledge store correctly triggers knowledge_sufficiency LOW.
+  This is not a bug — the agent genuinely lacks domain knowledge for
+  this topic.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+  clear_knowledge: true
+steps:
+  - send: "what authentication approach should we use for the mobile API endpoints? We need to support both OAuth2 and API key authentication for different client types."
+    from: { platform: dashboard, user: kirill }
+    messageType: chat
+    expect:
+      homeostasis.knowledge_sufficiency: LOW
+      guidance.0: "contains: Knowledge"
+      outcome.action: respond

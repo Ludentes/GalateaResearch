@@ -12,6 +12,9 @@ steps:
     from: { platform: dashboard, user: kirill }
     messageType: task_assignment
     setup:
+      seedFacts:
+        - content: "OAuth2 refresh tokens should be rotated on every use to prevent replay attacks"
+        - content: "SSO providers like Okta and Auth0 support PKCE flow for public clients"
       createTask:
         description: "Research SSO provider comparison"
         phase: exploring

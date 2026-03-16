@@ -1,4 +1,4 @@
-scenario: "L98: Agent escalation on blocked task"
+scenario: "L108: Agent escalation on blocked task"
 description: >
   When an agent receives an impossible or ambiguous task, it should
   use the escalation mechanism to signal it needs human help rather

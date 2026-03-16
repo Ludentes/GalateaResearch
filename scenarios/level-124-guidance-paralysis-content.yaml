@@ -1,0 +1,24 @@
+scenario: "L124: Guidance content — analysis paralysis guidance is actionable"
+description: >
+  When knowledge_application is HIGH (analysis paralysis), the guidance
+  should contain actionable advice about starting to build, not just
+  a generic warning. Validates guidance content quality.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "maybe we should also evaluate one more caching strategy before deciding"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    setup:
+      seedFacts:
+        - content: "Redis is the standard caching layer for this project"
+        - content: "Memcached was evaluated and rejected due to lack of persistence"
+      createTask:
+        description: "Evaluate caching strategies"
+        phase: exploring
+        phaseMinutesAgo: 180
+    expect:
+      homeostasis.knowledge_application: HIGH
+      guidance.0: "contains: paralysis"

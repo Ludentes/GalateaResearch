@@ -1,0 +1,16 @@
+scenario: "L118: Realistic message — priority clarification from PM"
+description: >
+  Besa receives a realistic production message about sprint priorities.
+  Tests PM agent with real-world project management language.
+agent: besa
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "we need to reprioritize for this sprint — the client demo got moved to Thursday. Can you check what Beki is working on and figure out if we can ship the dashboard feature by Wednesday?"
+    from: { platform: discord, user: kirill }
+    messageType: chat
+    expect:
+      homeostasis.self_preservation: HEALTHY
+      outcome.action: respond
+      outcome.response: exists

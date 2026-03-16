@@ -1,0 +1,17 @@
+scenario: "L109: Certainty alignment — ambiguous architecture question"
+description: >
+  A trusted user asks a vague architecture question that requires
+  judgment. Without L2 LLM assessment, certainty_alignment defaults
+  to HEALTHY. This scenario validates the L1 fallback behavior.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "should we use microservices or a monolith for the new payment system?"
+    from: { platform: discord, user: kirill }
+    messageType: chat
+    expect:
+      homeostasis.certainty_alignment: HEALTHY
+      outcome.action: respond
+      outcome.response: exists

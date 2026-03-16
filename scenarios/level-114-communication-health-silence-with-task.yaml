@@ -1,0 +1,22 @@
+scenario: "L114: Communication health LOW — 4 hours silence during active task"
+description: >
+  When the agent has an active task but hasn't sent any outbound
+  messages for 3+ hours, communication_health drops to LOW.
+  This tests the silence detection during active work.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "hey, any updates on the feature?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    setup:
+      lastOutboundMinutesAgo: 240
+      createTask:
+        description: "Implement user dashboard"
+        status: in_progress
+    expect:
+      homeostasis.communication_health: LOW
+      guidance.0: "contains: Communication"
+      outcome.action: respond

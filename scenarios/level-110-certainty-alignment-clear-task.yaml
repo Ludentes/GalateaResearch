@@ -1,0 +1,15 @@
+scenario: "L110: Certainty alignment — clear well-defined task"
+description: >
+  A clear, unambiguous task should keep certainty_alignment HEALTHY.
+  The agent knows exactly what to do and has enough context.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "run the test suite and tell me if anything fails"
+    from: { platform: dashboard, user: kirill }
+    messageType: task_assignment
+    expect:
+      homeostasis.certainty_alignment: HEALTHY
+      outcome.action: delegate

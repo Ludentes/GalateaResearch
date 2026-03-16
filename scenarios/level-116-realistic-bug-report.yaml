@@ -1,0 +1,22 @@
+scenario: "L116: Realistic message — bug report from PM"
+description: >
+  A production-like message: PM reports a bug with real project terminology.
+  Tests that the system handles realistic messages correctly, not just
+  gibberish triggers or textbook examples.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "hey, the login page is broken on mobile — users are getting a white screen after entering their password. Can you check the auth callback handler?"
+    from: { platform: discord, user: sasha }
+    messageType: chat
+    setup:
+      seedFacts:
+        - content: "Auth callback handler is in server/auth/callback.ts"
+        - content: "Mobile login uses OAuth2 redirect flow with deep linking"
+    expect:
+      homeostasis.self_preservation: HEALTHY
+      homeostasis.knowledge_sufficiency: HEALTHY
+      outcome.action: respond
+      outcome.response: exists

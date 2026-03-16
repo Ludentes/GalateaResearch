@@ -1,0 +1,19 @@
+scenario: "L113: Communication health HIGH — agent sent message 2 minutes ago"
+description: >
+  When the agent's last outbound message was less than 5 minutes ago,
+  communication_health should be HIGH (cooldown — don't spam).
+  This validates the < 5 min outbound cooldown trigger.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "one more thing — can you also update the readme?"
+    from: { platform: discord, user: kirill }
+    messageType: chat
+    setup:
+      lastOutboundMinutesAgo: 2
+    expect:
+      homeostasis.communication_health: HIGH
+      guidance.0: "contains: communication"
+      outcome.action: respond

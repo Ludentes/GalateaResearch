@@ -1,0 +1,16 @@
+scenario: "L127: Besa certainty alignment — PM context defaults HEALTHY"
+description: >
+  Besa (PM agent) receives a clear planning question. certainty_alignment
+  should default to HEALTHY. Tests that certainty_alignment works correctly
+  for the PM agent, not just the developer agent.
+agent: besa
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "can you create GitLab issues for the sprint backlog items we discussed?"
+    from: { platform: dashboard, user: kirill }
+    messageType: task_assignment
+    expect:
+      homeostasis.certainty_alignment: HEALTHY
+      outcome.action: delegate
