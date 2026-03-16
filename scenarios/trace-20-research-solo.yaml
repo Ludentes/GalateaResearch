@@ -1,6 +1,7 @@
 scenario: "Solo agent handles research task"
 source_gherkin: "Trace 12 (adapted for solo agent)"
 agent: besa
+model: haiku
 type: dogfood
 setup:
   clear_ticks: true

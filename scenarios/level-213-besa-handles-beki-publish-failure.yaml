@@ -3,6 +3,7 @@ description: >
   When Beki reports a problem (task failed, publish failed, blocked),
   Besa should acknowledge and suggest next steps rather than ignoring it.
 agent: besa
+model: sonnet
 setup:
   clear_ticks: true
   clear_state: true

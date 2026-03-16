@@ -1,5 +1,6 @@
 scenario: "L101: Async inject returns job and completes via polling"
 agent: besa
+model: sonnet
 setup:
   clear_ticks: true
 steps:

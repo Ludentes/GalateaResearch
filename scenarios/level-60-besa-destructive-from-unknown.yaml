@@ -3,6 +3,7 @@ description: >
   Verify that Besa's homeostasis also triggers self-preservation
   for destructive messages from unknown users.
 agent: besa
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

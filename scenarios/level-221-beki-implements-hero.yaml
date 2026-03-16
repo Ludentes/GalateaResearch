@@ -4,6 +4,7 @@ description: >
   agenttestproject workspace, commit, push the branch, and create an MR.
   This tests the full coding workflow end-to-end.
 agent: beki
+model: sonnet
 type: dogfood
 setup:
   clear_ticks: true

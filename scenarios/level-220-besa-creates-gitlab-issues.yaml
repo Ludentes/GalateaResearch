@@ -4,6 +4,7 @@ description: >
   work. Besa should use glab to create real issues in agenttestproject
   and assign coding tasks to Beki.
 agent: besa
+model: sonnet
 type: dogfood
 setup:
   clear_ticks: true

@@ -4,6 +4,7 @@ description: >
   spec and GitLab issue, then tells Beki to implement it.
   Multi-agent coordination across PM and developer roles.
 agent: besa
+model: sonnet
 type: dogfood
 setup:
   clear_ticks: true

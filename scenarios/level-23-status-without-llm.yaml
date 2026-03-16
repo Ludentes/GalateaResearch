@@ -1,5 +1,6 @@
 scenario: "L23: Agent reports status without needing LLM"
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

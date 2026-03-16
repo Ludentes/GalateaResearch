@@ -5,6 +5,7 @@ description: >
   This is not a bug — the agent genuinely lacks domain knowledge for
   this topic.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

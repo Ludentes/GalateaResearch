@@ -4,6 +4,7 @@ description: >
   adapter, which has access to skills like /topic-research. The scenario
   verifies the delegation path works and the adapter is invoked.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

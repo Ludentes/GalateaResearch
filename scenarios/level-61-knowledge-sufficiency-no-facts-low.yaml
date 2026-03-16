@@ -5,6 +5,7 @@ description: >
   or topic. HEALTHY/HIGH require retrieved facts with stem overlap.
   This confirms the conservative baseline behavior.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

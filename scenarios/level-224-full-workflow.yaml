@@ -4,6 +4,7 @@ description: >
   implements it, pushes, creates MR, and reports what was done.
   The response should mention the MR or branch.
 agent: beki
+model: sonnet
 type: dogfood
 setup:
   clear_ticks: true

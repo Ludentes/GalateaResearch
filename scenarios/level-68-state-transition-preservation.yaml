@@ -5,6 +5,7 @@ description: >
   2. Destructive message from unknown → LOW
   3. Benign follow-up from trusted → HEALTHY again
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

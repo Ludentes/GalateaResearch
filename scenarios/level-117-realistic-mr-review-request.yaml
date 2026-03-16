@@ -3,6 +3,7 @@ description: >
   A production-like message: request to review a merge request.
   Uses real project language and MR reference format.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

@@ -1,5 +1,6 @@
 scenario: "L7: Read existing file, modify, write back"
 agent: beki
+model: haiku
 type: dogfood
 setup:
   clear_ticks: true

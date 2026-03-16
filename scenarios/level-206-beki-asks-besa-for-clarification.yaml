@@ -3,6 +3,7 @@ description: >
   Besa gives Beki a vague task. Beki should recognize insufficient info and
   ask for clarification rather than guessing.
 agent: beki
+model: sonnet
 setup:
   clear_ticks: true
   clear_state: true

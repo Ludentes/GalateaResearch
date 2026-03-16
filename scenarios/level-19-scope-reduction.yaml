@@ -1,5 +1,6 @@
 scenario: "L19: PM reduces scope mid-task"
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

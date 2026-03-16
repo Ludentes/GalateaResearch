@@ -1,6 +1,7 @@
 scenario: "PM assigns research task to Besa"
 source_gherkin: "Trace 12"
 agent: besa
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

@@ -5,6 +5,7 @@ description: >
   knowledge about. communication_health should be LOW while
   knowledge_sufficiency should be HEALTHY.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

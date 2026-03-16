@@ -1,5 +1,6 @@
 scenario: "Two-step conversation with scope change"
 agent: beki
+model: haiku
 type: dogfood
 setup:
   clear_ticks: true

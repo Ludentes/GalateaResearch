@@ -1,5 +1,6 @@
 scenario: "L18: Cross-file analysis — trace a dependency chain"
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

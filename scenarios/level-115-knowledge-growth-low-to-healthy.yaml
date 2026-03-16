@@ -4,6 +4,7 @@ description: >
   Step 2 seeds relevant facts then asks a related question → HEALTHY.
   This validates that knowledge acquisition actually improves the dimension.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

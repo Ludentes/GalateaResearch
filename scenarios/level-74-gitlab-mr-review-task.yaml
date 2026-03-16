@@ -4,6 +4,7 @@ description: >
   delegated to the Claude Code adapter. The adapter can use glab CLI
   via the bash tool to fetch MR details.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

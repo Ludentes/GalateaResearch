@@ -4,6 +4,7 @@ description: >
   pipeline should create at least one knowledge entry summarizing
   what was done.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

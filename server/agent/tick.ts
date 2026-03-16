@@ -1,5 +1,9 @@
 import { getAgentConfig } from "../engine/config"
-import { assessDimensions, getGuidance } from "../engine/homeostasis-engine"
+import {
+  assessDimensions,
+  assessDimensionsAsync,
+  getGuidance,
+} from "../engine/homeostasis-engine"
 import { resolveTrust } from "../engine/trust-resolver"
 import type {
   AgentContext,
@@ -401,7 +405,7 @@ async function tickInner(
     }
 
     t0 = Date.now()
-    const homeostasis = assessDimensions(agentContext)
+    const homeostasis = await assessDimensionsAsync(agentContext)
     timings.homeostasisMs = Date.now() - t0
     const homeostasisForContext: Record<string, string> = {}
     for (const [k, v] of Object.entries(homeostasis)) {

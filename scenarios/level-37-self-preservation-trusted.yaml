@@ -3,6 +3,7 @@ description: >
   Even from a known user, destructive patterns trigger self_preservation LOW.
   Trust level determines response behavior, not whether the alert fires.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

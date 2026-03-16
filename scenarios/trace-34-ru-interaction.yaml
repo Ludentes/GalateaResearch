@@ -1,5 +1,6 @@
 scenario: "Вопрос остаётся интеракцией"
 agent: besa
+model: haiku
 setup:
   clear_ticks: true
 steps:

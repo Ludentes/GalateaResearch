@@ -4,6 +4,7 @@ description: >
   without creating a TaskState or entering the delegation path.
   This validates the two-level model: interactions are cheap and fast.
 agent: besa
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

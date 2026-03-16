@@ -1,5 +1,6 @@
 scenario: "L4: Multi-tool exploration — list then read"
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
 steps:

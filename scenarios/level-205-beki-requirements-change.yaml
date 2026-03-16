@@ -3,6 +3,7 @@ description: >
   Beki is working on a section, then Besa changes the requirements.
   Tests that Beki adapts without losing previous work.
 agent: beki
+model: sonnet
 type: dogfood
 setup:
   clear_ticks: true

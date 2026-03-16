@@ -4,6 +4,7 @@ description: >
   the coding adapter should resume the existing session rather than
   starting a fresh one. This is critical for cost efficiency.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

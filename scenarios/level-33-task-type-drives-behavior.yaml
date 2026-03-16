@@ -4,6 +4,7 @@ description: >
   analysis, comparisons), while a coding task should produce code artifacts.
   Both go through delegation but the routing.taskType should differ.
 agent: besa
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

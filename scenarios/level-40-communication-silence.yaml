@@ -3,6 +3,7 @@ description: >
   When agent has an active task but hasn't communicated for 3+ hours,
   communication_health drops to LOW with guidance to send an update.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

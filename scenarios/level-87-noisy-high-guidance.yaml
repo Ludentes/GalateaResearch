@@ -5,6 +5,7 @@ description: >
   overload detected" or "frequent communication detected". These are
   informational, not warnings.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

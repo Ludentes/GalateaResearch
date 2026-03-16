@@ -3,6 +3,7 @@ description: >
   Kirill asks Besa to review Beki's hero section MR. Besa should read the diff,
   check against design requirements, and provide feedback.
 agent: besa
+model: sonnet
 type: dogfood
 setup:
   clear_ticks: true

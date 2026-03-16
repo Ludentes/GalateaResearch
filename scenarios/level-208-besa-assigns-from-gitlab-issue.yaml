@@ -3,6 +3,7 @@ description: >
   Kirill asks Besa to check GitLab for unassigned issues and assign one to Beki.
   Tests the PM workflow of triaging and delegating from the issue tracker.
 agent: besa
+model: sonnet
 type: dogfood
 setup:
   clear_ticks: true

@@ -1,6 +1,7 @@
 scenario: "Besa reviews Beki's MR"
 source_gherkin: "Trace 16"
 agent: besa
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

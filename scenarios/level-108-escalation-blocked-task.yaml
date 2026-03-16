@@ -6,6 +6,7 @@ description: >
   escalation, mark the task as blocked, and dispatch an escalation
   message to the configured target.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

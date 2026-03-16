@@ -4,6 +4,7 @@ description: >
   assessment is unavailable or returns HEALTHY, the dimension should default
   to HEALTHY. This scenario confirms the baseline behavior.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

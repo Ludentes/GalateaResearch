@@ -3,6 +3,7 @@ description: >
   After a coding task completes, the agent's response should include
   information about the pushed branch and MR creation.
 agent: beki
+model: sonnet
 type: dogfood
 setup:
   clear_ticks: true

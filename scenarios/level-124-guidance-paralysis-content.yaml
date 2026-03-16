@@ -4,19 +4,21 @@ description: >
   should contain actionable advice about starting to build, not just
   a generic warning. Validates guidance content quality.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true
 steps:
-  - send: "maybe we should also evaluate one more caching strategy before deciding"
+  - send: "let me research more caching strategies — maybe try Varnish or Squid next"
     from: { platform: discord, user: sasha }
     messageType: chat
     setup:
       seedFacts:
-        - content: "Redis is the standard caching layer for this project"
-        - content: "Memcached was evaluated and rejected due to lack of persistence"
+        - content: "Redis caching strategy was chosen for the project cache layer"
+        - content: "Memcached caching strategy was rejected in favor of Redis"
+        - content: "Caching strategies comparison research completed last sprint"
       createTask:
-        description: "Evaluate caching strategies"
+        description: "Research caching strategies comparison"
         phase: exploring
         phaseMinutesAgo: 180
     expect:

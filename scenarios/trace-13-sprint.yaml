@@ -1,6 +1,7 @@
 scenario: "PM creates sprint tasks via Besa"
 source_gherkin: "Trace 13"
 agent: besa
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

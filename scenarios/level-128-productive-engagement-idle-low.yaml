@@ -4,6 +4,7 @@ description: >
   productive_engagement should be LOW indicating idle state.
   The guidance should tell the agent to seek work.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

@@ -4,6 +4,7 @@ description: >
   facts available, knowledge_application should be HIGH (analysis paralysis).
   The guidance should nudge toward implementation.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

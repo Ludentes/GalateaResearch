@@ -4,6 +4,7 @@ description: >
   in the agenttestproject workspace. Beki should create branch, do the work,
   commit, push, and create MR.
 agent: beki
+model: sonnet
 type: dogfood
 setup:
   clear_ticks: true

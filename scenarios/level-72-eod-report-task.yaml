@@ -4,6 +4,7 @@ description: >
   delegated to the Claude Code adapter, which can use the /end-of-day-report
   skill. Verifies routing and delegation for report-type tasks.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

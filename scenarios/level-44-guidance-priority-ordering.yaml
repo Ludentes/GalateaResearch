@@ -3,6 +3,7 @@ description: >
   When both self_preservation (priority 0) and knowledge_sufficiency (priority 1)
   are LOW, safety guidance appears first in the guidance array.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

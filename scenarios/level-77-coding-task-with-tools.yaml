@@ -4,6 +4,7 @@ description: >
   The adapter has access to read_file, write_file, list_files, and bash
   tools for implementation work.
 agent: beki
+model: sonnet
 type: dogfood
 setup:
   clear_ticks: true

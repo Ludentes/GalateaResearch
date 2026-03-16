@@ -3,6 +3,7 @@ description: >
   Kirill and Besa give Beki conflicting directions on the same component.
   Beki should flag the contradiction rather than just following the last message.
 agent: beki
+model: sonnet
 setup:
   clear_ticks: true
   clear_state: true

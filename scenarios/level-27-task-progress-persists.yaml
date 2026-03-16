@@ -4,6 +4,7 @@ description: >
   previous work. The second tick should resume the session (cheaper)
   rather than starting fresh.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

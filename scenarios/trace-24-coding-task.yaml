@@ -1,5 +1,6 @@
 scenario: "Coding task from issue reference"
 agent: besa
+model: haiku
 type: dogfood
 setup:
   clear_ticks: true

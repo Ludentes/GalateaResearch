@@ -3,6 +3,7 @@ description: >
   Heartbeat fires while agent has a task but hasn't communicated for 4+ hours.
   productive_engagement is HEALTHY (has task) but communication_health is LOW.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

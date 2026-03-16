@@ -3,6 +3,7 @@ description: >
   A clear, unambiguous task should keep certainty_alignment HEALTHY.
   The agent knows exactly what to do and has enough context.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

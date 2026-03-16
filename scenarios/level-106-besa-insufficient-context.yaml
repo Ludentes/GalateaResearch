@@ -1,5 +1,6 @@
 scenario: "L106: Besa encounters unfamiliar domain terminology"
 agent: besa
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

@@ -1,6 +1,7 @@
 scenario: "Status question stays interaction-level"
 source_gherkin: "Trace 14 (unchanged)"
 agent: besa
+model: haiku
 setup:
   clear_ticks: true
 steps:

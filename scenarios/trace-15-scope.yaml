@@ -1,6 +1,7 @@
 scenario: "Mid-task scope change clears session"
 source_gherkin: "Trace 15"
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

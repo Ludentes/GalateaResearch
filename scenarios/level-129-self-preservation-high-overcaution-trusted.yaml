@@ -4,6 +4,7 @@ description: >
   self_preservation HEALTHY. No destructive patterns detected means
   the dimension stays at baseline regardless of trust level.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

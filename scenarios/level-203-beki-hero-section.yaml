@@ -3,6 +3,7 @@ description: >
   Besa assigns Beki the hero section task with specific design requirements.
   Full coding workflow: branch → implement → test → commit → push → MR.
 agent: beki
+model: sonnet
 type: dogfood
 setup:
   clear_ticks: true

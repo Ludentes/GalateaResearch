@@ -6,6 +6,7 @@ description: >
   from denis should trigger LOW self_preservation on both channels
   since HIGH trust still flags destructive actions.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

@@ -4,6 +4,7 @@ description: >
   status check (interaction). Validates that the agent correctly
   switches back from task mode to interaction mode.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

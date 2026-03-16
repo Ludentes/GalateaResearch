@@ -5,6 +5,7 @@ description: >
   a routine action from a trusted user should NOT trigger HIGH.
   self_preservation should be HEALTHY for normal requests.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

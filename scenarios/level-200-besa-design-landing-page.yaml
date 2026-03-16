@@ -3,6 +3,7 @@ description: >
   Kirill asks Besa (PM) to design a landing page for Galatea using the
   /frontend-design skill. Besa should research, design, and produce a plan.
 agent: besa
+model: sonnet
 type: dogfood
 setup:
   clear_ticks: true

@@ -4,6 +4,7 @@ description: >
   command. Trust is ABSOLUTE — self_preservation stays HEALTHY because the
   engine trusts ABSOLUTE users to know what they're doing.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

@@ -3,6 +3,7 @@ description: >
   After being stuck (3 similar questions → LOW progress_momentum),
   a completely different question should reset momentum to HEALTHY.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

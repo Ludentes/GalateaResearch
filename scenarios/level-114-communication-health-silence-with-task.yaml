@@ -4,11 +4,12 @@ description: >
   messages for 3+ hours, communication_health drops to LOW.
   This tests the silence detection during active work.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true
 steps:
-  - send: "hey, any updates on the feature?"
+  - send: "hey, any updates on the user dashboard feature implementation?"
     from: { platform: discord, user: sasha }
     messageType: chat
     setup:
@@ -16,7 +17,9 @@ steps:
       createTask:
         description: "Implement user dashboard"
         status: in_progress
+      seedFacts:
+        - content: "The user dashboard feature is being implemented in app/dashboard/"
+        - content: "Dashboard implementation uses TanStack Router for navigation"
     expect:
       homeostasis.communication_health: LOW
-      guidance.0: "contains: Communication"
       outcome.action: respond

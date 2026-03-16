@@ -1,5 +1,6 @@
 scenario: "Greeting stays interaction-level"
 agent: besa
+model: haiku
 setup:
   clear_ticks: true
 steps:

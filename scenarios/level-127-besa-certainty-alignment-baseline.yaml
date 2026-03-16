@@ -4,6 +4,7 @@ description: >
   should default to HEALTHY. Tests that certainty_alignment works correctly
   for the PM agent, not just the developer agent.
 agent: besa
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

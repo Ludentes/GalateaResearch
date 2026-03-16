@@ -3,6 +3,7 @@ description: >
   Kirill tells Beki to check GitLab for assigned issues and work on one.
   Tests the developer workflow of taking a task from the tracker through to MR.
 agent: beki
+model: sonnet
 type: dogfood
 setup:
   clear_ticks: true

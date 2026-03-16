@@ -4,6 +4,7 @@ description: >
   After the task response, productive_engagement on heartbeat should be LOW
   since no active task remains.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

@@ -1,6 +1,7 @@
 scenario: "Quick status check — interaction, not task"
 source_gherkin: "Trace 14"
 agent: besa
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

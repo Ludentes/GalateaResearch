@@ -4,6 +4,7 @@ description: >
   less than 2 hours), knowledge_application should be HEALTHY. This is the
   default/baseline state for most interactions.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

@@ -3,6 +3,7 @@ description: >
   When asked a detailed question about a topic with no matching entries
   in the knowledge store, knowledge_sufficiency should drop to LOW.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

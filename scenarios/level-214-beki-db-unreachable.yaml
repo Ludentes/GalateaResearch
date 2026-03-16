@@ -4,6 +4,7 @@ description: >
   unreachable. Beki should attempt the connection, recognize the failure,
   and report the problem clearly rather than producing partial work.
 agent: beki
+model: sonnet
 setup:
   clear_ticks: true
   clear_state: true

@@ -3,6 +3,7 @@ description: >
   When self_preservation and knowledge_sufficiency are both LOW,
   both dimensions appear in homeostasis and guidance includes multiple entries.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

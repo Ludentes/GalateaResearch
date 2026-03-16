@@ -4,6 +4,7 @@ description: >
   Tests that the system handles realistic messages correctly, not just
   gibberish triggers or textbook examples.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

@@ -1,5 +1,6 @@
 scenario: "L16: Feature request with acceptance criteria check"
 agent: beki
+model: haiku
 type: dogfood
 setup:
   clear_ticks: true

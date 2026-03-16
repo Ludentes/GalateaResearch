@@ -1,5 +1,6 @@
 scenario: "Создание задач — русский язык"
 agent: besa
+model: haiku
 type: dogfood
 setup:
   clear_ticks: true

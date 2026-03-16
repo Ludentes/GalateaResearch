@@ -4,6 +4,7 @@ description: >
   question. self_preservation should be HEALTHY since the message is not
   destructive. Trust level should still be NONE.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

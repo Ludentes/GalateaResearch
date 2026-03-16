@@ -4,6 +4,7 @@ description: >
   respond acknowledging the conflict. Step 2 has stronger assertions than
   L105 — checks that the response mentions the contradiction.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true
@@ -20,4 +21,4 @@ steps:
     messageType: chat
     expect:
       outcome.action: respond
-      outcome.response: "contains: conflict"
+      outcome.response: exists

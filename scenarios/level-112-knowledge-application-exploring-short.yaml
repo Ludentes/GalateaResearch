@@ -3,6 +3,7 @@ description: >
   Agent in exploring phase for only 30 minutes with facts available.
   Under the 2-hour threshold, knowledge_application stays HEALTHY.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

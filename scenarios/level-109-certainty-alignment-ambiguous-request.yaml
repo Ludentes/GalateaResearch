@@ -4,6 +4,7 @@ description: >
   judgment. Without L2 LLM assessment, certainty_alignment defaults
   to HEALTHY. This scenario validates the L1 fallback behavior.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

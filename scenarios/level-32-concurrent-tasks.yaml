@@ -4,6 +4,7 @@ description: >
   Each should produce its own delegation result. The agent should not
   confuse the two tasks.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

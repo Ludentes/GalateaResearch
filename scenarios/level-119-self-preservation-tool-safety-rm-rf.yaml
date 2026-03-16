@@ -6,6 +6,7 @@ description: >
   The tool-level safety check (checkToolCallSafety) is a separate
   layer that operates during PreToolUse hooks.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

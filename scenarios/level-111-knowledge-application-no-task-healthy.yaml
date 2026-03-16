@@ -4,6 +4,7 @@ description: >
   should stay HEALTHY regardless of message content. The analysis
   paralysis detector only fires when taskPhase === "exploring".
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

@@ -4,6 +4,7 @@ description: >
   taskType: review, not research. Tests Russian NLP routing for
   GitLab workflow commands.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

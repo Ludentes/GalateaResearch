@@ -1,5 +1,6 @@
 scenario: "L1: Answer a simple technical question"
 agent: besa
+model: haiku
 setup:
   clear_ticks: true
 steps:

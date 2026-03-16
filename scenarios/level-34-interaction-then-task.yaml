@@ -4,6 +4,7 @@ description: >
   task assignment (task level). Each should be routed correctly,
   validating that the two-level model works within a single conversation.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

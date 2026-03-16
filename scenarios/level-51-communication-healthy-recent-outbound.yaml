@@ -3,6 +3,7 @@ description: >
   When the agent sent a message recently (< 5 min ago),
   communication_health should be HIGH (cooldown — don't spam).
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

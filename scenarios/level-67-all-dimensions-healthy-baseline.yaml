@@ -4,6 +4,7 @@ description: >
   no stuck detection, no communication gaps, with active task. All 7 dimensions
   should be HEALTHY. This is the most important baseline scenario.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

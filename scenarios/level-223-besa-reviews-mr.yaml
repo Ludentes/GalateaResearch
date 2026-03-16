@@ -4,6 +4,7 @@ description: >
   Besa should use glab to view the MR, review the diff, and
   provide constructive feedback.
 agent: besa
+model: sonnet
 type: dogfood
 setup:
   clear_ticks: true

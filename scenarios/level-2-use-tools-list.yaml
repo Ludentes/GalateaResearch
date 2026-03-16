@@ -1,5 +1,6 @@
 scenario: "L2: Use list_files tool to explore project"
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
 steps:

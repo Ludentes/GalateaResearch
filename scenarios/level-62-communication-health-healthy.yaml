@@ -3,6 +3,7 @@ description: >
   A message arriving with no prior communication gaps and no recent outbound
   should show communication_health HEALTHY. This is the baseline state.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

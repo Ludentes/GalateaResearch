@@ -5,6 +5,7 @@ description: >
   is correct current behavior: the safety guardrail in Claude Code's
   PreToolUse hook blocks dangerous operations regardless of routing.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

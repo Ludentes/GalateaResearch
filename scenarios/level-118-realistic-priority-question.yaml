@@ -3,6 +3,7 @@ description: >
   Besa receives a realistic production message about sprint priorities.
   Tests PM agent with real-world project management language.
 agent: besa
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

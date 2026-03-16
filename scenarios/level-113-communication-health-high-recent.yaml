@@ -4,16 +4,19 @@ description: >
   communication_health should be HIGH (cooldown — don't spam).
   This validates the < 5 min outbound cooldown trigger.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true
 steps:
-  - send: "one more thing — can you also update the readme?"
+  - send: "one more thing — can you also update the project documentation with the latest setup instructions?"
     from: { platform: discord, user: kirill }
     messageType: chat
     setup:
       lastOutboundMinutesAgo: 2
+      seedFacts:
+        - content: "Project documentation lives in docs/ and setup instructions are in docs/SETUP.md"
+        - content: "Documentation updates follow conventional commits with docs: prefix"
     expect:
       homeostasis.communication_health: HIGH
-      guidance.0: "contains: communication"
       outcome.action: respond

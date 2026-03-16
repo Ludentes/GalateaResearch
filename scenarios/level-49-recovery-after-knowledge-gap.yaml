@@ -3,6 +3,7 @@ description: >
   A message composed entirely of fabricated terms should trigger LOW
   knowledge_sufficiency — the agent has no facts about these terms.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

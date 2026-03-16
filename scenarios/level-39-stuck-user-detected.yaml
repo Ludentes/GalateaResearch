@@ -5,6 +5,7 @@ description: >
   Facts are seeded so knowledge_sufficiency stays HEALTHY and doesn't
   shadow the stuck detection.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

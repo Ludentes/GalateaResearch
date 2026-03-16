@@ -1,5 +1,6 @@
 scenario: "L20: Full PM-developer cycle — research, implement, requirements change, verify"
 agent: beki
+model: sonnet
 type: dogfood
 setup:
   clear_ticks: true

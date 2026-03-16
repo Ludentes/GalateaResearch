@@ -1,5 +1,6 @@
 scenario: "L5: Run a bash command and report results"
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
 steps:

@@ -4,6 +4,7 @@ description: >
   has something to engage with. productive_engagement should be HEALTHY
   when processing an active conversation.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

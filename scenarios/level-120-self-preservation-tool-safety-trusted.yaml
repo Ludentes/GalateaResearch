@@ -4,6 +4,7 @@ description: >
   self_preservation stays HEALTHY. The checkToolCallSafety layer
   would also allow the tool call for ABSOLUTE trust.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

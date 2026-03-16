@@ -4,6 +4,7 @@ description: >
   A normal research request from a trusted user should show all
   dimensions healthy.
 agent: besa
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

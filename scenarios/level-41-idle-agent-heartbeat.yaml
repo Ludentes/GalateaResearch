@@ -3,6 +3,7 @@ description: >
   When a heartbeat fires with no pending messages and no assigned task,
   productive_engagement drops to LOW. Agent should be idle.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

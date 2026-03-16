@@ -3,6 +3,7 @@ description: >
   After designing the landing page, Kirill asks Besa to create GitLab issues
   and assign implementation tasks to Beki.
 agent: besa
+model: sonnet
 type: dogfood
 setup:
   clear_ticks: true

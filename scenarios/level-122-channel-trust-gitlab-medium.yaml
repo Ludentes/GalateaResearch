@@ -5,6 +5,7 @@ description: >
   should trigger LOW self_preservation because MEDIUM trust is not
   enough to bypass safety.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

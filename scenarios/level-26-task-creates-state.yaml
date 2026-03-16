@@ -4,6 +4,7 @@ description: >
   should record a TaskState with the correct type derived from routing.
   Validates that delegation actually tracks work, not just fires-and-forgets.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

@@ -4,6 +4,7 @@ description: >
   (priority 1) are LOW, the safety guidance must appear first.
   This validates the priority ordering in the guidance system.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

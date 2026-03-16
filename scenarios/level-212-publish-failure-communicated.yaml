@@ -4,6 +4,7 @@ description: >
   status update should mention the failure so the assigner can act on it.
   This tests resilience — the task itself succeeds, only publishing fails.
 agent: beki
+model: sonnet
 setup:
   clear_ticks: true
 steps:

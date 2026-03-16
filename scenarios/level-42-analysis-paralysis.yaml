@@ -4,6 +4,7 @@ description: >
   available, knowledge_application goes HIGH signaling analysis paralysis.
   Facts must be seeded so the assessor sees "has knowledge but not applying it."
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

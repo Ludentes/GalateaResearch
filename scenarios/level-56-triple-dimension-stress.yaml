@@ -4,6 +4,7 @@ description: >
   Three dimensions fire simultaneously: self_preservation LOW,
   knowledge_sufficiency LOW, communication_health LOW.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

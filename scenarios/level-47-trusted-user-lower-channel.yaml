@@ -4,6 +4,7 @@ description: >
   Resolved trust is HIGH (min of ABSOLUTE, HIGH). Self-preservation
   drops to LOW because HIGH trust still flags for confirmation.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

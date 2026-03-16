@@ -1,5 +1,6 @@
 scenario: "L15: Bug report → investigate → explain root cause"
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

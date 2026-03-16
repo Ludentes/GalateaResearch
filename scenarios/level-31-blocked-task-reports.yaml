@@ -4,6 +4,7 @@ description: >
   the agent should report the blocker rather than producing garbage output.
   This tests the agent's ability to recognize and communicate limitations.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

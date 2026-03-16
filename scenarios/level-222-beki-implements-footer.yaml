@@ -3,6 +3,7 @@ description: >
   Kirill directly assigns Beki the footer. Tests that Beki can take
   a task from a non-PM source and still follow the full workflow.
 agent: beki
+model: sonnet
 type: dogfood
 setup:
   clear_ticks: true

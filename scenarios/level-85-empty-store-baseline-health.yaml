@@ -7,6 +7,7 @@ description: >
   Short greetings also return LOW because all words are too short to
   produce meaningful stems, falling through to the empty-facts path.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

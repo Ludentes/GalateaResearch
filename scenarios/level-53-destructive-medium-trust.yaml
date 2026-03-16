@@ -4,6 +4,7 @@ description: >
   a destructive command. min(HIGH, MEDIUM) = MEDIUM. Self-preservation
   fires with medium trust context.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

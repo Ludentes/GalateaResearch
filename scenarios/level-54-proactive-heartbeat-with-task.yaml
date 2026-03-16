@@ -3,6 +3,7 @@ description: >
   When a heartbeat fires while the agent has an active task,
   productive_engagement should be HEALTHY (not LOW) since work is assigned.
 agent: beki
+model: haiku
 setup:
   clear_ticks: true
   clear_state: true

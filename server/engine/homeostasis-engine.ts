@@ -159,6 +159,11 @@ function assessKnowledgeSufficiencyL1(ctx: AgentContext): DimensionState {
   const cfg = getHomeostasisConfig()
   const facts = ctx.retrievedFacts || []
 
+  // No message to assess (heartbeat/idle) → nothing to be insufficient about
+  if (!ctx.currentMessage || ctx.currentMessage.length === 0) {
+    return "HEALTHY"
+  }
+
   if (
     facts.length === 0 &&
     ctx.currentMessage.length > cfg.knowledge_message_min_length
@@ -406,42 +411,20 @@ export function assessDimensions(ctx: AgentContext): HomeostasisState {
 // ============ L2: LLM Semantic Assessment ============
 
 import { generateText } from "ai"
-import { createOllamaModel } from "../providers/ollama"
-import type { AssessmentMethod } from "./types"
 
 export async function assessDimensionsAsync(
   ctx: AgentContext,
 ): Promise<HomeostasisState> {
+  // Start with L1 baseline (shared logic, no duplication)
+  const l1 = assessDimensions(ctx)
   const sessionId = ctx.sessionId
   const cfg = getHomeostasisConfig()
 
-  // L1 dimensions (same as sync version, except knowledge_sufficiency promoted to L2)
-  let knowledge_sufficiency: DimensionState =
-    assessL0Cached("knowledge_sufficiency", sessionId) ??
-    assessKnowledgeSufficiencyL1(ctx)
-  let knowledgeMethod: AssessmentMethod = "computed"
-  const progress_momentum =
-    assessL0Cached("progress_momentum", sessionId) ??
-    assessProgressMomentumL1(ctx)
-  const communication_health =
-    assessL0Cached("communication_health", sessionId) ??
-    assessCommunicationHealthL1(ctx)
-  const productive_engagement =
-    assessL0Cached("productive_engagement", sessionId) ??
-    assessProductiveEngagementL1(ctx)
-  const self_preservation =
-    assessL0Cached("self_preservation", sessionId) ??
-    assessSelfPreservationL1(ctx)
+  const method: HomeostasisState["assessment_method"] = {
+    ...l1.assessment_method,
+  }
 
-  // L2 dimensions — try LLM, fall back to L1 heuristic
-  let certainty_alignment: DimensionState =
-    assessL0Cached("certainty_alignment", sessionId) ?? "HEALTHY"
-  let knowledge_application: DimensionState =
-    assessL0Cached("knowledge_application", sessionId) ??
-    assessKnowledgeApplicationL1(ctx)
-  let certaintyMethod: AssessmentMethod = "computed"
-  let applicationMethod: AssessmentMethod = "computed"
-
+  // L2 certainty_alignment + knowledge_application via Ollama
   if (cfg.l2?.enabled) {
     const [ca, ka] = await Promise.all([
       assessL0Cached("certainty_alignment", sessionId)
@@ -452,12 +435,14 @@ export async function assessDimensionsAsync(
         : assessL2Semantic(ctx, "knowledge_application"),
     ])
     if (ca) {
-      certainty_alignment = ca
-      certaintyMethod = "llm"
+      l1.certainty_alignment = ca
+      method.certainty_alignment = "llm"
+      updateCache("certainty_alignment", sessionId, ca)
     }
     if (ka) {
-      knowledge_application = ka
-      applicationMethod = "llm"
+      l1.knowledge_application = ka
+      method.knowledge_application = "llm"
+      updateCache("knowledge_application", sessionId, ka)
     }
   }
 
@@ -465,42 +450,20 @@ export async function assessDimensionsAsync(
   // Only if not already cached and message is long enough to warrant it
   if (
     !assessL0Cached("knowledge_sufficiency", sessionId) &&
+    ctx.currentMessage &&
     ctx.currentMessage.length > cfg.knowledge_message_min_length
   ) {
     const ks = await assessKnowledgeSufficiencyL2(ctx)
     if (ks !== null) {
-      knowledge_sufficiency = ks
-      knowledgeMethod = "llm"
+      l1.knowledge_sufficiency = ks
+      method.knowledge_sufficiency = "llm"
+      updateCache("knowledge_sufficiency", sessionId, ks)
     }
   }
 
-  // Update all caches
-  updateCache("knowledge_sufficiency", sessionId, knowledge_sufficiency)
-  updateCache("progress_momentum", sessionId, progress_momentum)
-  updateCache("communication_health", sessionId, communication_health)
-  updateCache("productive_engagement", sessionId, productive_engagement)
-  updateCache("certainty_alignment", sessionId, certainty_alignment)
-  updateCache("knowledge_application", sessionId, knowledge_application)
-  updateCache("self_preservation", sessionId, self_preservation)
-
   return {
-    knowledge_sufficiency,
-    certainty_alignment,
-    progress_momentum,
-    communication_health,
-    productive_engagement,
-    knowledge_application,
-    self_preservation,
-    assessed_at: new Date(),
-    assessment_method: {
-      knowledge_sufficiency: knowledgeMethod,
-      certainty_alignment: certaintyMethod,
-      progress_momentum: "computed",
-      communication_health: "computed",
-      productive_engagement: "computed",
-      knowledge_application: applicationMethod,
-      self_preservation: "computed",
-    },
+    ...l1,
+    assessment_method: method,
   }
 }
 
@@ -510,8 +473,7 @@ async function assessL2Semantic(
 ): Promise<DimensionState | null> {
   const cfg = getHomeostasisConfig()
   try {
-    const ollamaUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434"
-    const model = createOllamaModel(cfg.l2.model, ollamaUrl, { think: false })
+    const model = createClaudeCodeModel("haiku")
 
     const prompt = buildL2Prompt(dimension, ctx)
     const result = await generateText({
