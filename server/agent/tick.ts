@@ -799,6 +799,7 @@ async function tickInner(
         durationMs: Date.now() - tickStart,
         diagnostics: buildDiagnostics({
           modelUsed: (msg.metadata?.modelOverride as string) || config.model,
+          providerUsed: "claude-code",
           factsRetrieved: retrievedFacts.length,
           escalation: escalation
             ? {
@@ -822,6 +823,7 @@ async function tickInner(
     let loopToolNames: string[] = []
     let loopCostUsd: number | undefined
     let executionAdapter: "claude-code" | "direct-response" = "direct-response"
+    let usedProvider: string | undefined
 
     const providerOverride = msg.metadata?.providerOverride as
       | string
@@ -839,6 +841,7 @@ async function tickInner(
       if (config.provider === "claude-code") {
         // Agent SDK direct path — uses built-in tools, session persistence
         executionAdapter = "claude-code"
+        usedProvider = "claude-code"
         try {
           // Build conversation history from operational context
           const ccHistory = opCtx.recentHistory
@@ -885,7 +888,10 @@ async function tickInner(
       } else {
         // AI SDK agent loop — for ollama, openrouter, etc.
         try {
-          const { model } = getModelWithFallback()
+          const { model, modelName } = getModelWithFallback()
+          usedProvider = modelName.includes(":")
+            ? modelName.split(":")[0]
+            : config.provider
 
           // Build history from operational context (exclude the message we just added)
           const history = opCtx.recentHistory
@@ -1036,6 +1042,7 @@ async function tickInner(
         },
         durationMs: Date.now() - tickStart,
         diagnostics: buildDiagnostics({
+          providerUsed: usedProvider,
           factsRetrieved: retrievedFacts.length,
         }),
       })
