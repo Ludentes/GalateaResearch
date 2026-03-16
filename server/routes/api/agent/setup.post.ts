@@ -32,11 +32,13 @@ export default defineEventHandler(async (event) => {
     throw new HTTPError("Missing required field: agentId", { status: 400 })
   }
 
-  // Resolve per-agent operational memory path from spec
+  // Resolve per-agent paths from spec
   let opPath: string | undefined
+  let knowledgeStorePath = "data/memory/entries.jsonl"
   try {
     const spec = await loadAgentSpec(body.agentId)
     opPath = spec.operational_memory
+    if (spec.knowledge_store) knowledgeStorePath = spec.knowledge_store
   } catch (err) {
     console.warn(`[setup] Agent spec not found for ${body.agentId}:`, err)
   }
@@ -88,7 +90,6 @@ export default defineEventHandler(async (event) => {
   }
 
   if (body.seedFacts?.length) {
-    const storePath = "data/memory/entries.jsonl"
     const entries = body.seedFacts.map((f, i) => ({
       id: `seed-${Date.now()}-${i}`,
       type: "fact" as const,
@@ -98,7 +99,7 @@ export default defineEventHandler(async (event) => {
       entities: [],
       extractedAt: new Date().toISOString(),
     }))
-    await appendEntries(entries, storePath)
+    await appendEntries(entries, knowledgeStorePath)
     applied.push(`seedFacts=${entries.length}`)
   }
 

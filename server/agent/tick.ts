@@ -258,13 +258,12 @@ async function tickInner(
   const tickId = crypto.randomUUID()
   const tickStart = Date.now()
   const statePath = opts?.statePath
-  const storePath = opts?.storePath ?? "data/memory/entries.jsonl"
   const optsOpContextPath = opts?.opContextPath
 
   // Stage 1: Load agent spec + operational context + self-model
   const selfModel = await checkSelfModel()
 
-  // Load agent spec FIRST — we need operational_memory path for context
+  // Load agent spec FIRST — we need operational_memory and knowledge_store paths
   let spec: AgentSpec | undefined
   let toolsContext: string | undefined
   let specTrust: AgentSpec["trust"] | undefined
@@ -276,10 +275,11 @@ async function tickInner(
     console.warn(`[tick] Agent spec not found for ${agentId}:`, err)
   }
 
-  // Use per-agent operational memory path from spec to prevent
-  // cross-agent session contamination (shared file = shared tasks/sessions)
+  // Use per-agent paths from spec to prevent cross-agent contamination
   const agentOpPath = optsOpContextPath ?? spec?.operational_memory ?? undefined
   const opCtx = await loadOperationalContext(agentOpPath)
+  const storePath =
+    opts?.storePath ?? spec?.knowledge_store ?? "data/memory/entries.jsonl"
 
   // Build diagnostics closure — captures paths used for this tick
   const buildDiagnostics = (extra?: {

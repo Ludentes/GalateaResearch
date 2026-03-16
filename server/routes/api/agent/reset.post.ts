@@ -44,9 +44,11 @@ export default defineEventHandler(async (event) => {
   // 3. Reset operational context (recentHistory, tasks, carryover)
   // Use per-agent path from spec to avoid cross-agent contamination
   let opPath: string | undefined
+  let knowledgeStorePath = "data/memory/entries.jsonl"
   try {
     const spec = await loadAgentSpec(agentId)
     opPath = spec.operational_memory
+    if (spec.knowledge_store) knowledgeStorePath = spec.knowledge_store
   } catch (err) {
     console.warn(`[reset] Agent spec not found for ${agentId}:`, err)
   }
@@ -71,7 +73,7 @@ export default defineEventHandler(async (event) => {
   // 7. Optionally truncate knowledge store
   if (body.clearKnowledge) {
     const { writeFile } = await import("node:fs/promises")
-    await writeFile("data/memory/entries.jsonl", "", "utf-8")
+    await writeFile(knowledgeStorePath, "", "utf-8")
     cleared.push("knowledgeStore")
   }
 
