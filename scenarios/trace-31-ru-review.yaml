@@ -3,6 +3,7 @@ agent: besa
 model: haiku
 type: dogfood
 setup:
+  l2: true
   clear_ticks: true
 steps:
   - send: "проверь МР !42 по авторизации"

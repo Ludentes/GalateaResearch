@@ -218,6 +218,8 @@ async function executeStep(
       }
     }
   } else {
+    // Skip L2 LLM assessments unless scenario explicitly opts in with l2: true
+    const needsL2 = scenario.setup?.l2 === true
     const injectBody = JSON.stringify({
       agentId: scenario.agent,
       content: step.send,
@@ -226,6 +228,7 @@ async function executeStep(
       messageType: step.messageType,
       ...(step.provider ? { provider: step.provider } : {}),
       ...(scenario.model ? { model: scenario.model } : {}),
+      ...(!needsL2 ? { skipL2: true } : {}),
     })
 
     try {

@@ -61,6 +61,8 @@ interface InjectBody {
   provider?: string
   /** Override LLM model for this message (e.g. "sonnet" for dogfooding) */
   model?: string
+  /** Skip L2 LLM assessments in homeostasis (use L1 heuristics only) */
+  skipL2?: boolean
 }
 
 export function validateInjectBody(body: InjectBody): string | null {
@@ -109,6 +111,7 @@ export function buildChannelMessage(body: InjectBody): ChannelMessage {
     metadata: {
       ...(body.provider ? { providerOverride: body.provider } : {}),
       ...(body.model ? { modelOverride: body.model } : {}),
+      ...(body.skipL2 ? { skipL2: true } : {}),
     },
   }
 }

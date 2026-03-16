@@ -3,6 +3,7 @@ agent: beki
 model: haiku
 type: dogfood
 setup:
+  l2: true
   clear_ticks: true
 steps:
   - send: "Read the file server/routes/api/agent/inject.post.ts and explain what HTTP method it handles and what validation it performs on the request body."

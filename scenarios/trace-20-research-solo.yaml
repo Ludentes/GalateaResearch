@@ -4,6 +4,7 @@ agent: besa
 model: haiku
 type: dogfood
 setup:
+  l2: true
   clear_ticks: true
 steps:
   - send: "research auth options for the mobile app"

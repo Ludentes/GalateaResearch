@@ -8,6 +8,7 @@ agent: besa
 type: dogfood
 model: sonnet
 setup:
+  l2: true
   clear_ticks: true
   clear_state: true
 steps:

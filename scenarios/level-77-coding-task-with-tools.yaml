@@ -7,6 +7,7 @@ agent: beki
 model: sonnet
 type: dogfood
 setup:
+  l2: true
   clear_ticks: true
   clear_state: true
 steps:

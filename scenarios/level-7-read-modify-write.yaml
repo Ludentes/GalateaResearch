@@ -3,6 +3,7 @@ agent: beki
 model: haiku
 type: dogfood
 setup:
+  l2: true
   clear_ticks: true
 steps:
   - send: "Read the file vite.config.ts, then tell me how many Vite plugins are configured and what their names are."

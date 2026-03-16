@@ -41,6 +41,8 @@ export interface ScenarioSetup {
   clear_ticks?: boolean
   clear_state?: boolean
   clear_knowledge?: boolean
+  /** Enable L2 LLM assessments in homeostasis (default: false for speed) */
+  l2?: boolean
 }
 
 export interface Scenario {

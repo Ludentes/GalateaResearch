@@ -405,7 +405,10 @@ async function tickInner(
     }
 
     t0 = Date.now()
-    const homeostasis = await assessDimensionsAsync(agentContext)
+    const skipL2 = msg.metadata?.skipL2 === true
+    const homeostasis = skipL2
+      ? assessDimensions(agentContext)
+      : await assessDimensionsAsync(agentContext)
     timings.homeostasisMs = Date.now() - t0
     const homeostasisForContext: Record<string, string> = {}
     for (const [k, v] of Object.entries(homeostasis)) {

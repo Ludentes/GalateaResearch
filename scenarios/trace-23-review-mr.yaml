@@ -4,6 +4,7 @@ agent: besa
 model: haiku
 type: dogfood
 setup:
+  l2: true
   clear_ticks: true
 steps:
   - send: "review Beki's MR !42"

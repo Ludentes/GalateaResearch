@@ -3,6 +3,7 @@ agent: beki
 model: haiku
 type: dogfood
 setup:
+  l2: true
   clear_ticks: true
 steps:
   - send: "реализуй экран настроек #101"

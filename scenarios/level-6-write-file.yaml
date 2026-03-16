@@ -3,6 +3,7 @@ agent: beki
 model: haiku
 type: dogfood
 setup:
+  l2: true
   clear_ticks: true
 steps:
   - send: "Create a file at /tmp/galatea-test-workspace/src/utils.ts with a function called 'capitalize' that takes a string and returns it capitalized"
