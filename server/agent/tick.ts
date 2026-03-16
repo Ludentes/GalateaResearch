@@ -399,6 +399,12 @@ async function tickInner(
       // Skip /etc/gitconfig — snap-confined glab can't read it
       process.env.GIT_CONFIG_NOSYSTEM = "1"
 
+      // Set agent-specific Claude config directory (skills, plugins, settings)
+      const prevClaudeConfigDir = process.env.CLAUDE_CONFIG_DIR ?? null
+      if (spec?.claude_config_dir) {
+        process.env.CLAUDE_CONFIG_DIR = spec.claude_config_dir
+      }
+
       const workContext = toolsContext
         ? {
             ...context,
@@ -551,6 +557,13 @@ async function tickInner(
         } else {
           delete process.env.GITLAB_TOKEN
         }
+      }
+
+      // Restore CLAUDE_CONFIG_DIR
+      if (prevClaudeConfigDir) {
+        process.env.CLAUDE_CONFIG_DIR = prevClaudeConfigDir
+      } else {
+        delete process.env.CLAUDE_CONFIG_DIR
       }
 
       if (usingWorktree) {
