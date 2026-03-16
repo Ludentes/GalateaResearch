@@ -99,7 +99,7 @@ export async function assembleContext(
   let homeostasisGuidanceIncluded = false
   if (agentContext) {
     const dimensions = assessDimensions(agentContext)
-    const guidance = getGuidance(dimensions)
+    const guidance = getGuidance(dimensions, agentContext)
     if (guidance) {
       sections.push({
         name: "SELF-REGULATION",

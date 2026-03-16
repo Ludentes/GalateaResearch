@@ -33,6 +33,7 @@ import { runClaudeCodeRespond } from "./claude-code-respond"
 import type { CodingToolAdapter } from "./coding-adapter/types"
 import { executeWorkArc } from "./coding-adapter/work-arc"
 import { dispatchMessage } from "./dispatcher"
+import { checkForEscalation, cleanupEscalation } from "./escalation"
 import {
   addTask,
   getActiveTask,
@@ -43,7 +44,12 @@ import {
 } from "./operational-memory"
 import { classifyWithLLM, inferRouting } from "./task-type-inference"
 import { createAllTools } from "./tools"
-import type { ChannelMessage, SelfModel, TickResult } from "./types"
+import type {
+  ChannelMessage,
+  ChannelName,
+  SelfModel,
+  TickResult,
+} from "./types"
 import { getTextContent } from "./types"
 import { getDiffStat } from "./utils"
 
@@ -292,6 +298,11 @@ async function tickInner(
       (t) => t.status === "in_progress" || t.status === "assigned",
     )
 
+    // Find any blocked task with a pending escalation
+    const escalationTask = opCtx.tasks.find(
+      (t) => t.status === "blocked" && t.escalatedAt,
+    )
+
     const agentContext: AgentContext = {
       sessionId: `tick-${Date.now()}`,
       currentMessage: textContent,
@@ -313,6 +324,13 @@ async function tickInner(
       sourceIdentity: msg.from,
       sourceTrustLevel: specTrust
         ? resolveTrust(specTrust, msg.channel, msg.from)
+        : undefined,
+      // Escalation state
+      pendingEscalation: escalationTask
+        ? {
+            category: escalationTask.escalationCategory ?? "blocked",
+            escalatedAt: escalationTask.escalatedAt!,
+          }
         : undefined,
     }
 
@@ -390,10 +408,11 @@ async function tickInner(
       let workDir = baseDir
       let usingWorktree = false
       try {
-        execSync(
-          `git worktree add "${worktreePath}" -b "${worktreeBranch}"`,
-          { cwd: baseDir, encoding: "utf-8", timeout: 10_000 },
-        )
+        execSync(`git worktree add "${worktreePath}" -b "${worktreeBranch}"`, {
+          cwd: baseDir,
+          encoding: "utf-8",
+          timeout: 10_000,
+        })
         workDir = worktreePath
         usingWorktree = true
         console.log(`[tick] Created worktree at ${worktreePath}`)
@@ -415,7 +434,6 @@ async function tickInner(
             timeout: 5000,
           })
         }
-
       } catch (wtErr) {
         console.warn(
           "[tick] Worktree creation failed, using main dir:",
@@ -431,6 +449,12 @@ async function tickInner(
       }
       // Skip /etc/gitconfig — snap-confined glab can't read it
       process.env.GIT_CONFIG_NOSYSTEM = "1"
+
+      // Set agent-specific Claude config directory (skills, plugins, settings)
+      const prevClaudeConfigDir = process.env.CLAUDE_CONFIG_DIR ?? null
+      if (spec?.claude_config_dir) {
+        process.env.CLAUDE_CONFIG_DIR = spec.claude_config_dir
+      }
 
       const workContext = toolsContext
         ? {
@@ -490,6 +514,44 @@ async function tickInner(
         opCtx.carryover.push(
           `SDK session ${arcResult.status}: ${arcResult.text}`,
         )
+      }
+
+      // ---------------------------------------------------------------
+      // ESCALATION check — agent may have written an escalation file
+      // ---------------------------------------------------------------
+      const escalation = await checkForEscalation(workDir, task.id)
+      if (escalation) {
+        task.status = "blocked"
+        task.escalatedAt = new Date().toISOString()
+        task.escalationCategory = escalation.category
+        opCtx.blockers.push(
+          `Escalated (${escalation.category}): ${escalation.reason}`,
+        )
+
+        // Dispatch escalation message to the configured target
+        if (spec?.escalation_target) {
+          const escalationMsg: ChannelMessage = {
+            id: `escalate-${msg.id}`,
+            channel: spec.escalation_target.channel as ChannelName,
+            direction: "outbound",
+            routing: { replyToId: msg.id },
+            from: agentId,
+            content: `**Escalation from ${spec.agent.name}** (${escalation.category}):\n\n${escalation.reason}\n\nTask: ${task.description}`,
+            messageType: "status_update",
+            receivedAt: new Date().toISOString(),
+            metadata: {
+              escalation: true,
+              category: escalation.category,
+            },
+          }
+          try {
+            await dispatchMessage(escalationMsg)
+          } catch {
+            console.warn("[tick] Failed to dispatch escalation message")
+          }
+        }
+
+        await cleanupEscalation(workDir, task.id)
       }
 
       // ---------------------------------------------------------------
@@ -595,6 +657,13 @@ async function tickInner(
         }
       }
 
+      // Restore CLAUDE_CONFIG_DIR
+      if (prevClaudeConfigDir) {
+        process.env.CLAUDE_CONFIG_DIR = prevClaudeConfigDir
+      } else {
+        delete process.env.CLAUDE_CONFIG_DIR
+      }
+
       if (usingWorktree) {
         try {
           execSync(`git worktree remove --force "${worktreePath}"`, {
@@ -650,8 +719,9 @@ async function tickInner(
         delegation: {
           adapter: adapter.name,
           taskId: task.id,
-          status:
-            arcResult.status === "completed"
+          status: escalation
+            ? "failed"
+            : arcResult.status === "completed"
               ? "completed"
               : arcResult.status === "blocked"
                 ? "failed"
@@ -662,6 +732,13 @@ async function tickInner(
                     | "timeout"),
           transcript: arcResult.transcript,
           costUsd: arcResult.costUsd,
+          escalation: escalation
+            ? {
+                category: escalation.category,
+                reason: escalation.reason,
+                target: spec?.escalation_target?.entity,
+              }
+            : undefined,
         },
         timestamp: new Date().toISOString(),
       }
@@ -681,9 +758,8 @@ async function tickInner(
         execution: {
           adapter: "claude-code",
           sessionResumed,
-          toolCalls: arcResult.transcript.filter(
-            (e) => e.role === "tool_call",
-          ).length,
+          toolCalls: arcResult.transcript.filter((e) => e.role === "tool_call")
+            .length,
           toolNames: [
             ...new Set(
               arcResult.transcript

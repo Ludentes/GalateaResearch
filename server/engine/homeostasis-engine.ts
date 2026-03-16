@@ -682,7 +682,10 @@ export function loadGuidanceText(): GuidanceConfig {
   return _guidanceCache
 }
 
-export function getGuidance(state: HomeostasisState): string {
+export function getGuidance(
+  state: HomeostasisState,
+  ctx?: AgentContext,
+): string {
   const guidance = loadGuidanceText()
   const imbalanced: Array<{
     dimension: Dimension
@@ -700,6 +703,23 @@ export function getGuidance(state: HomeostasisState): string {
         state: dimState as DimensionState,
         entry: dimGuidance,
       })
+    }
+  }
+
+  // Escalation-aware override: if progress is LOW but agent has a pending
+  // escalation, replace generic "ask for help" with "wait for response"
+  if (ctx?.pendingEscalation) {
+    const progressIdx = imbalanced.findIndex(
+      (g) => g.dimension === "progress_momentum" && g.state === "LOW",
+    )
+    if (progressIdx !== -1) {
+      imbalanced[progressIdx] = {
+        ...imbalanced[progressIdx],
+        entry: {
+          ...imbalanced[progressIdx].entry,
+          primary: `**Escalation pending (${ctx.pendingEscalation.category}).** You've already escalated this to a human. Do not re-escalate or retry the same approach.\n- Wait for a response before resuming this task\n- If you have other assigned tasks, work on those instead\n- If idle, report your status and wait`,
+        },
+      }
     }
   }
 

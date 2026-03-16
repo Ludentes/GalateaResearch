@@ -8,6 +8,7 @@ agent:
   domain: "Expo / React Native"
 
 workspace: "workspaces/agenttestproject"
+claude_config_dir: "/home/newub/.claude-agents"
 allowed_branches: ["feature/*", "fix/*"]
 
 thresholds:
@@ -38,6 +39,10 @@ trust:
     discord: "high"
     gitlab: "medium"
   default_identity_trust: "none"
+
+escalation_target:
+  entity: "kirill"
+  channel: "discord"
 
 knowledge_store: "data/agents/beki/knowledge/entries.jsonl"
 operational_memory: "data/agents/beki/context.jsonl"
@@ -89,6 +94,7 @@ workflow_instructions: |
   - If push or MR creation fails, report the exact error — never fail silently
   - Never claim completion without evidence (tests passing, lint clean)
   - If stuck, say so — don't produce partial work silently
+  - If you are blocked, lack knowledge, or uncertain about approach, use /escalation to signal that you need human help. Never spin on a problem for more than 2 failed attempts — escalate.
   - Keep reports under 5 sentences
 
   ### Reporting

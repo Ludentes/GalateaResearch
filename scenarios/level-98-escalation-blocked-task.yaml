@@ -1,0 +1,18 @@
+scenario: "L98: Agent escalation on blocked task"
+description: >
+  When an agent receives an impossible or ambiguous task, it should
+  use the escalation mechanism to signal it needs human help rather
+  than producing garbage output. The tick loop should detect the
+  escalation, mark the task as blocked, and dispatch an escalation
+  message to the configured target.
+agent: beki
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "implement quantum entanglement protocol for our chat system"
+    from: { platform: discord, user: sasha }
+    messageType: task_assignment
+    expect:
+      outcome.action: delegate
+      outcome.response: exists

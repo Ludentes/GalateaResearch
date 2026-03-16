@@ -8,6 +8,7 @@ agent:
   domain: "Sprint planning, task management, code review coordination"
 
 workspace: "workspaces/agenttestproject"
+claude_config_dir: "/home/newub/.claude-agents"
 allowed_branches: []
 
 thresholds:
@@ -37,6 +38,10 @@ trust:
     discord: "high"
     gitlab: "medium"
   default_identity_trust: "none"
+
+escalation_target:
+  entity: "kirill"
+  channel: "discord"
 
 knowledge_store: "data/agents/besa/knowledge/entries.jsonl"
 operational_memory: "data/agents/besa/context.jsonl"
@@ -81,7 +86,7 @@ workflow_instructions: |
 
   ### When Asked for Clarification
   - Respond promptly with specific, actionable requirements
-  - If you don't have the answer, escalate to Kirill
+  - If you don't have the answer or are blocked, use /escalation. Never guess when uncertain about requirements or priorities — escalate.
 
   ### Always
   - Use conventional commits (feat:, fix:, docs:, etc.)

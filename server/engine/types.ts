@@ -80,6 +80,12 @@ export interface AgentContext {
   sourceTrustLevel?: TrustLevel
   sourceChannel?: string
   sourceIdentity?: string // who sent the message
+
+  // Escalation state — set when agent has a pending escalation
+  pendingEscalation?: {
+    category: string
+    escalatedAt: string // ISO timestamp
+  }
 }
 
 /**
