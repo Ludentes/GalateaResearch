@@ -1,9 +1,4 @@
-import {
-  defineEventHandler,
-  HTTPError,
-  readBody,
-  setResponseStatus,
-} from "h3"
+import { defineEventHandler, HTTPError, readBody, setResponseStatus } from "h3"
 import { addMessage } from "../../../agent/agent-state"
 import { startCleanupTimer } from "../../../agent/job-store"
 import { tick } from "../../../agent/tick"
@@ -100,11 +95,7 @@ export default defineEventHandler(async (event) => {
     .then(async (result) => {
       // appendTickRecord is fire-and-forget — poll until new record appears
       let record = await readLastTickRecord(tickPath)
-      for (
-        let i = 0;
-        i < 30 && record?.tickId === beforeTick?.tickId;
-        i++
-      ) {
+      for (let i = 0; i < 30 && record?.tickId === beforeTick?.tickId; i++) {
         await new Promise((r) => setTimeout(r, 100))
         record = await readLastTickRecord(tickPath)
       }

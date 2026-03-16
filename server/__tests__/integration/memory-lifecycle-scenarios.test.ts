@@ -16,7 +16,6 @@ import {
   addToQueue,
   cleanupStale,
   getPendingItems,
-  resolveItem,
 } from "../../memory/curation-queue"
 import { runDecay } from "../../memory/decay"
 import { recordOutcome } from "../../memory/feedback-loop"

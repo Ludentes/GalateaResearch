@@ -218,7 +218,7 @@ async function extractCloud(
   // Truncate massive turns to 30K chars (avoid exceeding context)
   const truncated =
     transcript.length > 30000
-      ? transcript.slice(0, 30000) + "\n\n[...truncated...]"
+      ? `${transcript.slice(0, 30000)}\n\n[...truncated...]`
       : transcript
 
   const promptText = `${OPTIMIZED_PROMPT}\n\n---\n\nTRANSCRIPT:\n${truncated}`
@@ -311,7 +311,7 @@ async function main() {
   const llmEntries: KnowledgeEntry[] = []
   let totalTurns = 0
   let factualTurns = 0
-  const totalCost = 0
+  const _totalCost = 0
   const t0 = Date.now()
   const chunkSize = 8
 

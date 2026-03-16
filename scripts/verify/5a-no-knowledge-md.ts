@@ -1,5 +1,5 @@
+import { existsSync, mkdirSync, rmSync } from "node:fs"
 import { ollama } from "ai-sdk-ollama"
-import { existsSync, mkdirSync, rmSync } from "fs"
 import { runExtraction } from "../../server/memory/extraction-pipeline"
 
 ;(async () => {
@@ -7,8 +7,8 @@ import { runExtraction } from "../../server/memory/extraction-pipeline"
   if (existsSync(testDir)) rmSync(testDir, { recursive: true })
   mkdirSync(testDir, { recursive: true })
 
-  const storePath = testDir + "/entries.jsonl"
-  const mdPath = testDir + "/knowledge.md"
+  const storePath = `${testDir}/entries.jsonl`
+  const mdPath = `${testDir}/knowledge.md`
 
   await runExtraction({
     transcriptPath: "server/memory/__tests__/fixtures/sample-session.jsonl",

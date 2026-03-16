@@ -176,7 +176,7 @@ async function main() {
     }
   }
 
-  console.log("\n" + "=".repeat(60))
+  console.log(`\n${"=".repeat(60)}`)
   console.log(
     `TOTAL: ${sessions.length} sessions, ${totalTurns} turns, ${totalEntries} new entries`,
   )

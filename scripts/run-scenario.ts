@@ -142,10 +142,9 @@ async function executeStep(
       const pollStart = Date.now()
       let job: any
       while (Date.now() - pollStart < timeoutMs) {
-        const pollRes = await fetch(
-          `${BASE_URL}/api/agent/jobs/${jobId}`,
-          { signal: AbortSignal.timeout(5000) },
-        )
+        const pollRes = await fetch(`${BASE_URL}/api/agent/jobs/${jobId}`, {
+          signal: AbortSignal.timeout(5000),
+        })
         job = await pollRes.json()
         if (job.status === "completed" || job.status === "failed") break
         await new Promise((r) => setTimeout(r, 1000))

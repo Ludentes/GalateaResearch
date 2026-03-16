@@ -20,7 +20,7 @@ import path from "node:path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { appendEntries } from "../../memory/knowledge-store"
 import type { KnowledgeEntry } from "../../memory/types"
-import { getAgentState, updateAgentState } from "../agent-state"
+import { updateAgentState } from "../agent-state"
 import { setAdapter, tick } from "../tick"
 import type { ChannelMessage } from "../types"
 
@@ -286,7 +286,7 @@ describe("tick() integration — real pipeline", () => {
       STATE_PATH,
     )
 
-    const result = await tick("manual", {
+    const _result = await tick("manual", {
       statePath: STATE_PATH,
       storePath: STORE_PATH,
       opContextPath: OP_CTX_PATH,

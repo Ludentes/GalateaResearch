@@ -1,5 +1,5 @@
+import { existsSync, mkdirSync, rmSync } from "node:fs"
 import { ollama } from "ai-sdk-ollama"
-import { existsSync, mkdirSync, rmSync } from "fs"
 import { assembleContext } from "../../server/memory/context-assembler"
 import { runExtraction } from "../../server/memory/extraction-pipeline"
 import { retrieveRelevantFacts } from "../../server/memory/fact-retrieval"
@@ -8,7 +8,7 @@ import { retrieveRelevantFacts } from "../../server/memory/fact-retrieval"
   const testDir = "/tmp/galatea-e2e-test"
   if (existsSync(testDir)) rmSync(testDir, { recursive: true })
   mkdirSync(testDir, { recursive: true })
-  const storePath = testDir + "/entries.jsonl"
+  const storePath = `${testDir}/entries.jsonl`
 
   // Step 1: Extract knowledge from a transcript
   console.log("=== Step 1: Extract ===")

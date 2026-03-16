@@ -1,4 +1,4 @@
-import { rmSync } from "fs"
+import { rmSync } from "node:fs"
 import { emitEvent } from "../../server/observation/emit"
 import { readEvents } from "../../server/observation/event-store"
 

@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
 import {
-  validateInjectBody,
   buildChannelMessage,
+  validateInjectBody,
 } from "../api/agent/inject.post"
 
 // These unit tests verify the existing validation/build functions still work.

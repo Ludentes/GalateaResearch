@@ -111,7 +111,7 @@ async function main() {
 
   // Write output
   const output = goldItems.map((item) => JSON.stringify(item)).join("\n")
-  await writeFile(OUTPUT_PATH, output + "\n", "utf-8")
+  await writeFile(OUTPUT_PATH, `${output}\n`, "utf-8")
 
   console.log(
     `[build-gold-draft] Wrote ${goldItems.length} items to ${OUTPUT_PATH}`,

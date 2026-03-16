@@ -1,9 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
-import {
-  type ExtractionStrategyConfig,
-  getExtractionStrategyConfig,
-} from "../config"
+import { getExtractionStrategyConfig } from "../config"
 
 describe("getExtractionStrategyConfig", () => {
   it("returns a valid strategy config", () => {

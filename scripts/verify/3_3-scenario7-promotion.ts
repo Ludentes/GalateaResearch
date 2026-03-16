@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, rmSync } from "fs"
+import { existsSync, readFileSync, rmSync } from "node:fs"
 import {
   consolidateToClaudeMd,
   findConsolidationCandidates,

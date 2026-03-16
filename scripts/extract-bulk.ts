@@ -12,10 +12,7 @@ import { extractHeuristic } from "../server/memory/heuristic-extractor"
 import { applyNoveltyGateAndApproval } from "../server/memory/post-extraction"
 import { classifyTurn } from "../server/memory/signal-classifier"
 import { readTranscript } from "../server/memory/transcript-reader"
-import type {
-  KnowledgeEntry,
-  SignalClassification,
-} from "../server/memory/types"
+import type { KnowledgeEntry } from "../server/memory/types"
 
 const claudeDir = process.argv[2]
 const label = process.argv[3] || "unknown"

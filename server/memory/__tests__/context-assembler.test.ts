@@ -219,7 +219,7 @@ describe("Context Assembler", () => {
     ]
     writeFileSync(
       TEST_STORE,
-      entries.map((e) => JSON.stringify(e)).join("\n") + "\n",
+      `${entries.map((e) => JSON.stringify(e)).join("\n")}\n`,
     )
 
     // Simulate retrieval returning only kiosk-related entries
@@ -287,9 +287,9 @@ describe("Context Assembler", () => {
 
     writeFileSync(
       TEST_STORE,
-      [rule1, rule2, fact1, fact2, unrelated]
+      `${[rule1, rule2, fact1, fact2, unrelated]
         .map((e) => JSON.stringify(e))
-        .join("\n") + "\n",
+        .join("\n")}\n`,
     )
 
     // Retrieval returns only kiosk facts — no rules
@@ -344,7 +344,7 @@ describe("Context Assembler", () => {
     ]
     writeFileSync(
       TEST_STORE,
-      entries.map((e) => JSON.stringify(e)).join("\n") + "\n",
+      `${entries.map((e) => JSON.stringify(e)).join("\n")}\n`,
     )
 
     // No retrievedEntries — should include everything

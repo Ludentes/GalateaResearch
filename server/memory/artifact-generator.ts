@@ -517,7 +517,7 @@ function extractTitle(content: string): string {
   // Fallback: truncate at word boundary
   const truncated = content.slice(0, 80)
   const lastSpace = truncated.lastIndexOf(" ")
-  return (lastSpace > 40 ? truncated.slice(0, lastSpace) : truncated) + "…"
+  return `${lastSpace > 40 ? truncated.slice(0, lastSpace) : truncated}…`
 }
 
 function slugify(text: string): string {

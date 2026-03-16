@@ -54,9 +54,7 @@ export interface TestWorld {
 
   // Layer 1: Chat
   sendMessage(content: string): Promise<void>
-  roundTrip(
-    content: string,
-  ): Promise<{
+  roundTrip(content: string): Promise<{
     text: string
     tokenCount: number
     signalClassification?: SignalClassification
@@ -344,9 +342,7 @@ function createTestWorld(config: TestWorldConfig): TestWorld {
       })
     },
 
-    async roundTrip(
-      content: string,
-    ): Promise<{
+    async roundTrip(content: string): Promise<{
       text: string
       tokenCount: number
       signalClassification?: SignalClassification

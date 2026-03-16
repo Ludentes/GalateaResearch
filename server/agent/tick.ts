@@ -331,9 +331,7 @@ async function tickInner(
         ? `${process.cwd()}/${spec.workspace}`
         : undefined
       const baseDir =
-        (msg.metadata?.workspace as string) ??
-        specWorkspace ??
-        process.cwd()
+        (msg.metadata?.workspace as string) ?? specWorkspace ?? process.cwd()
 
       // Create an isolated worktree for coding tasks so the main
       // working directory (and dev server) stays on main undisturbed.
@@ -349,10 +347,11 @@ async function tickInner(
       let workDir = baseDir
       let usingWorktree = false
       try {
-        execSync(
-          `git worktree add "${worktreePath}" -b "${worktreeBranch}"`,
-          { cwd: baseDir, encoding: "utf-8", timeout: 10_000 },
-        )
+        execSync(`git worktree add "${worktreePath}" -b "${worktreeBranch}"`, {
+          cwd: baseDir,
+          encoding: "utf-8",
+          timeout: 10_000,
+        })
         workDir = worktreePath
         usingWorktree = true
         console.log(`[tick] Created worktree at ${worktreePath}`)
@@ -374,7 +373,6 @@ async function tickInner(
             timeout: 5000,
           })
         }
-
       } catch (wtErr) {
         console.warn(
           "[tick] Worktree creation failed, using main dir:",

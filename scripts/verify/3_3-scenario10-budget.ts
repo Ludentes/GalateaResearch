@@ -1,4 +1,4 @@
-import { rmSync } from "fs"
+import { rmSync } from "node:fs"
 import { assembleContext } from "../../server/memory/context-assembler"
 import { appendEntries } from "../../server/memory/knowledge-store"
 
@@ -34,7 +34,7 @@ console.log(
   "All 30 included?",
   ctx.metadata.knowledgeEntries === 30
     ? "YES (budget large enough)"
-    : "NO (budget enforced, only " + ctx.metadata.knowledgeEntries + " fit)",
+    : `NO (budget enforced, only ${ctx.metadata.knowledgeEntries} fit)`,
 )
 
 rmSync("/tmp/galatea-scenario10", { recursive: true })

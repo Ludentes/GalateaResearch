@@ -1,10 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
-import type {
-  KnowledgeEntry,
-  KnowledgeNovelty,
-  KnowledgeOrigin,
-} from "../types"
+import type { KnowledgeEntry } from "../types"
 
 describe("KnowledgeEntry novelty and origin types", () => {
   it("accepts novelty field with valid values", () => {

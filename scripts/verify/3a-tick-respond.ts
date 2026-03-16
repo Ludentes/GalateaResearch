@@ -1,4 +1,4 @@
-import { rmSync } from "fs"
+import { rmSync } from "node:fs"
 import { updateAgentState } from "../../server/agent/agent-state"
 import { tick } from "../../server/agent/tick"
 

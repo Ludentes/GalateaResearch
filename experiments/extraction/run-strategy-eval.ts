@@ -229,7 +229,7 @@ async function main() {
       `${developer}-${strategy}-entries.jsonl`,
     )
     const { writeFileSync: wfs } = await import("node:fs")
-    wfs(dumpPath, entries.map((e) => JSON.stringify(e)).join("\n") + "\n")
+    wfs(dumpPath, `${entries.map((e) => JSON.stringify(e)).join("\n")}\n`)
     console.log(`  Entries saved: ${dumpPath}`)
 
     // Cleanup

@@ -1,10 +1,7 @@
 /**
  * Quick test: re-extract a small chunk with gemma3:12b and compare quality.
  */
-import {
-  ExtractionSchema,
-  extractKnowledge,
-} from "../../server/memory/knowledge-extractor"
+import { extractKnowledge } from "../../server/memory/knowledge-extractor"
 import type { TranscriptTurn } from "../../server/memory/types"
 import { createOllamaModel } from "../../server/providers/ollama"
 

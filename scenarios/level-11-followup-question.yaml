@@ -4,7 +4,7 @@ setup:
   clear_ticks: true
   clear_state: true
 steps:
-  - send: "What testing framework does this project use?"
+  - send: "What testing framework does the Galatea project use? Check the package.json."
     from: { platform: discord, user: sasha }
     messageType: chat
     expect:

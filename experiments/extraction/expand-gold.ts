@@ -148,14 +148,14 @@ async function main() {
       ...t,
       content:
         t.content.length > MAX_TURN_CHARS
-          ? t.content.slice(0, MAX_TURN_CHARS) + "..."
+          ? `${t.content.slice(0, MAX_TURN_CHARS)}...`
           : t.content,
     }))
     const truncatedSignalTurns = signalTurns.map((t) => ({
       ...t,
       content:
         t.content.length > MAX_TURN_CHARS
-          ? t.content.slice(0, MAX_TURN_CHARS) + "..."
+          ? `${t.content.slice(0, MAX_TURN_CHARS)}...`
           : t.content,
     }))
 
@@ -228,7 +228,7 @@ async function main() {
           },
         }
 
-        await appendFile(OUTPUT_PATH, JSON.stringify(goldItem) + "\n")
+        await appendFile(OUTPUT_PATH, `${JSON.stringify(goldItem)}\n`)
         totalAdded++
 
         console.log(

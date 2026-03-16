@@ -1,4 +1,4 @@
-import { rmSync } from "fs"
+import { rmSync } from "node:fs"
 import { retrieveRelevantFacts } from "../../server/memory/fact-retrieval"
 import {
   appendEntries,

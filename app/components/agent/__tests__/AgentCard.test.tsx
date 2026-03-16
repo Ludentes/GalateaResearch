@@ -38,7 +38,6 @@ describe("AgentCard", () => {
       <AgentCard
         id="agent-1"
         name="Test Agent"
-        role="Developer"
         domain="testing"
         health="healthy"
         lastTick="2026-03-14T10:00:00Z"
@@ -57,7 +56,6 @@ describe("AgentCard", () => {
       <AgentCard
         id="agent-1"
         name="Test Agent"
-        role="Developer"
         domain="testing"
         health="unknown"
         lastTick={null}
@@ -73,7 +71,6 @@ describe("AgentCard", () => {
       <AgentCard
         id="agent-1"
         name="Test Agent"
-        role="Developer"
         domain="testing"
         health="healthy"
         lastTick="2026-03-14T10:00:00Z"
@@ -90,7 +87,6 @@ describe("AgentCard", () => {
       <AgentCard
         id="agent-1"
         name="Test Agent"
-        role="Developer"
         domain="testing"
         health="healthy"
         lastTick="2026-03-14T10:00:00Z"
@@ -107,7 +103,6 @@ describe("AgentCard", () => {
       <AgentCard
         id="agent-1"
         name="Test Agent"
-        role="Developer"
         domain="testing"
         health="degraded"
         lastTick="2026-03-14T10:00:00Z"
@@ -125,7 +120,6 @@ describe("AgentCard", () => {
       <AgentCard
         id="agent-1"
         name="Test Agent"
-        role="Developer"
         domain="testing"
         health="healthy"
         lastTick="2026-03-14T10:00:00Z"
