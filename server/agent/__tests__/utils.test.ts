@@ -3,7 +3,7 @@
 import { execSync } from "node:child_process"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { formatDuration, getDiffStat } from "../utils"
 
 describe("formatDuration", () => {
