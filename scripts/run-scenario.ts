@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises"
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises"
 import path from "node:path"
 import YAML from "yaml"
 import { assertStep } from "./scenario-assert"
@@ -441,8 +441,77 @@ function printReport(verdicts: ScenarioVerdict[]): void {
   }
 }
 
+const RESULTS_DIR = path.join(
+  path.dirname(path.dirname(new URL(import.meta.url).pathname)),
+  "scenario-results",
+)
+
+async function saveResults(verdicts: ScenarioVerdict[]): Promise<string> {
+  await mkdir(RESULTS_DIR, { recursive: true })
+  const now = new Date()
+  const ts = now
+    .toISOString()
+    .replace(/[:-]/g, "")
+    .replace("T", "-")
+    .slice(0, 15)
+  const filename = `${ts}.jsonl`
+  const filepath = path.join(RESULTS_DIR, filename)
+  const lines = verdicts.map((v) =>
+    JSON.stringify({
+      ...v,
+      run_at: now.toISOString(),
+      git_sha: process.env.GIT_SHA ?? undefined,
+    }),
+  )
+  await writeFile(filepath, lines.join("\n") + "\n")
+  return filepath
+}
+
+async function showHistory(): Promise<void> {
+  const files = await readdir(RESULTS_DIR).catch(() => [])
+  const jsonlFiles = files.filter((f) => f.endsWith(".jsonl")).sort()
+
+  if (jsonlFiles.length === 0) {
+    console.log("No scenario run history found.")
+    return
+  }
+
+  // Show last 10 runs
+  const recent = jsonlFiles.slice(-10)
+  for (const file of recent) {
+    const content = await readFile(path.join(RESULTS_DIR, file), "utf-8")
+    const verdicts = content
+      .trim()
+      .split("\n")
+      .map((l) => JSON.parse(l) as ScenarioVerdict & { run_at?: string })
+    const total = verdicts.length
+    const passed = verdicts.filter((v) => v.pass).length
+    const failed = total - passed
+    const totalMs = verdicts.reduce((s, v) => s + v.durationMs, 0)
+    const runAt = verdicts[0]?.run_at ?? file
+    const failedNames = verdicts
+      .filter((v) => !v.pass)
+      .map((v) => v.scenario.match(/^L\d+/)?.[0] ?? v.scenario)
+      .join(", ")
+
+    const status =
+      failed === 0
+        ? `${GREEN}${passed}/${total} passed${RESET}`
+        : `${GREEN}${passed}${RESET}/${total}, ${RED}${failed} failed${RESET} (${failedNames})`
+    console.log(
+      `${DIM}${runAt}${RESET}  ${status}  ${DIM}${formatDuration(totalMs)}${RESET}`,
+    )
+  }
+}
+
 async function main(): Promise<void> {
   const args = process.argv.slice(2)
+
+  if (args.includes("--history")) {
+    await showHistory()
+    return
+  }
+
   const regressionOnly = args.includes("--regression")
   traceMode = args.includes("--trace")
   const files = args.filter(
@@ -520,6 +589,10 @@ async function main(): Promise<void> {
   )
 
   printReport(verdicts)
+
+  // Persist results
+  const resultPath = await saveResults(verdicts)
+  process.stderr.write(`${DIM}Results saved: ${resultPath}${RESET}\n`)
 
   const allPass = verdicts.every((v) => v.pass)
   process.exit(allPass ? 0 : 1)
