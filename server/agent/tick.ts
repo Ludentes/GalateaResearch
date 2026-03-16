@@ -44,6 +44,7 @@ import {
 import { classifyWithLLM, inferRouting } from "./task-type-inference"
 import { createAllTools } from "./tools"
 import type { ChannelMessage, SelfModel, TickResult } from "./types"
+import { getTextContent } from "./types"
 import { getDiffStat } from "./utils"
 
 // ---------------------------------------------------------------------------
@@ -247,14 +248,16 @@ async function tickInner(
   if (pending.length > 0) {
     const msg = pickNextMessage(pending) // priority-sorted
 
+    const textContent = getTextContent(msg.content)
+
     // Retrieve facts relevant to the message + sender entity
-    const facts = await retrieveRelevantFacts(msg.content, storePath, {
+    const facts = await retrieveRelevantFacts(textContent, storePath, {
       additionalEntities: [msg.from],
     })
     const retrievedFacts = facts.entries
 
     // Record inbound in operational history (before assessment, so stuck detection sees it)
-    pushHistoryEntry(opCtx, "user", msg.content)
+    pushHistoryEntry(opCtx, "user", textContent)
 
     // Find active task from operational context
     const activeOpTask = opCtx.tasks.find(
@@ -263,7 +266,7 @@ async function tickInner(
 
     const agentContext: AgentContext = {
       sessionId: `tick-${Date.now()}`,
-      currentMessage: msg.content,
+      currentMessage: textContent,
       messageHistory: opCtx.recentHistory.map((h) => ({
         role: h.role,
         content: h.content,
@@ -301,12 +304,12 @@ async function tickInner(
     })
 
     // Smart routing: heuristic first, LLM fallback for low-confidence
-    let routing = inferRouting(msg.content, msg.messageType)
+    let routing = inferRouting(textContent, msg.messageType)
     if (
       routing.confidence === "low" &&
       selfModel.availableProviders.length > 0
     ) {
-      const llmRouting = await classifyWithLLM(msg.content)
+      const llmRouting = await classifyWithLLM(textContent)
       if (llmRouting) {
         routing = llmRouting
       }
@@ -316,9 +319,9 @@ async function tickInner(
     const adapter = await ensureAdapter()
     if (msg.messageType === "task_assignment" && adapter) {
       const existingTask = getActiveTask(opCtx)
-      const task = existingTask ?? addTask(opCtx, msg.content, msg)
+      const task = existingTask ?? addTask(opCtx, textContent, msg)
       if (existingTask) {
-        task.progress.push(`Follow-up: ${msg.content}`)
+        task.progress.push(`Follow-up: ${textContent}`)
       }
       task.status = "in_progress"
 
@@ -406,7 +409,8 @@ async function tickInner(
           }
         : context
       const config = getLLMConfig()
-      const rawDescription = existingTask ? msg.content : task.description
+      // TODO(task-48): pass raw msg.content for multimodal support
+      const rawDescription = existingTask ? textContent : task.description
       const taskDescription = usingWorktree
         ? `${rawDescription}\n\n**Working directory:** You are in an isolated git worktree at \`${workDir}\` on branch \`${worktreeBranch}\`. The main repo is undisturbed.\n\n**When you finish:** Commit your changes, push the branch (\`git push -u origin ${worktreeBranch}\`), and create a merge request. If push or MR creation fails, report the error — do not fail silently.`
         : rawDescription
@@ -694,10 +698,11 @@ async function tickInner(
             .slice(0, -1)
             .map((h) => ({ role: h.role, content: h.content }))
 
+          // TODO(task-47): pass raw msg.content for multimodal support
           const result = await runClaudeCodeRespond({
             agentId,
             systemPrompt,
-            userMessage: msg.content,
+            userMessage: textContent,
             history: ccHistory,
             workingDirectory:
               (msg.metadata?.workspace as string) ?? process.cwd(),
@@ -744,7 +749,7 @@ async function tickInner(
           const loopResult = await runAgentLoop({
             model,
             system: systemPrompt,
-            messages: [{ role: "user", content: msg.content }],
+            messages: [{ role: "user", content: textContent }],
             tools: getAgentTools(agentId, msg.metadata?.workspace as string),
             history,
             config: { maxSteps: 8, timeoutMs: 120_000 },

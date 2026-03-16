@@ -1,5 +1,6 @@
 import { Client, Events, GatewayIntentBits, Partials } from "discord.js"
 import { registerHandler } from "../agent/dispatcher"
+import { getTextContent } from "../agent/types"
 import { getDiscordConfig } from "../engine/config"
 import { handleInboundMessage } from "./handlers"
 
@@ -78,11 +79,11 @@ export async function startDiscordBot(): Promise<Client | null> {
             .fetch(message.routing.threadId)
             .catch(() => null)
           if (thread?.isTextBased() && "send" in thread) {
-            await thread.send(message.content)
+            await thread.send(getTextContent(message.content))
             return
           }
         }
-        await channel.send(message.content)
+        await channel.send(getTextContent(message.content))
       } else {
         console.warn(
           `[discord] Channel ${channelId} not text-based or not found`,
