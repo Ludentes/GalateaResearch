@@ -6,6 +6,7 @@ agent: beki
 setup:
   clear_ticks: true
   clear_state: true
+  clear_knowledge: true
 steps:
   - send: "xyloquark biquadratic eigensubstrate phaselock zygomorphic cryodampener saturating beyondthreshold"
     from: { platform: discord, user: sasha }

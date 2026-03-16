@@ -6,6 +6,7 @@ agent: beki
 setup:
   clear_ticks: true
   clear_state: true
+  clear_knowledge: true
 steps:
   - send: "xyloquark tensor rebalancing — zygomorphic cryosubstrate phaselock drifted past eigenthreshold, biquadratic dampener saturating. Thoughts on recalibrating?"
     from: { platform: discord, user: sasha }

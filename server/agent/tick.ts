@@ -322,9 +322,17 @@ async function tickInner(
       }
       task.status = "in_progress"
 
-      // Only resume a session owned by this task — never use shared lastClaudeSessionId
-      // which can be stale or belong to a concurrent tick
-      const resumeSessionId = task.claudeSessionId
+      // Resume from this task's own session, or from the most recently
+      // completed task (for sequential follow-ups after completion).
+      // Never use shared lastClaudeSessionId which can collide across
+      // concurrent ticks.
+      const resumeSessionId =
+        task.claudeSessionId ??
+        (existingTask
+          ? undefined
+          : opCtx.tasks
+              .filter((t) => t.status === "done" && t.claudeSessionId)
+              .at(-1)?.claudeSessionId)
       const sessionResumed = !!resumeSessionId
       // Use workspace from: message metadata > agent spec > cwd
       const specWorkspace = spec?.workspace
@@ -422,7 +430,7 @@ async function tickInner(
       let knowledgeCount = 0
       if (arcResult.status === "completed") {
         task.status = "done"
-        task.claudeSessionId = undefined
+        // Keep claudeSessionId — a follow-up message may resume this session
         task.progress.push(arcResult.text)
         // Extract knowledge from completed work
         const knowledgeEntries = createWorkKnowledge(task, agentId)
@@ -631,7 +639,16 @@ async function tickInner(
         execution: {
           adapter: "claude-code",
           sessionResumed,
-          toolCalls: 0,
+          toolCalls: arcResult.transcript.filter(
+            (e) => e.role === "tool_call",
+          ).length,
+          toolNames: [
+            ...new Set(
+              arcResult.transcript
+                .filter((e) => e.role === "tool_call" && e.toolName)
+                .map((e) => e.toolName as string),
+            ),
+          ],
         },
         outcome: {
           action: "delegate",

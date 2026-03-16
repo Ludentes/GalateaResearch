@@ -15,6 +15,7 @@ import { getTickRecordPath } from "../../../observation/tick-record"
 interface ResetBody {
   agentId?: string
   clearTicks?: boolean
+  clearKnowledge?: boolean
 }
 
 export default defineEventHandler(async (event) => {
@@ -56,6 +57,13 @@ export default defineEventHandler(async (event) => {
     const tickPath = getTickRecordPath(agentId)
     await rm(tickPath, { force: true })
     cleared.push("tickRecords")
+  }
+
+  // 7. Optionally truncate knowledge store
+  if (body.clearKnowledge) {
+    const { writeFile } = await import("node:fs/promises")
+    await writeFile("data/memory/entries.jsonl", "", "utf-8")
+    cleared.push("knowledgeStore")
   }
 
   return { ok: true, agentId, cleared }

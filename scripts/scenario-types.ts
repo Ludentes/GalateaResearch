@@ -24,6 +24,7 @@ export interface ScenarioStep {
 export interface ScenarioSetup {
   clear_ticks?: boolean
   clear_state?: boolean
+  clear_knowledge?: boolean
 }
 
 export interface Scenario {

@@ -28,6 +28,7 @@ async function handleSetup(scenario: Scenario): Promise<void> {
       body: JSON.stringify({
         agentId: scenario.agent,
         clearTicks: scenario.setup?.clear_ticks ?? false,
+        clearKnowledge: scenario.setup?.clear_knowledge ?? false,
       }),
       signal: AbortSignal.timeout(30_000),
     })

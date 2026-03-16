@@ -12,8 +12,7 @@ steps:
       outcome.response: exists
   - send: "The file is scripts/scenario-assert.ts. Check if the numeric comparison matcher handles negative numbers correctly."
     from: { platform: discord, user: sasha }
-    messageType: chat
+    messageType: task_assignment
     expect:
-      outcome.action: respond
-      outcome.response: exists
+      outcome.action: delegate
       execution.toolCalls: ">= 1"
