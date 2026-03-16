@@ -130,7 +130,8 @@ async function getMainRepoRoot(): Promise<string> {
     if (cachedRepoRoot.endsWith("/.git")) {
       cachedRepoRoot = cachedRepoRoot.slice(0, -5)
     }
-  } catch {
+  } catch (err) {
+    console.warn("[tick] Failed to resolve repo root via git:", err)
     cachedRepoRoot = process.cwd()
   }
   return cachedRepoRoot
@@ -151,8 +152,8 @@ async function ensureAdapter(): Promise<CodingToolAdapter | undefined> {
         "./coding-adapter/claude-code-adapter"
       )
       codingAdapter = new ClaudeCodeAdapter()
-    } catch {
-      // Adapter unavailable — SDK not installed
+    } catch (err) {
+      console.warn("[tick] Coding adapter unavailable:", err)
     }
   }
   return codingAdapter
@@ -230,8 +231,8 @@ export async function tick(
   if (pending) {
     try {
       await pending
-    } catch {
-      // Previous tick failed — proceed anyway
+    } catch (err) {
+      console.warn("[tick] Previous tick for agent failed:", err)
     }
   }
 
@@ -256,13 +257,12 @@ async function tickInner(
   const tickStart = Date.now()
   const statePath = opts?.statePath
   const storePath = opts?.storePath ?? "data/memory/entries.jsonl"
-  const opContextPath = opts?.opContextPath
+  const optsOpContextPath = opts?.opContextPath
 
-  // Stage 1: Load operational context + self-model
+  // Stage 1: Load agent spec + operational context + self-model
   const selfModel = await checkSelfModel()
-  const opCtx = await loadOperationalContext(opContextPath)
 
-  // Load agent spec for tools_context + trust config + workflow
+  // Load agent spec FIRST — we need operational_memory path for context
   let spec: AgentSpec | undefined
   let toolsContext: string | undefined
   let specTrust: AgentSpec["trust"] | undefined
@@ -270,9 +270,14 @@ async function tickInner(
     spec = await loadAgentSpec(agentId)
     toolsContext = spec.tools_context
     specTrust = spec.trust
-  } catch {
-    // Agent spec not found — not critical
+  } catch (err) {
+    console.warn(`[tick] Agent spec not found for ${agentId}:`, err)
   }
+
+  // Use per-agent operational memory path from spec to prevent
+  // cross-agent session contamination (shared file = shared tasks/sessions)
+  const agentOpPath = optsOpContextPath ?? spec?.operational_memory ?? undefined
+  const opCtx = await loadOperationalContext(agentOpPath)
 
   // Stage 2: Read state
   const state = await getAgentState(statePath)
@@ -390,9 +395,7 @@ async function tickInner(
         ? `${repoRoot}/${spec.workspace}`
         : undefined
       const baseDir =
-        (msg.metadata?.workspace as string) ??
-        specWorkspace ??
-        repoRoot
+        (msg.metadata?.workspace as string) ?? specWorkspace ?? repoRoot
 
       // Create an isolated worktree for coding tasks so the main
       // working directory (and dev server) stays on main undisturbed.
@@ -466,12 +469,11 @@ async function tickInner(
       // Pass raw content through for multimodal support (images)
       const rawDescription = existingTask ? textContent : task.description
       // Extract images from content blocks for the adapter
-      const images =
-        Array.isArray(msg.content)
-          ? msg.content.filter(
-              (b): b is import("./types").ImageBlock => b.type === "image",
-            )
-          : undefined
+      const images = Array.isArray(msg.content)
+        ? msg.content.filter(
+            (b): b is import("./types").ImageBlock => b.type === "image",
+          )
+        : undefined
       const taskDescription = usingWorktree
         ? `${rawDescription}\n\n**Working directory:** You are in an isolated git worktree at \`${workDir}\` on branch \`${worktreeBranch}\`. The main repo is undisturbed.\n\n**When you finish:** Commit your changes, push the branch (\`git push -u origin ${worktreeBranch}\`), and create a merge request. If push or MR creation fails, report the error — do not fail silently.`
         : rawDescription
@@ -699,12 +701,12 @@ async function tickInner(
 
       try {
         await dispatchMessage(outbound)
-      } catch {
-        /* logged */
+      } catch (err) {
+        console.warn("[tick] Failed to dispatch message:", err)
       }
 
       recordOutbound(opCtx)
-      await saveOperationalContext(opCtx, opContextPath)
+      await saveOperationalContext(opCtx, agentOpPath)
       await removeMessage(msg, statePath)
 
       const tickResult: TickResult = {
@@ -956,7 +958,7 @@ async function tickInner(
 
       // Record outbound time + save operational context
       recordOutbound(opCtx)
-      await saveOperationalContext(opCtx, opContextPath)
+      await saveOperationalContext(opCtx, agentOpPath)
 
       // Update state: remove pending message, update activity
       await removeMessage(msg, statePath)
@@ -1048,7 +1050,7 @@ async function tickInner(
     }
 
     await removeMessage(msg, statePath)
-    await saveOperationalContext(opCtx, opContextPath)
+    await saveOperationalContext(opCtx, agentOpPath)
 
     const templateResult: TickResult = {
       homeostasis,
@@ -1102,7 +1104,7 @@ async function tickInner(
     taskCount: opCtx.tasks.filter((t) => t.status !== "done").length,
   }
 
-  await saveOperationalContext(opCtx, opContextPath)
+  await saveOperationalContext(opCtx, agentOpPath)
 
   const idleHomeostasis = assessDimensions(agentContext)
 

@@ -1,11 +1,12 @@
 import { defineEventHandler, HTTPError, readBody } from "h3"
+import { loadAgentSpec } from "../../../agent/agent-spec"
 import {
   addTask,
   loadOperationalContext,
   saveOperationalContext,
 } from "../../../agent/operational-memory"
-import { appendEntries } from "../../../memory/knowledge-store"
 import type { ChannelMessage } from "../../../agent/types"
+import { appendEntries } from "../../../memory/knowledge-store"
 
 interface SetupBody {
   agentId?: string
@@ -31,7 +32,15 @@ export default defineEventHandler(async (event) => {
     throw new HTTPError("Missing required field: agentId", { status: 400 })
   }
 
-  const opCtx = await loadOperationalContext()
+  // Resolve per-agent operational memory path from spec
+  let opPath: string | undefined
+  try {
+    const spec = await loadAgentSpec(body.agentId)
+    opPath = spec.operational_memory
+  } catch (err) {
+    console.warn(`[setup] Agent spec not found for ${body.agentId}:`, err)
+  }
+  const opCtx = await loadOperationalContext(opPath)
   const applied: string[] = []
 
   if (body.lastOutboundMinutesAgo !== undefined) {
@@ -93,6 +102,6 @@ export default defineEventHandler(async (event) => {
     applied.push(`seedFacts=${entries.length}`)
   }
 
-  await saveOperationalContext(opCtx)
+  await saveOperationalContext(opCtx, opPath)
   return { ok: true, applied }
 })

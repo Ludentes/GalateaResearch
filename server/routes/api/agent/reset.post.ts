@@ -1,5 +1,6 @@
 import { rm } from "node:fs/promises"
 import { defineEventHandler, HTTPError, readBody } from "h3"
+import { loadAgentSpec } from "../../../agent/agent-spec"
 import { updateAgentState } from "../../../agent/agent-state"
 import { clearAgentSession } from "../../../agent/claude-code-respond"
 import {
@@ -41,7 +42,15 @@ export default defineEventHandler(async (event) => {
   cleared.push("agentState")
 
   // 3. Reset operational context (recentHistory, tasks, carryover)
-  await saveOperationalContext(emptyContext())
+  // Use per-agent path from spec to avoid cross-agent contamination
+  let opPath: string | undefined
+  try {
+    const spec = await loadAgentSpec(agentId)
+    opPath = spec.operational_memory
+  } catch (err) {
+    console.warn(`[reset] Agent spec not found for ${agentId}:`, err)
+  }
+  await saveOperationalContext(emptyContext(), opPath)
   cleared.push("operationalContext")
 
   // 4. Clear homeostasis dimension cache (in-memory, per-session)
