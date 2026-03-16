@@ -409,6 +409,7 @@ async function tickInner(
         workingDirectory: workDir,
         trustLevel: (agentContext.sourceTrustLevel ?? "MEDIUM") as TrustLevel,
         model: config.model,
+        timeout: getAdapterTimeout(routing.taskType),
         sessionId: resumeSessionId,
       })
 
