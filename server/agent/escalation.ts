@@ -1,3 +1,7 @@
+import { existsSync } from "node:fs"
+import { readFile, unlink } from "node:fs/promises"
+import path from "node:path"
+
 export type EscalationCategory =
   | "knowledge_gap"
   | "blocked"
@@ -31,5 +35,34 @@ export function parseEscalationFile(json: string): EscalationRequest | null {
     return isValidEscalation(parsed) ? parsed : null
   } catch {
     return null
+  }
+}
+
+const ESCALATION_DIR = ".escalations"
+
+export async function checkForEscalation(
+  workDir: string,
+  taskId: string,
+): Promise<EscalationRequest | null> {
+  const filePath = path.join(workDir, ESCALATION_DIR, `${taskId}.json`)
+  if (!existsSync(filePath)) return null
+
+  try {
+    const content = await readFile(filePath, "utf-8")
+    return parseEscalationFile(content)
+  } catch {
+    return null
+  }
+}
+
+export async function cleanupEscalation(
+  workDir: string,
+  taskId: string,
+): Promise<void> {
+  const filePath = path.join(workDir, ESCALATION_DIR, `${taskId}.json`)
+  try {
+    await unlink(filePath)
+  } catch {
+    // File already removed or never existed
   }
 }

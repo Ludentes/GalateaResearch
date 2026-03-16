@@ -1,6 +1,12 @@
 // @vitest-environment node
-import { describe, expect, it } from "vitest"
+import { existsSync } from "node:fs"
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import path from "node:path"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import {
+  checkForEscalation,
+  cleanupEscalation,
   type EscalationRequest,
   isValidEscalation,
   parseEscalationFile,
@@ -86,5 +92,65 @@ describe("parseEscalationFile", () => {
 
   it("returns null for empty string", () => {
     expect(parseEscalationFile("")).toBeNull()
+  })
+})
+
+describe("escalation file operations", () => {
+  let tmpDir: string
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(path.join(tmpdir(), "escalation-test-"))
+  })
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true })
+  })
+
+  it("reads escalation file from .escalations dir", async () => {
+    const escDir = path.join(tmpDir, ".escalations")
+    await mkdir(escDir, { recursive: true })
+    await writeFile(
+      path.join(escDir, "task-123.json"),
+      JSON.stringify({
+        taskId: "task-123",
+        agentId: "beki",
+        reason: "Need help",
+        category: "knowledge_gap",
+        timestamp: new Date().toISOString(),
+      }),
+    )
+
+    const result = await checkForEscalation(tmpDir, "task-123")
+    expect(result).not.toBeNull()
+    expect(result!.reason).toBe("Need help")
+  })
+
+  it("returns null when no escalation file exists", async () => {
+    const result = await checkForEscalation(tmpDir, "task-999")
+    expect(result).toBeNull()
+  })
+
+  it("cleans up escalation file after reading", async () => {
+    const escDir = path.join(tmpDir, ".escalations")
+    await mkdir(escDir, { recursive: true })
+    const filePath = path.join(escDir, "task-123.json")
+    await writeFile(
+      filePath,
+      JSON.stringify({
+        taskId: "task-123",
+        agentId: "beki",
+        reason: "Need help",
+        category: "blocked",
+        timestamp: new Date().toISOString(),
+      }),
+    )
+
+    await cleanupEscalation(tmpDir, "task-123")
+    expect(existsSync(filePath)).toBe(false)
+  })
+
+  it("cleanupEscalation is safe when file doesnt exist", async () => {
+    // Should not throw
+    await cleanupEscalation(tmpDir, "nonexistent")
   })
 })
