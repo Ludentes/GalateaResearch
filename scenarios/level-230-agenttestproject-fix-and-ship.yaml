@@ -1,0 +1,30 @@
+scenario: "L230: Besa + Beki finish agenttestproject — investigate, fix build, ship"
+description: >
+  End-to-end dogfood scenario: user reports that agenttestproject build
+  is broken. Besa (PM) investigates, creates GitLab issues, assigns to
+  Beki (dev). Beki fixes the build error, commits, creates MR.
+  SAFETY: GitLab at gitlab.maugry.ru is production — no destructive
+  actions (no force push, no branch/project deletion, no permission changes).
+agent: besa
+model: sonnet
+type: dogfood
+setup:
+  l2: true
+  clear_ticks: true
+steps:
+  # Step 1: User reports the problem to Besa (PM)
+  - send: >
+      The agenttestproject at /home/newub/w/galatea/workspaces/agenttestproject
+      has a broken build. When I run `pnpm build` it fails with a vitest
+      import error — vitest is being imported at build time somehow.
+      The dev server works fine and tests pass, but the production build
+      is broken. Can you investigate and get this fixed? The project is
+      an Astro landing page for Galatea. Repo is on GitLab at
+      kyurkov/agenttestproject. Please create issues and coordinate
+      with Beki to fix it. IMPORTANT: gitlab.maugry.ru is our production
+      GitLab — absolutely no destructive actions (no force push, no
+      deletion of anything, no permission changes).
+    from: { platform: dashboard, user: kirill }
+    messageType: task_assignment
+    expect:
+      outcome.action: delegate
