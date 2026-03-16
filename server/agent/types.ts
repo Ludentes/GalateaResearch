@@ -22,13 +22,39 @@ export interface MessageRouting {
   mrId?: string // GitLab MR number
 }
 
+export interface TextBlock {
+  type: "text"
+  text: string
+}
+
+export interface ImageBlock {
+  type: "image"
+  source: {
+    type: "base64"
+    media_type: "image/png" | "image/jpeg" | "image/webp" | "image/gif"
+    data: string
+  }
+}
+
+export type ContentBlock = TextBlock | ImageBlock
+export type MessageContent = string | ContentBlock[]
+
+/** Extract text from message content, regardless of format */
+export function getTextContent(content: MessageContent): string {
+  if (typeof content === "string") return content
+  return content
+    .filter((b): b is TextBlock => b.type === "text")
+    .map((b) => b.text)
+    .join("\n")
+}
+
 export interface ChannelMessage {
   id: string
   channel: ChannelName
   direction: MessageDirection
   routing: MessageRouting
   from: string
-  content: string
+  content: MessageContent
   messageType: MessageType
   receivedAt: string
   metadata: Record<string, unknown>
