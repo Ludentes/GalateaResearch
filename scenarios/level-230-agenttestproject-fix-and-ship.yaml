@@ -1,10 +1,11 @@
 scenario: "L230: Besa investigates broken build, creates issue, delegates to Beki"
 description: >
   Kirill reports that agenttestproject build is broken. Besa (PM) should
-  investigate the error, create a GitLab issue with findings, and delegate
-  the fix to Beki. The actual error: test files inside src/pages/ are
-  picked up as Astro routes during build, causing vitest internal state
-  errors. SAFETY: gitlab.maugry.ru is production — no destructive actions.
+  investigate the build error, understand the root cause, create a GitLab
+  issue with findings, and delegate the fix to Beki.
+  State: master has Hero + HowItWorks, build broken (test file in pages/),
+  2 open issues (#2 Pricing, #3 Footer), 0 open MRs.
+  SAFETY: gitlab.maugry.ru is production — no destructive actions.
 agent: besa
 model: sonnet
 type: dogfood
@@ -13,19 +14,15 @@ setup:
   clear_ticks: true
 steps:
   - send: >
-      The agenttestproject at /home/newub/w/galatea/workspaces/agenttestproject
-      has a broken build. When I run `pnpm build` it fails with a vitest
-      import error — vitest is being imported at build time somehow.
-      The dev server works fine and tests pass, but the production build
-      is broken. Can you investigate and get this fixed? The project is
-      an Astro landing page for Galatea. Repo is on GitLab at
-      kyurkov/agenttestproject. Please create a GitLab issue with your
-      findings and assign the fix to Beki.
-      IMPORTANT: gitlab.maugry.ru is our production GitLab — absolutely
-      no destructive actions (no force push, no deletion of anything,
-      no permission changes).
+      The agenttestproject build is broken — `pnpm build` fails in
+      /home/newub/w/galatea/workspaces/agenttestproject. Dev server
+      and tests work fine, only the production build crashes. Can you
+      investigate what's wrong, create a GitLab issue with your findings,
+      and get Beki to fix it? The repo is kyurkov/agenttestproject.
+      IMPORTANT: gitlab.maugry.ru is our production GitLab — no
+      destructive actions of any kind.
     from: { platform: dashboard, user: kirill }
     messageType: task_assignment
     expect:
-      routing.level: task
       outcome.action: delegate
+      outcome.response: exists

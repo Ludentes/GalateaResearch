@@ -1,12 +1,11 @@
 scenario: "L231: Beki fixes agenttestproject broken build and creates MR"
 description: >
-  Beki receives a task to fix the agenttestproject build. The root cause
-  is test files inside src/pages/ being treated as Astro routes during
-  build (src/pages/api/health.test.ts imports vitest, which fails outside
-  the vitest runner). Fix: move test files out of pages/ or exclude them
-  in astro.config. Beki should fix, verify build passes, commit, push,
-  and create an MR. SAFETY: gitlab.maugry.ru is production — no
-  destructive actions.
+  Besa delegates the build fix to Beki. Beki should investigate the
+  build error in /home/newub/w/galatea/workspaces/agenttestproject,
+  find the root cause, fix it, verify the build passes, and create
+  an MR. The actual issue: test files in src/pages/ are picked up
+  as Astro routes during build.
+  SAFETY: gitlab.maugry.ru is production — no destructive actions.
 agent: beki
 model: sonnet
 type: dogfood
@@ -15,20 +14,16 @@ setup:
   clear_ticks: true
 steps:
   - send: >
-      The agenttestproject build at /home/newub/w/galatea/workspaces/agenttestproject
-      is broken. When running `pnpm build`, Astro tries to render
-      src/pages/api/health.test.ts as a route, which imports vitest and
-      crashes. The fix is to move test files out of src/pages/ (e.g. to
-      src/__tests__/ or tests/) so Astro doesn't treat them as routes.
-      Please fix this, verify the build passes with `pnpm build`, commit
-      your changes, push to a new branch, and create an MR on GitLab
-      (kyurkov/agenttestproject). Report back with the MR link.
-      IMPORTANT: gitlab.maugry.ru is production GitLab — no force push,
-      no deletion of anything, no permission changes.
+      The agenttestproject production build is broken — `pnpm build`
+      crashes in /home/newub/w/galatea/workspaces/agenttestproject
+      with a vitest error. Dev server works fine. Please investigate,
+      fix the issue, make sure `pnpm build` passes, then push to a
+      branch and create an MR on kyurkov/agenttestproject.
+      IMPORTANT: gitlab.maugry.ru is production GitLab — no force
+      push, no deletion, no permission changes.
     from: { platform: discord, user: besa }
     messageType: task_assignment
     expect:
       routing.level: task
       routing.taskType: coding
       outcome.action: delegate
-      outcome.response: "contains: commit"
