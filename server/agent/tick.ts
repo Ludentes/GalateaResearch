@@ -33,6 +33,7 @@ import { runClaudeCodeRespond } from "./claude-code-respond"
 import type { CodingToolAdapter } from "./coding-adapter/types"
 import { executeWorkArc } from "./coding-adapter/work-arc"
 import { dispatchMessage } from "./dispatcher"
+import { checkForEscalation, cleanupEscalation } from "./escalation"
 import {
   addTask,
   getActiveTask,
@@ -43,7 +44,12 @@ import {
 } from "./operational-memory"
 import { classifyWithLLM, inferRouting } from "./task-type-inference"
 import { createAllTools } from "./tools"
-import type { ChannelMessage, SelfModel, TickResult } from "./types"
+import type {
+  ChannelMessage,
+  ChannelName,
+  SelfModel,
+  TickResult,
+} from "./types"
 import { getDiffStat } from "./utils"
 
 // ---------------------------------------------------------------------------
@@ -339,9 +345,7 @@ async function tickInner(
         ? `${process.cwd()}/${spec.workspace}`
         : undefined
       const baseDir =
-        (msg.metadata?.workspace as string) ??
-        specWorkspace ??
-        process.cwd()
+        (msg.metadata?.workspace as string) ?? specWorkspace ?? process.cwd()
 
       // Create an isolated worktree for coding tasks so the main
       // working directory (and dev server) stays on main undisturbed.
@@ -357,10 +361,11 @@ async function tickInner(
       let workDir = baseDir
       let usingWorktree = false
       try {
-        execSync(
-          `git worktree add "${worktreePath}" -b "${worktreeBranch}"`,
-          { cwd: baseDir, encoding: "utf-8", timeout: 10_000 },
-        )
+        execSync(`git worktree add "${worktreePath}" -b "${worktreeBranch}"`, {
+          cwd: baseDir,
+          encoding: "utf-8",
+          timeout: 10_000,
+        })
         workDir = worktreePath
         usingWorktree = true
         console.log(`[tick] Created worktree at ${worktreePath}`)
@@ -382,7 +387,6 @@ async function tickInner(
             timeout: 5000,
           })
         }
-
       } catch (wtErr) {
         console.warn(
           "[tick] Worktree creation failed, using main dir:",
@@ -454,6 +458,42 @@ async function tickInner(
         opCtx.carryover.push(
           `SDK session ${arcResult.status}: ${arcResult.text}`,
         )
+      }
+
+      // ---------------------------------------------------------------
+      // ESCALATION check — agent may have written an escalation file
+      // ---------------------------------------------------------------
+      const escalation = await checkForEscalation(workDir, task.id)
+      if (escalation) {
+        task.status = "blocked"
+        opCtx.blockers.push(
+          `Escalated (${escalation.category}): ${escalation.reason}`,
+        )
+
+        // Dispatch escalation message to the configured target
+        if (spec?.escalation_target) {
+          const escalationMsg: ChannelMessage = {
+            id: `escalate-${msg.id}`,
+            channel: spec.escalation_target.channel as ChannelName,
+            direction: "outbound",
+            routing: { replyToId: msg.id },
+            from: agentId,
+            content: `**Escalation from ${spec.agent.name}** (${escalation.category}):\n\n${escalation.reason}\n\nTask: ${task.description}`,
+            messageType: "status_update",
+            receivedAt: new Date().toISOString(),
+            metadata: {
+              escalation: true,
+              category: escalation.category,
+            },
+          }
+          try {
+            await dispatchMessage(escalationMsg)
+          } catch {
+            console.warn("[tick] Failed to dispatch escalation message")
+          }
+        }
+
+        await cleanupEscalation(workDir, task.id)
       }
 
       // ---------------------------------------------------------------
@@ -652,9 +692,8 @@ async function tickInner(
         execution: {
           adapter: "claude-code",
           sessionResumed,
-          toolCalls: arcResult.transcript.filter(
-            (e) => e.role === "tool_call",
-          ).length,
+          toolCalls: arcResult.transcript.filter((e) => e.role === "tool_call")
+            .length,
           toolNames: [
             ...new Set(
               arcResult.transcript
