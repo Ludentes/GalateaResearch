@@ -9,7 +9,7 @@
  * - L4: Strategic patterns (30s) - [FUTURE] Cross-session analysis
  *
  * Dimension assessment strategies:
- * - knowledge_sufficiency: L1 with relevance scoring + confidence weighting
+ * - knowledge_sufficiency: L2 Claude Haiku semantic (falls back to L1 heuristic)
  * - progress_momentum: L1 with improved Jaccard similarity
  * - communication_health: L1 time-based
  * - productive_engagement: L1 simple rules
@@ -415,10 +415,11 @@ export async function assessDimensionsAsync(
   const sessionId = ctx.sessionId
   const cfg = getHomeostasisConfig()
 
-  // L1 dimensions (same as sync version)
-  const knowledge_sufficiency =
+  // L1 dimensions (same as sync version, except knowledge_sufficiency promoted to L2)
+  let knowledge_sufficiency: DimensionState =
     assessL0Cached("knowledge_sufficiency", sessionId) ??
     assessKnowledgeSufficiencyL1(ctx)
+  let knowledgeMethod: AssessmentMethod = "computed"
   const progress_momentum =
     assessL0Cached("progress_momentum", sessionId) ??
     assessProgressMomentumL1(ctx)
@@ -460,6 +461,19 @@ export async function assessDimensionsAsync(
     }
   }
 
+  // L2 knowledge_sufficiency via Claude Haiku — semantic relevance check
+  // Only if not already cached and message is long enough to warrant it
+  if (
+    !assessL0Cached("knowledge_sufficiency", sessionId) &&
+    ctx.currentMessage.length > cfg.knowledge_message_min_length
+  ) {
+    const ks = await assessKnowledgeSufficiencyL2(ctx)
+    if (ks !== null) {
+      knowledge_sufficiency = ks
+      knowledgeMethod = "llm"
+    }
+  }
+
   // Update all caches
   updateCache("knowledge_sufficiency", sessionId, knowledge_sufficiency)
   updateCache("progress_momentum", sessionId, progress_momentum)
@@ -479,7 +493,7 @@ export async function assessDimensionsAsync(
     self_preservation,
     assessed_at: new Date(),
     assessment_method: {
-      knowledge_sufficiency: "computed",
+      knowledge_sufficiency: knowledgeMethod,
       certainty_alignment: certaintyMethod,
       progress_momentum: "computed",
       communication_health: "computed",
@@ -566,6 +580,57 @@ function parseL2Result(text: string): DimensionState {
   if (upper.startsWith("LOW")) return "LOW"
   if (upper.startsWith("HIGH")) return "HIGH"
   return "HEALTHY"
+}
+
+// ============ L2: Knowledge Sufficiency via Claude Haiku ============
+
+import { createClaudeCodeModel } from "../providers/claude-code"
+
+async function assessKnowledgeSufficiencyL2(
+  ctx: AgentContext,
+): Promise<DimensionState | null> {
+  try {
+    const facts = ctx.retrievedFacts || []
+    const factSummary =
+      facts.length === 0
+        ? "No facts retrieved."
+        : facts
+            .slice(0, 5)
+            .map((f) => `- "${f.content.slice(0, 100)}" (confidence: ${f.confidence})`)
+            .join("\n")
+
+    const prompt = `You assess whether an AI agent has sufficient knowledge to handle a message.
+
+Message: "${ctx.currentMessage.slice(0, 300)}"
+
+Retrieved facts from knowledge store (${facts.length} total):
+${factSummary}
+
+Are these facts actually relevant to the message? Does the agent have enough knowledge to respond competently?
+
+Respond with exactly one word: LOW, HEALTHY, or HIGH
+- LOW: The facts are irrelevant or missing — the agent lacks knowledge for this topic
+- HEALTHY: The facts are relevant and sufficient for a competent response
+- HIGH: Extensive, high-confidence knowledge available
+
+Your answer (one word):`
+
+    const model = createClaudeCodeModel("haiku")
+    const result = await generateText({
+      model,
+      prompt,
+      maxOutputTokens: 10,
+      abortSignal: AbortSignal.timeout(5000),
+    })
+
+    return parseL2Result(result.text)
+  } catch (err) {
+    console.warn(
+      "[homeostasis] L2 knowledge_sufficiency (Haiku) failed, using L1:",
+      (err as Error)?.message ?? err,
+    )
+    return null
+  }
 }
 
 // ---------------------------------------------------------------------------
