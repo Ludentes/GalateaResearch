@@ -661,8 +661,9 @@ async function tickInner(
         delegation: {
           adapter: adapter.name,
           taskId: task.id,
-          status:
-            arcResult.status === "completed"
+          status: escalation
+            ? "failed"
+            : arcResult.status === "completed"
               ? "completed"
               : arcResult.status === "blocked"
                 ? "failed"
@@ -673,6 +674,13 @@ async function tickInner(
                     | "timeout"),
           transcript: arcResult.transcript,
           costUsd: arcResult.costUsd,
+          escalation: escalation
+            ? {
+                category: escalation.category,
+                reason: escalation.reason,
+                target: spec?.escalation_target?.entity,
+              }
+            : undefined,
         },
         timestamp: new Date().toISOString(),
       }

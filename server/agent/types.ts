@@ -70,6 +70,11 @@ export interface TickResult {
     status: "started" | "completed" | "failed" | "timeout"
     transcript?: import("./coding-adapter/types").CodingTranscriptEntry[]
     costUsd?: number
+    escalation?: {
+      category: string
+      reason: string
+      target?: string
+    }
   }
   timestamp?: string
 }
