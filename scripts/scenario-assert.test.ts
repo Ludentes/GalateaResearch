@@ -1,15 +1,18 @@
-import { describe, it, expect } from "vitest"
-import { assertStep } from "./scenario-assert"
+import { describe, expect, it } from "vitest"
 import type { TickDecisionRecord } from "../server/observation/tick-record"
 
+import { assertStep } from "./scenario-assert"
+
 describe("assertStep numeric comparisons with negative numbers", () => {
-  const mockTick = (overrides: Record<string, unknown> = {}): TickDecisionRecord => ({
+  const mockTick = (
+    overrides: Record<string, unknown> = {},
+  ): TickDecisionRecord => ({
     tickId: "test-tick-1",
     timestamp: new Date().toISOString(),
     workPhase: "idle",
     agentId: "test-agent",
     messageCount: 0,
-    homeostasisState: {} as any,
+    homeostasisState: {} as Record<string, unknown>,
     tasksSnapshot: [],
     ...overrides,
   })
