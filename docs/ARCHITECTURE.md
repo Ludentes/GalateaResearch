@@ -955,7 +955,7 @@ Inner loop continues from where it left off (using recentHistory + task.progress
 
 ## Implementation Status
 
-Last updated: 2026-03-15
+Last updated: 2026-03-16
 
 ### Production-Ready (tested, 97 test files, 817 tests)
 
@@ -992,7 +992,12 @@ Last updated: 2026-03-15
 | UI | Fleet dashboard with agent cards | `app/routes/agent/fleet/` |
 | UI | Homeostasis sparkline + dimension heatmap | `app/components/agent/` |
 | Eval | Golden dataset (4 devs, 98 items), 3 strategy comparisons | `experiments/extraction/` |
+| Runtime | Per-agent config isolation (`CLAUDE_CONFIG_DIR`, operational memory, knowledge store) | `server/agent/tick.ts`, `data/agents/*/spec.yaml` |
+| Runtime | Escalation mechanism (file-based, tick-detected, channel-dispatched) | `server/agent/escalation.ts`, `server/agent/tick.ts` |
+| Runtime | Escalation-aware guidance (prevents re-escalation spin) | `server/engine/homeostasis-engine.ts` |
 | Eval | Scenario runner with regression/dogfood separation (116 scenarios) | `scripts/run-scenario.ts` |
+| Eval | Trace mode (`--trace`) with diagnostics and anomaly warnings | `scripts/run-scenario.ts` |
+| Eval | Tick diagnostics (op memory path, knowledge store, provider, model, facts) | `server/observation/tick-record.ts` |
 
 ### Scaffolding / Disabled
 
@@ -1008,7 +1013,6 @@ Last updated: 2026-03-15
 
 | Component | Phase |
 |-----------|-------|
-| Async Job Model (non-blocking inject API) | Pre-launch |
 | Multi-Agent State | Phase H |
 | Persona Export/Import | Phase H |
 | Agent Registry | Phase H |
@@ -1029,6 +1033,7 @@ Last updated: 2026-03-15
 | [Cognitive Models Design](plans/2026-02-12-cognitive-models-design.md) | Views over knowledge store |
 | [Phase E Design](plans/2026-02-15-phase-e-design.md) | Launch & observe (command center, lifecycle, eval) |
 | [Agent Work Lifecycle](plans/2026-03-15-agent-work-lifecycle-design.md) | 6-phase lifecycle (BEGIN→DO→VERIFY→PUBLISH→REPORT→FINISH) |
+| [Agent Config & Escalation](plans/2026-03-16-agent-config-and-escalation.md) | CLAUDE_CONFIG_DIR isolation + escalation mechanism |
 | [Remaining Work for Launch](plans/2026-03-15-remaining-work-for-launch.md) | P0/P1/P2 items blocking or improving launch |
 | [Async Job Model Spec](plans/2026-03-15-async-job-model-spec.md) | Non-blocking inject API design |
 
