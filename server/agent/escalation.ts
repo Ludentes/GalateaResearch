@@ -17,6 +17,13 @@ export interface EscalationRequest {
   dimensions?: Record<string, string>
 }
 
+const VALID_CATEGORIES: string[] = [
+  "knowledge_gap",
+  "blocked",
+  "uncertain",
+  "safety",
+]
+
 export function isValidEscalation(req: unknown): req is EscalationRequest {
   if (typeof req !== "object" || req === null) return false
   const r = req as Record<string, unknown>
@@ -25,6 +32,7 @@ export function isValidEscalation(req: unknown): req is EscalationRequest {
     typeof r.agentId === "string" &&
     typeof r.reason === "string" &&
     typeof r.category === "string" &&
+    VALID_CATEGORIES.includes(r.category as string) &&
     typeof r.timestamp === "string"
   )
 }
