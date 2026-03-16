@@ -81,7 +81,9 @@ function checkValue(
 
   // Numeric comparison matchers
   if (typeof expected === "string") {
-    const numMatch = expected.match(/^([<>]=?)\s*(-?\d+(?:\.\d+)?)$/)
+    // Pattern: operator + optional whitespace + number
+    // Supports integers (5, -5), decimals (5.5, -5.5), and shorthand decimals (.5, -.5)
+    const numMatch = expected.match(/^([<>]=?)\s*(-?(?:\d+\.?\d*|\.\d+))$/)
     if (numMatch) {
       const op = numMatch[1]
       const threshold = Number(numMatch[2])

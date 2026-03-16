@@ -21,6 +21,9 @@ const INHERITED_ENV_VARS = [
   "LC_ALL",
   "TMPDIR",
   "CLAUDE_CONFIG_DIR",
+  // Agent identity — set by tick pipeline per-agent
+  "GITLAB_TOKEN",
+  "GIT_CONFIG_NOSYSTEM",
 ]
 
 function getCleanEnv(): Record<string, string> {
