@@ -56,6 +56,7 @@ export interface TickDecisionRecord {
       reason: string
       target?: string
     }
+    timings?: Record<string, number>
   }
 }
 

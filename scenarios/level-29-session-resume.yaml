@@ -17,6 +17,12 @@ steps:
   - send: "now also check server/agent/operational-memory.ts and compare the two"
     from: { platform: discord, user: sasha }
     messageType: task_assignment
+    setup:
+      createTask:
+        description: "Read tick.ts and summarize the main flow"
+        phase: implementing
+        status: in_progress
+        claudeSessionId: "session-l29-test"
     expect:
       outcome.action: delegate
       execution.sessionResumed: true

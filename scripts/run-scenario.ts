@@ -268,6 +268,10 @@ async function executeStep(
         const pollRes = await fetch(`${BASE_URL}/api/agent/jobs/${jobId}`, {
           signal: AbortSignal.timeout(5000),
         })
+        if (!pollRes.ok) {
+          job = { status: pollRes.status }
+          break
+        }
         job = await pollRes.json()
         if (job.status === "completed" || job.status === "failed") break
         await new Promise((r) => setTimeout(r, 1000))

@@ -8,6 +8,7 @@ agent: beki
 setup:
   clear_ticks: true
   clear_state: true
+  clear_knowledge: true
 steps:
   - send: "what framework should we use for the mobile app?"
     from: { platform: discord, user: sasha }

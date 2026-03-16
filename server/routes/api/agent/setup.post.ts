@@ -18,6 +18,7 @@ interface SetupBody {
     phase?: string
     phaseMinutesAgo?: number
     status?: string
+    claudeSessionId?: string
   }
   /** Add messages to recentHistory (for stuck detection) */
   addHistory?: Array<{ role: "user" | "assistant"; content: string }>
@@ -74,6 +75,9 @@ export default defineEventHandler(async (event) => {
         )
         task.phaseStartedAt = d.toISOString()
       }
+    }
+    if (body.createTask.claudeSessionId) {
+      task.claudeSessionId = body.createTask.claudeSessionId
     }
     applied.push(`task=${task.id} phase=${task.phase} status=${task.status}`)
   }

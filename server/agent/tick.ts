@@ -169,6 +169,32 @@ export async function getAdapter(): Promise<CodingToolAdapter | undefined> {
 }
 
 // ---------------------------------------------------------------------------
+// Tick timing instrumentation
+// ---------------------------------------------------------------------------
+
+interface TickTimings {
+  specLoadMs?: number
+  opContextLoadMs?: number
+  factRetrievalMs?: number
+  homeostasisMs?: number
+  contextAssemblyMs?: number
+  routingMs?: number
+  llmMs?: number
+  adapterMs?: number
+  verifyMs?: number
+  dispatchMs?: number
+  totalMs?: number
+}
+
+function logTimings(agentId: string, tickId: string, timings: TickTimings) {
+  const parts = Object.entries(timings)
+    .filter(([, v]) => v !== undefined && v > 0)
+    .map(([k, v]) => `${k}=${v}`)
+    .join(" ")
+  console.log(`[tick:timing] ${agentId} ${tickId.slice(0, 8)} ${parts}`)
+}
+
+// ---------------------------------------------------------------------------
 // Tick decision record helper
 // ---------------------------------------------------------------------------
 
@@ -222,6 +248,10 @@ interface TickOptions {
 // failures when back-to-back messages race on the Claude Code SDK session.
 const agentLocks = new Map<string, Promise<TickResult>>()
 
+export function clearAgentLock(agentId: string): void {
+  agentLocks.delete(agentId)
+}
+
 export async function tick(
   _trigger: "manual" | "heartbeat" | "webhook",
   opts?: TickOptions,
@@ -260,6 +290,8 @@ async function tickInner(
   const statePath = opts?.statePath
   const optsOpContextPath = opts?.opContextPath
 
+  const timings: TickTimings = {}
+
   // Stage 1: Load agent spec + operational context + self-model
   const selfModel = await checkSelfModel()
 
@@ -267,6 +299,7 @@ async function tickInner(
   let spec: AgentSpec | undefined
   let toolsContext: string | undefined
   let specTrust: AgentSpec["trust"] | undefined
+  let t0 = Date.now()
   try {
     spec = await loadAgentSpec(agentId)
     toolsContext = spec.tools_context
@@ -274,10 +307,13 @@ async function tickInner(
   } catch (err) {
     console.warn(`[tick] Agent spec not found for ${agentId}:`, err)
   }
+  timings.specLoadMs = Date.now() - t0
 
   // Use per-agent paths from spec to prevent cross-agent contamination
   const agentOpPath = optsOpContextPath ?? spec?.operational_memory ?? undefined
+  t0 = Date.now()
   const opCtx = await loadOperationalContext(agentOpPath)
+  timings.opContextLoadMs = Date.now() - t0
   const storePath =
     opts?.storePath ?? spec?.knowledge_store ?? "data/memory/entries.jsonl"
 
@@ -297,6 +333,9 @@ async function tickInner(
     specLoaded: !!spec,
     workspacePath: spec?.workspace,
     ...extra,
+    timings: Object.fromEntries(
+      Object.entries(timings).filter(([, v]) => v != null),
+    ) as Record<string, number>,
   })
 
   // Stage 2: Read state
@@ -310,9 +349,11 @@ async function tickInner(
     const textContent = getTextContent(msg.content)
 
     // Retrieve facts relevant to the message + sender entity
+    t0 = Date.now()
     const facts = await retrieveRelevantFacts(textContent, storePath, {
       additionalEntities: [msg.from],
     })
+    timings.factRetrievalMs = Date.now() - t0
     const retrievedFacts = facts.entries
 
     // Record inbound in operational history (before assessment, so stuck detection sees it)
@@ -359,13 +400,16 @@ async function tickInner(
         : undefined,
     }
 
+    t0 = Date.now()
     const homeostasis = assessDimensions(agentContext)
+    timings.homeostasisMs = Date.now() - t0
     const homeostasisForContext: Record<string, string> = {}
     for (const [k, v] of Object.entries(homeostasis)) {
       if (k !== "assessed_at" && k !== "assessment_method") {
         homeostasisForContext[k] = v as string
       }
     }
+    t0 = Date.now()
     const context = await assembleContext({
       storePath,
       agentContext,
@@ -373,8 +417,10 @@ async function tickInner(
       workflowInstructions: spec?.workflow_instructions,
       homeostasisState: homeostasisForContext,
     })
+    timings.contextAssemblyMs = Date.now() - t0
 
     // Smart routing: heuristic first, LLM fallback for low-confidence
+    t0 = Date.now()
     let routing = inferRouting(textContent, msg.messageType)
     if (
       routing.confidence === "low" &&
@@ -385,6 +431,7 @@ async function tickInner(
         routing = llmRouting
       }
     }
+    timings.routingMs = Date.now() - t0
 
     // Stage 3b: Delegate to coding adapter for explicit task assignments
     const adapter = await ensureAdapter()
@@ -497,6 +544,7 @@ async function tickInner(
       const taskDescription = usingWorktree
         ? `${rawDescription}\n\n**Working directory:** You are in an isolated git worktree at \`${workDir}\` on branch \`${worktreeBranch}\`. The main repo is undisturbed.\n\n**When you finish:** Commit your changes, push the branch (\`git push -u origin ${worktreeBranch}\`), and create a merge request. If push or MR creation fails, report the error — do not fail silently.`
         : rawDescription
+      t0 = Date.now()
       const arcResult = await executeWorkArc({
         adapter,
         task: { id: task.id, description: taskDescription },
@@ -507,6 +555,7 @@ async function tickInner(
         sessionId: resumeSessionId,
         images: images?.length ? images : undefined,
       })
+      timings.adapterMs = Date.now() - t0
 
       // Store session ID for potential resume (both on task and context)
       if (arcResult.sessionId) {
@@ -814,6 +863,8 @@ async function tickInner(
         (err) => console.warn("[tick] Failed to persist tick record:", err),
       )
 
+      timings.totalMs = Date.now() - tickStart
+      logTimings(agentId, tickId, timings)
       return tickResult
     }
 
@@ -848,6 +899,7 @@ async function tickInner(
             .slice(0, -1)
             .map((h) => ({ role: h.role, content: h.content }))
 
+          t0 = Date.now()
           const result = await runClaudeCodeRespond({
             agentId,
             systemPrompt,
@@ -859,6 +911,7 @@ async function tickInner(
             model: (msg.metadata?.modelOverride as string) || config.model,
           })
 
+          timings.llmMs = Date.now() - t0
           if (result.ok) {
             llmResult = result.text
             loopToolCalls = result.toolCalls
@@ -898,6 +951,7 @@ async function tickInner(
             .slice(0, -1)
             .map((h) => ({ role: h.role, content: h.content }))
 
+          t0 = Date.now()
           const loopResult = await runAgentLoop({
             model,
             system: systemPrompt,
@@ -907,6 +961,7 @@ async function tickInner(
             config: { maxSteps: 8, timeoutMs: 120_000 },
           })
 
+          timings.llmMs = Date.now() - t0
           llmResult = loopResult.text
           const toolSteps = loopResult.steps.filter(
             (s) => s.type === "tool_call",
@@ -1050,6 +1105,8 @@ async function tickInner(
         console.warn("[tick] Failed to persist tick record:", err),
       )
 
+      timings.totalMs = Date.now() - tickStart
+      logTimings(agentId, tickId, timings)
       return tickResult
     }
 
@@ -1133,6 +1190,8 @@ async function tickInner(
       console.warn("[tick] Failed to persist tick record:", err),
     )
 
+    timings.totalMs = Date.now() - tickStart
+    logTimings(agentId, tickId, timings)
     return templateResult
   }
 
@@ -1187,6 +1246,8 @@ async function tickInner(
     console.warn("[tick] Failed to persist tick record:", err),
   )
 
+  timings.totalMs = Date.now() - tickStart
+  logTimings(agentId, tickId, timings)
   return tickResult
 }
 

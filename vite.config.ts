@@ -5,19 +5,24 @@ import { nitro } from "nitro/vite"
 import { defineConfig } from "vite"
 import tsConfigPaths from "vite-tsconfig-paths"
 
+const noWatch = !!process.env.NO_WATCH
+
 export default defineConfig({
   server: {
     port: 13000,
-    watch: {
-      ignored: [
-        "**/data/**",
-        "**/graphiti/**",
-        "**/node_modules/**",
-        "**/.git/**",
-        "**/docs/archive/**",
-        "**/workspaces/**",
-      ],
-    },
+    watch: noWatch
+      ? { ignored: ["**"] }
+      : {
+          ignored: [
+            "**/data/**",
+            "**/graphiti/**",
+            "**/node_modules/**",
+            "**/.git/**",
+            "**/.worktrees/**",
+            "**/docs/archive/**",
+            "**/workspaces/**",
+          ],
+        },
   },
   plugins: [
     tsConfigPaths({
