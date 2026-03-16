@@ -103,6 +103,34 @@ function getAgentTools(
 }
 
 // ---------------------------------------------------------------------------
+// Repo root resolution — workspace paths must resolve against the main repo,
+// not the current worktree, because workspaces/ is gitignored.
+// ---------------------------------------------------------------------------
+
+let cachedRepoRoot: string | undefined
+
+async function getMainRepoRoot(): Promise<string> {
+  if (cachedRepoRoot) return cachedRepoRoot
+  try {
+    const { execSync } = await import("node:child_process")
+    const gitCommonDir = execSync("git rev-parse --git-common-dir", {
+      encoding: "utf-8",
+      timeout: 5000,
+    }).trim()
+    // --git-common-dir returns the .git dir of the main repo
+    const { resolve, dirname } = await import("node:path")
+    cachedRepoRoot = resolve(dirname(gitCommonDir))
+    // Handle bare .git dir case (returns "." or absolute path ending in .git)
+    if (cachedRepoRoot.endsWith("/.git")) {
+      cachedRepoRoot = cachedRepoRoot.slice(0, -5)
+    }
+  } catch {
+    cachedRepoRoot = process.cwd()
+  }
+  return cachedRepoRoot
+}
+
+// ---------------------------------------------------------------------------
 // Coding tool adapter (Phase G)
 // ---------------------------------------------------------------------------
 
@@ -337,14 +365,16 @@ async function tickInner(
               .filter((t) => t.status === "done" && t.claudeSessionId)
               .at(-1)?.claudeSessionId)
       const sessionResumed = !!resumeSessionId
-      // Use workspace from: message metadata > agent spec > cwd
+      // Resolve workspace relative to the main repo root (not cwd),
+      // because workspaces/ is gitignored and won't exist in worktrees.
+      const repoRoot = await getMainRepoRoot()
       const specWorkspace = spec?.workspace
-        ? `${process.cwd()}/${spec.workspace}`
+        ? `${repoRoot}/${spec.workspace}`
         : undefined
       const baseDir =
         (msg.metadata?.workspace as string) ??
         specWorkspace ??
-        process.cwd()
+        repoRoot
 
       // Create an isolated worktree for coding tasks so the main
       // working directory (and dev server) stays on main undisturbed.
@@ -427,7 +457,7 @@ async function tickInner(
         context: workContext,
         workingDirectory: workDir,
         trustLevel: (agentContext.sourceTrustLevel ?? "MEDIUM") as TrustLevel,
-        model: config.model,
+        model: (msg.metadata?.modelOverride as string) || config.model,
         sessionId: resumeSessionId,
         images: images?.length ? images : undefined,
       })
