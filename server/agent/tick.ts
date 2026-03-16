@@ -322,7 +322,9 @@ async function tickInner(
       }
       task.status = "in_progress"
 
-      const resumeSessionId = task.claudeSessionId ?? opCtx.lastClaudeSessionId
+      // Only resume a session owned by this task — never use shared lastClaudeSessionId
+      // which can be stale or belong to a concurrent tick
+      const resumeSessionId = task.claudeSessionId
       const sessionResumed = !!resumeSessionId
       // Use workspace from: message metadata > agent spec > cwd
       const specWorkspace = spec?.workspace
