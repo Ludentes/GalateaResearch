@@ -44,10 +44,20 @@ function printTrace(tick: any, stepIndex: number): void {
     )
   }
 
-  // Homeostasis
+  // Homeostasis (skip metadata fields like assessed_at, assessment_method)
   console.log(`${CYAN}  Homeostasis:${RESET}`)
   const homeo = tick.homeostasis ?? {}
+  const dimensionNames = new Set([
+    "knowledge_sufficiency",
+    "certainty_alignment",
+    "progress_momentum",
+    "communication_health",
+    "productive_engagement",
+    "knowledge_application",
+    "self_preservation",
+  ])
   for (const [dim, val] of Object.entries(homeo)) {
+    if (!dimensionNames.has(dim)) continue
     const color = val === "HEALTHY" ? DIM : val === "HIGH" ? YELLOW : RED
     console.log(`    ${dim}: ${color}${val}${RESET}`)
   }
