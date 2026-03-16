@@ -1,0 +1,24 @@
+scenario: "L110: Dogfood — Beki fixes CSS syntax bug in agenttestproject"
+description: >
+  Beki receives a bug report about broken CSS in the landing page.
+  The global styles in index.astro are missing semicolons after
+  margin: 0 and padding: 0. Beki should find and fix the bug,
+  then commit the change.
+agent: beki
+type: dogfood
+model: sonnet
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: >
+      There's a CSS bug in the agenttestproject landing page.
+      The global styles in src/pages/index.astro seem broken —
+      the reset styles (margin, padding) aren't applying correctly.
+      Find the syntax issue, fix it, and commit.
+    from: { platform: dashboard, user: sasha }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: delegate

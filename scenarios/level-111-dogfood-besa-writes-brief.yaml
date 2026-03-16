@@ -1,0 +1,24 @@
+scenario: "L111: Dogfood — Besa writes a competitive analysis brief"
+description: >
+  Besa receives a task to write a competitive analysis of AI agent
+  frameworks. This tests the PM agent's ability to research, analyze,
+  and produce a structured document.
+agent: besa
+type: dogfood
+model: sonnet
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: >
+      Write a brief competitive analysis of open-source AI agent
+      frameworks. Compare at least 3 frameworks (e.g. CrewAI,
+      AutoGen, LangGraph). Focus on: architecture approach,
+      multi-agent support, and production readiness. Save it as
+      docs/research/agent-frameworks-comparison.md in the project.
+      Keep it concise — 1-2 pages max.
+    from: { platform: dashboard, user: kirill }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      outcome.action: delegate
