@@ -278,9 +278,7 @@ describe("activity signals — backward compatibility", () => {
           ).toISOString(),
         },
       ],
-      lastExternalCheckAt: new Date(
-        Date.now() - 2 * 60 * 60_000,
-      ).toISOString(),
+      lastExternalCheckAt: new Date(Date.now() - 2 * 60 * 60_000).toISOString(),
       outboundFollowUps: 0,
       inboundActivityCount: 0,
     })
