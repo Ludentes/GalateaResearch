@@ -66,7 +66,8 @@ import { getDiffStat } from "./utils"
 function getAdapterTimeout(taskType: string | undefined): number {
   const { adapter_timeouts: timeouts } = getAgentConfig()
   const defaultTimeout = timeouts.default ?? 180_000
-  return taskType ? (timeouts[taskType] ?? defaultTimeout) : defaultTimeout
+  const lookup: Record<string, number | undefined> = timeouts
+  return lookup[taskType ?? ""] ?? defaultTimeout
 }
 
 // ---------------------------------------------------------------------------
