@@ -38,6 +38,8 @@ import type { CodingToolAdapter } from "./coding-adapter/types"
 import { executeWorkArc } from "./coding-adapter/work-arc"
 import { dispatchMessage } from "./dispatcher"
 import { checkForEscalation, cleanupEscalation } from "./escalation"
+import { parseGlabActivity } from "./glab-activity-parser"
+import type { OperationalContext } from "./operational-memory"
 import {
   addTask,
   getActiveTask,
@@ -234,6 +236,60 @@ function buildTickRecord(params: {
     resources: {},
     outcome: params.outcome,
     ...(params.diagnostics ? { diagnostics: params.diagnostics } : {}),
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Action feedback — glab output parsing → opCtx update → dimension recovery
+// ---------------------------------------------------------------------------
+
+/**
+ * Post-tick: scan tool outputs for GitLab activity and update opCtx.
+ * Closes the homeostasis feedback loop: agent checks GitLab → opCtx updated → dimensions recover.
+ */
+function applyGlabFeedback(
+  opCtx: OperationalContext,
+  steps: Array<{
+    toolName?: string
+    toolArgs?: Record<string, unknown>
+    toolResult?: string
+    role?: string
+    content?: string
+  }>,
+): void {
+  const activity = parseGlabActivity(steps)
+  if (!activity.queriedGitLab && activity.createdItems.length === 0) return
+
+  if (activity.queriedGitLab) {
+    opCtx.lastExternalCheckAt = new Date().toISOString()
+  }
+
+  if (!opCtx.activeWorkItems) opCtx.activeWorkItems = []
+
+  const allActivity = [...activity.issueActivity, ...activity.mrActivity]
+  for (const item of allActivity) {
+    const existing = opCtx.activeWorkItems.find((w) => w.id === item.id)
+    if (existing) {
+      existing.lastActivityAt = item.lastActivityAt
+      if (item.title) existing.title = item.title
+    }
+  }
+
+  for (const created of activity.createdItems) {
+    const exists = opCtx.activeWorkItems.some((w) => w.id === created.id)
+    if (!exists) {
+      opCtx.activeWorkItems.push({
+        id: created.id,
+        title: created.title,
+        lastActivityAt: new Date().toISOString(),
+        assignedTo: created.assignedTo,
+        delegatedAt: created.assignedTo ? new Date().toISOString() : undefined,
+      })
+    }
+  }
+
+  if (activity.queriedGitLab) {
+    opCtx.outboundFollowUps = (opCtx.outboundFollowUps ?? 0) + 1
   }
 }
 
@@ -787,6 +843,8 @@ async function tickInner(
         console.warn("[tick] Failed to dispatch message:", err)
       }
 
+      // Action feedback: parse glab outputs from work arc transcript
+      applyGlabFeedback(opCtx, arcResult.transcript)
       recordOutbound(opCtx)
       await saveOperationalContext(opCtx, agentOpPath)
       await removeMessage(msg, statePath)
@@ -886,6 +944,11 @@ async function tickInner(
     let loopToolCalls = 0
     let loopToolNames: string[] = []
     let loopCostUsd: number | undefined
+    let loopStepsForFeedback: Array<{
+      toolName?: string
+      toolArgs?: Record<string, unknown>
+      toolResult?: string
+    }> = []
     let executionAdapter: "claude-code" | "direct-response" = "direct-response"
     let usedProvider: string | undefined
 
@@ -984,6 +1047,9 @@ async function tickInner(
             .map((s) => s.toolName)
             .filter((n): n is string => !!n)
 
+          // Capture steps for action feedback parsing
+          loopStepsForFeedback = loopResult.steps
+
           // Record assistant response in operational history
           pushHistoryEntry(opCtx, "assistant", llmResult)
 
@@ -1059,6 +1125,11 @@ async function tickInner(
             error: String(err),
           },
         }).catch(() => {})
+      }
+
+      // Action feedback: parse glab outputs from agent loop
+      if (loopStepsForFeedback.length > 0) {
+        applyGlabFeedback(opCtx, loopStepsForFeedback)
       }
 
       // Record outbound time + save operational context
