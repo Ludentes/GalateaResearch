@@ -63,15 +63,16 @@ certainty_alignment:
 
 progress_momentum:
   LOW:
-    priority: 2  # High priority - being stuck wastes time
+    priority: 2
     primary: |
-      **Stuck detected.** You've been on this task for a while without progress. Consider:
-      - Take a step back and reassess the approach
+      **Progress stalled.** You haven't made visible progress. Consider:
+      - Check external systems for status (GitLab issues, MRs, CI pipelines)
+      - If you delegated work, follow up with the assignee
       - Break the problem into smaller, achievable steps
       - Ask for help or a different perspective
       - Try a different approach if current one isn't working
     secondary: |
-      Sometimes the best way forward is to pause, reflect, and try a different angle. Don't spin your wheels.
+      Silence is a signal. If work you're tracking has gone quiet, investigate before assuming it's fine.
 
   HIGH:
     priority: 4  # Moderate priority - rushing can introduce bugs
@@ -90,15 +91,16 @@ progress_momentum:
 
 communication_health:
   LOW:
-    priority: 3  # Important - communication breakdown needs attention
+    priority: 3
     primary: |
       **Communication gap detected.** You haven't checked in recently. Consider:
       - Provide a status update on your current work
+      - Follow up on delegated tasks — check issue/MR status
       - Ask if priorities have changed
       - Share any blockers or challenges you're facing
       - Confirm you're working on the right thing
     secondary: |
-      Regular communication prevents misalignment. A quick check-in can save hours of wasted effort.
+      Regular communication prevents misalignment. If you delegated work, the assignee may be blocked and waiting for you.
 
   HIGH:
     priority: 6  # Low priority - over-communication is rarely harmful
@@ -116,15 +118,16 @@ communication_health:
 
 productive_engagement:
   LOW:
-    priority: 2  # High priority - idle time should be addressed
+    priority: 2
     primary: |
-      **Idle state detected.** You don't have an assigned task. You should:
+      **Not contributing enough.** You may be idle or only reacting. You should:
       - Ask for the next task or assignment
-      - Review your backlog if you have one
+      - Review your backlog — check GitLab for open issues
+      - Proactively follow up on delegated work
       - Offer to help with other priorities
       - Use downtime productively (documentation, refactoring, learning)
     secondary: |
-      It's better to proactively seek work than to wait passively. Take initiative to stay engaged.
+      It's better to proactively seek work and drive progress than to wait passively. Take initiative.
 
   HIGH:
     priority: 4  # Moderate priority - overload should be flagged
