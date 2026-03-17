@@ -1,21 +1,21 @@
 import { Client, Events, GatewayIntentBits, Partials } from "discord.js"
-import { registerHandler } from "../agent/dispatcher"
-import { getTextContent } from "../agent/types"
 import { getDiscordConfig } from "../engine/config"
 import { handleInboundMessage } from "./handlers"
+import { splitMessage } from "./message-split"
 
-let client: Client | null = null
+export interface AgentBot {
+  agentId: string
+  client: Client
+  stop(): Promise<void>
+}
 
-export async function startDiscordBot(): Promise<Client | null> {
+export async function createAgentBot(
+  agentId: string,
+  token: string,
+): Promise<AgentBot> {
   const config = getDiscordConfig()
-  const token = process.env.DISCORD_BOT_TOKEN
 
-  if (!config.enabled || !token) {
-    console.log("[discord] Bot disabled or no token — skipping")
-    return null
-  }
-
-  client = new Client({
+  const client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
       GatewayIntentBits.GuildMessages,
@@ -26,15 +26,13 @@ export async function startDiscordBot(): Promise<Client | null> {
   })
 
   client.once(Events.ClientReady, (c) => {
-    console.log(`[discord] Bot ready as ${c.user.tag}`)
+    console.log(`[discord:${agentId}] Bot ready as ${c.user.tag}`)
   })
 
   client.on(Events.MessageCreate, async (message) => {
-    // Ignore own messages and bots
     if (message.author.bot) return
     if (message.author.id === client?.user?.id) return
 
-    // Check guild/channel filters
     if (config.allowed_guilds.length > 0 && message.guildId) {
       if (!config.allowed_guilds.includes(message.guildId)) return
     }
@@ -42,63 +40,79 @@ export async function startDiscordBot(): Promise<Client | null> {
       if (!config.allowed_channels.includes(message.channelId)) return
     }
 
-    // DM check
     const isDM = !message.guildId
     if (isDM && !config.respond_to_dms) return
-
-    // Mention check (non-DM)
     if (!isDM && config.respond_to_mentions) {
-      if (!message.mentions.has(client!.user!.id)) return
+      if (!message.mentions.has(client.user!.id)) return
     }
 
-    await handleInboundMessage({
-      authorUsername: message.author.username,
-      content: message.content,
-      channelId: message.channelId,
-      messageId: message.id,
-      guildId: message.guildId ?? undefined,
-    })
-  })
-
-  // Register outbound handler with dispatcher
-  registerHandler("discord", {
-    send: async (message) => {
-      const channelId = message.metadata.discordChannelId as string | undefined
-      if (!channelId || !client) {
-        console.warn(
-          `[discord] Cannot send: ${!channelId ? "missing channelId" : "client not ready"}`,
-        )
-        return
-      }
-
-      const channel = await client.channels.fetch(channelId)
-      if (channel?.isTextBased() && "send" in channel) {
-        // If we have a threadId in routing, try to send there
-        if (message.routing.threadId) {
-          const thread = await client.channels
-            .fetch(message.routing.threadId)
-            .catch(() => null)
-          if (thread?.isTextBased() && "send" in thread) {
-            await thread.send(getTextContent(message.content))
-            return
-          }
-        }
-        await channel.send(getTextContent(message.content))
-      } else {
-        console.warn(
-          `[discord] Channel ${channelId} not text-based or not found`,
-        )
-      }
-    },
+    await handleInboundMessage(
+      {
+        authorUsername: message.author.username,
+        content: message.content,
+        channelId: message.channelId,
+        messageId: message.id,
+        guildId: message.guildId ?? undefined,
+      },
+      agentId,
+    )
   })
 
   await client.login(token)
-  return client
+  return {
+    agentId,
+    client,
+    stop: async () => {
+      client.destroy()
+    },
+  }
+}
+
+/**
+ * Send a message through a bot client, splitting if needed.
+ * Returns true if sent successfully.
+ */
+export async function sendViaBot(
+  bot: AgentBot,
+  channelId: string,
+  content: string,
+  threadId?: string,
+): Promise<boolean> {
+  const channel = await bot.client.channels
+    .fetch(channelId)
+    .catch(() => null)
+  if (!channel?.isTextBased() || !("send" in channel)) {
+    console.warn(
+      `[discord:${bot.agentId}] Channel ${channelId} not text-based or not found`,
+    )
+    return false
+  }
+
+  const target = threadId
+    ? await bot.client.channels.fetch(threadId).catch(() => null)
+    : null
+  const sendTo =
+    target?.isTextBased() && "send" in target ? target : channel
+
+  const chunks = splitMessage(content)
+  for (const chunk of chunks) {
+    await sendTo.send(chunk)
+  }
+  return true
+}
+
+// Legacy wrapper for backward compat (scripts/verify/discord-smoke.ts)
+export async function startDiscordBot(): Promise<Client | null> {
+  const config = getDiscordConfig()
+  const token = process.env.DISCORD_BOT_TOKEN
+  if (!config.enabled || !token) {
+    console.log("[discord] Bot disabled or no token — skipping")
+    return null
+  }
+  const bot = await createAgentBot("galatea", token)
+  return bot.client
 }
 
 export async function stopDiscordBot(): Promise<void> {
-  if (client) {
-    client.destroy()
-    client = null
-  }
+  // Legacy — no-op, kept for smoke test compat
 }

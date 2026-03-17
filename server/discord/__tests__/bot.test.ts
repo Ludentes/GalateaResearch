@@ -29,8 +29,10 @@ describe("Discord Handlers", () => {
           discordChannelId: "123",
           discordMessageId: "456",
           discordGuildId: "789",
+          targetAgent: "galatea",
         }),
       }),
+      undefined,
     )
   })
 
