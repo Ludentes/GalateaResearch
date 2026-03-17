@@ -22,8 +22,22 @@ vi.mock("../../memory/context-assembler", () => ({
 }))
 
 vi.mock("../../providers", () => ({
-  getModelWithFallback: vi.fn().mockReturnValue({ model: "test-model" }),
+  getModelWithFallback: vi
+    .fn()
+    .mockReturnValue({ model: "test-model", modelName: "test-model" }),
 }))
+
+vi.mock("../../engine/homeostasis-engine", async (importOriginal) => {
+  const actual =
+    (await importOriginal()) as typeof import("../../engine/homeostasis-engine")
+  return {
+    ...actual,
+    // Skip L2 async assessment — use synchronous L1 only
+    assessDimensionsAsync: vi.fn().mockImplementation((ctx) => {
+      return Promise.resolve(actual.assessDimensions(ctx))
+    }),
+  }
+})
 
 vi.mock("../agent-loop", () => ({
   runAgentLoop: vi.fn().mockResolvedValue({

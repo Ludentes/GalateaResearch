@@ -9,7 +9,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./app/test/setup.ts"],
     exclude: [
-      "node_modules",
+      "**/node_modules/**",
       "e2e",
       "docs/archive",
       ".worktrees",

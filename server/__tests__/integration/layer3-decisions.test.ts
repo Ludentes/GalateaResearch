@@ -13,10 +13,23 @@ import {
   describe,
   expect,
   it,
+  vi,
 } from "vitest"
 import { userModel } from "./helpers/fixtures"
 import { closeTestDb, ensureOllama, ensureTestDb } from "./helpers/setup"
 import { scenario, type TestWorld } from "./helpers/test-world"
+
+// Skip L2 async assessment — uses Claude Code SDK which isn't available in tests
+vi.mock("../../engine/homeostasis-engine", async (importOriginal) => {
+  const actual =
+    (await importOriginal()) as typeof import("../../engine/homeostasis-engine")
+  return {
+    ...actual,
+    assessDimensionsAsync: vi.fn().mockImplementation((ctx) => {
+      return Promise.resolve(actual.assessDimensions(ctx))
+    }),
+  }
+})
 
 describe("Layer 3: Alina asks project status, agent decides to respond", () => {
   let world: TestWorld

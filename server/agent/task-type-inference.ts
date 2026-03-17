@@ -102,12 +102,16 @@ function hasTaskSignal(lower: string): boolean {
 }
 
 function inferTaskType(lower: string): TaskType {
-  // Research (EN + RU)
-  if (
-    new RegExp(`${EN_RESEARCH_VERBS.source}|${RU_RESEARCH_VERBS.source}`).test(
-      lower,
-    )
-  ) {
+  const hasCodingVerb = new RegExp(
+    `${EN_CODING_VERBS.source}|${RU_CODING_VERBS.source}`,
+  ).test(lower)
+  const hasResearchVerb = new RegExp(
+    `${EN_RESEARCH_VERBS.source}|${RU_RESEARCH_VERBS.source}`,
+  ).test(lower)
+
+  // When both coding and research verbs are present (e.g. "investigate and fix"),
+  // the deliverable is code — classify as coding
+  if (hasResearchVerb && !hasCodingVerb) {
     return "research"
   }
 

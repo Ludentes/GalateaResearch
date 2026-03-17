@@ -49,6 +49,18 @@ vi.mock("../../providers/config", () => ({
   }),
 }))
 
+// Skip L2 async assessment — use synchronous L1 only
+vi.mock("../../engine/homeostasis-engine", async (importOriginal) => {
+  const actual =
+    (await importOriginal()) as typeof import("../../engine/homeostasis-engine")
+  return {
+    ...actual,
+    assessDimensionsAsync: vi.fn().mockImplementation((ctx) => {
+      return Promise.resolve(actual.assessDimensions(ctx))
+    }),
+  }
+})
+
 // Mock operational memory
 vi.mock("../operational-memory", () => ({
   loadOperationalContext: vi.fn().mockResolvedValue({

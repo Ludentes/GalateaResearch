@@ -103,6 +103,24 @@ describe("inferRouting", () => {
       expect(result.level).toBe("task")
       expect(result.taskType).toBe("coding")
     })
+
+    it("investigate + fix → coding (coding verb wins)", () => {
+      const result = inferRouting(
+        "investigate the build error, fix it, and create an MR",
+        "task_assignment",
+      )
+      expect(result.level).toBe("task")
+      expect(result.taskType).toBe("coding")
+    })
+
+    it("investigate + build → coding (coding verb wins)", () => {
+      const result = inferRouting(
+        "look into the failing tests and build a fix",
+        "task_assignment",
+      )
+      expect(result.level).toBe("task")
+      expect(result.taskType).toBe("coding")
+    })
   })
 
   describe("Russian language support", () => {

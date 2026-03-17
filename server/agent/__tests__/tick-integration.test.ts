@@ -67,6 +67,18 @@ vi.mock("../../providers/config", () => ({
   }),
 }))
 
+// Homeostasis: skip L2 async assessment (makes real SDK calls)
+vi.mock("../../engine/homeostasis-engine", async (importOriginal) => {
+  const actual =
+    (await importOriginal()) as typeof import("../../engine/homeostasis-engine")
+  return {
+    ...actual,
+    assessDimensionsAsync: vi.fn().mockImplementation((ctx) => {
+      return Promise.resolve(actual.assessDimensions(ctx))
+    }),
+  }
+})
+
 // Context assembly requires DB — mock it
 vi.mock("../../memory/context-assembler", () => ({
   assembleContext: vi.fn().mockResolvedValue({

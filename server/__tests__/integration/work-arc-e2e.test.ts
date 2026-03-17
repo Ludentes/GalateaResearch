@@ -19,8 +19,22 @@ vi.mock("../../memory/context-assembler", () => ({
 }))
 
 vi.mock("../../providers", () => ({
-  getModelWithFallback: vi.fn().mockReturnValue({ model: "test-model" }),
+  getModelWithFallback: vi
+    .fn()
+    .mockReturnValue({ model: "test-model", modelName: "test-model" }),
 }))
+
+// Skip L2 async assessment — use synchronous L1 only
+vi.mock("../../engine/homeostasis-engine", async (importOriginal) => {
+  const actual =
+    (await importOriginal()) as typeof import("../../engine/homeostasis-engine")
+  return {
+    ...actual,
+    assessDimensionsAsync: vi.fn().mockImplementation((ctx) => {
+      return Promise.resolve(actual.assessDimensions(ctx))
+    }),
+  }
+})
 
 vi.mock("../../agent/agent-loop", () => ({
   runAgentLoop: vi.fn().mockResolvedValue({
@@ -138,8 +152,8 @@ describe("E2E work arc flow", () => {
     expect(result.delegation?.adapter).toBe("e2e-mock")
     expect(result.delegation?.status).toBe("completed")
 
-    // Assert adapter.query was called with prompt containing the task content
-    expect(mockQuery).toHaveBeenCalledOnce()
+    // Assert adapter.query was called (DO phase + optional VERIFY phase)
+    expect(mockQuery.mock.calls.length).toBeGreaterThanOrEqual(1)
     const queryOpts = mockQuery.mock.calls[0][0] as CodingQueryOptions
     expect(queryOpts.prompt).toContain("Create user profile screen")
 
@@ -244,8 +258,9 @@ describe("E2E work arc flow", () => {
       opContextPath: OP_PATH,
     })
 
-    // Verify hook decisions were captured
-    expect(decisions).toHaveLength(2)
+    // Verify hook decisions were captured (DO phase + VERIFY phase)
+    // Each phase invokes the adapter which triggers 2 hook calls
+    expect(decisions.length).toBeGreaterThanOrEqual(2)
     expect(decisions[0]).toEqual({ toolName: "Read", decision: "allow" })
     expect(decisions[1]).toEqual({ toolName: "Bash", decision: "deny" })
   }, 30_000)
