@@ -1,0 +1,25 @@
+scenario: "L250 — progress_momentum drops when tracked work goes stale"
+description: |
+  Besa has delegated an issue to Beki. 3 days pass with no activity.
+  On the next tick, progress_momentum should be LOW.
+agent: besa
+type: regression
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "How are things going with the pricing page?"
+    from: { platform: dashboard, user: kirill }
+    setup:
+      createTask:
+        description: "Track pricing page implementation"
+        phase: implementing
+        status: in_progress
+      activeWorkItems:
+        - id: "gitlab:issue:42"
+          title: "Build pricing page"
+          lastActivityAt: "-72h"
+          assignedTo: "beki"
+          delegatedAt: "-96h"
+    expect:
+      homeostasis.progress_momentum: LOW

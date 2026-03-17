@@ -1,0 +1,26 @@
+scenario: "L251 — communication_health drops when delegation has no follow-up"
+description: |
+  Besa delegated work 30 hours ago and hasn't followed up.
+  communication_health should be LOW.
+agent: besa
+type: regression
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "Any updates on the project?"
+    from: { platform: dashboard, user: kirill }
+    setup:
+      createTask:
+        description: "Manage pricing page project"
+        phase: implementing
+        status: in_progress
+      activeWorkItems:
+        - id: "gitlab:issue:42"
+          title: "Build pricing page"
+          lastActivityAt: "-6h"
+          assignedTo: "beki"
+          delegatedAt: "-30h"
+      outboundFollowUps: 0
+    expect:
+      homeostasis.communication_health: LOW

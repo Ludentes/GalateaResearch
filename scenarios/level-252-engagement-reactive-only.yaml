@@ -1,0 +1,27 @@
+scenario: "L252 — productive_engagement drops for reactive-only PM with stale work"
+description: |
+  Besa has work items but hasn't proactively followed up.
+  Stale work + zero outbound follow-ups = LOW productive_engagement.
+agent: besa
+type: regression
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "What's the status?"
+    from: { platform: dashboard, user: kirill }
+    setup:
+      createTask:
+        description: "Manage sprint"
+        phase: implementing
+        status: in_progress
+      activeWorkItems:
+        - id: "gitlab:issue:42"
+          title: "Stale task"
+          lastActivityAt: "-72h"
+          assignedTo: "beki"
+          delegatedAt: "-96h"
+      outboundFollowUps: 0
+    expect:
+      homeostasis.productive_engagement: LOW
+      homeostasis.progress_momentum: LOW
