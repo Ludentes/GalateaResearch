@@ -1,0 +1,32 @@
+scenario: "L240: Besa reviews agenttestproject site and creates task plan"
+description: >
+  Kirill asks Besa (PM) to review the current state of the agenttestproject
+  landing page, identify what's missing/broken, and create an ordered list
+  of GitLab issues for Beki to implement. The site has Hero and HowItWorks
+  components but Tailwind CSS is not installed (all utility classes are dead),
+  Pricing is a placeholder, and Footer is missing entirely.
+  State: master has Hero + HowItWorks, 2 open issues (#2 Pricing, #3 Footer),
+  0 open MRs. Dev server runs on localhost:4321.
+  SAFETY: gitlab.maugry.ru is production — no destructive actions.
+agent: besa
+model: sonnet
+type: dogfood
+setup:
+  l2: true
+  clear_ticks: true
+steps:
+  - send: >
+      Please review the agenttestproject landing page. The dev server is
+      running at http://localhost:4321/. The code is in
+      /home/newub/w/galatea/workspaces/agenttestproject.
+      Check the current state of the site — what works, what's broken,
+      what's missing. Then create an ordered list of GitLab issues in
+      kyurkov/agenttestproject for Beki to implement one by one.
+      There are already issues #2 (Pricing) and #3 (Footer) — update
+      them if needed or create new ones. Order tasks by priority/dependency.
+      IMPORTANT: gitlab.maugry.ru is production GitLab — no destructive actions.
+    from: { platform: dashboard, user: kirill }
+    messageType: task_assignment
+    expect:
+      outcome.action: exists
+      outcome.response: exists

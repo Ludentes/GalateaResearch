@@ -1,0 +1,31 @@
+scenario: "L241: Beki installs Tailwind CSS in agenttestproject"
+description: >
+  Besa delegates the first task to Beki: install and configure Tailwind CSS.
+  The site uses Tailwind utility classes everywhere (Hero.astro, HowItWorks.astro)
+  but Tailwind is not installed — all styling is broken. Beki should install
+  @astrojs/tailwind or Tailwind v4, configure it, verify the site renders
+  correctly with styles applied, then push and create an MR.
+  SAFETY: gitlab.maugry.ru is production — no destructive actions.
+agent: beki
+model: sonnet
+type: dogfood
+setup:
+  l2: true
+  clear_ticks: true
+steps:
+  - send: >
+      First task for the agenttestproject landing page: install and configure
+      Tailwind CSS. The site in /home/newub/w/galatea/workspaces/agenttestproject
+      uses Tailwind utility classes in all components (Hero.astro, HowItWorks.astro)
+      but Tailwind is NOT installed — none of the styles work. Install it
+      properly for Astro, verify the dev server shows styled content at
+      localhost:4321, then push to a branch and create an MR on
+      kyurkov/agenttestproject.
+      IMPORTANT: gitlab.maugry.ru is production GitLab — no force push,
+      no deletion, no permission changes.
+    from: { platform: discord, user: besa }
+    messageType: task_assignment
+    expect:
+      routing.level: task
+      routing.taskType: coding
+      outcome.action: delegate
