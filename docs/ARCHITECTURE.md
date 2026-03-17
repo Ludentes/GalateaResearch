@@ -300,6 +300,67 @@ L3 (meta-assessment: arbitrate L1 vs L2 when they disagree) and L4 (strategic an
 | knowledge_application | L2 only (defaults HEALTHY without LLM) |
 | self_preservation | Tool risk level + hard rule conflict check + trust level verification + injection pattern detection |
 
+### Drive → Competence → Action Model *(not yet built)*
+
+The homeostasis engine provides **drive** (pressure from imbalanced dimensions). But drive alone produces thrashing — an agent that knows something is wrong but doesn't know what to do about it. The full loop requires three layers:
+
+```
+Dimensions (drive)     → "Something is wrong. Progress has stalled."
+Skills (competence)    → "I know how to check GitLab for stale issues."
+Tools (action)         → gitlab.list_issues({ state: "opened", assignee: "beki" })
+```
+
+**Dimensions are the regulatory axes.** They must remain general — 7 dimensions covering any persona, any domain. We do NOT create new dimensions per problem. When a new class of issue arises (e.g., "Besa doesn't follow up on delegated work"), the fix is:
+
+1. Identify which existing dimension(s) already describe the imbalance (progress_momentum, communication_health, productive_engagement)
+2. Expand the assessor's **signal surface** to detect the new signal class
+3. Ensure guidance points toward actions the agent's skills can execute
+
+**Skills are the agent's competencies.** Different agents respond to the same LOW dimension differently:
+
+| Dimension LOW | Beki (developer) | Besa (PM) |
+|---------------|-------------------|-----------|
+| progress_momentum | Try a different approach, ask for help | Check GitLab for stale issues, unblock team |
+| communication_health | Post status update in Discord | Follow up on delegated tasks, write status report |
+| productive_engagement | Pick next task from backlog | Review open MRs, assign next sprint items |
+
+Skills can demand specific behaviors (e.g., a `project-management` skill that says "create a plan file when starting multi-task work"). This is learned competence, not hardcoded engine logic.
+
+**External systems are ground truth, not internal state.** Besa doesn't need an internal "goal memory" tracking delegated tasks — GitLab already has that. When homeostatic pressure says "seek status updates," Besa queries GitLab and discovers the state she needs. The agent uses external tools to resolve internal pressure, just as a human PM checks Jira when feeling anxious about a quiet project.
+
+#### Signal Surface Expansion *(not yet built)*
+
+Current assessors use narrow signals (message repetition, time since last message, task assignment). For autonomous PM behavior, assessors need **time-aware silence detection**:
+
+| Dimension | Current signals | Future signals |
+|-----------|----------------|----------------|
+| progress_momentum | Repeated user messages (stuck detection) | Time since last observable progress on active work (commits, MR activity, issue updates) |
+| communication_health | Time since last inbound/outbound message | Pending follow-ups across channels (Discord + GitLab), unanswered questions from teammates |
+| productive_engagement | Has assigned task (binary) | Active vs reactive ratio — is the agent initiating or only responding when poked? |
+
+The key mechanism: **silence itself is the signal.** The longer since Besa last observed progress on active work, the more pressure builds across multiple dimensions simultaneously. No polling schedule needed — the heartbeat runs assessment, and if everything is HEALTHY, nothing happens. If dimensions are LOW, the agent acts.
+
+This means the heartbeat's role simplifies: it is the nervous system tick, not a task scheduler. It doesn't poll GitLab on a timer. It evaluates whether the agent feels pressure, and the agent's skill-driven response to that pressure may include querying external systems.
+
+#### Action Feedback Loop *(not yet built)*
+
+When an agent acts to resolve homeostatic pressure, the results must feed back into assessment:
+
+```
+communication_health: LOW (silence on delegated task)
+  → guidance: "seek status updates"
+  → agent queries GitLab, finds MR open with passing CI
+  → communication_health recovers (activity observed)
+  → progress_momentum recovers (work is progressing)
+
+OR:
+  → agent queries GitLab, finds no activity for 3 days
+  → communication_health stays LOW
+  → agent escalates: messages Beki in Discord
+```
+
+The action itself (checking GitLab) is homeostasis-driven — not scheduled. The result either resolves the pressure or deepens it, driving further action.
+
 ---
 
 ## Layer 2: Memory System
@@ -933,7 +994,7 @@ Inner loop continues from where it left off (using recentHistory + task.progress
 
 ## Architecture Principles
 
-1. **Homeostasis is the unifying principle.** Don't add subsystems — add dimensions or connect existing dimensions to new data sources.
+1. **Homeostasis is the unifying principle.** Don't add subsystems — connect existing dimensions to new data sources. Don't add dimensions per problem — expand the signal surface of existing ones. 7 dimensions should cover any persona.
 
 2. **Memory with lifecycle.** Every piece of knowledge has confidence, can decay, can be superseded, can be consolidated. No immortal facts except hard rules.
 
@@ -950,6 +1011,10 @@ Inner loop continues from where it left off (using recentHistory + task.progress
 8. **Safety before tools.** Design the trust model before implementing the tool layer. Tool interfaces carry risk metadata.
 
 9. **The agent must remember its own actions.** Work outputs must enter the knowledge store. An agent that forgets what it did is useless across sessions.
+
+10. **Drive, competence, action.** Homeostasis provides drive (what's wrong), skills provide competence (how to fix it), tools provide action (doing it). All three are needed — drive without competence thrashes, competence without drive is inert.
+
+11. **External systems are ground truth.** Don't duplicate state that lives in authoritative systems (GitLab, Discord). The agent queries external systems to resolve internal pressure, not to maintain a parallel copy. If Besa needs to know issue status, she checks GitLab — she doesn't maintain an internal task tracker.
 
 ---
 
@@ -1011,11 +1076,14 @@ Last updated: 2026-03-16
 
 ### Not Yet Built
 
-| Component | Phase |
-|-----------|-------|
-| Multi-Agent State | Phase H |
-| Persona Export/Import | Phase H |
-| Agent Registry | Phase H |
+| Component | Description | Phase |
+|-----------|-------------|-------|
+| Signal surface expansion | Time-aware silence detection, cross-channel activity signals for assessors | Phase I |
+| Skill-driven action routing | Dimensions map to agent-specific skills, not hardcoded responses | Phase I |
+| Action feedback loop | Agent actions (e.g., GitLab query) feed results back into homeostasis assessment | Phase I |
+| Multi-Agent State | Shared context, delegation tracking between agents | Phase H |
+| Persona Export/Import | Portable agent identity + knowledge | Phase H |
+| Agent Registry | Discovery and coordination of multiple agents | Phase H |
 
 ---
 
@@ -1040,6 +1108,6 @@ Last updated: 2026-03-16
 ---
 
 *Created: 2026-02-21*
-*Last major update: 2026-03-15 (lifecycle pipeline, priority queue, SELF-AWARENESS, settings screen)*
+*Last major update: 2026-03-17 (drive/competence/action model, signal surface expansion design, external-systems-as-truth principle)*
 *Synthesized from: Psychological Architecture, Phases A-E implementation, OpenClaw research, 3-agent adversarial review, Reference Scenarios audit*
 *Foundation: Homeostasis-based architecture with 7 universal dimensions (self_preservation added in Phase G)*
