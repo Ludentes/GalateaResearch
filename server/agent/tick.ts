@@ -402,6 +402,11 @@ async function tickInner(
             escalatedAt: escalationTask.escalatedAt!,
           }
         : undefined,
+      // Phase I: activity signal fields (from operational memory)
+      activeWorkItems: opCtx.activeWorkItems ?? undefined,
+      lastExternalCheckAt: opCtx.lastExternalCheckAt ?? undefined,
+      outboundFollowUps: opCtx.outboundFollowUps ?? undefined,
+      inboundActivityCount: opCtx.inboundActivityCount ?? undefined,
     }
 
     t0 = Date.now()
@@ -1215,6 +1220,11 @@ async function tickInner(
     hasAssignedTask: !!state.activeTask || !!idleActiveTask,
     lastOutboundAt: opCtx.lastOutboundAt || undefined,
     taskCount: opCtx.tasks.filter((t) => t.status !== "done").length,
+    // Phase I: activity signal fields (from operational memory)
+    activeWorkItems: opCtx.activeWorkItems ?? undefined,
+    lastExternalCheckAt: opCtx.lastExternalCheckAt ?? undefined,
+    outboundFollowUps: opCtx.outboundFollowUps ?? undefined,
+    inboundActivityCount: opCtx.inboundActivityCount ?? undefined,
   }
 
   await saveOperationalContext(opCtx, agentOpPath)
