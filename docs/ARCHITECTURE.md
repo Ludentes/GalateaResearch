@@ -1012,12 +1012,14 @@ Last updated: 2026-03-17
 
 ### Not Yet Built
 
-| Component | Phase |
-|-----------|-------|
-| Cross-channel activity signals | Phase I.2 |
-| Multi-Agent State | Phase H |
-| Persona Export/Import | Phase H |
-| Agent Registry | Phase H |
+| Component | Description | Phase |
+|-----------|-------------|-------|
+| Cross-channel activity signals | Inbound activity from GitLab webhooks/MR updates feeding into assessors automatically | Phase I.2 |
+| Skill-driven action routing | Dimensions map to agent-specific skills, not hardcoded responses | Phase I.2 |
+| Action feedback loop | Agent actions (e.g., GitLab query) feed results back into homeostasis assessment | Phase I.2 |
+| Multi-Agent State | Shared context, delegation tracking between agents | Phase H |
+| Persona Export/Import | Portable agent identity + knowledge | Phase H |
+| Agent Registry | Discovery and coordination of multiple agents | Phase H |
 
 ---
 
