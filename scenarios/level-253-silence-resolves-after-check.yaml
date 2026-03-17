@@ -1,0 +1,29 @@
+scenario: "L253 — dimensions recover when work items have recent activity"
+description: |
+  Besa's work items show recent activity. All dimensions should be HEALTHY.
+  This is the "after Besa checked GitLab and found things are fine" state.
+agent: besa
+type: regression
+setup:
+  clear_ticks: true
+  clear_state: true
+steps:
+  - send: "How is the sprint going?"
+    from: { platform: dashboard, user: kirill }
+    setup:
+      createTask:
+        description: "Manage sprint"
+        phase: implementing
+        status: in_progress
+      activeWorkItems:
+        - id: "gitlab:issue:42"
+          title: "Build pricing page"
+          lastActivityAt: "-2h"
+          assignedTo: "beki"
+      outboundFollowUps: 2
+      seedFacts:
+        - content: "Beki pushed 3 commits to the pricing-page branch today"
+    expect:
+      homeostasis.progress_momentum: HEALTHY
+      homeostasis.communication_health: HEALTHY
+      homeostasis.productive_engagement: HEALTHY

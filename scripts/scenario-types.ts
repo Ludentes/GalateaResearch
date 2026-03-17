@@ -32,6 +32,16 @@ export interface ScenarioStep {
     }
     addHistory?: Array<{ role: string; content: string }>
     seedFacts?: Array<{ content: string; source?: string }>
+    // Phase I: activity signal fields
+    activeWorkItems?: Array<{
+      id: string
+      title: string
+      lastActivityAt: string
+      assignedTo?: string
+      delegatedAt?: string
+    }>
+    outboundFollowUps?: number
+    inboundActivityCount?: number
   }
   /** Trigger a heartbeat tick instead of sending a message */
   trigger?: "heartbeat"

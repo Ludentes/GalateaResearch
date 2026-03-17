@@ -184,7 +184,7 @@ describe("Homeostasis Engine", () => {
       }
       const guidance = getGuidance(state)
       const knowledgeIdx = guidance.indexOf("Knowledge gap")
-      const stuckIdx = guidance.indexOf("Stuck detected")
+      const stuckIdx = guidance.indexOf("Progress stalled")
       expect(knowledgeIdx).toBeLessThan(stuckIdx)
     })
   })

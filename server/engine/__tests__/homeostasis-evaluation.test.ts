@@ -110,7 +110,7 @@ describe("Homeostasis Evaluation - Reference Scenarios", () => {
       expect(state.progress_momentum).toBe("LOW")
 
       const guidance = getGuidance(state)
-      expect(guidance).toContain("Stuck detected")
+      expect(guidance).toContain("Progress stalled")
     })
 
     it("detects HEALTHY for varied conversation", () => {
@@ -317,6 +317,6 @@ describe("Homeostasis Goal Achievement", () => {
     const guidance = getGuidance(state)
 
     expect(state.progress_momentum).toBe("LOW")
-    expect(guidance).toContain("Stuck detected")
+    expect(guidance).toContain("Progress stalled")
   })
 })

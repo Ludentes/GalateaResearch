@@ -293,9 +293,9 @@ L3 (meta-assessment: arbitrate L1 vs L2 when they disagree) and L4 (strategic an
 | Dimension | L1 Method |
 |-----------|-----------|
 | knowledge_sufficiency | Count retrieved facts matching query keywords; weight by confidence |
-| progress_momentum | Jaccard similarity of recent user messages (repetition = stuck) |
-| communication_health | Time since last inbound message + `lastOutboundAt` for cooldown |
-| productive_engagement | Has assigned task + recent message count |
+| progress_momentum | Repeated user messages (stuck detection) + stale `activeWorkItems` (no activity beyond `stale_work_hours`) |
+| communication_health | Time since last inbound/outbound + delegation follow-up (delegated work with zero `outboundFollowUps` beyond `delegation_followup_hours`) |
+| productive_engagement | Has assigned task + reactive-only detection (stale `activeWorkItems` with zero `outboundFollowUps`) |
 | certainty_alignment | L2 only (defaults HEALTHY without LLM) |
 | knowledge_application | L2 only (defaults HEALTHY without LLM) |
 | self_preservation | Tool risk level + hard rule conflict check + trust level verification + injection pattern detection |
@@ -1020,7 +1020,7 @@ Inner loop continues from where it left off (using recentHistory + task.progress
 
 ## Implementation Status
 
-Last updated: 2026-03-16
+Last updated: 2026-03-17
 
 ### Production-Ready (tested, 97 test files, 817 tests)
 
@@ -1063,6 +1063,9 @@ Last updated: 2026-03-16
 | Eval | Scenario runner with regression/dogfood separation (116 scenarios) | `scripts/run-scenario.ts` |
 | Eval | Trace mode (`--trace`) with diagnostics and anomaly warnings | `scripts/run-scenario.ts` |
 | Eval | Tick diagnostics (op memory path, knowledge store, provider, model, facts) | `server/observation/tick-record.ts` |
+| Brain | Signal surface expansion (stale work, delegation follow-up, reactive-only) | `server/engine/homeostasis-engine.ts` |
+| Brain | Action feedback loop (glab output parsing → opCtx update → dimension recovery) | `server/agent/glab-activity-parser.ts` |
+| Brain | Outbound signal tracking (glab issue create → auto-add to activeWorkItems) | `server/agent/glab-activity-parser.ts` |
 
 ### Scaffolding / Disabled
 
@@ -1078,9 +1081,8 @@ Last updated: 2026-03-16
 
 | Component | Description | Phase |
 |-----------|-------------|-------|
-| Signal surface expansion | Time-aware silence detection, cross-channel activity signals for assessors | Phase I |
-| Skill-driven action routing | Dimensions map to agent-specific skills, not hardcoded responses | Phase I |
-| Action feedback loop | Agent actions (e.g., GitLab query) feed results back into homeostasis assessment | Phase I |
+| Cross-channel activity signals | GitLab webhooks pushing inbound activity (currently agent must actively query) | Phase I.2 |
+| Skill-driven action routing | Dimensions map to agent-specific skills, not hardcoded responses | Phase I.2 |
 | Multi-Agent State | Shared context, delegation tracking between agents | Phase H |
 | Persona Export/Import | Portable agent identity + knowledge | Phase H |
 | Agent Registry | Discovery and coordination of multiple agents | Phase H |

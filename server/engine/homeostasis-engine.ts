@@ -206,6 +206,19 @@ function assessKnowledgeSufficiencyL1(ctx: AgentContext): DimensionState {
 
 function assessProgressMomentumL1(ctx: AgentContext): DimensionState {
   const cfg = getHomeostasisConfig()
+
+  // Stale work detection: if any active work item has no activity beyond threshold
+  if (ctx.activeWorkItems && ctx.activeWorkItems.length > 0) {
+    const staleHours = cfg.stale_work_hours ?? 48
+    const staleThresholdMs = staleHours * 60 * 60_000
+    const now = Date.now()
+    const hasStaleWork = ctx.activeWorkItems.some((item) => {
+      const lastActivity = new Date(item.lastActivityAt).getTime()
+      return now - lastActivity > staleThresholdMs
+    })
+    if (hasStaleWork) return "LOW"
+  }
+
   const userMessages = ctx.messageHistory.filter((m) => m.role === "user")
   if (userMessages.length < cfg.stuck_detection_window) return "HEALTHY"
 
@@ -245,6 +258,23 @@ function assessCommunicationHealthL1(ctx: AgentContext): DimensionState {
     if (outboundElapsedMs < 5 * 60_000) return "HIGH"
   }
 
+  // Delegation follow-up: if agent delegated work and hasn't followed up
+  if (
+    ctx.activeWorkItems &&
+    ctx.outboundFollowUps !== undefined &&
+    ctx.outboundFollowUps === 0
+  ) {
+    const followupHours = cfg.delegation_followup_hours ?? 24
+    const followupThresholdMs = followupHours * 60 * 60_000
+    const now = Date.now()
+    const hasStaleDelegation = ctx.activeWorkItems.some((item) => {
+      if (!item.delegatedAt) return false
+      const delegated = new Date(item.delegatedAt).getTime()
+      return now - delegated > followupThresholdMs
+    })
+    if (hasStaleDelegation) return "LOW"
+  }
+
   // Check silence during active work: LOW if has task but no outbound for 3+ hours
   if (ctx.hasAssignedTask && ctx.lastOutboundAt) {
     const outboundElapsedMs =
@@ -264,6 +294,8 @@ function assessCommunicationHealthL1(ctx: AgentContext): DimensionState {
 }
 
 function assessProductiveEngagementL1(ctx: AgentContext): DimensionState {
+  const cfg = getHomeostasisConfig()
+
   // No tasks and no messages → idle, seek work
   if (
     !ctx.hasAssignedTask &&
@@ -273,6 +305,24 @@ function assessProductiveEngagementL1(ctx: AgentContext): DimensionState {
   ) {
     return "LOW"
   }
+
+  // Reactive-only detection: has work items but hasn't been proactive
+  if (
+    ctx.activeWorkItems &&
+    ctx.activeWorkItems.length > 0 &&
+    ctx.outboundFollowUps !== undefined &&
+    ctx.outboundFollowUps === 0
+  ) {
+    const staleHours = cfg.stale_work_hours ?? 48
+    const staleThresholdMs = staleHours * 60 * 60_000
+    const now = Date.now()
+    const hasStaleWork = ctx.activeWorkItems.some((item) => {
+      const lastActivity = new Date(item.lastActivityAt).getTime()
+      return now - lastActivity > staleThresholdMs
+    })
+    if (hasStaleWork) return "LOW"
+  }
+
   return "HEALTHY"
 }
 
@@ -629,7 +679,10 @@ async function assessKnowledgeSufficiencyL2(
       ? "No facts retrieved."
       : facts
           .slice(0, 5)
-          .map((f) => `- "${f.content.slice(0, 100)}" (confidence: ${f.confidence})`)
+          .map(
+            (f) =>
+              `- "${f.content.slice(0, 100)}" (confidence: ${f.confidence})`,
+          )
           .join("\n")
 
   const prompt = `You assess whether an AI agent has sufficient knowledge to handle a message.

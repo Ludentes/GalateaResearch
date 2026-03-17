@@ -134,7 +134,7 @@ describe("productive_engagement — idle agent", () => {
     })
     const state = assessDimensions(ctx)
     const guidance = getGuidance(state)
-    expect(guidance).toContain("Idle")
+    expect(guidance).toContain("Not contributing enough")
   })
 })
 
@@ -285,5 +285,237 @@ describe("activity signals — backward compatibility", () => {
     const state = assessDimensions(ctx)
     expect(state.knowledge_sufficiency).toBeDefined()
     expect(state.self_preservation).toBeDefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// BDD Scenario 9: Progress Momentum — stale work detection
+// ---------------------------------------------------------------------------
+describe("progress_momentum — stale work detection", () => {
+  it("returns LOW when active work item has no activity for 48+ hours", () => {
+    const ctx = makeContext({
+      hasAssignedTask: true,
+      activeWorkItems: [
+        {
+          id: "gitlab:issue:42",
+          title: "Build pricing page",
+          lastActivityAt: new Date(Date.now() - 72 * 60 * 60_000).toISOString(),
+          assignedTo: "beki",
+          delegatedAt: new Date(Date.now() - 96 * 60 * 60_000).toISOString(),
+        },
+      ],
+    })
+    const state = assessDimensions(ctx)
+    expect(state.progress_momentum).toBe("LOW")
+  })
+
+  it("returns HEALTHY when work item has recent activity", () => {
+    const ctx = makeContext({
+      hasAssignedTask: true,
+      activeWorkItems: [
+        {
+          id: "gitlab:issue:42",
+          title: "Build pricing page",
+          lastActivityAt: new Date(Date.now() - 6 * 60 * 60_000).toISOString(),
+          assignedTo: "beki",
+        },
+      ],
+    })
+    const state = assessDimensions(ctx)
+    expect(state.progress_momentum).toBe("HEALTHY")
+  })
+
+  it("returns HEALTHY when no activeWorkItems (backward compat)", () => {
+    const ctx = makeContext({ hasAssignedTask: true })
+    const state = assessDimensions(ctx)
+    expect(state.progress_momentum).toBe("HEALTHY")
+  })
+
+  it("triggers LOW from ANY stale item, not all", () => {
+    const ctx = makeContext({
+      hasAssignedTask: true,
+      activeWorkItems: [
+        {
+          id: "issue:1",
+          title: "Fresh work",
+          lastActivityAt: new Date(Date.now() - 1 * 60 * 60_000).toISOString(),
+        },
+        {
+          id: "issue:2",
+          title: "Stale work",
+          lastActivityAt: new Date(Date.now() - 72 * 60 * 60_000).toISOString(),
+          assignedTo: "beki",
+        },
+      ],
+    })
+    const state = assessDimensions(ctx)
+    expect(state.progress_momentum).toBe("LOW")
+  })
+})
+
+// ---------------------------------------------------------------------------
+// BDD Scenario 10: Communication Health — delegation follow-up
+// ---------------------------------------------------------------------------
+describe("communication_health — delegation follow-up pressure", () => {
+  it("returns LOW when delegated work has no follow-up for 24+ hours", () => {
+    const ctx = makeContext({
+      hasAssignedTask: true,
+      activeWorkItems: [
+        {
+          id: "issue:42",
+          title: "Build pricing page",
+          lastActivityAt: new Date(Date.now() - 6 * 60 * 60_000).toISOString(),
+          assignedTo: "beki",
+          delegatedAt: new Date(Date.now() - 30 * 60 * 60_000).toISOString(),
+        },
+      ],
+      outboundFollowUps: 0,
+    })
+    const state = assessDimensions(ctx)
+    expect(state.communication_health).toBe("LOW")
+  })
+
+  it("returns HEALTHY when delegated work has been followed up on", () => {
+    const ctx = makeContext({
+      hasAssignedTask: true,
+      activeWorkItems: [
+        {
+          id: "issue:42",
+          title: "Build pricing page",
+          lastActivityAt: new Date(Date.now() - 6 * 60 * 60_000).toISOString(),
+          assignedTo: "beki",
+          delegatedAt: new Date(Date.now() - 30 * 60 * 60_000).toISOString(),
+        },
+      ],
+      outboundFollowUps: 1,
+    })
+    const state = assessDimensions(ctx)
+    expect(state.communication_health).toBe("HEALTHY")
+  })
+
+  it("returns HEALTHY when no delegated items (backward compat)", () => {
+    const ctx = makeContext({ hasAssignedTask: true })
+    const state = assessDimensions(ctx)
+    expect(state.communication_health).toBe("HEALTHY")
+  })
+
+  it("does not override outbound cooldown HIGH", () => {
+    const ctx = makeContext({
+      lastOutboundAt: new Date(Date.now() - 2 * 60_000).toISOString(),
+      activeWorkItems: [
+        {
+          id: "issue:42",
+          title: "Build pricing page",
+          lastActivityAt: new Date(Date.now() - 6 * 60 * 60_000).toISOString(),
+          assignedTo: "beki",
+          delegatedAt: new Date(Date.now() - 30 * 60 * 60_000).toISOString(),
+        },
+      ],
+      outboundFollowUps: 0,
+    })
+    const state = assessDimensions(ctx)
+    expect(state.communication_health).toBe("HIGH")
+  })
+})
+
+// ---------------------------------------------------------------------------
+// BDD Scenario 11: Productive Engagement — reactive-only detection
+// ---------------------------------------------------------------------------
+describe("productive_engagement — reactive-only behavior", () => {
+  it("returns LOW when agent has tasks but zero outbound follow-ups and stale work", () => {
+    const ctx = makeContext({
+      hasAssignedTask: true,
+      taskCount: 2,
+      currentMessage: "How is the pricing page going?",
+      messageHistory: [
+        { role: "user", content: "How is the pricing page going?" },
+      ],
+      activeWorkItems: [
+        {
+          id: "issue:42",
+          title: "Build pricing page",
+          lastActivityAt: new Date(Date.now() - 72 * 60 * 60_000).toISOString(),
+          assignedTo: "beki",
+          delegatedAt: new Date(Date.now() - 96 * 60 * 60_000).toISOString(),
+        },
+      ],
+      outboundFollowUps: 0,
+    })
+    const state = assessDimensions(ctx)
+    expect(state.productive_engagement).toBe("LOW")
+  })
+
+  it("returns HEALTHY when agent has tasks and is actively following up", () => {
+    const ctx = makeContext({
+      hasAssignedTask: true,
+      taskCount: 2,
+      currentMessage: "Status update?",
+      messageHistory: [{ role: "user", content: "Status update?" }],
+      activeWorkItems: [
+        {
+          id: "issue:42",
+          title: "Build pricing page",
+          lastActivityAt: new Date(Date.now() - 12 * 60 * 60_000).toISOString(),
+          assignedTo: "beki",
+        },
+      ],
+      outboundFollowUps: 3,
+    })
+    const state = assessDimensions(ctx)
+    expect(state.productive_engagement).toBe("HEALTHY")
+  })
+
+  it("returns HEALTHY when no activeWorkItems (backward compat)", () => {
+    const ctx = makeContext({
+      hasAssignedTask: true,
+      taskCount: 1,
+      currentMessage: "working on it",
+      messageHistory: [{ role: "user", content: "do the thing" }],
+    })
+    const state = assessDimensions(ctx)
+    expect(state.productive_engagement).toBe("HEALTHY")
+  })
+})
+
+// ---------------------------------------------------------------------------
+// BDD Scenario 12: Guidance suggests external system checks
+// ---------------------------------------------------------------------------
+describe("guidance — skill-appropriate actions", () => {
+  it("progress_momentum LOW guidance mentions checking external systems", () => {
+    const ctx = makeContext({
+      hasAssignedTask: true,
+      activeWorkItems: [
+        {
+          id: "issue:42",
+          title: "Stale task",
+          lastActivityAt: new Date(Date.now() - 72 * 60 * 60_000).toISOString(),
+          assignedTo: "beki",
+        },
+      ],
+    })
+    const state = assessDimensions(ctx)
+    expect(state.progress_momentum).toBe("LOW")
+    const guidance = getGuidance(state)
+    expect(guidance).toContain("external systems")
+  })
+
+  it("communication_health LOW guidance mentions follow-up", () => {
+    const ctx = makeContext({
+      hasAssignedTask: true,
+      activeWorkItems: [
+        {
+          id: "issue:42",
+          title: "Delegated task",
+          lastActivityAt: new Date(Date.now() - 6 * 60 * 60_000).toISOString(),
+          assignedTo: "beki",
+          delegatedAt: new Date(Date.now() - 30 * 60 * 60_000).toISOString(),
+        },
+      ],
+      outboundFollowUps: 0,
+    })
+    const state = assessDimensions(ctx)
+    expect(state.communication_health).toBe("LOW")
+    const guidance = getGuidance(state)
+    expect(guidance).toContain("delegated")
   })
 })
