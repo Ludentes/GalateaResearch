@@ -20,7 +20,7 @@ describe("Layer 1: Developer works on Umka MQTT persistence", () => {
           "Never push directly to main",
         ],
       })
-      .withKnowledgeFrom("data/memory/entries.jsonl")
+      .withKnowledgeFrom("server/memory/__tests__/fixtures/umka-mqtt-scenario.jsonl")
       .seed()
   }, 30_000)
 

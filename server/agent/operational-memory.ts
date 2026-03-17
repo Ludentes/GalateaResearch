@@ -40,6 +40,14 @@ export interface HistoryEntry {
   timestamp: string
 }
 
+export interface WorkItem {
+  id: string
+  title: string
+  lastActivityAt: string
+  assignedTo?: string
+  delegatedAt?: string
+}
+
 export interface OperationalContext {
   tasks: TaskState[]
   workPhase: WorkPhase
@@ -51,6 +59,8 @@ export interface OperationalContext {
   lastOutboundAt: string
   lastUpdated: string
   lastClaudeSessionId?: string
+  activeWorkItems?: WorkItem[]
+  outboundFollowUps?: number
 }
 
 // ---------------------------------------------------------------------------

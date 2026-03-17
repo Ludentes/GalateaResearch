@@ -9,8 +9,8 @@ setup:
   clear_state: true
 steps:
   - send: >
-      Build the "How It Works" section. Make it look good and match the overall
-      design. You know what to do.
+      Add a "How It Works" section to the README. Make it look good.
+      You know what to do.
     from: { platform: discord, user: besa }
     messageType: task_assignment
     expect:
@@ -18,10 +18,9 @@ steps:
       outcome.action: delegate
 
   - send: >
-      Good question. Use 3 steps: 1) Define your agent's personality from a real
-      teammate, 2) Agent learns your codebase and workflows, 3) Agent works
-      autonomously with homeostatic self-regulation. Use icons and a horizontal
-      layout on desktop, vertical on mobile.
+      Good question. Use 3 steps: 1) Define your agent's personality,
+      2) Agent learns your codebase, 3) Agent works autonomously.
+      Keep it short, just a few bullet points.
     from: { platform: discord, user: besa }
     messageType: chat
     expect:

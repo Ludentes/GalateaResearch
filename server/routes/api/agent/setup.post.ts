@@ -8,6 +8,24 @@ import {
 import type { ChannelMessage } from "../../../agent/types"
 import { appendEntries } from "../../../memory/knowledge-store"
 
+/**
+ * Parse relative time strings like "-72h", "-30m", "-2d" to ISO timestamps.
+ * Returns the string as-is if it's already an ISO timestamp.
+ */
+function parseRelativeTime(value: string): string {
+  const match = value.match(/^-(\d+)(h|m|d)$/)
+  if (!match) return value
+  const amount = Number.parseInt(match[1], 10)
+  const unit = match[2]
+  const ms =
+    unit === "d"
+      ? amount * 86_400_000
+      : unit === "h"
+        ? amount * 3_600_000
+        : amount * 60_000
+  return new Date(Date.now() - ms).toISOString()
+}
+
 interface SetupBody {
   agentId?: string
   /** Set lastOutboundAt to this many minutes ago */
@@ -24,6 +42,16 @@ interface SetupBody {
   addHistory?: Array<{ role: "user" | "assistant"; content: string }>
   /** Seed knowledge store with facts (for homeostasis dimension tests) */
   seedFacts?: Array<{ content: string; source?: string }>
+  /** Set active work items for homeostasis dimension tests */
+  activeWorkItems?: Array<{
+    id: string
+    title: string
+    lastActivityAt: string
+    assignedTo?: string
+    delegatedAt?: string
+  }>
+  /** Set outbound follow-up count for homeostasis dimension tests */
+  outboundFollowUps?: number
 }
 
 export default defineEventHandler(async (event) => {
@@ -105,6 +133,24 @@ export default defineEventHandler(async (event) => {
     }))
     await appendEntries(entries, knowledgeStorePath)
     applied.push(`seedFacts=${entries.length}`)
+  }
+
+  if (body.activeWorkItems?.length) {
+    opCtx.activeWorkItems = body.activeWorkItems.map((item) => ({
+      id: item.id,
+      title: item.title,
+      lastActivityAt: parseRelativeTime(item.lastActivityAt),
+      assignedTo: item.assignedTo,
+      delegatedAt: item.delegatedAt
+        ? parseRelativeTime(item.delegatedAt)
+        : undefined,
+    }))
+    applied.push(`activeWorkItems=${opCtx.activeWorkItems.length}`)
+  }
+
+  if (body.outboundFollowUps !== undefined) {
+    opCtx.outboundFollowUps = body.outboundFollowUps
+    applied.push(`outboundFollowUps=${body.outboundFollowUps}`)
   }
 
   await saveOperationalContext(opCtx, opPath)

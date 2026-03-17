@@ -5,7 +5,7 @@ import { assertStep } from "./scenario-assert"
 import type { Scenario, ScenarioVerdict, StepVerdict } from "./scenario-types"
 
 const BASE_URL = process.env.SCENARIO_BASE_URL ?? "http://localhost:13000"
-const FETCH_TIMEOUT_MS = 360_000 // 6 minutes — must exceed server-side adapter timeout (5 min)
+const FETCH_TIMEOUT_MS = 660_000 // 11 minutes — must exceed server-side adapter timeout (10 min for coding)
 const DOGFOOD_TIMEOUT_MS = 900_000 // 15 minutes — dogfood tasks involve real coding/design work
 
 // ANSI colors

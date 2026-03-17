@@ -8,7 +8,7 @@ setup:
   clear_ticks: true
   clear_state: true
 steps:
-  - send: "run the test suite and tell me if anything fails"
+  - send: "read the file server/agent/types.ts and list all exported types"
     from: { platform: dashboard, user: kirill }
     messageType: task_assignment
     expect:

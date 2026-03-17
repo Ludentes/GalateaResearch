@@ -9,7 +9,7 @@ setup:
   clear_ticks: true
   clear_state: true
 steps:
-  - send: "implement a dark mode toggle for the settings page"
+  - send: "create a file called test-publish.txt with 'hello world' and commit it"
     from: { platform: discord, user: sasha }
     messageType: task_assignment
     expect:

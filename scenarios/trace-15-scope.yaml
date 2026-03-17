@@ -6,7 +6,7 @@ setup:
   clear_ticks: true
   clear_state: true
 steps:
-  - send: "implement user settings screen for #101"
+  - send: "read server/agent/types.ts and add a comment at the top with today's date"
     from: { platform: discord, user: sasha }
     messageType: task_assignment
     expect:

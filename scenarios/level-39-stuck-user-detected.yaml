@@ -30,5 +30,5 @@ steps:
     messageType: chat
     expect:
       homeostasis.progress_momentum: LOW
-      guidance.0: "contains: Stuck"
+      guidance.0: "contains: Progress stalled"
       outcome.action: respond
