@@ -955,7 +955,7 @@ Inner loop continues from where it left off (using recentHistory + task.progress
 
 ## Implementation Status
 
-Last updated: 2026-03-16
+Last updated: 2026-03-17
 
 ### Production-Ready (tested, 97 test files, 817 tests)
 
@@ -998,6 +998,7 @@ Last updated: 2026-03-16
 | Eval | Scenario runner with regression/dogfood separation (116 scenarios) | `scripts/run-scenario.ts` |
 | Eval | Trace mode (`--trace`) with diagnostics and anomaly warnings | `scripts/run-scenario.ts` |
 | Eval | Tick diagnostics (op memory path, knowledge store, provider, model, facts) | `server/observation/tick-record.ts` |
+| Brain | Signal surface expansion (stale work, delegation follow-up, reactive-only) | `server/engine/homeostasis-engine.ts` |
 
 ### Scaffolding / Disabled
 
@@ -1013,6 +1014,7 @@ Last updated: 2026-03-16
 
 | Component | Phase |
 |-----------|-------|
+| Cross-channel activity signals | Phase I.2 |
 | Multi-Agent State | Phase H |
 | Persona Export/Import | Phase H |
 | Agent Registry | Phase H |
