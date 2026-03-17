@@ -999,6 +999,8 @@ Last updated: 2026-03-17
 | Eval | Trace mode (`--trace`) with diagnostics and anomaly warnings | `scripts/run-scenario.ts` |
 | Eval | Tick diagnostics (op memory path, knowledge store, provider, model, facts) | `server/observation/tick-record.ts` |
 | Brain | Signal surface expansion (stale work, delegation follow-up, reactive-only) | `server/engine/homeostasis-engine.ts` |
+| Brain | Action feedback loop (glab output parsing → opCtx update → dimension recovery) | `server/agent/glab-activity-parser.ts` |
+| Brain | Outbound signal tracking (glab issue create → auto-add to activeWorkItems) | `server/agent/glab-activity-parser.ts` |
 
 ### Scaffolding / Disabled
 
@@ -1014,9 +1016,8 @@ Last updated: 2026-03-17
 
 | Component | Description | Phase |
 |-----------|-------------|-------|
-| Cross-channel activity signals | Inbound activity from GitLab webhooks/MR updates feeding into assessors automatically | Phase I.2 |
+| Cross-channel activity signals | GitLab webhooks pushing inbound activity (currently agent must actively query) | Phase I.2 |
 | Skill-driven action routing | Dimensions map to agent-specific skills, not hardcoded responses | Phase I.2 |
-| Action feedback loop | Agent actions (e.g., GitLab query) feed results back into homeostasis assessment | Phase I.2 |
 | Multi-Agent State | Shared context, delegation tracking between agents | Phase H |
 | Persona Export/Import | Portable agent identity + knowledge | Phase H |
 | Agent Registry | Discovery and coordination of multiple agents | Phase H |
