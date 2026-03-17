@@ -111,12 +111,18 @@ export interface MemoryConfig {
   consolidation: ConsolidationConfig
 }
 
+export interface DiscordAgentConfig {
+  token_env: string
+}
+
 export interface DiscordConfig {
   enabled: boolean
   respond_to_dms: boolean
   respond_to_mentions: boolean
   allowed_guilds: string[]
   allowed_channels: string[]
+  ops_channel_id: string
+  agents: Record<string, DiscordAgentConfig>
 }
 
 export interface StopWordsConfig {
@@ -290,7 +296,11 @@ export function getConsolidationConfig(): ConsolidationConfig {
 }
 
 export function getDiscordConfig(): DiscordConfig {
-  return loadConfig().discord
+  const cfg = loadConfig().discord
+  if (process.env.DISCORD_OPS_CHANNEL_ID) {
+    cfg.ops_channel_id = process.env.DISCORD_OPS_CHANNEL_ID
+  }
+  return cfg
 }
 
 export function getStopWords(list: "retrieval" | "dedup"): Set<string> {

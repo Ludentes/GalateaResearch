@@ -417,6 +417,12 @@ discord:
   respond_to_mentions: true
   allowed_guilds: []
   allowed_channels: []
+  ops_channel_id: ""
+  agents:
+    beki:
+      token_env: DISCORD_BOT_TOKEN_BEKI
+    besa:
+      token_env: DISCORD_BOT_TOKEN_BESA
 
 # -----------------------------------------------------------------------------
 # ARTIFACT GENERATION — server/memory/channel-router.ts
