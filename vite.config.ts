@@ -15,12 +15,10 @@ export default defineConfig({
       : {
           ignored: [
             "**/data/**",
-            "**/graphiti/**",
             "**/node_modules/**",
             "**/.git/**",
             "**/.worktrees/**",
             "**/docs/archive/**",
-            "**/workspaces/**",
           ],
         },
   },

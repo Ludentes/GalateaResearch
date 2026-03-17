@@ -7,7 +7,7 @@ agent:
   role: "Mobile developer"
   domain: "Expo / React Native"
 
-workspace: "workspaces/agenttestproject"
+workspace: "/home/newub/w/agentsproject/agenttestproject"
 claude_config_dir: "/home/newub/.claude-agents"
 allowed_branches: ["feature/*", "fix/*"]
 

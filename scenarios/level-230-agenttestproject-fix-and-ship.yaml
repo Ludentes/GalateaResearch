@@ -15,7 +15,7 @@ setup:
 steps:
   - send: >
       The agenttestproject build is broken — `pnpm build` fails in
-      /home/newub/w/galatea/workspaces/agenttestproject. Dev server
+      /home/newub/w/agentsproject/agenttestproject. Dev server
       and tests work fine, only the production build crashes. Can you
       investigate what's wrong, create a GitLab issue with your findings,
       and get Beki to fix it? The repo is kyurkov/agenttestproject.

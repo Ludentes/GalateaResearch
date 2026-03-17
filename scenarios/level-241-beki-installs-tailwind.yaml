@@ -15,7 +15,7 @@ setup:
 steps:
   - send: >
       First task for the agenttestproject landing page: install and configure
-      Tailwind CSS. The site in /home/newub/w/galatea/workspaces/agenttestproject
+      Tailwind CSS. The site in /home/newub/w/agentsproject/agenttestproject
       uses Tailwind utility classes in all components (Hero.astro, HowItWorks.astro)
       but Tailwind is NOT installed — none of the styles work. Install it
       properly for Astro, verify the dev server shows styled content at

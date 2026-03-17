@@ -1,7 +1,7 @@
 scenario: "L231: Beki fixes agenttestproject broken build and creates MR"
 description: >
   Besa delegates the build fix to Beki. Beki should investigate the
-  build error in /home/newub/w/galatea/workspaces/agenttestproject,
+  build error in /home/newub/w/agentsproject/agenttestproject,
   find the root cause, fix it, verify the build passes, and create
   an MR. The actual issue: test files in src/pages/ are picked up
   as Astro routes during build.
@@ -15,7 +15,7 @@ setup:
 steps:
   - send: >
       The agenttestproject production build is broken — `pnpm build`
-      crashes in /home/newub/w/galatea/workspaces/agenttestproject
+      crashes in /home/newub/w/agentsproject/agenttestproject
       with a vitest error. Dev server works fine. Please investigate,
       fix the issue, make sure `pnpm build` passes, then push to a
       branch and create an MR on kyurkov/agenttestproject.

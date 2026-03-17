@@ -1,6 +1,6 @@
 # Galatea
 
-Homeostasis-based AI agent system. TanStack Start v1, AI SDK v6, Drizzle ORM, PostgreSQL, FalkorDB.
+Homeostasis-based AI agent system. TanStack Start v1, AI SDK v6, Drizzle ORM, PostgreSQL.
 
 ## Key Files
 
@@ -13,7 +13,7 @@ Homeostasis-based AI agent system. TanStack Start v1, AI SDK v6, Drizzle ORM, Po
 - Biome: double quotes, no semicolons, 2-space indent, 80 char width
 - Vitest 4 with `// @vitest-environment node` directive
 - pnpm package manager
-- Dev server: port 13000, PostgreSQL: 15432, FalkorDB: 16379
+- Dev server: port 13000, PostgreSQL: 15432
 
 ## Shadow Learning
 

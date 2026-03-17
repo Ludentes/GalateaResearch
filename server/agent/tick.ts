@@ -116,8 +116,8 @@ function getAgentTools(
 }
 
 // ---------------------------------------------------------------------------
-// Repo root resolution — workspace paths must resolve against the main repo,
-// not the current worktree, because workspaces/ is gitignored.
+// Repo root resolution — relative workspace paths resolve against the main repo.
+// Absolute workspace paths (e.g. /home/user/w/agentsproject/foo) are used as-is.
 // ---------------------------------------------------------------------------
 
 let cachedRepoRoot: string | undefined
@@ -527,11 +527,13 @@ async function tickInner(
               .filter((t) => t.status === "done" && t.claudeSessionId)
               .at(-1)?.claudeSessionId)
       const sessionResumed = !!resumeSessionId
-      // Resolve workspace relative to the main repo root (not cwd),
-      // because workspaces/ is gitignored and won't exist in worktrees.
+      // Resolve workspace: absolute paths are used as-is, relative paths
+      // resolve against the main repo root (not cwd).
       const repoRoot = await getMainRepoRoot()
       const specWorkspace = spec?.workspace
-        ? `${repoRoot}/${spec.workspace}`
+        ? spec.workspace.startsWith("/")
+          ? spec.workspace
+          : `${repoRoot}/${spec.workspace}`
         : undefined
       const baseDir =
         (msg.metadata?.workspace as string) ?? specWorkspace ?? repoRoot

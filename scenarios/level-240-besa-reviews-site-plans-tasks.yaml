@@ -18,7 +18,7 @@ steps:
   - send: >
       Please review the agenttestproject landing page. The dev server is
       running at http://localhost:4321/. The code is in
-      /home/newub/w/galatea/workspaces/agenttestproject.
+      /home/newub/w/agentsproject/agenttestproject.
       Check the current state of the site — what works, what's broken,
       what's missing. Then create an ordered list of GitLab issues in
       kyurkov/agenttestproject for Beki to implement one by one.

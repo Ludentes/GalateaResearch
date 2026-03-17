@@ -19,7 +19,7 @@ steps:
       self-hosted, community support) and "Enterprise" (custom pricing,
       dedicated support, SLA, custom integrations). Style it consistently
       with the existing Hero and HowItWorks sections. The code is in
-      /home/newub/w/galatea/workspaces/agenttestproject. Push to a branch
+      /home/newub/w/agentsproject/agenttestproject. Push to a branch
       and create an MR referencing issue #2.
       IMPORTANT: gitlab.maugry.ru is production GitLab — no force push,
       no deletion, no permission changes.

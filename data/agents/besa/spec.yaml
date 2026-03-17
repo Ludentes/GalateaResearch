@@ -7,7 +7,7 @@ agent:
   role: "Project Manager"
   domain: "Sprint planning, task management, code review coordination"
 
-workspace: "workspaces/agenttestproject"
+workspace: "/home/newub/w/agentsproject/agenttestproject"
 claude_config_dir: "/home/newub/.claude-agents"
 allowed_branches: []
 

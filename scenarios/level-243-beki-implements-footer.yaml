@@ -18,7 +18,7 @@ steps:
       links to page sections (How It Works, Pricing), a GitHub/GitLab link,
       and copyright notice. Keep it clean and minimal, consistent with the
       site's dark theme. The code is in
-      /home/newub/w/galatea/workspaces/agenttestproject. Push to a branch
+      /home/newub/w/agentsproject/agenttestproject. Push to a branch
       and create an MR referencing issue #3.
       IMPORTANT: gitlab.maugry.ru is production GitLab — no force push,
       no deletion, no permission changes.

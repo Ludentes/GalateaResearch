@@ -1,9 +1,7 @@
 # Galatea Infrastructure
 #
 # Core: postgres (sessions, messages, personas, preprompts)
-# Observation: OTEL Collector (Phase C)
-#
-# Graphiti/FalkorDB removed in v2 cleanup (2026-02-11).
+# Observation: OTEL Collector
 
 services:
   postgres:

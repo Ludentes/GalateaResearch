@@ -44,8 +44,7 @@
       "!**/server/db/migrations",
       "!**/app/routeTree.gen.ts",
       "!**/.claude",
-      "!**/docs/archive",
-      "!**/graphiti"
+      "!**/docs/archive"
     ]
   }
 }

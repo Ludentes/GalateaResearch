@@ -6,7 +6,7 @@ An AI agent framework that adds psychological architecture between stimulus and 
 
 ## Quick Start
 
-**Start here:** [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) - Complete vision, architecture, and decisions
+**Start here:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — system architecture and implementation status
 
 ## What is Galatea?
 
@@ -217,46 +217,27 @@ This is the thesis made concrete: psychological architecture is not persona-spec
 
 | Layer | Technology |
 |-------|------------|
-| Memory | JSONL knowledge store + Qdrant (vector, optional) |
 | Framework | TanStack Start v1 |
-| LLM | Claude via OpenRouter + Ollama local fallback |
-| Tools | MCP ecosystem |
+| AI | AI SDK v6 + Claude via OpenRouter + Ollama local |
+| Database | PostgreSQL (Drizzle ORM) |
+| Memory | JSONL knowledge store |
 | Observability | OTEL + Langfuse |
-| Database | PostgreSQL + FalkorDB |
-
-## Benchmarking Graphiti LLM Quality
-
-Test different LLM configurations for entity/fact extraction:
-
-```bash
-# Run baseline
-pnpm benchmark:graphiti
-
-# Test specific config
-pnpm benchmark:graphiti --config=granite-balanced
-
-# Compare in Langfuse dashboard
-open http://localhost:3000
-```
-
-See [Benchmark Usage Guide](docs/guides/graphiti-benchmark-usage.md) for details.
 
 ## Documentation
 
 ```
 galatea/
-├── PROJECT_OVERVIEW.md              # Start here - executive summary
 ├── docs/
-│   ├── ARCHITECTURE.md              # Definitive system architecture
-│   ├── PSYCHOLOGICAL_ARCHITECTURE.md # Full architecture design
-│   ├── GUIDING_PRINCIPLES.md        # Core principles
-│   ├── REFERENCE_SCENARIOS.md       # Test scenarios
-│   └── plans/
-│       ├── BRAINSTORM_QUEUE.md      # Open research questions
-│       ├── 2026-02-02-memory-system-design.md
-│       └── 2026-02-02-homeostasis-architecture-design.md
-└── archive/
-    └── 2024-original/               # Original psychology research
+│   ├── ARCHITECTURE.md                    # Definitive system architecture
+│   ├── plans/
+│   │   ├── 2026-03-11-beta-simulation-design.md   # Current design direction
+│   │   └── ...                            # Active plans
+│   ├── research/                          # Active research
+│   ├── guides/                            # Operational guides
+│   └── archive/                           # Superseded docs
+├── scenarios/                             # Agent behavior test scenarios (181 files)
+├── data/agents/{beki,besa}/spec.yaml      # Agent persona definitions
+└── server/engine/config.yaml              # Homeostasis thresholds and strategies
 ```
 
 ## Guiding Principles
@@ -267,23 +248,14 @@ galatea/
 | **Iterative** | Useful at every step |
 | **Reuse** | Team of one leverages thousands |
 
-## Test Instantiations
+## Agent Personas
 
-We prove the thesis via two personas:
+Two beta-level agents modeled on real teammates:
 
-1. **"Programmer in the box"** - Expo/React Native specialist that shadow-learns from user's coding
-2. **"Personal assistant"** - General helper with same core, different thresholds
+1. **Beki** (beta-Kirill) — Developer agent, handles coding tasks, creates MRs
+2. **Besa** (beta-Sasha) — PM agent, handles planning, task breakdown, code review coordination
 
-Same homeostasis dimensions, different configurations. If both work well → thesis proven.
-
-## Research Foundation
-
-Based on established psychology:
-- Self-Determination Theory (Autonomy, Competence, Relatedness)
-- Goal Theory, Metacognition, Learning Theory
-- Memory research (Episodic, Semantic, Procedural)
-
-See `archive/2024-original/Modules 1-11.md` for full psychology curriculum.
+Same homeostasis engine, different `spec.yaml` configurations. Workspace: `~/w/agentsproject/agenttestproject`.
 
 ## License
 
@@ -292,4 +264,4 @@ TBD
 ---
 
 *Last Updated: 2026-03-17*
-*Status: Substantially implemented — 817 tests, production-ready core*
+*Status: Substantially implemented — 865 tests passing*

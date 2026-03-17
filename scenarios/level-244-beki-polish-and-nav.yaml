@@ -19,7 +19,7 @@ steps:
       on the right. Make it sticky/fixed at the top with a semi-transparent
       background. Then do a final review — make sure the page looks good
       end-to-end, build passes (`pnpm build`), tests pass (`pnpm test`).
-      The code is in /home/newub/w/galatea/workspaces/agenttestproject.
+      The code is in /home/newub/w/agentsproject/agenttestproject.
       Push to a branch and create an MR.
       IMPORTANT: gitlab.maugry.ru is production GitLab — no force push,
       no deletion, no permission changes.
