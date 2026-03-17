@@ -392,8 +392,8 @@ agent:
   adapter_timeouts:
     chat: 120000       # 2 minutes
     review: 180000     # 3 minutes
-    coding: 300000     # 5 minutes
-    admin: 120000      # 2 minutes
+    coding: 600000     # 10 minutes
+    admin: 600000      # 10 minutes (PM tasks touch GitLab, need time)
     research: 300000   # 5 minutes
     default: 180000    # 3 minutes (fallback for unknown task types)
 

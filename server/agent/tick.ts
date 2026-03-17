@@ -561,6 +561,7 @@ async function tickInner(
         model: (msg.metadata?.modelOverride as string) || config.model,
         sessionId: resumeSessionId,
         images: images?.length ? images : undefined,
+        timeout: getAdapterTimeout(routing.taskType),
       })
       timings.adapterMs = Date.now() - t0
 
