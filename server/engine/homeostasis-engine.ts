@@ -549,15 +549,19 @@ async function assessL2Semantic(
     }).catch(() => {})
     return state
   } catch (err) {
+    const errorMsg = (err as Error)?.message ?? String(err)
+    console.error(
+      `[homeostasis] L2 HAIKU FAILED for ${dimension} (${sid}): ${errorMsg}`,
+    )
     emitEvent({
       type: "log",
       source: "homeostasis",
       body: `l2.${dimension}.provider_failed`,
       attributes: {
         "event.name": `l2.${dimension}.provider_failed`,
-        severity: "warning",
+        severity: "error",
         provider: "haiku",
-        error: (err as Error)?.message ?? String(err),
+        error: errorMsg,
         sessionId: sid,
       },
     }).catch(() => {})
