@@ -288,7 +288,10 @@ function applyGlabFeedback(
     }
   }
 
-  if (activity.queriedGitLab) {
+  // Increment outboundFollowUps only for active engagement (create/update),
+  // not passive queries (list/view). A glab issue list is an external check,
+  // not a follow-up with the assignee.
+  if (activity.createdItems.length > 0) {
     opCtx.outboundFollowUps = (opCtx.outboundFollowUps ?? 0) + 1
   }
 }

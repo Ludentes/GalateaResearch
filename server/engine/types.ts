@@ -101,15 +101,17 @@ export interface AgentContext {
   }>
 
   /** When agent last checked an external system (GitLab, etc.).
-   *  Used by communication_health to detect "haven't checked in." */
+   *  Set by applyGlabFeedback in tick.ts. Not yet consumed by assessors —
+   *  reserved for Phase I.2 (cross-channel activity signals). */
   lastExternalCheckAt?: string // ISO timestamp
 
   /** Count of outbound follow-ups in current work cycle.
-   *  Used by productive_engagement to detect reactive-only behavior. */
+   *  Used by communication_health and productive_engagement assessors. */
   outboundFollowUps?: number
 
   /** Count of inbound activity signals (MR updates, comments, CI results)
-   *  received since last assessment. Feeds communication_health. */
+   *  received since last assessment. Not yet consumed by assessors —
+   *  reserved for Phase I.2 (GitLab webhook integration). */
   inboundActivityCount?: number
 }
 

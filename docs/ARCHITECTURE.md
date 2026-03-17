@@ -293,9 +293,9 @@ L3 (meta-assessment: arbitrate L1 vs L2 when they disagree) and L4 (strategic an
 | Dimension | L1 Method |
 |-----------|-----------|
 | knowledge_sufficiency | Count retrieved facts matching query keywords; weight by confidence |
-| progress_momentum | Jaccard similarity of recent user messages (repetition = stuck) |
-| communication_health | Time since last inbound message + `lastOutboundAt` for cooldown |
-| productive_engagement | Has assigned task + recent message count |
+| progress_momentum | Repeated user messages (stuck detection) + stale `activeWorkItems` (no activity beyond `stale_work_hours`) |
+| communication_health | Time since last inbound/outbound + delegation follow-up (delegated work with zero `outboundFollowUps` beyond `delegation_followup_hours`) |
+| productive_engagement | Has assigned task + reactive-only detection (stale `activeWorkItems` with zero `outboundFollowUps`) |
 | certainty_alignment | L2 only (defaults HEALTHY without LLM) |
 | knowledge_application | L2 only (defaults HEALTHY without LLM) |
 | self_preservation | Tool risk level + hard rule conflict check + trust level verification + injection pattern detection |
