@@ -10,7 +10,9 @@ function PersonalityPreview() {
       </div>
       <div className="space-y-0.5">
         <div>
-          <span className="text-blue-600 dark:text-blue-400">modeled_after</span>
+          <span className="text-blue-600 dark:text-blue-400">
+            modeled_after
+          </span>
           <span className="text-muted-foreground">: </span>
           <span>kirill</span>
         </div>
@@ -30,7 +32,9 @@ function PersonalityPreview() {
           <span>typescript</span>
         </div>
         <div className="pt-1">
-          <span className="text-blue-600 dark:text-blue-400">escalates_when</span>
+          <span className="text-blue-600 dark:text-blue-400">
+            escalates_when
+          </span>
           <span className="text-muted-foreground">:</span>
         </div>
         <div className="pl-3">
@@ -86,7 +90,11 @@ function LearnPreview() {
   )
 }
 
-const DIMENSIONS: { label: string; value: number; state: "healthy" | "high" | "low" }[] = [
+const DIMENSIONS: {
+  label: string
+  value: number
+  state: "healthy" | "high" | "low"
+}[] = [
   { label: "Knowledge", value: 75, state: "healthy" },
   { label: "Certainty", value: 80, state: "healthy" },
   { label: "Momentum", value: 92, state: "high" },
@@ -127,7 +135,9 @@ function HomeostasisPreview() {
                 style={{ width: `${dim.value}%` }}
               />
             </div>
-            <span className={`text-[10px] font-semibold w-11 text-right shrink-0 ${labelColor}`}>
+            <span
+              className={`text-[10px] font-semibold w-11 text-right shrink-0 ${labelColor}`}
+            >
               {dim.state.toUpperCase()}
             </span>
           </div>
@@ -185,8 +195,8 @@ export function HowItWorks() {
             How it works
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Three phases from configuration to autonomous work. No prompt engineering,
-            no token budgets, no silent failures.
+            Three phases from configuration to autonomous work. No prompt
+            engineering, no token budgets, no silent failures.
           </p>
         </div>
 

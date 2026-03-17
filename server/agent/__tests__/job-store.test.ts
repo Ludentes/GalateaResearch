@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it } from "vitest"
-import { createJob, getJob, updateJob, cleanExpiredJobs } from "../job-store"
+import { cleanExpiredJobs, createJob, getJob, updateJob } from "../job-store"
 
 describe("job-store", () => {
   afterEach(() => {

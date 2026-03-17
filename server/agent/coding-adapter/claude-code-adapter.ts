@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs"
-import { join } from "node:path"
 import { homedir } from "node:os"
-import { query as sdkQuery } from "@anthropic-ai/claude-agent-sdk"
+import { join } from "node:path"
 import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk"
+import { query as sdkQuery } from "@anthropic-ai/claude-agent-sdk"
 import type { ImageBlock } from "../types"
 import type {
   CodingQueryOptions,

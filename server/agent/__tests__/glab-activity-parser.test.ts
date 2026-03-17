@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
 import {
-  parseGlabActivity,
   type GlabActivityResult,
+  parseGlabActivity,
 } from "../glab-activity-parser"
 
 describe("parseGlabActivity", () => {

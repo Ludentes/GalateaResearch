@@ -461,9 +461,9 @@ export function assessDimensions(ctx: AgentContext): HomeostasisState {
 // ============ L2: LLM Semantic Assessment ============
 
 import { generateText } from "ai"
+import { emitEvent } from "../observation/emit"
 import { claudeCodeGenerateText } from "../providers/claude-code"
 import { createOllamaModel } from "../providers/ollama"
-import { emitEvent } from "../observation/emit"
 
 export async function assessDimensionsAsync(
   ctx: AgentContext,

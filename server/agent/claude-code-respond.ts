@@ -1,5 +1,5 @@
-import { query as sdkQuery } from "@anthropic-ai/claude-agent-sdk"
 import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk"
+import { query as sdkQuery } from "@anthropic-ai/claude-agent-sdk"
 import { emitEvent } from "../observation/emit"
 import type { ContentBlock, MessageContent } from "./types"
 

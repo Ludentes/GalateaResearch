@@ -129,7 +129,6 @@ function normalizeSteps(steps: ToolStep[]): NormalizedStep[] {
         command: step.content,
         output: output ?? undefined,
       })
-      continue
     }
   }
 

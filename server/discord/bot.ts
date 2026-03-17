@@ -83,9 +83,7 @@ export async function sendViaBot(
   content: string,
   threadId?: string,
 ): Promise<boolean> {
-  const channel = await bot.client.channels
-    .fetch(channelId)
-    .catch(() => null)
+  const channel = await bot.client.channels.fetch(channelId).catch(() => null)
   if (!channel?.isTextBased() || !("send" in channel)) {
     console.warn(
       `[discord:${bot.agentId}] Channel ${channelId} not text-based or not found`,
@@ -96,8 +94,7 @@ export async function sendViaBot(
   const target = threadId
     ? await bot.client.channels.fetch(threadId).catch(() => null)
     : null
-  const sendTo =
-    target?.isTextBased() && "send" in target ? target : channel
+  const sendTo = target?.isTextBased() && "send" in target ? target : channel
 
   const chunks = splitMessage(content)
   for (const chunk of chunks) {

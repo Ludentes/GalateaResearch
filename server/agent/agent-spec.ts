@@ -62,9 +62,7 @@ export async function loadAgentSpec(
   return parsed
 }
 
-export async function loadAgentSecrets(
-  agentId: string,
-): Promise<AgentSecrets> {
+export async function loadAgentSecrets(agentId: string): Promise<AgentSecrets> {
   try {
     const secretsPath = join(AGENTS_DIR, agentId, "secrets.yaml")
     const raw = await readFile(secretsPath, "utf-8")

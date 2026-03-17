@@ -1,8 +1,8 @@
 import { appendFile, mkdir } from "node:fs/promises"
 import path from "node:path"
 import { registerHandler } from "../agent/dispatcher"
-import { getTextContent } from "../agent/types"
 import type { ChannelMessage } from "../agent/types"
+import { getTextContent } from "../agent/types"
 import type { AgentBot } from "./bot"
 import { createAgentBot, sendViaBot } from "./bot"
 

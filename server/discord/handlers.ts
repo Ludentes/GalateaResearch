@@ -11,8 +11,6 @@ export async function handleInboundMessage(
   const cm = normalizeDiscordMessage(msg)
   cm.metadata.targetAgent = agentId
   const statePath =
-    agentId === "galatea"
-      ? undefined
-      : `data/agents/${agentId}/state.json`
+    agentId === "galatea" ? undefined : `data/agents/${agentId}/state.json`
   await addMessage(cm, statePath)
 }

@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { Button } from "@/components/ui/button"
 import { HowItWorks } from "@/components/HowItWorks"
+import { Button } from "@/components/ui/button"
 import { createSession } from "../../server/functions/chat"
 
 export const Route = createFileRoute("/")({
@@ -29,10 +29,15 @@ function HomePage() {
             Autonomous agents with psychological architecture
           </p>
           <p className="text-base md:text-lg text-muted-foreground max-w-xl mx-auto">
-            Deploy self-regulating AI agents modeled on your team. No prompts, no token budgets. Just intelligent autonomous work.
+            Deploy self-regulating AI agents modeled on your team. No prompts,
+            no token budgets. Just intelligent autonomous work.
           </p>
           <div className="pt-4">
-            <Button onClick={handleNewChat} size="lg" className="px-8 py-6 text-base md:text-lg">
+            <Button
+              onClick={handleNewChat}
+              size="lg"
+              className="px-8 py-6 text-base md:text-lg"
+            >
               Start Building
             </Button>
           </div>
