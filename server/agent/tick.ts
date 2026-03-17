@@ -850,6 +850,13 @@ async function tickInner(
         outcome: {
           action: "delegate",
           response: statusText,
+          delegation_status: escalation
+            ? "failed"
+            : (arcResult.status as
+                | "completed"
+                | "failed"
+                | "timeout"
+                | "budget_exceeded"),
           artifactsCreated: [],
           knowledgeEntriesCreated: knowledgeCount,
         },

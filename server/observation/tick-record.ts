@@ -34,6 +34,7 @@ export interface TickDecisionRecord {
   outcome: {
     action: "respond" | "delegate" | "ask" | "idle" | "extract"
     response?: string
+    delegation_status?: "completed" | "failed" | "timeout" | "budget_exceeded"
     artifactsCreated: string[]
     knowledgeEntriesCreated: number
   }
