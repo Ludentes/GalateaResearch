@@ -43,7 +43,12 @@ export async function createAgentBot(
     const isDM = !message.guildId
     if (isDM && !config.respond_to_dms) return
     if (!isDM && config.respond_to_mentions) {
-      if (!message.mentions.has(client.user!.id)) return
+      // Check user mentions and role mentions (bot's managed role)
+      const mentionedUser = message.mentions.has(client.user!.id)
+      const mentionedRole = message.mentions.roles.some(
+        (role) => role.managed && role.tags?.botId === client.user!.id,
+      )
+      if (!mentionedUser && !mentionedRole) return
     }
 
     await handleInboundMessage(
