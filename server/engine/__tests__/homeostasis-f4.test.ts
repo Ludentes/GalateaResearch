@@ -287,3 +287,68 @@ describe("activity signals — backward compatibility", () => {
     expect(state.self_preservation).toBeDefined()
   })
 })
+
+// ---------------------------------------------------------------------------
+// BDD Scenario 9: Progress Momentum — stale work detection
+// ---------------------------------------------------------------------------
+describe("progress_momentum — stale work detection", () => {
+  it("returns LOW when active work item has no activity for 48+ hours", () => {
+    const ctx = makeContext({
+      hasAssignedTask: true,
+      activeWorkItems: [
+        {
+          id: "gitlab:issue:42",
+          title: "Build pricing page",
+          lastActivityAt: new Date(Date.now() - 72 * 60 * 60_000).toISOString(),
+          assignedTo: "beki",
+          delegatedAt: new Date(Date.now() - 96 * 60 * 60_000).toISOString(),
+        },
+      ],
+    })
+    const state = assessDimensions(ctx)
+    expect(state.progress_momentum).toBe("LOW")
+  })
+
+  it("returns HEALTHY when work item has recent activity", () => {
+    const ctx = makeContext({
+      hasAssignedTask: true,
+      activeWorkItems: [
+        {
+          id: "gitlab:issue:42",
+          title: "Build pricing page",
+          lastActivityAt: new Date(Date.now() - 6 * 60 * 60_000).toISOString(),
+          assignedTo: "beki",
+        },
+      ],
+    })
+    const state = assessDimensions(ctx)
+    expect(state.progress_momentum).toBe("HEALTHY")
+  })
+
+  it("returns HEALTHY when no activeWorkItems (backward compat)", () => {
+    const ctx = makeContext({ hasAssignedTask: true })
+    const state = assessDimensions(ctx)
+    expect(state.progress_momentum).toBe("HEALTHY")
+  })
+
+  it("triggers LOW from ANY stale item, not all", () => {
+    const ctx = makeContext({
+      hasAssignedTask: true,
+      activeWorkItems: [
+        {
+          id: "issue:1",
+          title: "Fresh work",
+          lastActivityAt: new Date(Date.now() - 1 * 60 * 60_000).toISOString(),
+        },
+        {
+          id: "issue:2",
+          title: "Stale work",
+          lastActivityAt: new Date(Date.now() - 72 * 60 * 60_000).toISOString(),
+          assignedTo: "beki",
+        },
+      ],
+    })
+    const state = assessDimensions(ctx)
+    expect(state.progress_momentum).toBe("LOW")
+  })
+})

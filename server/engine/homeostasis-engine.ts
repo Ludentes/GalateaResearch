@@ -206,6 +206,19 @@ function assessKnowledgeSufficiencyL1(ctx: AgentContext): DimensionState {
 
 function assessProgressMomentumL1(ctx: AgentContext): DimensionState {
   const cfg = getHomeostasisConfig()
+
+  // Stale work detection: if any active work item has no activity beyond threshold
+  if (ctx.activeWorkItems && ctx.activeWorkItems.length > 0) {
+    const staleHours = cfg.stale_work_hours ?? 48
+    const staleThresholdMs = staleHours * 60 * 60_000
+    const now = Date.now()
+    const hasStaleWork = ctx.activeWorkItems.some((item) => {
+      const lastActivity = new Date(item.lastActivityAt).getTime()
+      return now - lastActivity > staleThresholdMs
+    })
+    if (hasStaleWork) return "LOW"
+  }
+
   const userMessages = ctx.messageHistory.filter((m) => m.role === "user")
   if (userMessages.length < cfg.stuck_detection_window) return "HEALTHY"
 

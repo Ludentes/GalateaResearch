@@ -303,6 +303,11 @@ homeostasis:
   # Lower: flag even loosely related repeated questions.
   stuck_shared_stems_min: 2
 
+  # Hours without activity on a tracked work item before progress_momentum drops.
+  # Raise: more tolerance for quiet periods (weekends, async teams).
+  # Lower: faster detection of stalled work.
+  stale_work_hours: 48
+
   # Minimum message length to trigger knowledge sufficiency check.
   # Very short messages ("hi") shouldn't trigger LOW knowledge.
   knowledge_message_min_length: 20
