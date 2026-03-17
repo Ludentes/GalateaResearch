@@ -86,6 +86,31 @@ export interface AgentContext {
     category: string
     escalatedAt: string // ISO timestamp
   }
+
+  // Activity signals — for time-aware silence detection (Phase I)
+  // All optional: when absent, assessors use existing logic only.
+
+  /** Active work items the agent is responsible for or tracking.
+   *  Populated by tick from operational memory + external queries. */
+  activeWorkItems?: Array<{
+    id: string // e.g., "gitlab:issue:42" or "task:abc"
+    title: string
+    lastActivityAt: string // ISO timestamp — last commit, comment, MR update
+    assignedTo?: string // who is doing the work
+    delegatedAt?: string // ISO timestamp — when agent delegated this
+  }>
+
+  /** When agent last checked an external system (GitLab, etc.).
+   *  Used by communication_health to detect "haven't checked in." */
+  lastExternalCheckAt?: string // ISO timestamp
+
+  /** Count of outbound follow-ups in current work cycle.
+   *  Used by productive_engagement to detect reactive-only behavior. */
+  outboundFollowUps?: number
+
+  /** Count of inbound activity signals (MR updates, comments, CI results)
+   *  received since last assessment. Feeds communication_health. */
+  inboundActivityCount?: number
 }
 
 /**

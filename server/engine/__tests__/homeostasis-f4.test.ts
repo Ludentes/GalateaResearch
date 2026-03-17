@@ -250,3 +250,42 @@ describe("HomeostasisState includes self_preservation", () => {
     expect(state.self_preservation).toBeDefined()
   })
 })
+
+// ---------------------------------------------------------------------------
+// BDD Scenario 8: Activity Signals — baseline (new fields don't break old behavior)
+// ---------------------------------------------------------------------------
+describe("activity signals — backward compatibility", () => {
+  it("returns same results when new activity fields are absent", () => {
+    const ctx = makeContext({ hasAssignedTask: true, taskCount: 1 })
+    const state = assessDimensions(ctx)
+    expect(state.progress_momentum).toBe("HEALTHY")
+    expect(state.communication_health).toBe("HEALTHY")
+    expect(state.productive_engagement).toBe("HEALTHY")
+  })
+
+  it("accepts new activity signal fields without error", () => {
+    const ctx = makeContext({
+      activeWorkItems: [
+        {
+          id: "issue-42",
+          title: "Build pricing page",
+          lastActivityAt: new Date(
+            Date.now() - 3 * 24 * 60 * 60_000,
+          ).toISOString(),
+          assignedTo: "beki",
+          delegatedAt: new Date(
+            Date.now() - 5 * 24 * 60 * 60_000,
+          ).toISOString(),
+        },
+      ],
+      lastExternalCheckAt: new Date(
+        Date.now() - 2 * 60 * 60_000,
+      ).toISOString(),
+      outboundFollowUps: 0,
+      inboundActivityCount: 0,
+    })
+    const state = assessDimensions(ctx)
+    expect(state.knowledge_sufficiency).toBeDefined()
+    expect(state.self_preservation).toBeDefined()
+  })
+})
