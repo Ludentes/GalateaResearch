@@ -1,8 +1,8 @@
-import { ArrowRight, BookOpen, Cpu, SlidersHorizontal } from "lucide-react"
+import { Activity, ArrowRight, GitBranch, UserCircle2 } from "lucide-react"
 
 // ─── Step visual previews ────────────────────────────────────────────────────
 
-function ConfigPreview() {
+function PersonalityPreview() {
   return (
     <div className="rounded-lg border bg-muted/40 p-3 font-mono text-xs leading-relaxed">
       <div className="text-muted-foreground text-[10px] mb-2.5 font-sans uppercase tracking-widest">
@@ -10,9 +10,9 @@ function ConfigPreview() {
       </div>
       <div className="space-y-0.5">
         <div>
-          <span className="text-blue-600 dark:text-blue-400">name</span>
+          <span className="text-blue-600 dark:text-blue-400">modeled_after</span>
           <span className="text-muted-foreground">: </span>
-          <span>Galatea</span>
+          <span>kirill</span>
         </div>
         <div>
           <span className="text-blue-600 dark:text-blue-400">role</span>
@@ -20,14 +20,14 @@ function ConfigPreview() {
           <span>developer</span>
         </div>
         <div>
-          <span className="text-blue-600 dark:text-blue-400">domain</span>
-          <span className="text-muted-foreground">: </span>
-          <span>typescript</span>
-        </div>
-        <div>
           <span className="text-blue-600 dark:text-blue-400">style</span>
           <span className="text-muted-foreground">: </span>
           <span>pragmatic</span>
+        </div>
+        <div>
+          <span className="text-blue-600 dark:text-blue-400">domain</span>
+          <span className="text-muted-foreground">: </span>
+          <span>typescript</span>
         </div>
         <div className="pt-1">
           <span className="text-blue-600 dark:text-blue-400">escalates_when</span>
@@ -52,9 +52,9 @@ function ConfigPreview() {
 
 function LearnPreview() {
   const facts = [
-    "Uses Vitest for all unit tests",
-    "Auth handled via JWT + refresh",
-    "PRs must reference an issue",
+    "Uses Vitest + biome for all tests",
+    "PRs must reference a GitLab issue",
+    "Infra managed via Docker Compose",
   ]
 
   return (
@@ -142,29 +142,29 @@ function HomeostasisPreview() {
 const STEPS = [
   {
     number: 1,
-    label: "Configure",
-    Icon: SlidersHorizontal,
-    title: "Model your agent",
+    label: "Define",
+    Icon: UserCircle2,
+    title: "Define your agent's personality",
     description:
-      "Define personality, expertise domain, and decision-making style. Galatea creates a behavioral profile with explicit escalation rules — not vague prompt instructions.",
-    Visual: ConfigPreview,
+      "Model your agent on a real teammate. Configure their expertise, communication style, and decision-making patterns—not vague prompts, but explicit behavioral contracts with escalation rules.",
+    Visual: PersonalityPreview,
   },
   {
     number: 2,
     label: "Learn",
-    Icon: BookOpen,
-    title: "Agent learns your context",
+    Icon: GitBranch,
+    title: "Agent learns your codebase and workflows",
     description:
-      "The agent autonomously reads your repositories, extracts architectural patterns, and builds a persistent knowledge store. No manual RAG setup. No context stuffing.",
+      "The agent autonomously reads your repositories, extracts architecture patterns, and maps team conventions. No manual RAG setup—knowledge persists and evolves with every task.",
     Visual: LearnPreview,
   },
   {
     number: 3,
     label: "Work",
-    Icon: Cpu,
-    title: "Self-regulating autonomous work",
+    Icon: Activity,
+    title: "Works autonomously with self-regulation",
     description:
-      "Agents execute multi-step tasks while monitoring 7 psychological dimensions in real time. They escalate when uncertain and pause when overwhelmed — never silently fail.",
+      "Agents execute multi-step tasks while monitoring 7 psychological dimensions in real time. They escalate when uncertain and pause when overwhelmed—never silently fail.",
     Visual: HomeostasisPreview,
   },
 ]
