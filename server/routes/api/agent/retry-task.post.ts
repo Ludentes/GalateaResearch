@@ -1,5 +1,5 @@
 import { defineEventHandler, HTTPError, readBody } from "h3"
-import { loadAgentSpec } from "../../../agent/agent-spec"
+import { loadAgentDefaultSpec } from "../../../agent/agent-spec"
 import { addMessage } from "../../../agent/agent-state"
 import { clearAgentSession } from "../../../agent/claude-code-respond"
 import {
@@ -29,7 +29,7 @@ export default defineEventHandler(async (event) => {
 
   let opPath: string | undefined
   try {
-    const spec = await loadAgentSpec(agentId)
+    const spec = await loadAgentDefaultSpec(agentId)
     opPath = spec.operational_memory
   } catch {
     // Use default path

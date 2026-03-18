@@ -7,45 +7,61 @@ import { describe, expect, it } from "vitest"
 import { listAgentIds, loadAgentSpec } from "../agent-spec"
 
 describe("loadAgentSpec", () => {
-  it("loads Beki spec from YAML", async () => {
-    const spec = await loadAgentSpec("beki")
+  it("loads Beki telejobs spec via projectId", async () => {
+    const spec = await loadAgentSpec("beki", "telejobs")
     expect(spec.agent.id).toBe("beki")
     expect(spec.agent.name).toBe("Beki")
-    expect(spec.agent.role).toBe("Mobile developer")
-    expect(spec.workspace).toBe("/home/newub/w/agentsproject/agenttestproject")
-    expect(spec.hard_blocks).toContain("push directly to main")
+    expect(spec.agent.role).toBe("Full-stack developer")
+    expect(spec.workspace).toBe("/home/newub/w/telejobs")
+    expect(spec.hard_blocks).toContain("push directly to master")
+    expect(spec.hard_blocks).toContain(
+      "deploy to production or staging",
+    )
   })
 
-  it("loads Besa spec with PM role", async () => {
-    const spec = await loadAgentSpec("besa")
-    expect(spec.agent.id).toBe("besa")
-    expect(spec.agent.role).toBe("Project Manager")
-  })
-
-  it("loads trust configuration correctly", async () => {
-    const spec = await loadAgentSpec("beki")
+  it("loads trust configuration from telejobs spec", async () => {
+    const spec = await loadAgentSpec("beki", "telejobs")
     expect(spec.trust.default_identity_trust).toBe("none")
-    const sasha = spec.trust.identities.find((i) => i.entity === "sasha")
-    expect(sasha).toBeDefined()
-    expect(sasha!.level).toBe("full")
+    const dasha = spec.trust.identities.find(
+      (i) => i.entity === "dasha",
+    )
+    expect(dasha).toBeDefined()
+    expect(dasha!.level).toBe("high")
     expect(spec.trust.channels.dashboard).toBe("full")
     expect(spec.trust.channels.discord).toBe("high")
   })
 
-  it("loads tools_context from agent specs", async () => {
-    const beki = await loadAgentSpec("beki")
-    expect(beki.tools_context).toContain("read_file")
-    expect(beki.tools_context).toContain("write_file")
-    expect(beki.tools_context).toContain("bash")
+  it("loads tools_context with telejobs multi-repo info", async () => {
+    const spec = await loadAgentSpec("beki", "telejobs")
+    expect(spec.tools_context).toContain("telejobs/tj-frontend")
+    expect(spec.tools_context).toContain("telejobs/tj-processor")
+    expect(spec.tools_context).toContain("telejobs/tj-collector")
+    expect(spec.tools_context).toContain("poetry")
+    expect(spec.tools_context).toContain("pnpm")
+  })
 
-    const besa = await loadAgentSpec("besa")
-    expect(besa.tools_context).toContain("read_file")
-    expect(besa.tools_context).toContain("bash")
-    expect(besa.tools_context).toContain("issue create")
+  it("loads workflow_instructions with superpowers skills", async () => {
+    const spec = await loadAgentSpec("beki", "telejobs")
+    expect(spec.workflow_instructions).toContain("/brainstorming")
+    expect(spec.workflow_instructions).toContain(
+      "/subagent-driven-development",
+    )
+    expect(spec.workflow_instructions).toContain(
+      "/end-of-day-report",
+    )
+    expect(spec.workflow_instructions).toContain(
+      "/requesting-code-review",
+    )
   })
 
   it("throws on missing spec file", async () => {
     await expect(loadAgentSpec("nonexistent")).rejects.toThrow()
+  })
+
+  it("throws on missing project spec", async () => {
+    await expect(
+      loadAgentSpec("beki", "no-such-project"),
+    ).rejects.toThrow()
   })
 
   it("throws on agent ID mismatch", async () => {
@@ -79,10 +95,10 @@ describe("loadAgentSpec", () => {
 })
 
 describe("listAgentIds", () => {
-  it("discovers all registered agents", async () => {
+  it("discovers agents with active specs", async () => {
     const ids = await listAgentIds()
     expect(ids).toContain("beki")
-    expect(ids).toContain("besa")
-    expect(ids).toHaveLength(2)
+    // besa has no active project specs (only archived)
+    expect(ids).not.toContain("besa")
   })
 })

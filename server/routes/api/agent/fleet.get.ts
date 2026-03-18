@@ -1,5 +1,8 @@
 import { defineEventHandler } from "h3"
-import { listAgentIds, loadAgentSpec } from "../../../agent/agent-spec"
+import {
+  listAgentIds,
+  loadAgentDefaultSpec,
+} from "../../../agent/agent-spec"
 import type { HomeostasisState } from "../../../engine/types"
 import {
   getTickRecordPath,
@@ -10,7 +13,7 @@ export default defineEventHandler(async () => {
   const agentIds = await listAgentIds()
   const agents = await Promise.all(
     agentIds.map(async (id) => {
-      const spec = await loadAgentSpec(id)
+      const spec = await loadAgentDefaultSpec(id)
       const lastTick = await readLastTickRecord(getTickRecordPath(id))
       return {
         id: spec.agent.id,

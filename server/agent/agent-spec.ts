@@ -49,9 +49,19 @@ const AGENTS_DIR = join(__dirname, "../../data/agents")
 
 export async function loadAgentSpec(
   agentId: string,
-  specPath?: string,
+  projectIdOrPath?: string,
 ): Promise<AgentSpec> {
-  const resolvedPath = specPath ?? join(AGENTS_DIR, agentId, "spec.yaml")
+  let resolvedPath: string
+  if (projectIdOrPath && projectIdOrPath.includes("/")) {
+    // Explicit path provided
+    resolvedPath = projectIdOrPath
+  } else if (projectIdOrPath) {
+    // Project ID — resolve to per-project spec
+    resolvedPath = join(AGENTS_DIR, agentId, "specs", `${projectIdOrPath}.yaml`)
+  } else {
+    // Fallback: legacy single spec.yaml
+    resolvedPath = join(AGENTS_DIR, agentId, "spec.yaml")
+  }
   const raw = await readFile(resolvedPath, "utf-8")
   const parsed = YAML.parse(raw) as AgentSpec
   if (parsed.agent.id !== agentId) {
@@ -72,6 +82,40 @@ export async function loadAgentSecrets(agentId: string): Promise<AgentSecrets> {
   }
 }
 
+/**
+ * List available project IDs for an agent (from specs/ directory).
+ */
+export async function listAgentProjects(agentId: string): Promise<string[]> {
+  try {
+    const specsDir = await readdir(join(AGENTS_DIR, agentId, "specs"))
+    return specsDir
+      .filter((f) => f.endsWith(".yaml") && !f.endsWith(".archived"))
+      .map((f) => f.replace(/\.yaml$/, ""))
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Load the first available spec for an agent.
+ * Tries legacy spec.yaml first, then first project spec.
+ */
+export async function loadAgentDefaultSpec(
+  agentId: string,
+): Promise<AgentSpec> {
+  // Try legacy spec.yaml
+  try {
+    return await loadAgentSpec(agentId)
+  } catch {
+    // Fall through to per-project specs
+  }
+  const projects = await listAgentProjects(agentId)
+  if (projects.length === 0) {
+    throw new Error(`No specs found for agent ${agentId}`)
+  }
+  return loadAgentSpec(agentId, projects[0])
+}
+
 export async function listAgentIds(): Promise<string[]> {
   const entries = await readdir(AGENTS_DIR, {
     withFileTypes: true,
@@ -79,11 +123,23 @@ export async function listAgentIds(): Promise<string[]> {
   const ids: string[] = []
   for (const entry of entries) {
     if (!entry.isDirectory()) continue
+    // Check for legacy spec.yaml or per-project specs/ directory
     try {
       await readFile(join(AGENTS_DIR, entry.name, "spec.yaml"), "utf-8")
       ids.push(entry.name)
+      continue
     } catch {
-      // No spec.yaml in this directory — skip
+      // No spec.yaml — check for specs/ directory
+    }
+    try {
+      const specsDir = await readdir(join(AGENTS_DIR, entry.name, "specs"))
+      if (
+        specsDir.some((f) => f.endsWith(".yaml") && !f.endsWith(".archived"))
+      ) {
+        ids.push(entry.name)
+      }
+    } catch {
+      // No specs/ directory either — skip
     }
   }
   return ids.sort()

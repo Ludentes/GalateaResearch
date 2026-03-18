@@ -97,6 +97,9 @@ data/agents/*
 data/agents/beki/*
 data/agents/besa/*
 !data/agents/*/spec.yaml
+!data/agents/*/specs/
+!data/agents/*/projects/
+data/agents/*/projects/*/context.jsonl
 
 # Private data — developer transcripts, golden datasets, extraction results
 # These contain personal knowledge extracted from real developer sessions.
@@ -108,3 +111,4 @@ experiments/extraction/evaluation-results.md
 experiments/extraction/.tmp-eval-*
 *.jsonl
 !server/memory/__tests__/fixtures/*.jsonl
+!data/agents/*/projects/*/knowledge/*.jsonl

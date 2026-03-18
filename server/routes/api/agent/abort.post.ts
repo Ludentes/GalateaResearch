@@ -1,5 +1,5 @@
 import { defineEventHandler, HTTPError, readBody } from "h3"
-import { loadAgentSpec } from "../../../agent/agent-spec"
+import { loadAgentDefaultSpec } from "../../../agent/agent-spec"
 import { clearAgentSession } from "../../../agent/claude-code-respond"
 import {
   loadOperationalContext,
@@ -36,7 +36,7 @@ export default defineEventHandler(async (event) => {
   // 3. Mark any in-progress tasks as blocked (with reason)
   let opPath: string | undefined
   try {
-    const spec = await loadAgentSpec(agentId)
+    const spec = await loadAgentDefaultSpec(agentId)
     opPath = spec.operational_memory
   } catch {
     // Use default path

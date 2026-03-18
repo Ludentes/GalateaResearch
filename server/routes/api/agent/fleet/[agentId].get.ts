@@ -1,5 +1,5 @@
 import { defineEventHandler, getRouterParam, HTTPError } from "h3"
-import { loadAgentSpec } from "../../../../agent/agent-spec"
+import { loadAgentDefaultSpec } from "../../../../agent/agent-spec"
 import { loadOperationalContext } from "../../../../agent/operational-memory"
 import {
   getTickRecordPath,
@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
 
   let spec
   try {
-    spec = await loadAgentSpec(agentId)
+    spec = await loadAgentDefaultSpec(agentId)
   } catch {
     throw new HTTPError("Agent not found", { status: 404 })
   }

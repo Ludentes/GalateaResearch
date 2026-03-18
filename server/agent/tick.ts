@@ -303,6 +303,7 @@ function applyGlabFeedback(
 
 interface TickOptions {
   agentId?: string
+  projectId?: string
   statePath?: string
   storePath?: string
   opContextPath?: string
@@ -360,16 +361,21 @@ async function tickInner(
   const selfModel = await checkSelfModel()
 
   // Load agent spec FIRST — we need operational_memory and knowledge_store paths
+  // Per-project specs are resolved via opts.projectId or msg.metadata.project
+  let projectId = opts?.projectId
   let spec: AgentSpec | undefined
   let toolsContext: string | undefined
   let specTrust: AgentSpec["trust"] | undefined
   let t0 = Date.now()
   try {
-    spec = await loadAgentSpec(agentId)
+    spec = await loadAgentSpec(agentId, projectId)
     toolsContext = spec.tools_context
     specTrust = spec.trust
   } catch (err) {
-    console.warn(`[tick] Agent spec not found for ${agentId}:`, err)
+    console.warn(
+      `[tick] Agent spec not found for ${agentId}${projectId ? ` (project: ${projectId})` : ""}:`,
+      err,
+    )
   }
   timings.specLoadMs = Date.now() - t0
 
@@ -409,6 +415,22 @@ async function tickInner(
   // Stage 3: Decide what to act on
   if (pending.length > 0) {
     const msg = pickNextMessage(pending) // priority-sorted
+
+    // Message can override project — reload spec if different
+    const msgProjectId = msg.metadata?.project as string | undefined
+    if (msgProjectId && msgProjectId !== projectId) {
+      projectId = msgProjectId
+      try {
+        spec = await loadAgentSpec(agentId, projectId)
+        toolsContext = spec.tools_context
+        specTrust = spec.trust
+      } catch (err) {
+        console.warn(
+          `[tick] Project spec not found for ${agentId}/${projectId}:`,
+          err,
+        )
+      }
+    }
 
     const textContent = getTextContent(msg.content)
 

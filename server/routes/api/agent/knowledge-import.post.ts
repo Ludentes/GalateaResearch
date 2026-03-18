@@ -2,7 +2,7 @@ import { existsSync } from "node:fs"
 import { readdir, readFile } from "node:fs/promises"
 import path from "node:path"
 import { defineEventHandler, HTTPError, readBody } from "h3"
-import { loadAgentSpec } from "../../../agent/agent-spec"
+import { loadAgentDefaultSpec } from "../../../agent/agent-spec"
 import {
   appendEntries,
   deduplicateEntries,
@@ -137,7 +137,7 @@ export default defineEventHandler(async (event) => {
 
   let storePath = "data/memory/entries.jsonl"
   try {
-    const spec = await loadAgentSpec(agentId)
+    const spec = await loadAgentDefaultSpec(agentId)
     if (spec.knowledge_store) storePath = spec.knowledge_store
   } catch {
     // Use default

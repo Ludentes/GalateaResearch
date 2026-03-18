@@ -1,6 +1,6 @@
 import { rm } from "node:fs/promises"
 import { defineEventHandler, HTTPError, readBody } from "h3"
-import { loadAgentSpec } from "../../../agent/agent-spec"
+import { loadAgentDefaultSpec } from "../../../agent/agent-spec"
 import { updateAgentState } from "../../../agent/agent-state"
 import { clearAgentSession } from "../../../agent/claude-code-respond"
 import {
@@ -46,7 +46,7 @@ export default defineEventHandler(async (event) => {
   let opPath: string | undefined
   let knowledgeStorePath = "data/memory/entries.jsonl"
   try {
-    const spec = await loadAgentSpec(agentId)
+    const spec = await loadAgentDefaultSpec(agentId)
     opPath = spec.operational_memory
     if (spec.knowledge_store) knowledgeStorePath = spec.knowledge_store
   } catch (err) {

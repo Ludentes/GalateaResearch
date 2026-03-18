@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { defineEventHandler, getQuery, HTTPError } from "h3"
-import { loadAgentSpec } from "../../../agent/agent-spec"
+import { loadAgentDefaultSpec } from "../../../agent/agent-spec"
 import { readEntries } from "../../../memory/knowledge-store"
 import type { KnowledgeEntry, KnowledgeType } from "../../../memory/types"
 
@@ -65,7 +65,7 @@ export default defineEventHandler(async (event) => {
 
   let storePath = "data/memory/entries.jsonl"
   try {
-    const spec = await loadAgentSpec(agentId)
+    const spec = await loadAgentDefaultSpec(agentId)
     if (spec.knowledge_store) storePath = spec.knowledge_store
   } catch {
     // Use default

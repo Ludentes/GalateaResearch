@@ -1,5 +1,5 @@
 import { defineEventHandler, HTTPError, readBody } from "h3"
-import { loadAgentSpec } from "../../../agent/agent-spec"
+import { loadAgentDefaultSpec } from "../../../agent/agent-spec"
 import {
   addTask,
   loadOperationalContext,
@@ -65,7 +65,7 @@ export default defineEventHandler(async (event) => {
   let opPath: string | undefined
   let knowledgeStorePath = "data/memory/entries.jsonl"
   try {
-    const spec = await loadAgentSpec(body.agentId)
+    const spec = await loadAgentDefaultSpec(body.agentId)
     opPath = spec.operational_memory
     if (spec.knowledge_store) knowledgeStorePath = spec.knowledge_store
   } catch (err) {
