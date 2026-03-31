@@ -198,6 +198,103 @@ describe("executeWorkArc", () => {
     expect(result.extractedTurns).toBeUndefined()
   })
 
+  it("retries once on stall and returns success if retry succeeds", async () => {
+    let callCount = 0
+    const adapter: CodingToolAdapter = {
+      name: "mock-stall",
+      isAvailable: vi.fn().mockResolvedValue(true),
+      query: vi.fn().mockImplementation(async function* () {
+        callCount++
+        if (callCount === 1) {
+          yield { type: "text", text: "Starting..." }
+          yield {
+            type: "result",
+            subtype: "stall",
+            text: "Stream stalled after 120s",
+            durationMs: 120_000,
+            transcript: [],
+          }
+        } else {
+          yield { type: "text", text: "Working..." }
+          yield {
+            type: "result",
+            subtype: "success",
+            text: "Done on retry",
+            durationMs: 5000,
+            transcript: [],
+          }
+        }
+      }),
+    }
+
+    const result = await executeWorkArc({
+      adapter,
+      task: { id: "task-stall", description: "Task that stalls" },
+      context: makeContext(),
+      workingDirectory: "/tmp",
+      trustLevel: "MEDIUM",
+    })
+
+    expect(result.status).toBe("completed")
+    expect(result.text).toBe("Done on retry")
+    expect(result.stallDetected).toBe(true)
+    expect(result.retryAttempted).toBe(true)
+    expect(callCount).toBe(2)
+  })
+
+  it("returns timeout if stall retry also fails", async () => {
+    const adapter: CodingToolAdapter = {
+      name: "mock-double-stall",
+      isAvailable: vi.fn().mockResolvedValue(true),
+      query: vi.fn().mockImplementation(async function* () {
+        yield {
+          type: "result",
+          subtype: "stall",
+          text: "Stream stalled",
+          durationMs: 120_000,
+          transcript: [],
+        }
+      }),
+    }
+
+    const result = await executeWorkArc({
+      adapter,
+      task: { id: "task-stall-2", description: "Double stall" },
+      context: makeContext(),
+      workingDirectory: "/tmp",
+      trustLevel: "MEDIUM",
+    })
+
+    // Second stall maps to "timeout" via statusMap
+    expect(result.status).toBe("timeout")
+    expect(result.stallDetected).toBe(true)
+    expect(result.retryAttempted).toBe(true)
+  })
+
+  it("sets stallDetected=false on normal completion", async () => {
+    const adapter = createMockAdapter([
+      {
+        type: "result",
+        subtype: "success",
+        text: "Done",
+        durationMs: 1000,
+        transcript: [],
+      },
+    ])
+
+    const result = await executeWorkArc({
+      adapter,
+      task: { id: "task-normal", description: "Normal task" },
+      context: makeContext(),
+      workingDirectory: "/tmp",
+      trustLevel: "MEDIUM",
+    })
+
+    expect(result.status).toBe("completed")
+    expect(result.stallDetected).toBe(false)
+    expect(result.retryAttempted).toBe(false)
+  })
+
   it("preserves error details for retry with narrower scope", async () => {
     const adapter = createMockAdapter([
       {

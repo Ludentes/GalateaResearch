@@ -1,6 +1,7 @@
 import type { TrustLevel } from "../../engine/types"
 import { recordOutcome } from "../../memory/feedback-loop"
 import type { AssembledContext, TranscriptTurn } from "../../memory/types"
+import { emitEvent } from "../../observation/emit"
 import type { ImageBlock } from "../types"
 import { createPreToolUseHook } from "./hooks"
 import { transcriptToTurns } from "./transcript-to-extraction"
@@ -34,6 +35,10 @@ export interface WorkArcResult {
   numTurns?: number
   extractedTurns?: TranscriptTurn[]
   sessionId?: string
+  /** True if the adapter detected a stream stall (no activity for too long) */
+  stallDetected?: boolean
+  /** True if work-arc retried after a stall */
+  retryAttempted?: boolean
 }
 
 /**
@@ -85,16 +90,77 @@ export async function executeWorkArc(
     images,
   })) {
     messages.push(msg)
-    const elapsed = Date.now() - arcStart
-    if (elapsed > 250_000) {
-      console.warn(
-        `[work-arc] Long-running adapter: ${Math.round(elapsed / 1000)}s / ${Math.round(timeout / 1000)}s budget`,
-      )
-    }
   }
 
   // Find the result message
-  const resultMsg = messages.find((m) => m.type === "result")
+  let resultMsg = messages.find((m) => m.type === "result")
+
+  // Retry once on stall — fresh session, no resume (stalled session is likely corrupted)
+  let stallDetected = false
+  let retryAttempted = false
+  if (resultMsg?.type === "result" && resultMsg.subtype === "stall") {
+    stallDetected = true
+    const stallDurationMs = Date.now() - arcStart
+
+    emitEvent({
+      type: "log",
+      source: "work-arc",
+      body: "adapter.stall_detected",
+      attributes: {
+        "event.name": "adapter.stall_detected",
+        severity: "warning",
+        taskId: task.id,
+        adapterName: adapter.name,
+        stallDurationMs,
+        sessionId: sessionId ?? "none",
+        willRetry: true,
+      },
+    }).catch(() => {})
+
+    retryAttempted = true
+    const retryMessages: CodingSessionMessage[] = []
+    for await (const msg of adapter.query({
+      prompt: task.description,
+      systemPrompt: context.systemPrompt,
+      workingDirectory,
+      hooks: { preToolUse },
+      timeout,
+      maxBudgetUsd,
+      model,
+      // No resume — fresh session
+      images,
+    })) {
+      retryMessages.push(msg)
+    }
+    const retryResult = retryMessages.find((m) => m.type === "result")
+    if (retryResult) {
+      resultMsg = retryResult
+      messages.length = 0
+      messages.push(...retryMessages)
+      emitEvent({
+        type: "log",
+        source: "work-arc",
+        body: "adapter.stall_retry_succeeded",
+        attributes: {
+          "event.name": "adapter.stall_retry_succeeded",
+          taskId: task.id,
+          retryDurationMs: Date.now() - arcStart - stallDurationMs,
+        },
+      }).catch(() => {})
+    } else {
+      emitEvent({
+        type: "log",
+        source: "work-arc",
+        body: "adapter.stall_retry_failed",
+        attributes: {
+          "event.name": "adapter.stall_retry_failed",
+          severity: "error",
+          taskId: task.id,
+          retryDurationMs: Date.now() - arcStart - stallDurationMs,
+        },
+      }).catch(() => {})
+    }
+  }
   if (!resultMsg || resultMsg.type !== "result") {
     return {
       status: "failed",
@@ -109,6 +175,7 @@ export async function executeWorkArc(
     error: "failed",
     timeout: "timeout",
     budget_exceeded: "budget_exceeded",
+    stall: "timeout",
   }
 
   const result: WorkArcResult = {
@@ -119,6 +186,8 @@ export async function executeWorkArc(
     costUsd: resultMsg.costUsd,
     numTurns: resultMsg.numTurns,
     sessionId: resultMsg.sessionId,
+    stallDetected,
+    retryAttempted,
   }
 
   // Feed transcript to extraction pipeline (G.5) — best-effort, non-blocking

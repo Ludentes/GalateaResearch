@@ -407,6 +407,16 @@ agent:
     research: 300000   # 5 minutes
     default: 180000    # 3 minutes (fallback for unknown task types)
 
+  # Stream stall detection — abort if no messages from SDK for this long.
+  # An active session streams tool calls/text continuously.
+  # Silence beyond this threshold means the API connection is stuck.
+  # Raise: tolerate longer pauses (slow models). Lower: detect stalls faster.
+  adapter_stall_timeout_ms: 120000  # 2 minutes of silence → abort + retry
+
+  # Consecutive timeout escalation — after N timeouts in a row, escalate.
+  # Prevents burning tokens on a provider outage.
+  max_consecutive_timeouts: 3
+
 # -----------------------------------------------------------------------------
 # DISCORD — server/discord/bot.ts
 # Bot connector for Discord messaging.

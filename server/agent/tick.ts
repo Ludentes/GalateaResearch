@@ -672,6 +672,8 @@ async function tickInner(
         if (knowledgeCount > 0) {
           appendEntries(knowledgeEntries, storePath).catch(() => {})
         }
+        // Reset consecutive timeout counter on success
+        opCtx.consecutiveTimeouts = 0
       } else if (arcResult.status === "blocked") {
         task.status = "blocked"
         task.claudeSessionId = undefined
@@ -682,6 +684,57 @@ async function tickInner(
         opCtx.carryover.push(
           `SDK session ${arcResult.status}: ${arcResult.text}`,
         )
+        // Track consecutive timeouts/failures for escalation
+        opCtx.consecutiveTimeouts = (opCtx.consecutiveTimeouts ?? 0) + 1
+        const maxConsecutive = getAgentConfig().max_consecutive_timeouts ?? 3
+        if (opCtx.consecutiveTimeouts >= maxConsecutive) {
+          emitEvent({
+            type: "log",
+            source: `${agentId}-tick`,
+            body: "tick.consecutive_timeout_escalation",
+            attributes: {
+              "event.name": "tick.consecutive_timeout_escalation",
+              severity: "error",
+              agentId,
+              consecutiveTimeouts: opCtx.consecutiveTimeouts,
+              lastStatus: arcResult.status,
+              stallDetected: arcResult.stallDetected ?? false,
+              taskId: task.id,
+              taskDescription: task.description.slice(0, 200),
+            },
+          }).catch(() => {})
+
+          task.status = "blocked"
+          task.claudeSessionId = undefined
+          opCtx.blockers.push(
+            `${opCtx.consecutiveTimeouts} consecutive timeouts — possible provider instability. Manual review required.`,
+          )
+
+          // Dispatch timeout escalation to configured target
+          if (spec?.escalation_target) {
+            const timeoutEscMsg: ChannelMessage = {
+              id: `timeout-escalate-${msg.id}`,
+              channel: spec.escalation_target.channel as ChannelName,
+              direction: "outbound",
+              routing: { replyToId: msg.id },
+              from: agentId,
+              content: `**Provider instability** — ${opCtx.consecutiveTimeouts} consecutive timeouts on task: ${task.description.slice(0, 150)}\n\nLast failure: ${arcResult.text}\nStall detected: ${arcResult.stallDetected ? "yes" : "no"}\n\nI've blocked this task. Please check provider status or retry manually.`,
+              messageType: "status_update",
+              receivedAt: new Date().toISOString(),
+              metadata: {
+                escalation: true,
+                category: "provider_instability",
+              },
+            }
+            try {
+              await dispatchMessage(timeoutEscMsg)
+            } catch {
+              console.warn(
+                "[tick] Failed to dispatch timeout escalation message",
+              )
+            }
+          }
+        }
       }
 
       // ---------------------------------------------------------------
@@ -952,18 +1005,23 @@ async function tickInner(
           knowledgeEntriesCreated: knowledgeCount,
         },
         durationMs: Date.now() - tickStart,
-        diagnostics: buildDiagnostics({
-          modelUsed: (msg.metadata?.modelOverride as string) || config.model,
-          providerUsed: "claude-code",
-          factsRetrieved: retrievedFacts.length,
-          escalation: escalation
-            ? {
-                category: escalation.category,
-                reason: escalation.reason,
-                target: spec?.escalation_target?.entity,
-              }
-            : undefined,
-        }),
+        diagnostics: {
+          ...buildDiagnostics({
+            modelUsed: (msg.metadata?.modelOverride as string) || config.model,
+            providerUsed: "claude-code",
+            factsRetrieved: retrievedFacts.length,
+            escalation: escalation
+              ? {
+                  category: escalation.category,
+                  reason: escalation.reason,
+                  target: spec?.escalation_target?.entity,
+                }
+              : undefined,
+          }),
+          stallDetected: arcResult.stallDetected,
+          retryAttempted: arcResult.retryAttempted,
+          consecutiveTimeouts: opCtx.consecutiveTimeouts ?? 0,
+        },
       })
       appendTickRecord(delegateRecord, getTickRecordPath(agentId)).catch(
         (err) => console.warn("[tick] Failed to persist tick record:", err),

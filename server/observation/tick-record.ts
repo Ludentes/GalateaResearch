@@ -57,6 +57,9 @@ export interface TickDecisionRecord {
       reason: string
       target?: string
     }
+    stallDetected?: boolean
+    retryAttempted?: boolean
+    consecutiveTimeouts?: number
     timings?: Record<string, number>
   }
 }

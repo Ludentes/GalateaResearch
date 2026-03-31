@@ -1,8 +1,10 @@
-import { readFileSync } from "node:fs"
+import { readFileSync, statSync } from "node:fs"
 import { homedir } from "node:os"
 import { join } from "node:path"
 import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk"
 import { query as sdkQuery } from "@anthropic-ai/claude-agent-sdk"
+import { getAgentConfig } from "../../engine/config"
+import { emitEvent } from "../../observation/emit"
 import type { ImageBlock } from "../types"
 import type {
   CodingQueryOptions,
@@ -183,6 +185,66 @@ export class ClaudeCodeAdapter implements CodingToolAdapter {
       timeoutHandle = setTimeout(() => abortController.abort(), timeout)
     }
 
+    // Stream stall detection — abort if no stream messages AND no session
+    // file activity for too long. Checking both signals avoids killing
+    // healthy long-running tasks where Claude is thinking or running a
+    // long bash command (the session JSONL grows even when our stream
+    // is quiet).
+    const stallTimeoutMs = getAgentConfig().adapter_stall_timeout_ms ?? 120_000
+    let lastActivityAt = Date.now()
+    let stallDetected = false
+    let capturedSessionId: string | undefined
+
+    // Derive session file path from config dir + workspace
+    const configDir =
+      process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude")
+    const workspaceHash = workingDirectory.replace(/\//g, "-")
+    const getSessionFileMtime = (): number | undefined => {
+      if (!capturedSessionId) return undefined
+      try {
+        const sessionPath = join(
+          configDir,
+          "projects",
+          workspaceHash,
+          `${capturedSessionId}.jsonl`,
+        )
+        return statSync(sessionPath).mtimeMs
+      } catch {
+        return undefined
+      }
+    }
+
+    const stallCheckInterval = setInterval(() => {
+      const now = Date.now()
+      const streamSilenceMs = now - lastActivityAt
+
+      // Check session file for recent writes
+      const sessionMtime = getSessionFileMtime()
+      const fileSilenceMs = sessionMtime ? now - sessionMtime : streamSilenceMs
+
+      // Both signals must agree: stream quiet AND file not growing
+      const effectiveSilenceMs = Math.min(streamSilenceMs, fileSilenceMs)
+
+      if (effectiveSilenceMs >= stallTimeoutMs) {
+        stallDetected = true
+        emitEvent({
+          type: "log",
+          source: "claude-code-adapter",
+          body: "adapter.stream_stall",
+          attributes: {
+            "event.name": "adapter.stream_stall",
+            severity: "warning",
+            streamSilenceMs: Math.round(streamSilenceMs),
+            fileSilenceMs: Math.round(fileSilenceMs),
+            thresholdMs: stallTimeoutMs,
+            sessionId: capturedSessionId ?? "unknown",
+            elapsedMs: now - startTime,
+          },
+        }).catch(() => {})
+        abortController.abort("stall_detected")
+      }
+    }, 15_000)
+
     try {
       const sdkHooks: Record<
         string,
@@ -279,8 +341,14 @@ export class ClaudeCodeAdapter implements CodingToolAdapter {
       })
 
       for await (const message of stream) {
+        lastActivityAt = Date.now()
         const sdkMsg = message as Record<string, unknown>
         const msgType = sdkMsg.type as string
+
+        // Capture session ID for file-based stall detection
+        if (!capturedSessionId && typeof sdkMsg.session_id === "string") {
+          capturedSessionId = sdkMsg.session_id
+        }
 
         if (msgType === "assistant") {
           const betaMessage = sdkMsg.message as {
@@ -379,12 +447,15 @@ export class ClaudeCodeAdapter implements CodingToolAdapter {
       yield { type: "error", error: errorMessage }
       yield {
         type: "result",
-        subtype: "error",
-        text: errorMessage,
+        subtype: stallDetected ? "stall" : "error",
+        text: stallDetected
+          ? `Stream stalled after ${Math.round((Date.now() - startTime) / 1000)}s (no activity for ${Math.round(stallTimeoutMs / 1000)}s)`
+          : errorMessage,
         durationMs: Date.now() - startTime,
         transcript,
       }
     } finally {
+      clearInterval(stallCheckInterval)
       if (timeoutHandle) {
         clearTimeout(timeoutHandle)
       }

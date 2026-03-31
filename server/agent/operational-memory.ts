@@ -61,6 +61,7 @@ export interface OperationalContext {
   lastClaudeSessionId?: string
   activeWorkItems?: WorkItem[]
   outboundFollowUps?: number
+  consecutiveTimeouts?: number
 }
 
 // ---------------------------------------------------------------------------

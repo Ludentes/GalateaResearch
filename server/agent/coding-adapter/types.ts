@@ -8,7 +8,7 @@ export type CodingSessionMessage =
   | { type: "error"; error: string }
   | {
       type: "result"
-      subtype: "success" | "error" | "timeout" | "budget_exceeded"
+      subtype: "success" | "error" | "timeout" | "budget_exceeded" | "stall"
       text: string
       durationMs: number
       costUsd?: number

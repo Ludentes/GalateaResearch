@@ -87,6 +87,8 @@ export interface HeartbeatConfig {
 
 export interface AgentConfig {
   adapter_timeouts: Record<string, number>
+  adapter_stall_timeout_ms: number
+  max_consecutive_timeouts: number
 }
 
 export interface DecayConfig {
