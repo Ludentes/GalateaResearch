@@ -76,4 +76,11 @@ describe("pickNextMessage", () => {
     // missing type defaults to 1 (same as chat), FIFO wins
     expect(pickNextMessage([withoutType, status])).toBe(withoutType)
   })
+
+  it("preserves FIFO between review_comment and task_assignment (same priority 2)", () => {
+    const review = makeMsg("review_comment", "LGTM")
+    const task = makeMsg("task_assignment", "implement X")
+    // Both are priority 2 — first in queue wins
+    expect(pickNextMessage([review, task])).toBe(review)
+  })
 })

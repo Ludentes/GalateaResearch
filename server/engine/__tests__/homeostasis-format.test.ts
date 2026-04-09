@@ -109,4 +109,14 @@ describe("formatHomeostasisState", () => {
     const lines = result.split("\n").filter((l) => l.trim().length > 0)
     expect(lines.every((l) => l.startsWith("- **"))).toBe(true)
   })
+
+  it("falls back to raw key name for unknown dimension labels", () => {
+    const stateWithUnknown = {
+      ...healthyState,
+      experimental_dimension: "HEALTHY",
+    } as unknown as HomeostasisState
+    const result = formatHomeostasisState(stateWithUnknown)
+    // DIMENSION_LABELS has no entry for this key, so raw key is used
+    expect(result).toContain("- **experimental_dimension**: HEALTHY")
+  })
 })
